@@ -248,96 +248,7 @@ tbody tr:hover {
 }
 
 .assignBtn:hover {
-  background-color: #6a0e2a;
-}
-
-/* ===== STAFF MEMBERS ===== */
-.staffContainer {
-  background-color: #fff;
-  border-radius: 0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.staffHeader {
-  background-color: #4a3a2a;
-  padding: 15px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-}
-
-.staffHeader h2 {
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin: 0;
-}
-
-.staffHeader .searchBox {
-  flex: 1;
-  max-width: 350px;
-  min-width: 250px;
-}
-
-.staffGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  padding: 0;
-  background-color: #fff;
-}
-
-.staffCard {
-  background-color: #fff;
-  padding: 16px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e0e0e0;
-  transition: all 0.2s;
-}
-
-.staffCard:last-child {
-  border-bottom: none;
-}
-
-.staffCard:hover {
-  background-color: #f9f9f9;
-}
-
-.staffName {
-  font-size: 14px;
-  font-weight: 400;
-  color: #333;
-  line-height: 1.4;
-  flex: 1;
-}
-
-.staffAssignBtn {
-  background-color: #480c1b;
-  color: #fff;
-  border: none;
-  padding: 8px 32px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: all 0.2s;
-  min-width: 100px;
-}
-
-.staffAssignBtn:hover {
-  background-color: #6a0e2a;
-}
-
-.staffAssignBtn.assigned {
-  background-color: #5cb85c;
+  background-color: #510a1f;
 }
 
 /* ===== PAGINATION ===== */
@@ -413,14 +324,34 @@ tbody tr:hover {
 }
 
 .assignModal,
-.successModal {
+.successModal,
+.staffSelectionModal {
   background-color: #480c1b;
-  border-radius: 8px;
+  border-radius: 12px;
   padding: 35px;
   max-width: 420px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   position: relative;
   animation: slideIn 0.3s ease;
+}
+
+.staffSelectionModal {
+  max-width: 600px;
+  width: 90%;
+  max-height: 85vh;
+  overflow: visible;
+  padding: 0;
+  background: #fff;
+  border: none;
+}
+
+/* SUCCESS MODAL - Match UI Design */
+.successModal {
+  background-color: #480c1b;
+  border-radius: 20px;
+  padding: 60px 50px;
+  max-width: 450px;
+  width: 90%;
 }
 
 @keyframes slideIn {
@@ -436,46 +367,84 @@ tbody tr:hover {
 
 .closeBtn {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 20px;
+  right: 20px;
   background: none;
   border: none;
-  font-size: 28px;
-  color: #fff;
+  font-size: 24px;
+  color: #ffffff;
   cursor: pointer;
-  opacity: 0.7;
-  transition: opacity 0.2s;
+  opacity: 1;
+  transition: color 0.2s;
+  z-index: 10;
 }
 
 .closeBtn:hover {
-  opacity: 1;
-}
-
-.modalIcon {
-  font-size: 48px;
-  margin-bottom: 40px;
-  text-align: center;
+  color: #333;
 }
 
 .successIcon {
-  font-size: 60px;
-  margin-bottom: 15px;
-  text-align: center;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 40px;
+  background: #00c853;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.successIcon::before {
+  content: '✓';
+  color: white;
+  font-size: 70px;
+  font-weight: bold;
+  position: absolute;
+  line-height: 1;
+}
+
+.icon-btn {
+  width: 50px;
+  height: 50px;
+  opacity: 0;
 }
 
 .assignModal h2,
-.successModal h2 {
-  color: #fff;
+.staffSelectionModal h2 {
+  color: #FFA237;
   font-size: 18px;
-  margin-bottom: 12px;
+  margin-bottom: 15px;
   font-weight: 600;
-  letter-spacing: 0.5px;
   text-align: center;
+  font-family: Arial;
+  padding: 40px 40px 10px 40px;
+  text-transform: uppercase;
 }
 
-.assignModal p,
-.successModal p {
-  color: #dcc8b0;
+.successModal h2 {
+  color: #ffffff;
+  font-size: 18px;
+  margin-bottom: 50px;
+  font-weight: 600;
+  text-align: center;
+  font-family: Arial;
+  padding: 0;
+
+}
+
+.modalSubtext {
+  color: #333;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 0 40px;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.assignModal p {
+  color: #e3e3e3;
   font-size: 13px;
   line-height: 1.5;
   margin-bottom: 10px;
@@ -486,60 +455,201 @@ tbody tr:hover {
   color: #b8968a;
   font-size: 12px;
   margin-top: 12px;
+  margin-bottom: 15px;
 }
 
 .modalButtons {
   display: flex;
-  gap: 12px;
-  margin-top: 25px;
+  gap: 15px;
+  margin-top: 15px;
   justify-content: center;
+  padding: 0 40px 35px 40px;
+}
+
+.successModal .modalButtons {
+  padding: 0;
+  margin-top: 0;
 }
 
 .modalBtn {
-  padding: 11px 28px;
+  padding: 15px 5px;
   border: none;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 700;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   text-transform: uppercase;
+  margin-top: 10px;
   letter-spacing: 0.5px;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
-.icon-btn {
-  height: 50px;
-  width: 50px;
+.modalBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modalBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 .cancelBtn {
-  background-color: #fff;
-  color: #480c1b;
-  min-width: 120px;
+  background: #e0e0e0;
+  color: #333;
+  min-width: 130px;
 }
 
 .cancelBtn:hover {
-  opacity: 0.9;
+  background: #d5d5d5;
 }
 
 .confirmBtn {
-  background-color: #ffb400;
-  color: #480c1b;
-  min-width: 160px;
+  background: #ffb400;
+  color: #000;
+  min-width: 180px;
 }
 
-.confirmBtn:hover {
-  opacity: 0.9;
+.confirmBtn:hover:not(:disabled) {
+  background: #895921;
 }
 
 .okayBtn {
-  background-color: #ffb400;
-  color: #480c1b;
-  min-width: 120px;
+  background-color: #FFA237;
+  color: #ffffff;
+  min-width: 250px;
+  padding: 16px 50px;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  margin-top: 0;
 }
 
 .okayBtn:hover {
-  opacity: 0.9;
+  background-color: #895921;
+}
+
+/* ===== STAFF LIST IN MODAL ===== */
+.modalSearchBox {
+  margin: 0 40px 25px 40px;
+  flex: none;
+  min-width: 0;
+  width: auto;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  transition: all 0.3s ease;
+}
+
+.modalSearchBox:focus-within {
+  border-color: #999;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+}
+
+.modalSearchBox .searchInput {
+  background: transparent;
+  color: #333;
+  font-size: 14px;
+}
+
+.modalSearchBox .searchInput::placeholder {
+  color: #999;
+}
+
+.modalSearchBox .searchBtn img {
+  filter: none;
+  opacity: 0.6;
+}
+
+.staffList {
+  margin: 0 40px 30px 40px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+/* Custom scrollbar for staff list */
+.staffList::-webkit-scrollbar {
+  width: 6px;
+}
+
+.staffList::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 3px;
+}
+
+.staffList::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.staffList::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+.staffListItem {
+  background: #f5f5f5;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.staffListItem:last-child {
+  margin-bottom: 0;
+}
+
+.staffListItem:hover:not(.assigned) {
+  background: #e8e8e8;
+  border-color: #ddd;
+}
+
+.staffListItem.selected {
+  background: #fff3cd;
+  border-color: #ffb300;
+  box-shadow: 0 2px 8px rgba(255, 180, 0, 0.2);
+}
+
+.staffListItem.assigned {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f9f9f9;
+}
+
+.staffListName {
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+  flex: 1;
+  letter-spacing: 0.3px;
+}
+
+.staffListStatus {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-align: center;
+  min-width: 90px;
+}
+
+.staffListStatus.available {
+  background: #d4edda;
+  color: #28a745;
+  border: 1px solid #c3e6cb;
+}
+
+.staffListStatus.assigned {
+  background: #f8d7da;
+  color: #dc3545;
+  border: 1px solid #f5c6cb;
 }
 
 /* ===== TAB NAVIGATION ===== */
@@ -601,16 +711,6 @@ tbody tr:hover {
   .downloadBtn {
     width: 100%;
   }
-
-  .staffHeader {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .staffHeader .searchBox {
-    width: 100%;
-    max-width: none;
-  }
 }
 
 @media (max-width: 768px) {
@@ -651,17 +751,6 @@ tbody tr:hover {
     width: 100%;
   }
 
-  .staffCard {
-    padding: 12px 15px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .staffAssignBtn {
-    width: 100%;
-  }
-
   table {
     font-size: 11px;
   }
@@ -672,7 +761,8 @@ tbody tr:hover {
   }
 
   .assignModal,
-  .successModal {
+  .successModal,
+  .staffSelectionModal {
     width: 90%;
     max-width: 380px;
     padding: 25px;
