@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Celestia Hotel - Maintenance Management</title>
+  <link rel="stylesheet" href="css/maintenance.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="headerLeft">
+      <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" />
+      <span class="hotelName">THE CELESTIA HOTEL</span>
+    </div>
+    
+    <img src="assets/icons/profile-icon.png" alt="Profile" class="profileIcon" id="profileBtn" />
+   
+  </header>
+
+  <!-- Main Container -->
+  <div class="mainContainer">
+    <!-- Page Title -->
+    <h1 class="pageTitle">MAINTENANCE</h1>
+
+    <!-- Tab Navigation -->
+    <div class="tabNavigation">
+      <button class="tabBtn active" data-tab="requests">
+        <img src="assets/icons/requests-icon.png" alt="Requests" class="tabIcon" />
+        Requests
+      </button>
+      <button class="tabBtn" data-tab="staff">
+        <img src="assets/icons/staff-icon.png" alt="Staff" class="tabIcon" />
+        Staff Members
+      </button>
+      <button class="tabBtn" data-tab="history">
+        <img src="assets/icons/history-icon.png" alt="History" class="tabIcon" />
+        History
+      </button>
+    </div>
+
+    <!-- ===== REQUESTS TAB ===== -->
+    <div class="tabContent active" id="requests-tab">
+      <div class="controlsRow">
+        <div class="filterControls">
+          <select class="filterDropdown" id="floorFilter">
+            <option value="">Floor</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+
+          <select class="filterDropdown" id="roomFilter">
+            <option value="">Room</option>
+            <option value="101">101</option>
+            <option value="102">102</option>
+          </select>
+
+          <select class="filterDropdown" id="statusFilter">
+            <option value="">Status</option>
+            <option value="pending">Pending</option>
+            <option value="urgent">Urgent</option>
+          </select>
+
+          <div class="searchBox">
+            <input type="text" placeholder="Search" class="searchInput" id="searchInput" />
+            <button class="searchBtn">
+              <img src="assets/icons/search-icon.png" alt="Search" />
+            </button>
+          </div>
+
+          <button class="refreshBtn" id="refreshBtn">
+            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+          </button>
+        </div>
+      </div>
+
+      <!-- Requests Table -->
+      <div class="tableWrapper">
+        <table class="requestsTable">
+          <thead>
+            <tr>
+              <th>Floor</th>
+              <th>Room</th>
+              <th>Issue Type</th>
+              <th>Date</th>
+              <th>Request Time</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Staff In Charge</th>
+            </tr>
+          </thead>
+          <tbody id="requestsTableBody">
+            <!-- Data will be populated here by backend -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== STAFF MEMBERS TAB ===== -->
+    <div class="tabContent" id="staff-tab">
+      <div class="staffContainer">
+        <div class="staffHeader">
+          <h2>STAFF MEMBERS</h2>
+          <div class="searchBox">
+            <input type="text" placeholder="Search" class="searchInput" id="staffSearchInput" />
+            <button class="searchBtn">
+                <img src="assets/icons/search-icon.png" alt="Search" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Staff Members Grid -->
+        <div class="staffGrid" id="staffGrid">
+          <!-- Staff members will be populated here by backend -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== HISTORY TAB ===== -->
+    <div class="tabContent" id="history-tab">
+      <div class="controlsRow">
+        <div class="filterControls">
+          <select class="filterDropdown" id="floorFilterHistory">
+            <option value="">Floor</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+          </select>
+
+          <select class="filterDropdown" id="roomFilterHistory">
+            <option value="">Room</option>
+            <option value="101">101</option>
+            <option value="102">102</option>
+          </select>
+
+          <select class="filterDropdown" id="dateFilterHistory">
+            <option value="">Calendar</option>
+          </select>
+
+          <div class="searchBox">
+            <input type="text" placeholder="Search" class="searchInput" id="historySearchInput" />
+            <button class="searchBtn">
+              <img src="assets/icons/search-icon.png" alt="Search" />
+            </button>
+          </div>
+
+          <button class="downloadBtn" id="downloadBtn">
+            <img src="assets/icons/download-icon.png" alt="Download" />
+          </button>
+        </div>
+      </div>
+
+      <!-- History Table -->
+      <div class="tableWrapper">
+        <table class="historyTable">
+          <thead>
+            <tr>
+              <th>Floor</th>
+              <th>Room</th>
+              <th>Issue Type</th>
+              <th>Date</th>
+              <th>Requested Time</th>
+              <th>Completed Time</th>
+              <th>Staff In Charge</th>
+              <th>Status</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody">
+            <!-- Data will be populated here by backend -->
+          </tbody>
+        </table>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <span class="paginationInfo">Display Records <span id="recordCount">0</span></span>
+          <div class="paginationControls">
+            <button class="paginationBtn">←</button>
+            <button class="paginationBtn active">1</button>
+            <button class="paginationBtn">2</button>
+            <button class="paginationBtn">3</button>
+            <button class="paginationBtn">4</button>
+            <button class="paginationBtn">5</button>
+            <span class="paginationDots">...</span>
+            <button class="paginationBtn">10</button>
+            <button class="paginationBtn">→</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Staff Modal -->
+  <div class="modalBackdrop" id="assignModal" style="display: none;">
+    <div class="assignModal">
+      <button class="closeBtn" id="closeAssignBtn">×</button>
+      <div class="modalIcon">⚠️</div>
+      <h2>Are you sure you want to assign this staff?</h2>
+      <p>Once confirmed, this request will be officially assigned to the selected staff member. A notification email will also be sent to their registered email address.</p>
+      <p class="noteText">Please note that once the assignment is confirmed, it cannot be edited or changed.</p>
+      <div class="modalButtons">
+        <button class="modalBtn cancelBtn" id="cancelAssignBtn">CANCEL</button>
+        <button class="modalBtn confirmBtn" id="confirmAssignBtn">YES, ASSIGN STAFF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modalBackdrop" id="successModal" style="display: none;">
+    <div class="successModal">
+      <button class="closeBtn" id="closeSuccessBtn">×</button>
+      <div class="successIcon">
+        <img src="assets/icons/successful-icon.png" alt="Success" class="icon-btn"/>
+      </div>
+      <h2>Staff Assigned Successfully</h2>
+      <div class="modalButtons">
+        <button class="modalBtn okayBtn" id="okayBtn">OKAY</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="script/maintenance.js"></script>
+</body>
+</html>
