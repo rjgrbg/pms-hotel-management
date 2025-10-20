@@ -1,32 +1,34 @@
-// ===== SAMPLE DATA =====
+// ===== USE SHARED DATA =====
 const requestsData = [
   { floor: 1, room: 101, issue: 'Leaky Faucet', date: '2025-10-19', requestTime: '10:30 AM', priority: 'High', status: 'pending', staff: 'Not Assigned' },
   { floor: 1, room: 102, issue: 'AC Not Working', date: '2025-10-19', requestTime: '11:15 AM', priority: 'Urgent', status: 'urgent', staff: 'Not Assigned' },
-  { floor: 2, room: 201, issue: 'Broken Door Lock', date: '2025-10-19', requestTime: '09:45 AM', priority: 'High', status: 'pending', staff: 'Juan Dela Cruz' },
+  { floor: 2, room: 201, issue: 'Broken Door Lock', date: '2025-10-19', requestTime: '09:45 AM', priority: 'High', status: 'pending', staff: 'Anna Martinez' },
   { floor: 2, room: 202, issue: 'Electrical Outlet Damaged', date: '2025-10-19', requestTime: '12:00 PM', priority: 'Urgent', status: 'urgent', staff: 'Not Assigned' },
 ];
 
 const staffData = [
-  { id: 1, name: 'Juan Dela Cruz', assigned: false },
-  { id: 2, name: 'Carlos Rodriguez', assigned: true },
-  { id: 3, name: 'Miguel Santos', assigned: false },
-  { id: 4, name: 'Luis Martinez', assigned: false },
-  { id: 5, name: 'Antonio Reyes', assigned: true },
-  { id: 6, name: 'Roberto Garcia', assigned: false },
+  { id: 1, name: 'Anna Martinez', assigned: false },
+  { id: 2, name: 'James Wilson', assigned: true },
+  { id: 3, name: 'Sofia Rodriguez', assigned: false },
+  { id: 4, name: 'Michael Brown', assigned: false },
+  { id: 5, name: 'Emma Davis', assigned: true },
+  { id: 6, name: 'Oliver Taylor', assigned: false },
 ];
 
 const historyData = [
-  { floor: 1, room: 101, issue: 'Leaky Faucet', date: '2025-10-18', requestedTime: '2:00 PM', completedTime: '3:00 PM', staff: 'Juan Dela Cruz', status: 'repaired', remarks: 'Replaced faucet washer' },
-  { floor: 1, room: 102, issue: 'Light Fixture Broken', date: '2025-10-18', requestedTime: '3:15 PM', completedTime: '4:30 PM', staff: 'Carlos Rodriguez', status: 'repaired', remarks: 'Replaced bulb and fixture' },
-  { floor: 2, room: 201, issue: 'Door Handle Stuck', date: '2025-10-18', requestedTime: '1:00 PM', completedTime: '2:00 PM', staff: 'Miguel Santos', status: 'repaired', remarks: 'Applied lubricant' },
-  { floor: 2, room: 202, issue: 'Shower Head Low Pressure', date: '2025-10-17', requestedTime: '10:00 AM', completedTime: '11:15 AM', staff: 'Luis Martinez', status: 'repaired', remarks: 'Cleaned aerator' },
-  { floor: 1, room: 103, issue: 'Wall Paint Chipped', date: '2025-10-17', requestedTime: '4:00 PM', completedTime: '5:00 PM', staff: 'Antonio Reyes', status: 'repaired', remarks: 'Touch up paint applied' },
+  { floor: 1, room: 101, issue: 'Leaky Faucet', date: '2025-10-18', requestedTime: '2:00 PM', completedTime: '3:00 PM', staff: 'Anna Martinez', status: 'repaired', remarks: 'Replaced faucet washer' },
+  { floor: 1, room: 102, issue: 'Light Fixture Broken', date: '2025-10-18', requestedTime: '3:15 PM', completedTime: '4:30 PM', staff: 'James Wilson', status: 'repaired', remarks: 'Replaced bulb and fixture' },
+  { floor: 2, room: 201, issue: 'Door Handle Stuck', date: '2025-10-18', requestedTime: '1:00 PM', completedTime: '2:00 PM', staff: 'Sofia Rodriguez', status: 'repaired', remarks: 'Applied lubricant' },
+  { floor: 2, room: 202, issue: 'Shower Head Low Pressure', date: '2025-10-17', requestedTime: '10:00 AM', completedTime: '11:15 AM', staff: 'Michael Brown', status: 'repaired', remarks: 'Cleaned aerator' },
+  { floor: 1, room: 103, issue: 'Wall Paint Chipped', date: '2025-10-17', requestedTime: '4:00 PM', completedTime: '5:00 PM', staff: 'Emma Davis', status: 'repaired', remarks: 'Touch up paint applied' },
 ];
 
 // Store filtered data
 let filteredRequests = [...requestsData];
 let filteredStaff = [...staffData];
 let filteredHistory = [...historyData];
+let selectedStaffId = null;
+let currentRequestIndex = null;
 
 // ===== TAB NAVIGATION =====
 const tabBtns = document.querySelectorAll('.tabBtn');
@@ -36,11 +38,9 @@ tabBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     const tabName = btn.getAttribute('data-tab');
     
-    // Remove active class from all tabs
     tabBtns.forEach(b => b.classList.remove('active'));
     tabContents.forEach(content => content.classList.remove('active'));
 
-    // Add active class to clicked tab
     btn.classList.add('active');
     document.getElementById(`${tabName}-tab`).classList.add('active');
   });
@@ -55,7 +55,7 @@ function renderRequestsTable(data = filteredRequests) {
     return;
   }
   
-  tbody.innerHTML = data.map(req => `
+  tbody.innerHTML = data.map((req, index) => `
     <tr>
       <td>${req.floor}</td>
       <td>${req.room}</td>
@@ -64,25 +64,45 @@ function renderRequestsTable(data = filteredRequests) {
       <td>${req.requestTime}</td>
       <td>${req.priority}</td>
       <td><span class="statusBadge ${req.status}">${req.status === 'pending' ? 'Pending' : 'Urgent'}</span></td>
-      <td>${req.staff === 'Not Assigned' ? '<button class="assignBtn">Assign Staff</button>' : req.staff}</td>
+      <td>${req.staff === 'Not Assigned' ? '<button class="assignBtn" data-index="' + index + '">Assign Staff</button>' : req.staff}</td>
     </tr>
   `).join('');
+  
+  document.querySelectorAll('.assignBtn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      currentRequestIndex = parseInt(e.target.getAttribute('data-index'));
+      showStaffModal();
+    });
+  });
 }
 
-function renderStaffGrid(data = filteredStaff) {
-  const grid = document.getElementById('staffGrid');
+function renderStaffList(data = filteredStaff) {
+  const staffList = document.getElementById('staffList');
   
   if (data.length === 0) {
-    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">No staff members found</div>';
+    staffList.innerHTML = '<div style="text-align: center; padding: 20px; color: #dcc8b0;">No staff members found</div>';
     return;
   }
   
-  grid.innerHTML = data.map(staff => `
-    <div class="staffCard">
-      <div class="staffName">${staff.name}</div>
-      <button class="staffAssignBtn ${staff.assigned ? 'assigned' : ''}">${staff.assigned ? 'ASSIGNED' : 'ASSIGN'}</button>
+  staffList.innerHTML = data.map(staff => `
+    <div class="staffListItem ${staff.assigned ? 'assigned' : ''}" data-staff-id="${staff.id}">
+      <div class="staffListName">${staff.name}</div>
+      <span class="staffListStatus ${staff.assigned ? 'assigned' : 'available'}">${staff.assigned ? 'Assigned' : 'Available'}</span>
     </div>
   `).join('');
+  
+  document.querySelectorAll('.staffListItem').forEach(item => {
+    if (!item.classList.contains('assigned')) {
+      item.addEventListener('click', (e) => {
+        document.querySelectorAll('.staffListItem').forEach(i => i.classList.remove('selected'));
+        
+        item.classList.add('selected');
+        selectedStaffId = parseInt(item.getAttribute('data-staff-id'));
+        
+        document.getElementById('confirmStaffBtn').disabled = false;
+      });
+    }
+  });
 }
 
 function renderHistoryTable(data = filteredHistory) {
@@ -107,7 +127,6 @@ function renderHistoryTable(data = filteredHistory) {
     </tr>
   `).join('');
   
-  // Update record count
   document.getElementById('recordCount').textContent = data.length;
 }
 
@@ -133,14 +152,14 @@ function filterRequests() {
   renderRequestsTable(filteredRequests);
 }
 
-function filterStaff() {
-  const search = document.getElementById('staffSearchInput').value.toLowerCase();
+function filterStaffInModal() {
+  const search = document.getElementById('staffModalSearchInput').value.toLowerCase();
   
   filteredStaff = staffData.filter(staff => 
     staff.name.toLowerCase().includes(search)
   );
   
-  renderStaffGrid(filteredStaff);
+  renderStaffList(filteredStaff);
 }
 
 function filterHistory() {
@@ -162,57 +181,84 @@ function filterHistory() {
   renderHistoryTable(filteredHistory);
 }
 
-// ===== MODALS =====
+// ===== MODAL FUNCTIONS =====
+const staffModal = document.getElementById('staffModal');
 const assignModal = document.getElementById('assignModal');
 const successModal = document.getElementById('successModal');
-const closeAssignBtn = document.getElementById('closeAssignBtn');
-const cancelAssignBtn = document.getElementById('cancelAssignBtn');
-const confirmAssignBtn = document.getElementById('confirmAssignBtn');
-const closeSuccessBtn = document.getElementById('closeSuccessBtn');
-const okayBtn = document.getElementById('okayBtn');
 
-// Close buttons
-closeAssignBtn.addEventListener('click', () => {
+function showStaffModal() {
+  selectedStaffId = null;
+  document.getElementById('confirmStaffBtn').disabled = true;
+  document.getElementById('staffModalSearchInput').value = '';
+  filteredStaff = [...staffData];
+  renderStaffList(filteredStaff);
+  staffModal.style.display = 'flex';
+}
+
+function hideStaffModal() {
+  staffModal.style.display = 'none';
+}
+
+function showAssignModal() {
+  hideStaffModal();
+  assignModal.style.display = 'flex';
+}
+
+function hideAssignModal() {
   assignModal.style.display = 'none';
-});
+}
 
-closeSuccessBtn.addEventListener('click', () => {
-  successModal.style.display = 'none';
-});
-
-cancelAssignBtn.addEventListener('click', () => {
-  assignModal.style.display = 'none';
-});
-
-// Confirm assign - show success modal
-confirmAssignBtn.addEventListener('click', () => {
-  assignModal.style.display = 'none';
+function showSuccessModal() {
+  hideAssignModal();
   successModal.style.display = 'flex';
-});
+}
 
-// Close success modal
-okayBtn.addEventListener('click', () => {
+function hideSuccessModal() {
   successModal.style.display = 'none';
+}
+
+// ===== MODAL EVENT LISTENERS =====
+document.getElementById('closeStaffModalBtn').addEventListener('click', hideStaffModal);
+document.getElementById('cancelStaffBtn').addEventListener('click', hideStaffModal);
+document.getElementById('confirmStaffBtn').addEventListener('click', () => {
+  if (selectedStaffId !== null) {
+    showAssignModal();
+  }
 });
 
-// Close modal on backdrop click
+document.getElementById('staffModalSearchInput').addEventListener('input', filterStaffInModal);
+
+document.getElementById('closeAssignBtn').addEventListener('click', hideAssignModal);
+document.getElementById('cancelAssignBtn').addEventListener('click', hideAssignModal);
+document.getElementById('confirmAssignBtn').addEventListener('click', () => {
+  const selectedStaff = staffData.find(s => s.id === selectedStaffId);
+  if (selectedStaff && currentRequestIndex !== null) {
+    requestsData[currentRequestIndex].staff = selectedStaff.name;
+    selectedStaff.assigned = true;
+    filterRequests();
+  }
+  
+  showSuccessModal();
+});
+
+document.getElementById('closeSuccessBtn').addEventListener('click', hideSuccessModal);
+document.getElementById('okayBtn').addEventListener('click', hideSuccessModal);
+
+staffModal.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    hideStaffModal();
+  }
+});
+
 assignModal.addEventListener('click', (e) => {
   if (e.target === e.currentTarget) {
-    assignModal.style.display = 'none';
+    hideAssignModal();
   }
 });
 
 successModal.addEventListener('click', (e) => {
   if (e.target === e.currentTarget) {
-    successModal.style.display = 'none';
-  }
-});
-
-// Assign buttons trigger modal
-document.addEventListener('click', (e) => {
-  if (e.target.classList.contains('staffAssignBtn') || 
-      e.target.classList.contains('assignBtn')) {
-    assignModal.style.display = 'flex';
+    hideSuccessModal();
   }
 });
 
@@ -227,7 +273,6 @@ if (profileBtn) {
 
 // ===== SEARCH INPUTS =====
 document.getElementById('searchInput').addEventListener('input', filterRequests);
-document.getElementById('staffSearchInput').addEventListener('input', filterStaff);
 document.getElementById('historySearchInput').addEventListener('input', filterHistory);
 
 // ===== FILTER DROPDOWNS =====
@@ -238,32 +283,45 @@ document.getElementById('floorFilterHistory').addEventListener('change', filterH
 document.getElementById('roomFilterHistory').addEventListener('change', filterHistory);
 document.getElementById('dateFilterHistory').addEventListener('change', (e) => {
   console.log('Date filter:', e.target.value);
-  // You can implement date filtering here when backend is ready
 });
 
 // ===== REFRESH BUTTON =====
 document.getElementById('refreshBtn').addEventListener('click', () => {
-  console.log('Refresh clicked - would fetch new data from backend');
-  
-  // Reset filters
   document.getElementById('floorFilter').value = '';
   document.getElementById('roomFilter').value = '';
   document.getElementById('statusFilter').value = '';
   document.getElementById('searchInput').value = '';
   
-  // Re-render with original data
   filteredRequests = [...requestsData];
   renderRequestsTable(filteredRequests);
   
-  // Show feedback
   alert('Data refreshed!');
 });
 
-// ===== DOWNLOAD BUTTON =====
+// ===== DOWNLOAD BUTTON - REQUESTS PAGE =====
+const downloadBtnRequests = document.getElementById('downloadBtnRequests');
+if (downloadBtnRequests) {
+  downloadBtnRequests.addEventListener('click', () => {
+    const headers = ['Floor', 'Room', 'Issue Type', 'Date', 'Request Time', 'Priority', 'Status', 'Staff In Charge'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredRequests.map(req => 
+        [req.floor, req.room, req.issue, req.date, req.requestTime, req.priority, req.status === 'pending' ? 'Pending' : 'Urgent', req.staff].join(',')
+      )
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `maintenance-requests-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  });
+}
+
+// ===== DOWNLOAD BUTTON - HISTORY PAGE =====
 document.getElementById('downloadBtn').addEventListener('click', () => {
-  console.log('Download clicked - would generate report');
-  
-  // Create CSV content
   const headers = ['Floor', 'Room', 'Issue Type', 'Date', 'Requested Time', 'Completed Time', 'Staff In Charge', 'Status', 'Remarks'];
   const csvContent = [
     headers.join(','),
@@ -272,7 +330,6 @@ document.getElementById('downloadBtn').addEventListener('click', () => {
     )
   ].join('\n');
   
-  // Create download link
   const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -302,6 +359,7 @@ document.querySelectorAll('.paginationBtn').forEach(btn => {
 });
 
 // ===== INITIAL RENDER =====
-renderRequestsTable();
-renderStaffGrid();
-renderHistoryTable();
+filteredRequests = [...requestsData];
+filteredHistory = [...historyData];
+renderRequestsTable(filteredRequests);
+renderHistoryTable(filteredHistory);

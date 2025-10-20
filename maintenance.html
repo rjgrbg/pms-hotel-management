@@ -29,10 +29,6 @@
         <img src="assets/icons/requests-icon.png" alt="Requests" class="tabIcon" />
         Requests
       </button>
-      <button class="tabBtn" data-tab="staff">
-        <img src="assets/icons/staff-icon.png" alt="Staff" class="tabIcon" />
-        Staff Members
-      </button>
       <button class="tabBtn" data-tab="history">
         <img src="assets/icons/history-icon.png" alt="History" class="tabIcon" />
         History
@@ -71,6 +67,10 @@
           <button class="refreshBtn" id="refreshBtn">
             <img src="assets/icons/refresh-icon.png" alt="Refresh" />
           </button>
+
+          <button class="downloadBtn" id="downloadBtnRequests">
+            <img src="assets/icons/download-icon.png" alt="Download" />
+          </button>
         </div>
       </div>
 
@@ -90,29 +90,9 @@
             </tr>
           </thead>
           <tbody id="requestsTableBody">
-            <!-- Data will be populated here by backend -->
+            <!-- Data will be populated here -->
           </tbody>
         </table>
-      </div>
-    </div>
-
-    <!-- ===== STAFF MEMBERS TAB ===== -->
-    <div class="tabContent" id="staff-tab">
-      <div class="staffContainer">
-        <div class="staffHeader">
-          <h2>STAFF MEMBERS</h2>
-          <div class="searchBox">
-            <input type="text" placeholder="Search" class="searchInput" id="staffSearchInput" />
-            <button class="searchBtn">
-                <img src="assets/icons/search-icon.png" alt="Search" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Staff Members Grid -->
-        <div class="staffGrid" id="staffGrid">
-          <!-- Staff members will be populated here by backend -->
-        </div>
       </div>
     </div>
 
@@ -166,7 +146,7 @@
             </tr>
           </thead>
           <tbody id="historyTableBody">
-            <!-- Data will be populated here by backend -->
+            <!-- Data will be populated here -->
           </tbody>
         </table>
 
@@ -189,11 +169,38 @@
     </div>
   </div>
 
-  <!-- Assign Staff Modal -->
+  <!-- Staff Selection Modal -->
+  <div class="modalBackdrop" id="staffModal" style="display: none;">
+    <div class="staffSelectionModal">
+      <button class="closeBtn" id="closeStaffModalBtn">×</button>
+      <h2>SELECT STAFF MEMBER</h2>
+      <p class="modalSubtext">Choose a staff member to assign to this maintenance request</p>
+      
+      <!-- Search Box -->
+      <div class="searchBox modalSearchBox">
+        <input type="text" placeholder="Search staff..." class="searchInput" id="staffModalSearchInput" />
+        <button class="searchBtn">
+          <img src="assets/icons/search-icon.png" alt="Search" />
+        </button>
+      </div>
+
+      <!-- Staff List -->
+      <div class="staffList" id="staffList">
+        <!-- Staff members will be populated here -->
+      </div>
+
+      <div class="modalButtons">
+        <button class="modalBtn cancelBtn" id="cancelStaffBtn">CANCEL</button>
+        <button class="modalBtn confirmBtn" id="confirmStaffBtn" disabled>ASSIGN STAFF</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirmation Modal -->
   <div class="modalBackdrop" id="assignModal" style="display: none;">
     <div class="assignModal">
       <button class="closeBtn" id="closeAssignBtn">×</button>
-      <div class="modalIcon">⚠️</div>
+
       <h2>Are you sure you want to assign this staff?</h2>
       <p>Once confirmed, this request will be officially assigned to the selected staff member. A notification email will also be sent to their registered email address.</p>
       <p class="noteText">Please note that once the assignment is confirmed, it cannot be edited or changed.</p>
@@ -209,7 +216,7 @@
     <div class="successModal">
       <button class="closeBtn" id="closeSuccessBtn">×</button>
       <div class="successIcon">
-        <img src="assets/icons/successful-icon.png" alt="Success" class="icon-btn"/>
+        <img src="assets/icons/successful-icon.png" alt="Success" class="icon-btn" style="width: 50px ; height: 50px;"/>
       </div>
       <h2>Staff Assigned Successfully</h2>
       <div class="modalButtons">
