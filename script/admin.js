@@ -3,7 +3,11 @@
 let hkData = [...housekeepingRequests];
 let hkHistData = [...housekeepingHistory];
 let mtData = [...maintenanceHistory];
+let roomData = typeof roomsData !== 'undefined' ? [...roomsData] : [];
 let dashData = dashboardStats;
+
+// Debug: Check if data is loaded
+console.log('Rooms Data Loaded:', roomData);
 
 // ===== UPDATE DASHBOARD FUNCTIONS =====
 function updateDashboardStats(data) {
@@ -108,6 +112,39 @@ function renderMTTable(data = mtData) {
   `).join('');
   
   document.getElementById('mtRecordCount').textContent = data.length;
+}
+
+function renderRoomsTable(data = roomData) {
+  const tbody = document.getElementById('roomsTableBody');
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+    return;
+  }
+
+  
+  
+  tbody.innerHTML = data.map((row, index) => `
+    <tr>
+      <td>${row.floor}</td>
+      <td>${row.room}</td>
+      <td>${row.type}</td>
+      <td>${row.guests}</td>
+      <td>${row.rate}</td>
+      <td><span class="statusBadge ${row.status}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
+      <td>
+        <div class="actionButtons">
+                    <button class="actionBtn editBtn" onclick="editRoom(${index})">
+                      <img src="assets/icons/edit-icon.png" alt="Edit" />
+                    </button>
+                    <button class="actionBtn deleteBtn" onclick="deleteRoom(${index})">
+                      <img src="assets/icons/delete-icon.png" alt="Delete" />
+                    </button>
+                  </div>
+      </td>
+    </tr>
+  `).join('');
+  
+  document.getElementById('roomsRecordCount').textContent = data.length;
 }
 
 // ===== PAGE NAVIGATION =====
@@ -313,6 +350,68 @@ document.getElementById('mtDownloadBtn')?.addEventListener('click', () => {
   window.URL.revokeObjectURL(url);
 });
 
+// ===== ROOMS FILTERS =====
+document.getElementById('roomsSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = roomData.filter(row => 
+    row.type.toLowerCase().includes(search) ||
+    row.room.toString().includes(search) ||
+    row.status.toLowerCase().includes(search)
+  );
+  renderRoomsTable(filtered);
+});
+
+document.getElementById('roomsFloorFilter')?.addEventListener('change', (e) => {
+  const floor = e.target.value;
+  const filtered = floor ? roomData.filter(row => row.floor.toString() === floor) : roomData;
+  renderRoomsTable(filtered);
+});
+
+document.getElementById('roomsRoomFilter')?.addEventListener('change', (e) => {
+  const room = e.target.value;
+  const filtered = room ? roomData.filter(row => row.room.toString() === room) : roomData;
+  renderRoomsTable(filtered);
+});
+
+document.getElementById('roomsTypeFilter')?.addEventListener('change', (e) => {
+  const type = e.target.value;
+  const filtered = type ? roomData.filter(row => row.type === type) : roomData;
+  renderRoomsTable(filtered);
+});
+
+document.getElementById('roomsStatusFilter')?.addEventListener('change', (e) => {
+  const status = e.target.value;
+  const filtered = status ? roomData.filter(row => row.status === status) : roomData;
+  renderRoomsTable(filtered);
+});
+
+document.getElementById('roomsRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('roomsSearchInput').value = '';
+  document.getElementById('roomsFloorFilter').value = '';
+  document.getElementById('roomsRoomFilter').value = '';
+  document.getElementById('roomsTypeFilter').value = '';
+  document.getElementById('roomsStatusFilter').value = '';
+  roomData = [...roomsData];
+  renderRoomsTable(roomData);
+  alert('Rooms data refreshed!');
+});
+
+document.getElementById('roomsDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Floor', 'Room', 'Type', 'No. Guests', 'Rate', 'Status'];
+  const csvContent = [
+    headers.join(','),
+    ...roomData.map(row => [row.floor, row.room, row.type, row.guests, row.rate, row.status].join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rooms-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
 // ===== LOGOUT FUNCTIONALITY =====
 const logoutBtn = document.getElementById('logoutBtn');
 const logoutModal = document.getElementById('logoutModal');
@@ -359,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('HK Data:', hkData);
   console.log('HK History Data:', hkHistData);
   console.log('MT Data:', mtData);
+  console.log('Rooms Data:', roomData);
   
   const dashboardLink = document.querySelector('[data-page="dashboard"]');
   if (dashboardLink) {
@@ -373,4 +473,122 @@ document.addEventListener('DOMContentLoaded', () => {
   renderHKTable(hkData);
   renderHKHistTable(hkHistData);
   renderMTTable(mtData);
+  renderRoomsTable(roomData);
+});
+
+// ===== ROOM MANAGEMENT FUNCTIONS =====
+let editingRoomIndex = -1;
+
+// Add Room Button
+document.getElementById('addRoomBtn')?.addEventListener('click', () => {
+  editingRoomIndex = -1;
+  document.getElementById('roomModalTitle').textContent = 'Add New Room';
+  document.getElementById('roomForm').reset();
+  document.getElementById('roomModal').style.display = 'flex';
+});
+
+// Edit Room Function (called from table)
+window.editRoom = function(index) {
+  editingRoomIndex = index;
+  const room = roomData[index];
+  
+  document.getElementById('roomModalTitle').textContent = 'Edit Room';
+  document.getElementById('roomFloor').value = room.floor;
+  document.getElementById('roomNumber').value = room.room;
+  document.getElementById('roomType').value = room.type;
+  document.getElementById('roomGuests').value = room.guests;
+  document.getElementById('roomRate').value = room.rate;
+  document.getElementById('roomStatus').value = room.status;
+  
+  document.getElementById('roomModal').style.display = 'flex';
+};
+
+// Delete Room Function (called from table)
+window.deleteRoom = function(index) {
+  editingRoomIndex = index;
+  const room = roomData[index];
+  document.getElementById('deleteRoomText').textContent = 
+    `Are you sure you want to delete Room ${room.room} (${room.type})? This action cannot be undone.`;
+  document.getElementById('deleteRoomModal').style.display = 'flex';
+};
+
+// Save Room Form
+document.getElementById('roomForm')?.addEventListener('submit', (e) => {
+  e.preventDefault();
+  
+  const roomObj = {
+    floor: parseInt(document.getElementById('roomFloor').value),
+    room: parseInt(document.getElementById('roomNumber').value),
+    type: document.getElementById('roomType').value,
+    guests: document.getElementById('roomGuests').value,
+    rate: document.getElementById('roomRate').value,
+    status: document.getElementById('roomStatus').value
+  };
+  
+  if (editingRoomIndex >= 0) {
+    // Update existing room
+    roomData[editingRoomIndex] = roomObj;
+    alert('Room updated successfully!');
+  } else {
+    // Add new room
+    roomData.push(roomObj);
+    alert('Room added successfully!');
+  }
+  
+  // Update global data
+  if (window.appData) {
+    window.appData.rooms = roomData;
+  }
+  
+  renderRoomsTable(roomData);
+  document.getElementById('roomModal').style.display = 'none';
+  document.getElementById('roomForm').reset();
+});
+
+// Confirm Delete Room
+document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => {
+  if (editingRoomIndex >= 0) {
+    const deletedRoom = roomData[editingRoomIndex];
+    roomData.splice(editingRoomIndex, 1);
+    
+    // Update global data
+    if (window.appData) {
+      window.appData.rooms = roomData;
+    }
+    
+    alert(`Room ${deletedRoom.room} deleted successfully!`);
+    renderRoomsTable(roomData);
+  }
+  document.getElementById('deleteRoomModal').style.display = 'none';
+});
+
+// Close Room Modal
+document.getElementById('closeRoomModalBtn')?.addEventListener('click', () => {
+  document.getElementById('roomModal').style.display = 'none';
+});
+
+document.getElementById('cancelRoomBtn')?.addEventListener('click', () => {
+  document.getElementById('roomModal').style.display = 'none';
+});
+
+// Close Delete Modal
+document.getElementById('closeDeleteModalBtn')?.addEventListener('click', () => {
+  document.getElementById('deleteRoomModal').style.display = 'none';
+});
+
+document.getElementById('cancelDeleteBtn')?.addEventListener('click', () => {
+  document.getElementById('deleteRoomModal').style.display = 'none';
+});
+
+// Close modals on backdrop click
+document.getElementById('roomModal')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    document.getElementById('roomModal').style.display = 'none';
+  }
+});
+
+document.getElementById('deleteRoomModal')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    document.getElementById('deleteRoomModal').style.display = 'none';
+  }
 });

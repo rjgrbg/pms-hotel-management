@@ -333,7 +333,8 @@ body {
 }
 
 .refreshBtn,
-.downloadBtn {
+.downloadBtn,
+.addRoomBtn {
   background: none;
   border: 1px solid #ccc;
   padding: 10px 14px;
@@ -346,14 +347,16 @@ body {
 }
 
 .refreshBtn img,
-.downloadBtn img {
+.downloadBtn img,
+.addRoomBtn img {
   width: 16px;
   height: 16px;
   object-fit: contain;
 }
 
 .refreshBtn:hover,
-.downloadBtn:hover {
+.downloadBtn:hover,
+.addRoomBtn:hover {
   background-color: #f9f9f9;
   border-color: #ffb400;
 }
@@ -436,6 +439,219 @@ tbody tr:hover {
 
 .statusBadge.repaired {
   background-color: #5cb85c;
+}
+
+/* ===== ROOM STATUS BADGES ===== */
+.statusBadge.available {
+  background-color: #5cb85c;
+}
+
+.statusBadge.occupied {
+  background-color: #ff9500;
+}
+
+.statusBadge.reserved {
+  background-color: #007bff;
+}
+
+.statusBadge.maintenance {
+  background-color: #c9302c;
+}
+
+/* ===== ACTION BUTTONS ===== */
+.actionButtons {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.actionBtn {
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionBtn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.editBtn:hover {
+  background-color: #e3f2fd;
+}
+
+.deleteBtn:hover {
+  background-color: #ffebee;
+}
+
+.statusChangeBtn {
+  background-color: #ff9500;
+  padding: 4px 8px;
+  font-size: 10px;
+  color: #fff;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.statusChangeBtn:hover {
+  background-color: #e68600;
+}
+
+/* ===== STRONG ACTIONS COLUMN ALIGNMENT FIX ===== */
+/* Only target the Rooms table to avoid affecting other tables */
+#rooms-page .tableWrapper table th:last-child,
+#rooms-page .tableWrapper table td:last-child {
+  text-align: center;
+  vertical-align: middle;   /* center vertically */
+  white-space: nowrap;      /* prevent wrapping of buttons */
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* give Actions column a stable width so icon column doesn't jump */
+#rooms-page .tableWrapper table td:last-child {
+  width: 120px;             /* tweak if you want narrower/wider */
+}
+
+/* container for the action buttons */
+#rooms-page .actionButtons {
+  display: inline-flex;     /* shrink to content and center properly */
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 40px;             /* ensures vertical centering in taller rows */
+  box-sizing: border-box;
+  padding: 0;
+}
+
+/* actual clickable buttons */
+#rooms-page .actionBtn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color .15s ease, transform .08s ease;
+  padding: 0;
+}
+
+/* subtle hover / focus styles */
+#rooms-page .actionBtn:hover {
+  background-color: rgba(0,0,0,0.04);
+  transform: translateY(-1px);
+}
+#rooms-page .actionBtn:active {
+  transform: translateY(0);
+}
+#rooms-page .actionBtn:focus {
+  outline: 2px solid rgba(0,0,0,0.06);
+  outline-offset: 1px;
+}
+
+/* icon sizing: force block so there's no inline spacing issues */
+#rooms-page .actionBtn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  display: block;
+}
+
+/* make header aligned too */
+#rooms-page .tableWrapper table thead th:last-child {
+  text-align: center;
+}
+
+/* fallback for very small screens: shrink buttons */
+@media (max-width: 760px) {
+  #rooms-page .tableWrapper table td:last-child {
+    width: auto;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  #rooms-page .actionBtn {
+    width: 32px;
+    height: 32px;
+  }
+  #rooms-page .actionBtn img {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+
+/* ===== ROOM MODAL ===== */
+.roomModal {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 35px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideIn 0.3s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.roomModal h2 {
+  color: #480c1b;
+  font-size: 22px;
+  margin-bottom: 25px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.formGroup {
+  margin-bottom: 15px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.formGroup input,
+.formGroup select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Arial', sans-serif;
+  transition: border 0.2s;
+}
+
+.formGroup input:focus,
+.formGroup select:focus {
+  outline: none;
+  border-color: #d4af78;
+}
+
+.formGroup input[type="number"]::-webkit-inner-spin-button,
+.formGroup input[type="number"]::-webkit-outer-spin-button {
+  opacity: 1;
 }
 
 /* ===== PAGINATION ===== */
@@ -764,7 +980,8 @@ tbody tr:hover {
   .filterDropdown,
   .searchBox,
   .refreshBtn,
-  .downloadBtn {
+  .downloadBtn,
+  .addRoomBtn {
     width: 100%;
   }
 }

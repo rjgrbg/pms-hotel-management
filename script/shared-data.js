@@ -36,11 +36,31 @@ const maintenanceHistory = [
   { floor: 2, room: 201, issue: 'Door Lock Broken', date: '10/25/25', requestedTime: '6:30 PM', completedTime: '8:00 PM', staff: 'Juan Dela Cruz', status: 'repaired', remarks: 'Fixed lock' },
 ];
 
+// ===== ROOMS DATA (MOCK - for frontend display only) =====
+const roomsData = [
+  { floor: 1, room: 101, type: 'Standard Room', guests: '1-2 guests', rate: '$120', status: 'available' },
+  { floor: 1, room: 102, type: 'Deluxe Room', guests: '2-3 guests', rate: '$180', status: 'occupied' },
+  { floor: 1, room: 103, type: 'Suite', guests: '2-4 guests', rate: '$250', status: 'maintenance' },
+  { floor: 1, room: 104, type: 'Penthouse Suite', guests: '2-3 guests', rate: '$350', status: 'available' },
+  { floor: 2, room: 201, type: 'Standard Room', guests: '1-2 guests', rate: '$120', status: 'occupied' },
+  { floor: 2, room: 202, type: 'Deluxe Room', guests: '2-3 guests', rate: '$180', status: 'available' },
+  { floor: 2, room: 203, type: 'Suite', guests: '2-4 guests', rate: '$250', status: 'reserved' },
+  { floor: 2, room: 204, type: 'Standard Room', guests: '1-2 guests', rate: '$120', status: 'maintenance' },
+];
+
+// Room Types for dropdown
+const roomTypes = [
+  'Standard Room',
+  'Deluxe Room',
+  'Suite',
+  'Penthouse Suite'
+];
+
 // ===== DASHBOARD STATS DATA =====
 const dashboardStats = {
   housekeepingMaintenance: {
-    totalRooms: 40,
-    occupied: 15,
+    totalRooms: roomsData.length,
+    occupied: roomsData.filter(r => r.status === 'occupied').length,
     needsCleaning: housekeepingRequests.length,
     maintenanceRequests: maintenanceHistory.length
   },
@@ -60,6 +80,13 @@ const dashboardStats = {
     housekeeping: 10,
     maintenance: 8,
     parking: 5
+  },
+  rooms: {
+    total: roomsData.length,
+    available: roomsData.filter(r => r.status === 'available').length,
+    occupied: roomsData.filter(r => r.status === 'occupied').length,
+    maintenance: roomsData.filter(r => r.status === 'maintenance').length,
+    reserved: roomsData.filter(r => r.status === 'reserved').length
   }
 };
 
@@ -70,5 +97,9 @@ window.appData = {
   history: housekeepingHistory,
   staff: staffMembers,
   maintenance: maintenanceHistory,
-  stats: dashboardStats
+  stats: dashboardStats,
+  rooms: roomsData // Add rooms to global data
 };
+
+// Make roomsData globally accessible
+window.roomsData = roomsData;
