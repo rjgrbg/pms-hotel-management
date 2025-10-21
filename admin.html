@@ -411,13 +411,153 @@
       <!-- Parking Page -->
       <div class="page" id="parking-page">
         <h1 class="pageTitle">PARKING</h1>
-        <p class="pagePlaceholder">Parking management content will be displayed here.</p>
+
+        <!-- Controls Row -->
+        <div class="controlsRow">
+          <div class="filterControls">
+            <select class="filterDropdown" id="parkingLevelFilter">
+              <option value="">Level</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+            <select class="filterDropdown" id="parkingBlockFilter">
+              <option value="">Block</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+            </select>
+            <select class="filterDropdown" id="parkingStatusFilter">
+              <option value="">Status</option>
+              <option value="occupied">Occupied</option>
+              <option value="vacant">Vacant</option>
+              <option value="reserved">Reserved</option>
+            </select>
+            <div class="searchBox">
+              <input type="text" placeholder="Search" class="searchInput" id="parkingSearchInput" />
+              <button class="searchBtn">
+                <img src="assets/icons/search-icon.png" alt="Search" />
+              </button>
+            </div>
+            <button class="refreshBtn" id="parkingRefreshBtn">
+              <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+            </button>
+            <button class="downloadBtn" id="parkingDownloadBtn">
+              <img src="assets/icons/download-icon.png" alt="Download" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Parking Table -->
+        <div class="tableWrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Plate #</th>
+                <th>Room</th>
+                <th>Name</th>
+                <th>Vehicle Type</th>
+                <th>Entry Time</th>
+                <th>Exit Time</th>
+                <th>Slot Number</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="parkingTableBody">
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <span class="paginationInfo">Display Records <span id="parkingRecordCount">0</span></span>
+          <div class="paginationControls">
+            <button class="paginationBtn">←</button>
+            <button class="paginationBtn active">1</button>
+            <button class="paginationBtn">2</button>
+            <button class="paginationBtn">3</button>
+            <button class="paginationBtn">4</button>
+            <button class="paginationBtn">5</button>
+            <span class="paginationDots">...</span>
+            <button class="paginationBtn">10</button>
+            <button class="paginationBtn">→</button>
+          </div>
+        </div>
       </div>
 
       <!-- Inventory Page -->
       <div class="page" id="inventory-page">
         <h1 class="pageTitle">INVENTORY</h1>
-        <p class="pagePlaceholder">Inventory management content will be displayed here.</p>
+
+        <!-- Controls Row -->
+        <div class="controlsRow">
+          <div class="filterControls">
+            <select class="filterDropdown" id="inventoryCategoryFilter">
+              <option value="">Category</option>
+              <option value="Cleaning solution">Cleaning solution</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Bathroom Supplies">Bathroom Supplies</option>
+              <option value="Linens">Linens</option>
+              <option value="Cleaning Equipment">Cleaning Equipment</option>
+            </select>
+            <select class="filterDropdown" id="inventoryStatusFilter">
+              <option value="">Status</option>
+              <option value="in-stock">In Stock</option>
+              <option value="low-stock">Low Stock</option>
+              <option value="out-of-stock">Out of Stock</option>
+            </select>
+            <div class="searchBox">
+              <input type="text" placeholder="Search" class="searchInput" id="inventorySearchInput" />
+              <button class="searchBtn">
+                <img src="assets/icons/search-icon.png" alt="Search" />
+              </button>
+            </div>
+            <button class="refreshBtn" id="inventoryRefreshBtn">
+              <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+            </button>
+            <button class="downloadBtn" id="inventoryDownloadBtn">
+              <img src="assets/icons/download-icon.png" alt="Download" />
+            </button>
+          </div>
+        </div>
+
+        <!-- Inventory Table -->
+        <div class="tableWrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Quantity</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Damage</th>
+                <th>Stock In Date</th>
+                <th>Stock Out Date</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody">
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination">
+          <span class="paginationInfo">Display Records <span id="inventoryRecordCount">0</span></span>
+          <div class="paginationControls">
+            <button class="paginationBtn">←</button>
+            <button class="paginationBtn active">1</button>
+            <button class="paginationBtn">2</button>
+            <button class="paginationBtn">3</button>
+            <button class="paginationBtn">4</button>
+            <button class="paginationBtn">5</button>
+            <span class="paginationDots">...</span>
+            <button class="paginationBtn">10</button>
+            <button class="paginationBtn">→</button>
+          </div>
+        </div>
       </div>
 
       <!-- Rooms Page -->

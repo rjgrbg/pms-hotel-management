@@ -458,6 +458,24 @@ tbody tr:hover {
   background-color: #c9302c;
 }
 
+/* ===== INVENTORY STATUS BADGES ===== */
+.statusBadge.in-stock {
+  background-color: #5cb85c;
+}
+
+.statusBadge.low-stock {
+  background-color: #ff9500;
+}
+
+.statusBadge.out-of-stock {
+  background-color: #c9302c;
+}
+
+/* ===== PARKING STATUS BADGES ===== */
+.statusBadge.vacant {
+  background-color: #5cb85c;
+}
+
 /* ===== ACTION BUTTONS ===== */
 .actionButtons {
   display: flex;
@@ -509,29 +527,26 @@ tbody tr:hover {
 #rooms-page .tableWrapper table th:last-child,
 #rooms-page .tableWrapper table td:last-child {
   text-align: center;
-  vertical-align: middle;   /* center vertically */
-  white-space: nowrap;      /* prevent wrapping of buttons */
+  vertical-align: middle;
+  white-space: nowrap;
   padding-left: 12px;
   padding-right: 12px;
 }
 
-/* give Actions column a stable width so icon column doesn't jump */
 #rooms-page .tableWrapper table td:last-child {
-  width: 120px;             /* tweak if you want narrower/wider */
+  width: 120px;
 }
 
-/* container for the action buttons */
 #rooms-page .actionButtons {
-  display: inline-flex;     /* shrink to content and center properly */
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  height: 40px;             /* ensures vertical centering in taller rows */
+  height: 40px;
   box-sizing: border-box;
   padding: 0;
 }
 
-/* actual clickable buttons */
 #rooms-page .actionBtn {
   width: 36px;
   height: 36px;
@@ -546,20 +561,20 @@ tbody tr:hover {
   padding: 0;
 }
 
-/* subtle hover / focus styles */
 #rooms-page .actionBtn:hover {
   background-color: rgba(0,0,0,0.04);
   transform: translateY(-1px);
 }
+
 #rooms-page .actionBtn:active {
   transform: translateY(0);
 }
+
 #rooms-page .actionBtn:focus {
   outline: 2px solid rgba(0,0,0,0.06);
   outline-offset: 1px;
 }
 
-/* icon sizing: force block so there's no inline spacing issues */
 #rooms-page .actionBtn img {
   width: 18px;
   height: 18px;
@@ -567,12 +582,10 @@ tbody tr:hover {
   display: block;
 }
 
-/* make header aligned too */
 #rooms-page .tableWrapper table thead th:last-child {
   text-align: center;
 }
 
-/* fallback for very small screens: shrink buttons */
 @media (max-width: 760px) {
   #rooms-page .tableWrapper table td:last-child {
     width: auto;
@@ -588,7 +601,6 @@ tbody tr:hover {
     height: 16px;
   }
 }
-
 
 /* ===== ROOM MODAL ===== */
 .roomModal {

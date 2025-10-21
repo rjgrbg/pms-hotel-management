@@ -1,13 +1,13 @@
 // ===== USE SHARED DATA =====
-// Reference the shared data from shared-data.js
 let hkData = [...housekeepingRequests];
 let hkHistData = [...housekeepingHistory];
 let mtData = [...maintenanceHistory];
 let roomData = typeof roomsData !== 'undefined' ? [...roomsData] : [];
+let parkingDataList = typeof parkingData !== 'undefined' ? [...parkingData] : [];
+let inventoryDataList = typeof inventoryData !== 'undefined' ? [...inventoryData] : [];
 let dashData = dashboardStats;
 
-// Debug: Check if data is loaded
-console.log('Rooms Data Loaded:', roomData);
+console.log('Data Loaded:', { roomData, parkingDataList, inventoryDataList });
 
 // ===== UPDATE DASHBOARD FUNCTIONS =====
 function updateDashboardStats(data) {
@@ -120,8 +120,6 @@ function renderRoomsTable(data = roomData) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
     return;
   }
-
-  
   
   tbody.innerHTML = data.map((row, index) => `
     <tr>
@@ -133,18 +131,69 @@ function renderRoomsTable(data = roomData) {
       <td><span class="statusBadge ${row.status}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
       <td>
         <div class="actionButtons">
-                    <button class="actionBtn editBtn" onclick="editRoom(${index})">
-                      <img src="assets/icons/edit-icon.png" alt="Edit" />
-                    </button>
-                    <button class="actionBtn deleteBtn" onclick="deleteRoom(${index})">
-                      <img src="assets/icons/delete-icon.png" alt="Delete" />
-                    </button>
-                  </div>
+          <button class="actionBtn editBtn" onclick="editRoom(${index})">
+            <img src="assets/icons/edit-icon.png" alt="Edit" />
+          </button>
+          <button class="actionBtn deleteBtn" onclick="deleteRoom(${index})">
+            <img src="assets/icons/delete-icon.png" alt="Delete" />
+          </button>
+        </div>
       </td>
     </tr>
   `).join('');
   
   document.getElementById('roomsRecordCount').textContent = data.length;
+}
+
+function renderParkingTable(data = parkingDataList) {
+  const tbody = document.getElementById('parkingTableBody');
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = data.map(row => `
+    <tr>
+      <td>${row.plateNumber}</td>
+      <td>${row.room}</td>
+      <td>${row.guestName}</td>
+      <td>${row.vehicleType}</td>
+      <td>${row.entryTime}</td>
+      <td>${row.exitTime}</td>
+      <td>${row.slotNumber}</td>
+      <td><span class="statusBadge ${row.status}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
+    </tr>
+  `).join('');
+  
+  document.getElementById('parkingRecordCount').textContent = data.length;
+}
+
+function renderInventoryTable(data = inventoryDataList) {
+  const tbody = document.getElementById('inventoryTableBody');
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = data.map(row => {
+    const statusText = row.status === 'in-stock' ? 'In Stock' : 
+                       row.status === 'low-stock' ? 'Low Stock' : 'Out of Stock';
+    return `
+      <tr>
+        <td>${row.id}</td>
+        <td>${row.name}</td>
+        <td>${row.category}</td>
+        <td>${row.quantity !== undefined && row.quantity !== null ? row.quantity : '-'}</td>
+        <td>${row.description}</td>
+        <td><span class="statusBadge ${row.status}">${statusText}</span></td>
+        <td>${row.damage}</td>
+        <td>${row.stockInDate}</td>
+        <td>${row.stockOutDate}</td>
+      </tr>
+    `;
+  }).join('');
+  
+  document.getElementById('inventoryRecordCount').textContent = data.length;
 }
 
 // ===== PAGE NAVIGATION =====
@@ -169,23 +218,20 @@ navLinks.forEach(link => {
   });
 });
 
-// ===== HOUSEKEEPING TAB NAVIGATION (within housekeeping page) =====
+// ===== HOUSEKEEPING TAB NAVIGATION =====
 const hkTabBtns = document.querySelectorAll('[data-admin-tab]');
 
 hkTabBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     const tabName = btn.getAttribute('data-admin-tab');
     
-    // Remove active class from all HK tab buttons
     hkTabBtns.forEach(b => b.classList.remove('active'));
     
-    // Remove active class from all HK tab contents
     const hkReqTab = document.getElementById('hk-requests-tab');
     const hkHistTab = document.getElementById('hk-history-tab');
     if (hkReqTab) hkReqTab.classList.remove('active');
     if (hkHistTab) hkHistTab.classList.remove('active');
 
-    // Add active class to clicked button and corresponding tab
     btn.classList.add('active');
     const selectedTab = document.getElementById(`${tabName}-tab`);
     if (selectedTab) selectedTab.classList.add('active');
@@ -350,6 +396,114 @@ document.getElementById('mtDownloadBtn')?.addEventListener('click', () => {
   window.URL.revokeObjectURL(url);
 });
 
+// ===== PARKING FILTERS =====
+document.getElementById('parkingSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = parkingDataList.filter(row => 
+    row.plateNumber.toLowerCase().includes(search) ||
+    row.guestName.toLowerCase().includes(search) ||
+    row.vehicleType.toLowerCase().includes(search) ||
+    row.slotNumber.toLowerCase().includes(search)
+  );
+  renderParkingTable(filtered);
+});
+
+document.getElementById('parkingLevelFilter')?.addEventListener('change', (e) => {
+  const level = e.target.value;
+  const filtered = level ? parkingDataList.filter(row => row.level.toString() === level) : parkingDataList;
+  renderParkingTable(filtered);
+});
+
+document.getElementById('parkingBlockFilter')?.addEventListener('change', (e) => {
+  const block = e.target.value;
+  const filtered = block ? parkingDataList.filter(row => row.block === block) : parkingDataList;
+  renderParkingTable(filtered);
+});
+
+document.getElementById('parkingStatusFilter')?.addEventListener('change', (e) => {
+  const status = e.target.value;
+  const filtered = status ? parkingDataList.filter(row => row.status === status) : parkingDataList;
+  renderParkingTable(filtered);
+});
+
+document.getElementById('parkingRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('parkingSearchInput').value = '';
+  document.getElementById('parkingLevelFilter').value = '';
+  document.getElementById('parkingBlockFilter').value = '';
+  document.getElementById('parkingStatusFilter').value = '';
+  parkingDataList = [...parkingData];
+  renderParkingTable(parkingDataList);
+  alert('Parking data refreshed!');
+});
+
+document.getElementById('parkingDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Plate Number', 'Room', 'Guest Name', 'Vehicle Type', 'Entry Time', 'Exit Time', 'Slot Number', 'Status'];
+  const csvContent = [
+    headers.join(','),
+    ...parkingDataList.map(row => [row.plateNumber, row.room, row.guestName, row.vehicleType, row.entryTime, row.exitTime, row.slotNumber, row.status].join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `parking-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// ===== INVENTORY FILTERS =====
+document.getElementById('inventorySearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = inventoryDataList.filter(row => 
+    row.name.toLowerCase().includes(search) ||
+    row.category.toLowerCase().includes(search) ||
+    row.description.toLowerCase().includes(search)
+  );
+  renderInventoryTable(filtered);
+});
+
+document.getElementById('inventoryCategoryFilter')?.addEventListener('change', (e) => {
+  const category = e.target.value;
+  const filtered = category ? inventoryDataList.filter(row => row.category === category) : inventoryDataList;
+  renderInventoryTable(filtered);
+});
+
+document.getElementById('inventoryStatusFilter')?.addEventListener('change', (e) => {
+  const status = e.target.value;
+  const filtered = status ? inventoryDataList.filter(row => row.status === status) : inventoryDataList;
+  renderInventoryTable(filtered);
+});
+
+document.getElementById('inventoryRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('inventorySearchInput').value = '';
+  document.getElementById('inventoryCategoryFilter').value = '';
+  document.getElementById('inventoryStatusFilter').value = '';
+  inventoryDataList = [...inventoryData];
+  renderInventoryTable(inventoryDataList);
+  alert('Inventory data refreshed!');
+});
+
+document.getElementById('inventoryDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['ID', 'Name', 'Category', 'Quantity', 'Description', 'Status', 'Damage', 'Stock In Date', 'Stock Out Date'];
+  const csvContent = [
+    headers.join(','),
+    ...inventoryDataList.map(row => {
+      const statusText = row.status === 'in-stock' ? 'In Stock' : 
+                         row.status === 'low-stock' ? 'Low Stock' : 'Out of Stock';
+      return [row.id, row.name, row.category, row.quantity, row.description, statusText, row.damage, row.stockInDate, row.stockOutDate].join(',');
+    })
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `inventory-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
 // ===== ROOMS FILTERS =====
 document.getElementById('roomsSearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
@@ -451,30 +605,6 @@ if (logoutModal) {
     }
   });
 }
-
-// ===== INITIALIZATION =====
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('Admin page loaded - initializing with shared data');
-  console.log('HK Data:', hkData);
-  console.log('HK History Data:', hkHistData);
-  console.log('MT Data:', mtData);
-  console.log('Rooms Data:', roomData);
-  
-  const dashboardLink = document.querySelector('[data-page="dashboard"]');
-  if (dashboardLink) {
-    dashboardLink.classList.add('active');
-  }
-  const dashboardPage = document.getElementById('dashboard-page');
-  if (dashboardPage) {
-    dashboardPage.classList.add('active');
-  }
-
-  updateDashboardStats(dashData);
-  renderHKTable(hkData);
-  renderHKHistTable(hkHistData);
-  renderMTTable(mtData);
-  renderRoomsTable(roomData);
-});
 
 // ===== ROOM MANAGEMENT FUNCTIONS =====
 let editingRoomIndex = -1;
@@ -591,4 +721,32 @@ document.getElementById('deleteRoomModal')?.addEventListener('click', (e) => {
   if (e.target === e.currentTarget) {
     document.getElementById('deleteRoomModal').style.display = 'none';
   }
+});
+
+// ===== INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('Admin page loaded - initializing with shared data');
+  console.log('HK Data:', hkData);
+  console.log('HK History Data:', hkHistData);
+  console.log('MT Data:', mtData);
+  console.log('Rooms Data:', roomData);
+  console.log('Parking Data:', parkingDataList);
+  console.log('Inventory Data:', inventoryDataList);
+  
+  const dashboardLink = document.querySelector('[data-page="dashboard"]');
+  if (dashboardLink) {
+    dashboardLink.classList.add('active');
+  }
+  const dashboardPage = document.getElementById('dashboard-page');
+  if (dashboardPage) {
+    dashboardPage.classList.add('active');
+  }
+
+  updateDashboardStats(dashData);
+  renderHKTable(hkData);
+  renderHKHistTable(hkHistData);
+  renderMTTable(mtData);
+  renderRoomsTable(roomData);
+  renderParkingTable(parkingDataList);
+  renderInventoryTable(inventoryDataList);
 });

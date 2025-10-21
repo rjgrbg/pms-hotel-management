@@ -36,6 +36,41 @@ const maintenanceHistory = [
   { floor: 2, room: 201, issue: 'Door Lock Broken', date: '10/25/25', requestedTime: '6:30 PM', completedTime: '8:00 PM', staff: 'Juan Dela Cruz', status: 'repaired', remarks: 'Fixed lock' },
 ];
 
+// ===== PARKING DATA =====
+const parkingData = [
+  { plateNumber: 'AB123C', room: 101, guestName: 'Juan Dela Cruz', vehicleType: 'Sedan', level: 1, block: 'A', slotNumber: '1L-A6', entryTime: '2025-10-25 6:30 PM', exitTime: '2025-10-25 8:30 PM', status: 'occupied' },
+  { plateNumber: 'XY789Z', room: 102, guestName: 'Maria Santos', vehicleType: 'SUV', level: 1, block: 'A', slotNumber: '1L-A7', entryTime: '2025-10-25 7:00 PM', exitTime: '-', status: 'occupied' },
+  { plateNumber: 'CD456E', room: 201, guestName: 'Robert Chen', vehicleType: 'Van', level: 1, block: 'B', slotNumber: '1L-B3', entryTime: '2025-10-25 5:45 PM', exitTime: '-', status: 'occupied' },
+  { plateNumber: 'FG321H', room: 202, guestName: 'Sarah Johnson', vehicleType: 'Sedan', level: 2, block: 'A', slotNumber: '2L-A1', entryTime: '2025-10-25 8:15 PM', exitTime: '2025-10-25 9:00 PM', status: 'reserved' },
+  { plateNumber: 'IJ654K', room: 103, guestName: 'David Lee', vehicleType: 'Motorcycle', level: 2, block: 'B', slotNumber: '2L-B5', entryTime: '2025-10-25 6:00 PM', exitTime: '-', status: 'occupied' },
+  { plateNumber: 'LM987N', room: 104, guestName: 'Anna Martinez', vehicleType: 'Sedan', level: 1, block: 'A', slotNumber: '1L-A2', entryTime: '2025-10-25 7:30 PM', exitTime: '-', status: 'vacant' },
+];
+
+// Parking Levels and Blocks for filters
+const parkingLevels = ['1', '2', '3'];
+const parkingBlocks = ['A', 'B', 'C', 'D'];
+
+// ===== INVENTORY DATA =====
+const inventoryData = [
+  { id: 101, name: 'Liquid Detergent', category: 'Cleaning solution', quantity: 100, description: 'All-Purpose Cleaning Solution', status: 'in-stock', damage: 'No Damage', stockInDate: '10/10/25 14:30', stockOutDate: '-' },
+  { id: 102, name: 'Electrical Tape', category: 'Electrical', quantity: 1, description: 'Insulating tape for electrical wiring', status: 'low-stock', damage: 'No Damage', stockInDate: '09/10/25 14:30', stockOutDate: '-' },
+  { id: 103, name: 'Light Bulb', category: 'Electrical', quantity: 0, description: 'LED bulb 60W equivalent', status: 'out-of-stock', damage: 'Burnt Out', stockInDate: '09/10/25 14:30', stockOutDate: '10/10/25 14:30' },
+  { id: 104, name: 'Toilet Paper', category: 'Bathroom Supplies', quantity: 250, description: '2-ply soft toilet tissue', status: 'in-stock', damage: 'No Damage', stockInDate: '10/15/25 10:00', stockOutDate: '-' },
+  { id: 105, name: 'Hand Soap', category: 'Bathroom Supplies', quantity: 45, description: 'Antibacterial liquid soap', status: 'in-stock', damage: 'No Damage', stockInDate: '10/12/25 09:30', stockOutDate: '-' },
+  { id: 106, name: 'Towels (Bath)', category: 'Linens', quantity: 8, description: 'White cotton bath towels', status: 'low-stock', damage: 'Minor Stains', stockInDate: '09/20/25 11:00', stockOutDate: '-' },
+  { id: 107, name: 'Bed Sheets', category: 'Linens', quantity: 120, description: 'Queen size white cotton sheets', status: 'in-stock', damage: 'No Damage', stockInDate: '10/05/25 08:00', stockOutDate: '-' },
+  { id: 108, name: 'Vacuum Cleaner Bags', category: 'Cleaning Equipment', quantity: 0, description: 'Replacement bags for vacuum', status: 'out-of-stock', damage: 'No Damage', stockInDate: '08/15/25 13:00', stockOutDate: '10/01/25 16:00' },
+];
+
+// Inventory Categories for filters
+const inventoryCategories = [
+  'Cleaning solution',
+  'Electrical',
+  'Bathroom Supplies',
+  'Linens',
+  'Cleaning Equipment'
+];
+
 // ===== ROOMS DATA (MOCK - for frontend display only) =====
 const roomsData = [
   { floor: 1, room: 101, type: 'Standard Room', guests: '1-2 guests', rate: '$120', status: 'available' },
@@ -65,15 +100,15 @@ const dashboardStats = {
     maintenanceRequests: maintenanceHistory.length
   },
   inventory: {
-    totalItems: 40,
-    lowStock: 15,
-    outOfStock: 15
+    totalItems: inventoryData.length,
+    lowStock: inventoryData.filter(i => i.status === 'low-stock').length,
+    outOfStock: inventoryData.filter(i => i.status === 'out-of-stock').length
   },
   parking: {
     totalSlots: 40,
-    occupied: 15,
-    vacant: 15,
-    reserved: 15
+    occupied: parkingData.filter(p => p.status === 'occupied').length,
+    vacant: parkingData.filter(p => p.status === 'vacant').length,
+    reserved: parkingData.filter(p => p.status === 'reserved').length
   },
   users: {
     totalEmployees: staffMembers.length,
@@ -98,8 +133,12 @@ window.appData = {
   staff: staffMembers,
   maintenance: maintenanceHistory,
   stats: dashboardStats,
-  rooms: roomsData // Add rooms to global data
+  rooms: roomsData,
+  parking: parkingData,
+  inventory: inventoryData
 };
 
-// Make roomsData globally accessible
+// Make data globally accessible
 window.roomsData = roomsData;
+window.parkingData = parkingData;
+window.inventoryData = inventoryData;
