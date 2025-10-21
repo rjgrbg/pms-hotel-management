@@ -1,3 +1,39 @@
+<?php
+// Use secure session settings
+session_start([
+    'cookie_httponly' => true,
+    'cookie_secure' => isset($_SERVER['HTTPS']),
+    'use_strict_mode' => true
+]);
+
+// This is the new part
+if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
+    // User is already logged in. Redirect them to their correct page.
+    $user_type = $_SESSION['UserType'];
+    
+    // Use the same redirect map from your signin.php
+    $redirect_map = [
+        'admin'           => 'admin.php', // Use .php
+        'housekeeping_manager' => 'housekeeping.php', // Use .php
+        'housekeeping_staff'   => 'housekeeping_staff.php', // Use .php
+        'maintenance_manager'  => 'maintenance.php', // Use .php
+        'maintenance_staff'    => 'maintenance_staff.php', // Use .php
+        'parking_manager'      => 'parking.php', // Use .php
+        'default'              => 'index.php' // Fallback (shouldn't happen)
+    ];
+
+    $location = $redirect_map[$user_type] ?? $redirect_map['default'];
+    
+    // Perform the redirect
+    header("Location: $location");
+    exit();
+}
+// If the user is NOT logged in, the script does nothing 
+// and the rest of the HTML page is displayed normally.
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head></head>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,14 +41,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Celestia Hotel - Property Management</title>
   <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .formErrorMessage {
+      color: red; 
+      text-align: center; 
+      margin-bottom: 10px; 
+      font-weight: bold;
+      font-size: 14px;
+    }
+  </style>
 </head>
 <body>
   <main>
     <div class="frontPage">
-      <!-- Login button -->
       <button class="loginButton" id="loginBtn">LOGIN</button>
 
-      <!-- Logo -->
       <div class="logocontainer">
         <img src="assets/images/celestia-logo.png" alt="Logo" class="logo" />
         <h2 class="logoName">THE CELESTIA HOTEL</h2>
@@ -22,7 +65,6 @@
       </div>
     </div>
 
-    <!-- --- Property Management Section --- -->
     <section class="propertySection">
       <h2>Property Management</h2>
       <hr />
@@ -58,7 +100,6 @@
       </div>
     </section>
 
-    <!-- --- Footer Section --- -->
     <footer class="footer">
       <img src="assets/images/celestia-logo.png" alt="Celestia Hotel Logo" />
 
@@ -79,56 +120,55 @@
       </p>
     </footer>
 
-    <!-- Login Modal -->
     <div class="modalBackdrop" id="loginModal" style="display: none;">
-      <div class="loginModal">
+    <div class="loginModal">
         <button class="closeButton" id="closeLoginBtn">×</button>
         
         <div class="loginHeader">
-          <img src="assets/images/celestia-logo.png" alt="Logo" class="modalLogo" />
-          <h2>THE CELESTIA HOTEL</h2>
-          <p>Property Management System</p>
+            <img src="assets/images/celestia-logo.png" alt="Logo" class="modalLogo" />
+            <h2>THE CELESTIA HOTEL</h2>
+            <p>Property Management System</p>
         </div>
 
-        <div class="loginForm">
-          <div class="formGroup">
-            <label for="username">Username</label>
-            <input 
-              type="text" 
-              id="username" 
-              placeholder="Enter your username"
-            />
-          </div>
+        <form class="loginForm" id="loginForm"> 
+            
+            <div id="loginError" style="color: red; text-align: center; margin-bottom: 10px; display: none; font-weight: bold;"></div>
 
-          <div class="formGroup">
-            <label for="password">Password</label>
-            <input 
-              type="password" 
-              id="password" 
-              placeholder="Enter your password"
-            />
-          </div>
+            <div class="formGroup">
+                <label for="username">Username</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" placeholder="Enter your username"
+                    required
+                />
+            </div>
 
-          <div class="formOptions">
-            <label class="rememberMe">
-              <input type="checkbox" />
-              <span>Remember me</span>
-            </label>
-            <a href="#" class="forgotPassword" id="forgotPasswordLink">Forgot Password?</a>
-          </div>
+            <div class="formGroup">
+                <label for="password">Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" placeholder="Enter your password"
+                    required
+                />
+            </div>
 
-          <button type="button" class="submitButton" id="submitBtn">
-            Sign In
-          </button>
-        </div>
+           <div class="formOptions">
+    <label class="rememberMe">
+        <input type="checkbox" name="remember_me" />
+        <span>Remember me</span>
+    </label>
+    <a href="#" class="forgotPassword" id="forgotPasswordLink">Forgot Password?</a>
+</div>
 
-        <div class="loginFooter">
-          <p>Don't have an account? <a href="#">Contact Administrator</a></p>
-        </div>
-      </div>
+            <button type="submit" class="submitButton" id="submitBtn"> Sign In
+            </button>
+        </form>
+
     </div>
+</div>
 
-    <!-- Account Recovery Modal -->
     <div class="modalBackdrop" id="recoveryModal" style="display: none;">
       <div class="recoveryModal">
         <button class="closeButton" id="closeRecoveryBtn">×</button>
@@ -158,7 +198,6 @@
       </div>
     </div>
 
-    <!-- Recover Username - Email Modal -->
     <div class="modalBackdrop" id="recoverUsernameEmailModal" style="display: none;">
       <div class="emailVerificationPanel">
         <button class="closeButton" id="closeRecoverUsernameEmailBtn">×</button>
@@ -169,12 +208,15 @@
         </div>
 
         <div class="verificationForm">
+          <div id="recoverUsernameEmailMessage" class="formErrorMessage" style="display: none;"></div>
+          
           <div class="formGroup">
             <label for="recoverUsernameEmail">Email Address:</label>
             <input 
               type="email" 
               id="recoverUsernameEmail" 
               placeholder="Enter your email address"
+              required
             />
           </div>
 
@@ -191,7 +233,6 @@
       </div>
     </div>
 
-    <!-- Username OTP Verification Modal -->
     <div class="modalBackdrop" id="usernameOtpVerificationModal" style="display: none;">
       <div class="emailVerificationPanel">
         <button class="closeButton" id="closeUsernameOtpBtn">×</button>
@@ -202,13 +243,15 @@
         </div>
 
         <div class="verificationForm">
+          <div id="usernameOtpErrorMessage" class="formErrorMessage" style="display: none;"></div>
+          
           <div class="otpInputContainer" id="usernameOtpContainer">
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" />
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" />
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" />
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" />
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" />
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" />
+            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required />
+            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required/>
           </div>
 
           <p class="resendCode">
@@ -228,7 +271,6 @@
       </div>
     </div>
 
-    <!-- Username Display Modal -->
     <div class="modalBackdrop" id="usernameDisplayModal" style="display: none;">
       <div class="emailVerificationPanel successPanel">
         <button class="closeButton" id="closeUsernameDisplayBtn">×</button>
@@ -241,7 +283,7 @@
         <div class="usernameDisplay">
           <div class="usernameBox">
             <p class="usernameLabel">Your Username:</p>
-            <p class="usernameValue" id="displayedUsername">john_doe_123</p>
+            <h3 id="displayedUsername" style="text-align: center; margin: 10px 0;"></h3>
           </div>
         </div>
 
@@ -253,7 +295,6 @@
       </div>
     </div>
 
-    <!-- Reset Password - Email Modal -->
     <div class="modalBackdrop" id="resetPasswordEmailModal" style="display: none;">
       <div class="emailVerificationPanel">
         <button class="closeButton" id="closeResetEmailBtn">×</button>
@@ -264,12 +305,15 @@
         </div>
 
         <div class="verificationForm">
+          <div id="resetPasswordEmailMessage" class="formErrorMessage" style="display: none;"></div>
+          
           <div class="formGroup">
             <label for="resetEmail">Email Address:</label>
             <input 
               type="email" 
               id="resetEmail" 
               placeholder="Enter your email address"
+              required
             />
           </div>
 
@@ -286,7 +330,6 @@
       </div>
     </div>
 
-    <!-- OTP Verification Modal -->
     <div class="modalBackdrop" id="otpVerificationModal" style="display: none;">
       <div class="emailVerificationPanel">
         <button class="closeButton" id="closeOtpBtn">×</button>
@@ -297,13 +340,15 @@
         </div>
 
         <div class="verificationForm">
+          <div id="passwordOtpErrorMessage" class="formErrorMessage" style="display: none;"></div>
+          
           <div class="otpInputContainer">
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" />
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" />
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" />
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" />
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" />
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" />
+            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
           </div>
 
           <p class="resendCode">
@@ -323,7 +368,6 @@
       </div>
     </div>
 
-    <!-- Create New Password Modal -->
     <div class="modalBackdrop" id="createPasswordModal" style="display: none;">
       <div class="emailVerificationPanel">
         <button class="closeButton" id="closeCreatePasswordBtn">×</button>
@@ -333,6 +377,8 @@
         </div>
 
         <div class="verificationForm">
+          <div id="createPasswordErrorMessage" class="formErrorMessage" style="display: none;"></div>
+          
           <div class="formGroup">
             <label for="newPassword">New Password:</label>
             <div class="passwordInputWrapper">
@@ -388,7 +434,6 @@
       </div>
     </div>
 
-    <!-- Password Success Modal -->
     <div class="modalBackdrop" id="passwordSuccessModal" style="display: none;">
       <div class="emailVerificationPanel successPanel">
         <button class="closeButton" id="closeSuccessBtn">×</button>

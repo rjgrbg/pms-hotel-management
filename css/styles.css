@@ -389,6 +389,21 @@ html, body {
   background: rgba(255, 255, 255, 0.08);
   box-shadow: 0 0 0 3px rgba(163, 139, 109, 0.1);
 }
+.formGroup input:focus {
+  outline: none;
+  border-color: #c9b896;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(163, 139, 109, 0.1);
+}
+
+/* ADD THIS NEW RULE */
+.formError {
+  color: #ff8a8a; /* A red that's visible on the dark background */
+  font-size: 13px;
+  margin-top: 8px;
+  display: none; /* Hidden by default */
+  text-align: left;
+}
 
 .formOptions {
   display: flex;
