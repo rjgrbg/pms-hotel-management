@@ -70,967 +70,1030 @@ const backToLoginFromSuccessBtn = document.getElementById('backToLoginFromSucces
 
 document.addEventListener('DOMContentLoaded', () => { // Wrap all code in DOMContentLoaded
 
-    // ==================== LOGIN MODAL ====================
-    if (loginBtn) {
-        loginBtn.addEventListener('click', () => {
-            if (loginModal) loginModal.style.display = 'flex';
+    // ==================== LOGIN MODAL ====================
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            if (loginModal) loginModal.style.display = 'flex';
+        });
+    }
+
+    if (closeLoginBtn) {
+        closeLoginBtn.addEventListener('click', () => {
+            if (loginModal) loginModal.style.display = 'none';
+            clearLoginForm();
+        });
+    }
+
+    // Correct backdrop close logic
+    if (loginModal) {
+        loginModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                loginModal.style.display = 'none';
+                clearLoginForm();
+            }
+        });
+    }
+
+    // --- Toggle Password for Login Modal ---
+    const toggleLoginPassword = document.getElementById('toggleLoginPassword');
+    const loginPasswordInput = document.getElementById('password');
+
+    if (toggleLoginPassword && loginPasswordInput) {
+        toggleLoginPassword.addEventListener('click', () => {
+            togglePasswordVisibility(loginPasswordInput);
         });
     }
 
-    if (closeLoginBtn) {
-        closeLoginBtn.addEventListener('click', () => {
-            if (loginModal) loginModal.style.display = 'none';
-            clearLoginForm();
-        });
-    }
+    // ==================== RECOVERY OPTIONS MODAL ====================
+    if (forgotPasswordLink) {
+        forgotPasswordLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (loginModal) loginModal.style.display = 'none';
+            if (recoveryModal) recoveryModal.style.display = 'flex';
+        });
+    }
 
-    // Correct backdrop close logic
-    if (loginModal) {
-        loginModal.addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                loginModal.style.display = 'none';
-                clearLoginForm();
+    if (closeRecoveryBtn) {
+        closeRecoveryBtn.addEventListener('click', () => {
+            if (recoveryModal) recoveryModal.style.display = 'none';
+        });
+    }
+
+    if (backToLoginBtn) {
+        backToLoginBtn.addEventListener('click', () => {
+            if (recoveryModal) recoveryModal.style.display = 'none';
+            if (loginModal) loginModal.style.display = 'flex';
+        });
+    }
+
+    if (recoveryModal) {
+        recoveryModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                recoveryModal.style.display = 'none';
+            }
+        });
+    }
+
+    // ==================== RECOVER USERNAME FLOW ====================
+    if (recoverUsernameBtn) {
+        recoverUsernameBtn.addEventListener('click', () => {
+            if (recoveryModal) recoveryModal.style.display = 'none';
+            if (recoverUsernameEmailModal) recoverUsernameEmailModal.style.display = 'flex';
+        });
+    }
+
+    if (closeRecoverUsernameEmailBtn) {
+        closeRecoverUsernameEmailBtn.addEventListener('click', () => {
+            if (recoverUsernameEmailModal) recoverUsernameEmailModal.style.display = 'none';
+        });
+    }
+
+    if (backToRecoveryFromUsernameEmailBtn) {
+        backToRecoveryFromUsernameEmailBtn.addEventListener('click', () => {
+            if (recoverUsernameEmailModal) recoverUsernameEmailModal.style.display = 'none';
+            if (recoveryModal) recoveryModal.style.display = 'flex';
+        });
+    }
+
+    if (recoverUsernameEmailModal) {
+        recoverUsernameEmailModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                recoverUsernameEmailModal.style.display = 'none';
+            }
+        });
+    }
+
+
+    // ==================== USERNAME OTP VERIFICATION MODAL ====================
+    if (closeUsernameOtpBtn) {
+        closeUsernameOtpBtn.addEventListener('click', () => {
+            if (usernameOtpVerificationModal) usernameOtpVerificationModal.style.display = 'none';
+        });
+    }
+
+    if (backToUsernameEmailBtn) {
+        backToUsernameEmailBtn.addEventListener('click', () => {
+            if (usernameOtpVerificationModal) usernameOtpVerificationModal.style.display = 'none';
+            if (recoverUsernameEmailModal) recoverUsernameEmailModal.style.display = 'flex';
+            clearUsernameOtpInputs();
+        });
+    }
+
+    if (usernameOtpVerificationModal) {
+        usernameOtpVerificationModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                usernameOtpVerificationModal.style.display = 'none';
+            }
+        });
+    }
+
+    // Username OTP Input Navigation
+usernameOtpInputs.forEach((input, index) => {
+    input.addEventListener('input', (e) => {
+        // Allow only numbers
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        
+        if (e.target.value.length === 1) {
+            if (index < usernameOtpInputs.length - 1) {
+                usernameOtpInputs[index + 1].focus();
             }
-        });
-    }
-
-    // ==================== RECOVERY OPTIONS MODAL ====================
-    if (forgotPasswordLink) {
-        forgotPasswordLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (loginModal) loginModal.style.display = 'none';
-            if (recoveryModal) recoveryModal.style.display = 'flex';
-        });
-    }
-
-    if (closeRecoveryBtn) {
-        closeRecoveryBtn.addEventListener('click', () => {
-            if (recoveryModal) recoveryModal.style.display = 'none';
-        });
-    }
-
-    if (backToLoginBtn) {
-        backToLoginBtn.addEventListener('click', () => {
-            if (recoveryModal) recoveryModal.style.display = 'none';
-            if (loginModal) loginModal.style.display = 'flex';
-        });
-    }
-
-    if (recoveryModal) {
-        recoveryModal.addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                recoveryModal.style.display = 'none';
-            }
-        });
-    }
-
-    // ==================== RECOVER USERNAME FLOW ====================
-    if (recoverUsernameBtn) {
-        recoverUsernameBtn.addEventListener('click', () => {
-            if (recoveryModal) recoveryModal.style.display = 'none';
-            if (recoverUsernameEmailModal) recoverUsernameEmailModal.style.display = 'flex';
-        });
-    }
-
-    if (closeRecoverUsernameEmailBtn) {
-        closeRecoverUsernameEmailBtn.addEventListener('click', () => {
-            if (recoverUsernameEmailModal) recoverUsernameEmailModal.style.display = 'none';
-        });
-    }
-
-    if (backToRecoveryFromUsernameEmailBtn) {
-        backToRecoveryFromUsernameEmailBtn.addEventListener('click', () => {
-            if (recoverUsernameEmailModal) recoverUsernameEmailModal.style.display = 'none';
-            if (recoveryModal) recoveryModal.style.display = 'flex';
-        });
-    }
-
-    if (recoverUsernameEmailModal) {
-        recoverUsernameEmailModal.addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                recoverUsernameEmailModal.style.display = 'none';
-            }
-        });
-    }
-
-
-    // ==================== USERNAME OTP VERIFICATION MODAL ====================
-    if (closeUsernameOtpBtn) {
-        closeUsernameOtpBtn.addEventListener('click', () => {
-            if (usernameOtpVerificationModal) usernameOtpVerificationModal.style.display = 'none';
-        });
-    }
-
-    if (backToUsernameEmailBtn) {
-        backToUsernameEmailBtn.addEventListener('click', () => {
-            if (usernameOtpVerificationModal) usernameOtpVerificationModal.style.display = 'none';
-            if (recoverUsernameEmailModal) recoverUsernameEmailModal.style.display = 'flex';
-            clearUsernameOtpInputs();
-        });
-    }
-
-    if (usernameOtpVerificationModal) {
-        usernameOtpVerificationModal.addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                usernameOtpVerificationModal.style.display = 'none';
-            }
-        });
-    }
-
-    // Username OTP Input Navigation
-    usernameOtpInputs.forEach((input, index) => {
-        input.addEventListener('input', (e) => {
-            if (e.target.value.length === 1) {
-                if (index < usernameOtpInputs.length - 1) {
-                    usernameOtpInputs[index + 1].focus();
-                }
-            }
-        });
-
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                usernameOtpInputs[index - 1].focus();
-            }
-        });
+        }
     });
 
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                usernameOtpInputs[index - 1].focus();
+            }
+        });
+    });
 
-    // Resend Username OTP Link
-    if (resendUsernameOtpLink) {
-        resendUsernameOtpLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            const emailInput = document.getElementById('recoverUsernameEmail');
-            const email = emailInput ? emailInput.value.trim() : '';
-            
-            const messageDiv = document.getElementById('usernameOtpErrorMessage'); 
 
-            if (!email || !isValidEmail(email)) {
-                if (messageDiv) {
-                     messageDiv.textContent = 'Email address missing. Go back and enter it again.';
-                     messageDiv.style.color = 'red';
-                     messageDiv.style.display = 'block';
-                } else {
-                    alert('Email address missing. Go back and enter it again.');
-                }
-                return;
+    // Resend Username OTP Link
+    if (resendUsernameOtpLink) {
+        resendUsernameOtpLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            const emailInput = document.getElementById('recoverUsernameEmail');
+            const email = emailInput ? emailInput.value.trim() : '';
+            
+            const messageDiv = document.getElementById('usernameOtpErrorMessage'); 
+
+            if (!email || !isValidEmail(email)) {
+                if (messageDiv) {
+                     messageDiv.textContent = 'Email address missing. Go back and enter it again.';
+                     messageDiv.style.color = 'red';
+                     messageDiv.style.display = 'block';
+                } else {
+                    alert('Email address missing. Go back and enter it again.');
+                }
+                return;
+            }
+            
+             if (messageDiv) {
+                  messageDiv.textContent = 'Resending OTP...';
+                  messageDiv.style.color = 'green';
+                  messageDiv.style.display = 'block';
+             } else {
+                alert('Resending OTP...'); // Fallback
+             }
+
+
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('type', 'username');
+
+            fetch('send_otp.php', { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                         if (messageDiv) {
+                              messageDiv.textContent = data.message;
+                              messageDiv.style.color = 'green';
+                              messageDiv.style.display = 'block';
+                              setTimeout(() => { if(messageDiv) messageDiv.style.display = 'none'; }, 2000); // Hide after 2s
+                         } else {
+                              alert(data.message); // Fallback
+                         }
+                        clearUsernameOtpInputs();
+                        if (usernameOtpInputs.length > 0) usernameOtpInputs[0].focus();
+                    } else {
+                         if (messageDiv) {
+                              messageDiv.textContent = data.message;
+                              messageDiv.style.color = 'red';
+                              messageDiv.style.display = 'block';
+                         } else {
+                              alert('Error resending OTP: ' + data.message); // Fallback
+                         }
+                    }
+                })
+                .catch(error => {
+                    console.error('Resend Username OTP Error:', error);
+                    if (messageDiv) {
+                         messageDiv.textContent = 'Network error. Please try again.';
+                         messageDiv.style.color = 'red';
+                         messageDiv.style.display = 'block';
+                    } else {
+                         alert('A network error occurred while resending. Please try again.'); // Fallback
+                    }
+                });
+        });
+    }
+
+    // ==================== USERNAME DISPLAY MODAL ====================
+    if (closeUsernameDisplayBtn) {
+        closeUsernameDisplayBtn.addEventListener('click', () => {
+            if (usernameDisplayModal) usernameDisplayModal.style.display = 'none';
+        });
+    }
+
+    if (backToLoginFromUsernameBtn) {
+        backToLoginFromUsernameBtn.addEventListener('click', () => {
+            if (usernameDisplayModal) usernameDisplayModal.style.display = 'none';
+            if (loginModal) loginModal.style.display = 'flex';
+            const emailInput = document.getElementById('recoverUsernameEmail');
+             if(emailInput) emailInput.value = '';
+        });
+    }
+
+    if (usernameDisplayModal) {
+        usernameDisplayModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                usernameDisplayModal.style.display = 'none';
+            }
+        });
+    }
+
+    // ==================== RECOVER PASSWORD FLOW ====================
+    if (recoverPasswordBtn) {
+        recoverPasswordBtn.addEventListener('click', () => {
+            if (recoveryModal) recoveryModal.style.display = 'none';
+            if (resetPasswordEmailModal) resetPasswordEmailModal.style.display = 'flex';
+        });
+    }
+
+    if (closeResetEmailBtn) {
+        closeResetEmailBtn.addEventListener('click', () => {
+            if (resetPasswordEmailModal) resetPasswordEmailModal.style.display = 'none';
+        });
+    }
+
+    if (backToRecoveryFromEmailBtn) {
+        backToRecoveryFromEmailBtn.addEventListener('click', () => {
+            if (resetPasswordEmailModal) resetPasswordEmailModal.style.display = 'none';
+            if (recoveryModal) recoveryModal.style.display = 'flex';
+        });
+    }
+
+    if (resetPasswordEmailModal) {
+        resetPasswordEmailModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                resetPasswordEmailModal.style.display = 'none';
+            }
+        });
+    }
+
+
+    // ==================== OTP VERIFICATION MODAL (Password Reset) ====================
+    if (closeOtpBtn) {
+        closeOtpBtn.addEventListener('click', () => {
+            if (otpVerificationModal) otpVerificationModal.style.display = 'none';
+        });
+    }
+
+    if (backToEmailBtn) {
+        backToEmailBtn.addEventListener('click', () => {
+            if (otpVerificationModal) otpVerificationModal.style.display = 'none';
+            if (resetPasswordEmailModal) resetPasswordEmailModal.style.display = 'flex';
+            clearOtpInputs();
+        });
+    }
+
+    if (otpVerificationModal) {
+        otpVerificationModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                otpVerificationModal.style.display = 'none';
+            }
+        });
+    }
+
+    // OTP Input Navigation (Password Reset)
+otpInputs.forEach((input, index) => {
+    input.addEventListener('input', (e) => {
+        // Allow only numbers
+        e.target.value = e.target.value.replace(/[^0-9]/g, '');
+        
+        if (e.target.value.length === 1) {
+            if (index < otpInputs.length - 1) {
+                otpInputs[index + 1].focus();
             }
-            
-             if (messageDiv) {
-                  messageDiv.textContent = 'Resending OTP...';
-                  messageDiv.style.color = 'green';
-                  messageDiv.style.display = 'block';
-             } else {
-                alert('Resending OTP...'); // Fallback
-             }
-
-
-            const formData = new FormData();
-            formData.append('email', email);
-            formData.append('type', 'username');
-
-            fetch('send_otp.php', { method: 'POST', body: formData })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                         if (messageDiv) {
-                              messageDiv.textContent = data.message;
-                              messageDiv.style.color = 'green';
-                              messageDiv.style.display = 'block';
-                              setTimeout(() => { if(messageDiv) messageDiv.style.display = 'none'; }, 2000); // Hide after 2s
-                         } else {
-                              alert(data.message); // Fallback
-                         }
-                        clearUsernameOtpInputs();
-                        if (usernameOtpInputs.length > 0) usernameOtpInputs[0].focus();
-                    } else {
-                         if (messageDiv) {
-                              messageDiv.textContent = data.message;
-                              messageDiv.style.color = 'red';
-                              messageDiv.style.display = 'block';
-                         } else {
-                              alert('Error resending OTP: ' + data.message); // Fallback
-                         }
-                    }
-                })
-                .catch(error => {
-                    console.error('Resend Username OTP Error:', error);
-                    if (messageDiv) {
-                         messageDiv.textContent = 'Network error. Please try again.';
-                         messageDiv.style.color = 'red';
-                         messageDiv.style.display = 'block';
-                    } else {
-                         alert('A network error occurred while resending. Please try again.'); // Fallback
-                    }
-                });
-        });
-    }
-
-    // ==================== USERNAME DISPLAY MODAL ====================
-    if (closeUsernameDisplayBtn) {
-        closeUsernameDisplayBtn.addEventListener('click', () => {
-            if (usernameDisplayModal) usernameDisplayModal.style.display = 'none';
-        });
-    }
-
-    if (backToLoginFromUsernameBtn) {
-        backToLoginFromUsernameBtn.addEventListener('click', () => {
-            if (usernameDisplayModal) usernameDisplayModal.style.display = 'none';
-            if (loginModal) loginModal.style.display = 'flex';
-            const emailInput = document.getElementById('recoverUsernameEmail');
-             if(emailInput) emailInput.value = '';
-        });
-    }
-
-    if (usernameDisplayModal) {
-        usernameDisplayModal.addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                usernameDisplayModal.style.display = 'none';
-            }
-        });
-    }
-
-    // ==================== RECOVER PASSWORD FLOW ====================
-    if (recoverPasswordBtn) {
-        recoverPasswordBtn.addEventListener('click', () => {
-            if (recoveryModal) recoveryModal.style.display = 'none';
-            if (resetPasswordEmailModal) resetPasswordEmailModal.style.display = 'flex';
-        });
-    }
-
-    if (closeResetEmailBtn) {
-        closeResetEmailBtn.addEventListener('click', () => {
-            if (resetPasswordEmailModal) resetPasswordEmailModal.style.display = 'none';
-        });
-    }
-
-    if (backToRecoveryFromEmailBtn) {
-        backToRecoveryFromEmailBtn.addEventListener('click', () => {
-            if (resetPasswordEmailModal) resetPasswordEmailModal.style.display = 'none';
-            if (recoveryModal) recoveryModal.style.display = 'flex';
-        });
-    }
-
-    if (resetPasswordEmailModal) {
-        resetPasswordEmailModal.addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                resetPasswordEmailModal.style.display = 'none';
-            }
-        });
-    }
-
-
-    // ==================== OTP VERIFICATION MODAL (Password Reset) ====================
-    if (closeOtpBtn) {
-        closeOtpBtn.addEventListener('click', () => {
-            if (otpVerificationModal) otpVerificationModal.style.display = 'none';
-        });
-    }
-
-    if (backToEmailBtn) {
-        backToEmailBtn.addEventListener('click', () => {
-            if (otpVerificationModal) otpVerificationModal.style.display = 'none';
-            if (resetPasswordEmailModal) resetPasswordEmailModal.style.display = 'flex';
-            clearOtpInputs();
-        });
-    }
-
-    if (otpVerificationModal) {
-        otpVerificationModal.addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                otpVerificationModal.style.display = 'none';
-            }
-        });
-    }
-
-    // OTP Input Navigation (Password Reset)
-    otpInputs.forEach((input, index) => {
-        input.addEventListener('input', (e) => {
-            if (e.target.value.length === 1) {
-                if (index < otpInputs.length - 1) {
-                    otpInputs[index + 1].focus();
-                }
-            }
-        });
-
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !e.target.value && index > 0) {
-                otpInputs[index - 1].focus();
-            }
-        });
+        }
     });
 
-
-    // Resend Password Reset OTP Link
-     if (resendOtpLink) {
-        resendOtpLink.addEventListener('click', (e) => {
-            e.preventDefault();
-             const emailInput = document.getElementById('resetEmail');
-             const email = emailInput ? emailInput.value.trim() : '';
-             
-             const messageDiv = document.getElementById('passwordOtpErrorMessage'); 
-
-             if (!email || !isValidEmail(email)) {
-                 if (messageDiv) {
-                      messageDiv.textContent = 'Email address missing. Go back and enter it again.';
-                      messageDiv.style.color = 'red';
-                      messageDiv.style.display = 'block';
-                 } else {
-                    alert('Email address missing. Go back and enter it again.');
-                 }
-                 return;
-             }
-              
-             if (messageDiv) {
-                  messageDiv.textContent = 'Resending OTP...';
-                  messageDiv.style.color = 'green';
-                  messageDiv.style.display = 'block';
-             } else {
-                alert('Resending OTP...'); // Fallback
-             }
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && index > 0) {
+                otpInputs[index - 1].focus();
+            }
+        });
+    });
 
 
-             const formData = new FormData();
-             formData.append('email', email);
-             formData.append('type', 'password');
+    // Resend Password Reset OTP Link
+     if (resendOtpLink) {
+        resendOtpLink.addEventListener('click', (e) => {
+            e.preventDefault();
+             const emailInput = document.getElementById('resetEmail');
+             const email = emailInput ? emailInput.value.trim() : '';
+             
+             const messageDiv = document.getElementById('passwordOtpErrorMessage'); 
 
-             fetch('send_otp.php', { method: 'POST', body: formData })
-                 .then(response => response.json())
-                 .then(data => {
-                     if (data.success) {
-                          if (messageDiv) {
-                              messageDiv.textContent = data.message;
-                              messageDiv.style.color = 'green';
-                              messageDiv.style.display = 'block';
-                              setTimeout(() => { if(messageDiv) messageDiv.style.display = 'none'; }, 2000);
-                         } else {
-                              alert(data.message);
-                         }
-                         clearOtpInputs();
-                         if (otpInputs.length > 0) otpInputs[0].focus();
-                     } else {
-                          if (messageDiv) {
-                              messageDiv.textContent = data.message;
-                              messageDiv.style.color = 'red';
-                              messageDiv.style.display = 'block';
-                         } else {
-                              alert('Error resending OTP: ' + data.message);
-                         }
-                     }
-                 })
-                 .catch(error => {
-                     console.error('Resend Password OTP Error:', error);
-                     if (messageDiv) {
-                          messageDiv.textContent = 'Network error. Please try again.';
-                          messageDiv.style.color = 'red';
-                          messageDiv.style.display = 'block';
-                     } else {
-                          alert('A network error occurred while resending. Please try again.'); // Fallback
-                     }
-                 });
-        });
-    }
+             if (!email || !isValidEmail(email)) {
+                 if (messageDiv) {
+                      messageDiv.textContent = 'Email address missing. Go back and enter it again.';
+                      messageDiv.style.color = 'red';
+                      messageDiv.style.display = 'block';
+                 } else {
+                    alert('Email address missing. Go back and enter it again.');
+                 }
+                 return;
+             }
+              
+             if (messageDiv) {
+                  messageDiv.textContent = 'Resending OTP...';
+                  messageDiv.style.color = 'green';
+                  messageDiv.style.display = 'block';
+             } else {
+                alert('Resending OTP...'); // Fallback
+             }
 
-    // ==================== CREATE PASSWORD MODAL ====================
-    if (closeCreatePasswordBtn) {
-        closeCreatePasswordBtn.addEventListener('click', () => {
-            if (createPasswordModal) createPasswordModal.style.display = 'none';
-        });
-    }
 
-    if (backToOtpBtn) {
-        backToOtpBtn.addEventListener('click', () => {
-            if (createPasswordModal) createPasswordModal.style.display = 'none';
-            if (otpVerificationModal) otpVerificationModal.style.display = 'flex';
-        });
-    }
+             const formData = new FormData();
+             formData.append('email', email);
+             formData.append('type', 'password');
 
-    if (createPasswordModal) {
-        createPasswordModal.addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                createPasswordModal.style.display = 'none';
-            }
-        });
-    }
+             fetch('send_otp.php', { method: 'POST', body: formData })
+                 .then(response => response.json())
+                 .then(data => {
+                     if (data.success) {
+                          if (messageDiv) {
+                              messageDiv.textContent = data.message;
+                              messageDiv.style.color = 'green';
+                              messageDiv.style.display = 'block';
+                              setTimeout(() => { if(messageDiv) messageDiv.style.display = 'none'; }, 2000);
+                         } else {
+                              alert(data.message);
+                         }
+                         clearOtpInputs();
+                         if (otpInputs.length > 0) otpInputs[0].focus();
+                     } else {
+                          if (messageDiv) {
+                              messageDiv.textContent = data.message;
+                              messageDiv.style.color = 'red';
+                              messageDiv.style.display = 'block';
+                         } else {
+                              alert('Error resending OTP: ' + data.message);
+                         }
+                     }
+                 })
+                 .catch(error => {
+                     console.error('Resend Password OTP Error:', error);
+                     if (messageDiv) {
+                          messageDiv.textContent = 'Network error. Please try again.';
+                          messageDiv.style.color = 'red';
+                          messageDiv.style.display = 'block';
+                     } else {
+                          alert('A network error occurred while resending. Please try again.'); // Fallback
+                     }
+                 });
+        });
+    }
 
-    // Toggle Password Visibility
-    if (togglePassword1 && newPasswordInput) {
+    // ==================== CREATE PASSWORD MODAL ====================
+    if (closeCreatePasswordBtn) {
+        closeCreatePasswordBtn.addEventListener('click', () => {
+            if (createPasswordModal) createPasswordModal.style.display = 'none';
+        });
+    }
+
+    if (backToOtpBtn) {
+        backToOtpBtn.addEventListener('click', () => {
+            if (createPasswordModal) createPasswordModal.style.display = 'none';
+            if (otpVerificationModal) otpVerificationModal.style.display = 'flex';
+        });
+    }
+
+    if (createPasswordModal) {
+        createPasswordModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                createPasswordModal.style.display = 'none';
+            }
+        });
+    }
+
+    // Toggle Password Visibility
+    if (togglePassword1 && newPasswordInput) {
         togglePassword1.addEventListener('click', () => {
-            togglePasswordVisibility(newPasswordInput);
+            togglePasswordVisibility(newPasswordInput); // Calls the function for the first input
         });
     }
 
     if (togglePassword2 && confirmPasswordInput) {
         togglePassword2.addEventListener('click', () => {
-            togglePasswordVisibility(confirmPasswordInput);
+            togglePasswordVisibility(confirmPasswordInput); // Calls the function for the second input
         });
     }
 
-    // Password validation listeners
-    if (newPasswordInput) newPasswordInput.addEventListener('input', validatePassword);
-    if (confirmPasswordInput) confirmPasswordInput.addEventListener('input', validatePassword);
+    // Password validation listeners
+    if (newPasswordInput) newPasswordInput.addEventListener('input', validatePassword);
+    if (confirmPasswordInput) confirmPasswordInput.addEventListener('input', validatePassword);
 
 
-    // ==================== PASSWORD SUCCESS MODAL ====================
-    if (closeSuccessBtn) {
-        closeSuccessBtn.addEventListener('click', () => {
-            if (passwordSuccessModal) passwordSuccessModal.style.display = 'none';
-        });
-    }
+    // ==================== PASSWORD SUCCESS MODAL ====================
+    if (closeSuccessBtn) {
+        closeSuccessBtn.addEventListener('click', () => {
+            if (passwordSuccessModal) passwordSuccessModal.style.display = 'none';
+        });
+    }
 
-    if (backToLoginFromSuccessBtn) {
-        backToLoginFromSuccessBtn.addEventListener('click', () => {
-            if (passwordSuccessModal) passwordSuccessModal.style.display = 'none';
-            if (loginModal) loginModal.style.display = 'flex';
-            clearAllForms();
-        });
-    }
+    if (backToLoginFromSuccessBtn) {
+        backToLoginFromSuccessBtn.addEventListener('click', () => {
+            if (passwordSuccessModal) passwordSuccessModal.style.display = 'none';
+            if (loginModal) loginModal.style.display = 'flex';
+            clearAllForms();
+        });
+    }
 
-    if (passwordSuccessModal) {
-        passwordSuccessModal.addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) {
-                passwordSuccessModal.style.display = 'none';
-            }
-        });
-    }
+    if (passwordSuccessModal) {
+        passwordSuccessModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                passwordSuccessModal.style.display = 'none';
+            }
+        });
+    }
 
-    // ==================== LOGIN FORM SUBMISSION (Correct Version) ====================
-    if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (loginError) {
-                loginError.style.display = 'none';
-                loginError.textContent = '';
-            }
-            const formData = new FormData(loginForm);
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.textContent = 'Signing In...';
-            }
+    // ==================== LOGIN FORM SUBMISSION (Correct Version) ====================
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (loginError) {
+                loginError.style.display = 'none';
+                loginError.textContent = '';
+            }
+            const formData = new FormData(loginForm);
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Signing In...';
+            }
 
-            fetch('signin.php', { method: 'POST', body: formData })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        window.location.href = data.redirect;
-                    } else {
-                        if (loginError) {
-                            loginError.textContent = data.message;
-                            loginError.style.display = 'block';
-                        }
-                        const passwordInput = document.getElementById('password');
-                        if (passwordInput) {
-                            passwordInput.value = '';
-                            passwordInput.focus();
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Network or Fetch Error:', error);
-                    if (loginError) {
-                        loginError.textContent = 'Network error: Could not connect to the server.';
-                        loginError.style.display = 'block';
-                    }
-                })
-                .finally(() => {
-                    if (submitBtn) {
-                        submitBtn.disabled = false;
-                        submitBtn.textContent = 'Sign In';
-                    }
-                });
-        });
-    }
-    // =======================================================================
-
-
-    // ==================== CARDS CLICK ====================
-    allCards.forEach(card => {
-        card.addEventListener('click', () => {
-            if (loginModal) loginModal.style.display = 'flex';
-        });
-    });
+            fetch('signin.php', { method: 'POST', body: formData })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.href = data.redirect;
+                    } else {
+                        if (loginError) {
+                            loginError.textContent = data.message;
+                            loginError.style.display = 'block';
+                        }
+                        const passwordInput = document.getElementById('password');
+                        if (passwordInput) {
+                            passwordInput.value = '';
+                            passwordInput.focus();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Network or Fetch Error:', error);
+                    if (loginError) {
+                        loginError.textContent = 'Network error: Could not connect to the server.';
+                        loginError.style.display = 'block';
+                    }
+                })
+                .finally(() => {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.textContent = 'Sign In';
+                    }
+                });
+        });
+    }
+    // =======================================================================
 
 
-    // ===== RECOVERY PROCESS EVENT LISTENERS (UPDATED - Using message divs) =====
-
-    // --- Send Username OTP ---
-    if (sendUsernameOtpBtn) {
-        sendUsernameOtpBtn.addEventListener('click', () => {
-            const emailInput = document.getElementById('recoverUsernameEmail');
-            const email = emailInput ? emailInput.value.trim() : '';
-            
-            const messageDiv = document.getElementById('recoverUsernameEmailMessage');
-            if(messageDiv) { 
-                messageDiv.textContent = '';
-                messageDiv.style.display = 'none';
-            }
-
-            if (!email || !isValidEmail(email)) {
-                if (messageDiv) {
-                    messageDiv.textContent = 'Please enter a valid email address.';
-                    messageDiv.style.display = 'block';
-                }
-                return;
-            }
-
-            sendUsernameOtpBtn.disabled = true;
-            sendUsernameOtpBtn.textContent = 'SENDING...';
-
-            const formData = new FormData();
-            formData.append('email', email);
-            formData.append('type', 'username');
-
-            fetch('send_otp.php', { method: 'POST', body: formData })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    if(messageDiv) {
-                        messageDiv.textContent = data.message;
-                        messageDiv.style.color = 'green';
-                        messageDiv.style.display = 'block';
-                    }
-                    setTimeout(() => {
-                        if(messageDiv) messageDiv.style.display = 'none';
-                        if(recoverUsernameEmailModal) recoverUsernameEmailModal.style.display = 'none';
-                        if(usernameOtpVerificationModal) usernameOtpVerificationModal.style.display = 'flex';
-                        if (usernameOtpInputs.length > 0) usernameOtpInputs[0].focus();
-                    }, 2000);
-                } else {
-                    if (messageDiv) {
-                         messageDiv.textContent = data.message;
-                         messageDiv.style.color = 'red';
-                         messageDiv.style.display = 'block';
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Send Username OTP Error:', error);
-                 if (messageDiv) {
-                      messageDiv.textContent = 'Network error. Please try again.';
-                      messageDiv.style.color = 'red';
-                      messageDiv.style.display = 'block';
-                 }
-            })
-            .finally(() => {
-                sendUsernameOtpBtn.disabled = false;
-                sendUsernameOtpBtn.textContent = 'SEND OTP';
-            });
-        });
-    }
-
-    // --- Verify Username OTP ---
-    if (verifyUsernameOtpBtn) {
-        verifyUsernameOtpBtn.addEventListener('click', () => {
-            const messageDiv = document.getElementById('usernameOtpErrorMessage');
-            if (messageDiv) { 
-                messageDiv.textContent = '';
-                messageDiv.style.display = 'none';
-            }
-            
-            const otp = Array.from(usernameOtpInputs).map(input => input.value).join('');
-
-            if (otp.length !== 6) {
-                if (messageDiv) {
-                    messageDiv.textContent = 'Please enter the complete 6-digit OTP.';
-                    messageDiv.style.display = 'block';
-                }
-                return;
-            }
-
-            verifyUsernameOtpBtn.disabled = true;
-            verifyUsernameOtpBtn.textContent = 'VERIFYING...';
-
-            const formData = new FormData();
-            formData.append('otp', otp);
-
-            fetch('verify_otp.php', { method: 'POST', body: formData })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.username) {
-                    const displayedUsername = document.getElementById('displayedUsername');
-                    if (displayedUsername) displayedUsername.textContent = data.username;
-                    if(usernameOtpVerificationModal) usernameOtpVerificationModal.style.display = 'none';
-                    if(usernameDisplayModal) usernameDisplayModal.style.display = 'flex';
-                    clearUsernameOtpInputs();
-                } else {
-                    if (messageDiv) {
-                        messageDiv.textContent = data.message;
-                        messageDiv.style.display = 'block';
-                    }
-                    clearUsernameOtpInputs();
-                    if (usernameOtpInputs.length > 0) usernameOtpInputs[0].focus();
-                }
-            })
-            .catch(error => {
-                console.error('Verify Username OTP Error:', error);
-                if (messageDiv) {
-                    messageDiv.textContent = 'A network error occurred. Please try again.';
-                    messageDiv.style.display = 'block';
-                }
-            })
-            .finally(() => {
-                verifyUsernameOtpBtn.disabled = false;
-                verifyUsernameOtpBtn.textContent = 'VERIFY CODE';
-            });
-        });
-    }
+    // ==================== CARDS CLICK ====================
+    allCards.forEach(card => {
+        card.addEventListener('click', () => {
+            if (loginModal) loginModal.style.display = 'flex';
+        });
+    });
 
 
-    // --- Send Password Reset OTP ---
-    if (sendOtpBtn) {
-        sendOtpBtn.addEventListener('click', () => {
-            const emailInput = document.getElementById('resetEmail');
-            const email = emailInput ? emailInput.value.trim() : '';
+    // ===== RECOVERY PROCESS EVENT LISTENERS (UPDATED - Using message divs) =====
 
-            const messageDiv = document.getElementById('resetPasswordEmailMessage');
-            if(messageDiv) { 
-                messageDiv.textContent = '';
-                messageDiv.style.display = 'none';
-            }
+    // --- Send Username OTP ---
+    if (sendUsernameOtpBtn) {
+        sendUsernameOtpBtn.addEventListener('click', () => {
+            const emailInput = document.getElementById('recoverUsernameEmail');
+            const email = emailInput ? emailInput.value.trim() : '';
+            
+            const messageDiv = document.getElementById('recoverUsernameEmailMessage');
+            if(messageDiv) { 
+                messageDiv.textContent = '';
+                messageDiv.style.display = 'none';
+            }
 
-            if (!email || !isValidEmail(email)) {
-                if (messageDiv) {
-                    messageDiv.textContent = 'Please enter a valid email address.';
-                    messageDiv.style.display = 'block';
-                }
-                return;
-            }
+            if (!email || !isValidEmail(email)) {
+                if (messageDiv) {
+                    messageDiv.textContent = 'Please enter a valid email address.';
+                    messageDiv.style.display = 'block';
+                }
+                return;
+            }
 
-            sendOtpBtn.disabled = true;
-            sendOtpBtn.textContent = 'SENDING...';
+            sendUsernameOtpBtn.disabled = true;
+            sendUsernameOtpBtn.textContent = 'SENDING...';
 
-            const formData = new FormData();
-            formData.append('email', email);
-            formData.append('type', 'password');
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('type', 'username');
 
-            fetch('send_otp.php', { method: 'POST', body: formData })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    if(messageDiv) {
-                        messageDiv.textContent = data.message;
-                        messageDiv.style.color = 'green';
-                        messageDiv.style.display = 'block';
-                    }
-                    setTimeout(() => {
-                        if(messageDiv) messageDiv.style.display = 'none';
-                        if(resetPasswordEmailModal) resetPasswordEmailModal.style.display = 'none';
-                        if(otpVerificationModal) otpVerificationModal.style.display = 'flex';
-                        if (otpInputs.length > 0) otpInputs[0].focus();
-                    }, 2000);
-                } else {
-                     if (messageDiv) {
-                          messageDiv.textContent = data.message;
-                          messageDiv.style.color = 'red';
-                          messageDiv.style.display = 'block';
-                     }
-                }
-            })
-             .catch(error => {
-                 console.error('Send Password OTP Error:', error);
-                  if (messageDiv) {
-                       messageDiv.textContent = 'Network error. Please try again.';
-                       messageDiv.style.color = 'red';
-                       messageDiv.style.display = 'block';
-                  }
-             })
-            .finally(() => {
-                sendOtpBtn.disabled = false;
-                sendOtpBtn.textContent = 'SEND OTP';
-            });
-        });
-    }
+            fetch('send_otp.php', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if(messageDiv) {
+                        messageDiv.textContent = data.message;
+                        messageDiv.style.color = 'green';
+                        messageDiv.style.display = 'block';
+                    }
+                    setTimeout(() => {
+                        if(messageDiv) messageDiv.style.display = 'none';
+                        if(recoverUsernameEmailModal) recoverUsernameEmailModal.style.display = 'none';
+                        if(usernameOtpVerificationModal) usernameOtpVerificationModal.style.display = 'flex';
+                        if (usernameOtpInputs.length > 0) usernameOtpInputs[0].focus();
+                    }, 2000);
+                } else {
+                    if (messageDiv) {
+                         messageDiv.textContent = data.message;
+                         messageDiv.style.color = 'red';
+                         messageDiv.style.display = 'block';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Send Username OTP Error:', error);
+                 if (messageDiv) {
+                      messageDiv.textContent = 'Network error. Please try again.';
+                      messageDiv.style.color = 'red';
+                      messageDiv.style.display = 'block';
+                 }
+            })
+            .finally(() => {
+                sendUsernameOtpBtn.disabled = false;
+                sendUsernameOtpBtn.textContent = 'SEND OTP';
+            });
+        });
+    }
+
+    // --- Verify Username OTP ---
+    if (verifyUsernameOtpBtn) {
+        verifyUsernameOtpBtn.addEventListener('click', () => {
+            const messageDiv = document.getElementById('usernameOtpErrorMessage');
+            if (messageDiv) { 
+                messageDiv.textContent = '';
+                messageDiv.style.display = 'none';
+            }
+            
+            const otp = Array.from(usernameOtpInputs).map(input => input.value).join('');
+
+            if (otp.length !== 6) {
+                if (messageDiv) {
+                    messageDiv.textContent = 'Please enter the complete 6-digit OTP.';
+                    messageDiv.style.display = 'block';
+                }
+                return;
+            }
+
+            verifyUsernameOtpBtn.disabled = true;
+            verifyUsernameOtpBtn.textContent = 'VERIFYING...';
+
+            const formData = new FormData();
+            formData.append('otp', otp);
+
+            fetch('verify_otp.php', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.username) {
+                    const displayedUsername = document.getElementById('displayedUsername');
+                    if (displayedUsername) displayedUsername.textContent = data.username;
+                    if(usernameOtpVerificationModal) usernameOtpVerificationModal.style.display = 'none';
+                    if(usernameDisplayModal) usernameDisplayModal.style.display = 'flex';
+                    clearUsernameOtpInputs();
+                } else {
+                    if (messageDiv) {
+                        messageDiv.textContent = data.message;
+                        messageDiv.style.display = 'block';
+                    }
+                    clearUsernameOtpInputs();
+                    if (usernameOtpInputs.length > 0) usernameOtpInputs[0].focus();
+                }
+            })
+            .catch(error => {
+                console.error('Verify Username OTP Error:', error);
+                if (messageDiv) {
+                    messageDiv.textContent = 'A network error occurred. Please try again.';
+                    messageDiv.style.display = 'block';
+                }
+            })
+            .finally(() => {
+                verifyUsernameOtpBtn.disabled = false;
+                verifyUsernameOtpBtn.textContent = 'VERIFY CODE';
+            });
+        });
+    }
 
 
-    // --- Verify Password Reset OTP ---
-    if (verifyOtpBtn) {
-        verifyOtpBtn.addEventListener('click', () => {
-            const messageDiv = document.getElementById('passwordOtpErrorMessage');
-            if (messageDiv) { 
-                messageDiv.textContent = '';
-                messageDiv.style.display = 'none';
-            }
-            
-            const otp = Array.from(otpInputs).map(input => input.value).join('');
+    // --- Send Password Reset OTP ---
+    if (sendOtpBtn) {
+        sendOtpBtn.addEventListener('click', () => {
+            const emailInput = document.getElementById('resetEmail');
+            const email = emailInput ? emailInput.value.trim() : '';
 
-            if (otp.length !== 6) {
-                 if (messageDiv) {
-                    messageDiv.textContent = 'Please enter the complete 6-digit OTP.';
-                    messageDiv.style.display = 'block';
-                }
-                return;
-            }
+            const messageDiv = document.getElementById('resetPasswordEmailMessage');
+            if(messageDiv) { 
+                messageDiv.textContent = '';
+                messageDiv.style.display = 'none';
+            }
 
-            verifyOtpBtn.disabled = true;
-            verifyOtpBtn.textContent = 'VERIFYING...';
+            if (!email || !isValidEmail(email)) {
+                if (messageDiv) {
+                    messageDiv.textContent = 'Please enter a valid email address.';
+                    messageDiv.style.display = 'block';
+                }
+                return;
+            }
 
-            const formData = new FormData();
-            formData.append('otp', otp);
+            sendOtpBtn.disabled = true;
+            sendOtpBtn.textContent = 'SENDING...';
 
-            fetch('verify_otp.php', { method: 'POST', body: formData })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    if(otpVerificationModal) otpVerificationModal.style.display = 'none';
-                    if(createPasswordModal) createPasswordModal.style.display = 'flex';
-                    clearOtpInputs();
-                } else {
-                    if (messageDiv) {
-                        messageDiv.textContent = data.message;
-                        messageDiv.style.display = 'block';
-                    }
-                    clearOtpInputs();
-                    if (otpInputs.length > 0) otpInputs[0].focus();
-                }
-            })
-            .catch(error => {
-                console.error('Verify Password OTP Error:', error);
-                if (messageDiv) {
-                    messageDiv.textContent = 'A network error occurred. Please try again.';
-                    messageDiv.style.display = 'block';
-                }
-            })
-            .finally(() => {
-                verifyOtpBtn.disabled = false;
-                verifyOtpBtn.textContent = 'VERIFY CODE';
-            });
-        });
-    }
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('type', 'password');
 
-    // --- Change Password ---
-    if (changePasswordBtn) {
-        changePasswordBtn.addEventListener('click', () => {
-            const messageDiv = document.getElementById('createPasswordErrorMessage');
-            if (messageDiv) { 
-                // Don't clear the message here, in case validatePassword() set it
-            }
+            fetch('send_otp.php', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if(messageDiv) {
+                        messageDiv.textContent = data.message;
+                        messageDiv.style.color = 'green';
+                        messageDiv.style.display = 'block';
+                    }
+                    setTimeout(() => {
+                        if(messageDiv) messageDiv.style.display = 'none';
+                        if(resetPasswordEmailModal) resetPasswordEmailModal.style.display = 'none';
+                        if(otpVerificationModal) otpVerificationModal.style.display = 'flex';
+                        if (otpInputs.length > 0) otpInputs[0].focus();
+                    }, 2000);
+                } else {
+                     if (messageDiv) {
+                          messageDiv.textContent = data.message;
+                          messageDiv.style.color = 'red';
+                          messageDiv.style.display = 'block';
+                     }
+                }
+            })
+             .catch(error => {
+                 console.error('Send Password OTP Error:', error);
+                  if (messageDiv) {
+                       messageDiv.textContent = 'Network error. Please try again.';
+                       messageDiv.style.color = 'red';
+                       messageDiv.style.display = 'block';
+                  }
+             })
+            .finally(() => {
+                sendOtpBtn.disabled = false;
+                sendOtpBtn.textContent = 'SEND OTP';
+            });
+        });
+    }
 
-            const newPassword = newPasswordInput ? newPasswordInput.value : '';
-            const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
 
-            // Check strength first
-            if (!validatePasswordStrength(newPassword)) {
-                 if (messageDiv) {
-                    messageDiv.textContent = 'Password does not meet all requirements.';
-                    messageDiv.style.display = 'block';
-                }
-                return;
-            }
-            
-            // Check match second (this is the final safeguard)
-            if (newPassword !== confirmPassword) {
-                if (messageDiv) {
-                    messageDiv.textContent = 'Passwords do not match.';
-                    messageDiv.style.display = 'block';
-                }
-                return;
-            }
+    // --- Verify Password Reset OTP ---
+    if (verifyOtpBtn) {
+        verifyOtpBtn.addEventListener('click', () => {
+            const messageDiv = document.getElementById('passwordOtpErrorMessage');
+            if (messageDiv) { 
+                messageDiv.textContent = '';
+                messageDiv.style.display = 'none';
+            }
+            
+            const otp = Array.from(otpInputs).map(input => input.value).join('');
 
-            changePasswordBtn.disabled = true;
-            changePasswordBtn.textContent = 'CHANGING...';
+            if (otp.length !== 6) {
+                 if (messageDiv) {
+                    messageDiv.textContent = 'Please enter the complete 6-digit OTP.';
+                    messageDiv.style.display = 'block';
+                }
+                return;
+            }
 
-            const formData = new FormData();
-            formData.append('newPassword', newPassword);
-            formData.append('confirmPassword', confirmPassword);
+            verifyOtpBtn.disabled = true;
+            verifyOtpBtn.textContent = 'VERIFYING...';
 
-            fetch('reset_password.php', { method: 'POST', body: formData })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    if(createPasswordModal) createPasswordModal.style.display = 'none';
-                    if(passwordSuccessModal) passwordSuccessModal.style.display = 'flex';
-                     if(newPasswordInput) newPasswordInput.value = '';
-                     if(confirmPasswordInput) confirmPasswordInput.value = '';
-                     validatePassword();
-                } else {
-                    if (messageDiv) {
-                        messageDiv.textContent = data.message;
-                        messageDiv.style.display = 'block';
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Change Password Error:', error);
-                if (messageDiv) {
-                    messageDiv.textContent = 'A network error occurred. Please try again.';
-                    messageDiv.style.display = 'block';
-                }
-            })
-            .finally(() => {
-                changePasswordBtn.textContent = 'CHANGE PASSWORD';
-                 validatePassword();
-            });
-        });
-    }
+            const formData = new FormData();
+            formData.append('otp', otp);
+
+            fetch('verify_otp.php', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if(otpVerificationModal) otpVerificationModal.style.display = 'none';
+                    if(createPasswordModal) createPasswordModal.style.display = 'flex';
+                    clearOtpInputs();
+                } else {
+                    if (messageDiv) {
+                        messageDiv.textContent = data.message;
+                        messageDiv.style.display = 'block';
+                    }
+                    clearOtpInputs();
+                    if (otpInputs.length > 0) otpInputs[0].focus();
+                }
+            })
+            .catch(error => {
+                console.error('Verify Password OTP Error:', error);
+                if (messageDiv) {
+                    messageDiv.textContent = 'A network error occurred. Please try again.';
+                    messageDiv.style.display = 'block';
+                }
+            })
+            .finally(() => {
+                verifyOtpBtn.disabled = false;
+                verifyOtpBtn.textContent = 'VERIFY CODE';
+            });
+        });
+    }
+
+    // --- Change Password ---
+    if (changePasswordBtn) {
+        changePasswordBtn.addEventListener('click', () => {
+            const messageDiv = document.getElementById('createPasswordErrorMessage');
+            if (messageDiv) { 
+                // Don't clear the message here, in case validatePassword() set it
+            }
+
+            const newPassword = newPasswordInput ? newPasswordInput.value : '';
+            const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
+
+            // Check strength first
+            if (!validatePasswordStrength(newPassword)) {
+                 if (messageDiv) {
+                    messageDiv.textContent = 'Password does not meet all requirements.';
+                    messageDiv.style.display = 'block';
+                }
+                return;
+            }
+            
+            // Check match second (this is the final safeguard)
+            if (newPassword !== confirmPassword) {
+                if (messageDiv) {
+                    messageDiv.textContent = 'Passwords do not match.';
+                    messageDiv.style.display = 'block';
+                }
+                return;
+            }
+
+            changePasswordBtn.disabled = true;
+            changePasswordBtn.textContent = 'CHANGING...';
+
+            const formData = new FormData();
+            formData.append('newPassword', newPassword);
+            formData.append('confirmPassword', confirmPassword);
+
+            fetch('reset_password.php', { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    if(createPasswordModal) createPasswordModal.style.display = 'none';
+                    if(passwordSuccessModal) passwordSuccessModal.style.display = 'flex';
+                     if(newPasswordInput) newPasswordInput.value = '';
+                     if(confirmPasswordInput) confirmPasswordInput.value = '';
+                     validatePassword();
+                } else {
+                    if (messageDiv) {
+                        messageDiv.textContent = data.message;
+                        messageDiv.style.display = 'block';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Change Password Error:', error);
+                if (messageDiv) {
+                    messageDiv.textContent = 'A network error occurred. Please try again.';
+                    messageDiv.style.display = 'block';
+                }
+            })
+            .finally(() => {
+                changePasswordBtn.textContent = 'CHANGE PASSWORD';
+                 validatePassword();
+            });
+        });
+    }
 
 }); // End DOMContentLoaded
 
 
 // ==================== HELPER FUNCTIONS ====================
 
+// **MODIFIED** clearLoginForm Function
 function clearLoginForm() {
-    const usernameInput = document.getElementById('username');
-    const passwordInput = document.getElementById('password');
-    const loginError = document.getElementById('loginError');
-    if (usernameInput) usernameInput.value = '';
-    if (passwordInput) passwordInput.value = '';
-    if (loginError) {
-        loginError.style.display = 'none';
-        loginError.textContent = '';
-    }
+  const usernameInput = document.getElementById('username');
+  const passwordInput = document.getElementById('password'); // Use the correct ID for the login password
+  const loginError = document.getElementById('loginError');
+  
+  if (usernameInput) usernameInput.value = '';
+  
+  if (passwordInput) {
+      passwordInput.value = '';
+      passwordInput.type = 'password'; // Reset to hidden
+      
+      // Find and reset the icon image
+      const wrapper = passwordInput.parentElement;
+      if (wrapper) {
+          const iconImg = wrapper.querySelector('.eyeIconImg');
+          if (iconImg) iconImg.src = 'assets/icons/eye-closed.png'; // Reset to closed eye
+      }
+  }
+  
+  if (loginError) {
+      loginError.style.display = 'none';
+      loginError.textContent = '';
+  }
 }
 
 function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
 }
 
+// **MODIFIED** togglePasswordVisibility Function
 function togglePasswordVisibility(input) {
-    if (input) {
-         input.type = (input.type === 'password') ? 'text' : 'password';
-    }
+  if (!input) return;
+
+  const wrapper = input.parentElement;
+  if (!wrapper) return;
+  const iconImg = wrapper.querySelector('.eyeIconImg'); // Find the img tag
+
+  if (!iconImg) return; 
+
+  const isPassword = input.type === 'password';
+
+  input.type = isPassword ? 'text' : 'password';
+  
+  // Toggle the image source based on the new state
+  // If it *was* password (isPassword is true), it's now text, so show 'eye-open.png'
+  // If it *was* text (isPassword is false), it's now password, so show 'eye-closed.png'
+  iconImg.src = isPassword ? 'assets/icons/eye-open.png' : 'assets/icons/eye-closed.png'; 
 }
+
 
 function validatePasswordStrength(password) {
-    if (password === null || password === undefined) return false;
-    const requirements = {
-        minLength: password.length >= 8,
-        uppercase: /[A-Z]/.test(password),
-        lowercase: /[a-z]/.test(password),
-        number: /[0-9]/.test(password),
-        special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
-        noSpaces: !/\s/.test(password) && !/(password|123456|qwerty)/i.test(password)
-    };
-    return Object.values(requirements).every(req => req);
+    if (password === null || password === undefined) return false;
+    const requirements = {
+        minLength: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /[0-9]/.test(password),
+        special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+        noSpaces: !/\s/.test(password) && !/(password|123456|qwerty)/i.test(password)
+    };
+    return Object.values(requirements).every(req => req);
 }
 
 
 // ===== UPDATED FUNCTION =====
 function validatePassword() {
-    const password = newPasswordInput ? newPasswordInput.value : '';
-    const confirmPass = confirmPasswordInput ? confirmPasswordInput.value : '';
-    
-    // Get the message div
-    const messageDiv = document.getElementById('createPasswordErrorMessage');
+    const password = newPasswordInput ? newPasswordInput.value : '';
+    const confirmPass = confirmPasswordInput ? confirmPasswordInput.value : '';
+    
+    // Get the message div
+    const messageDiv = document.getElementById('createPasswordErrorMessage');
 
-    const requirements = {
-        minLength: password.length >= 8,
-        uppercase: /[A-Z]/.test(password),
-        lowercase: /[a-z]/.test(password),
-        number: /[0-9]/.test(password),
-        special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
-        noSpaces: !/\s/.test(password) && !/(password|123456|qwerty)/i.test(password)
-    };
+    const requirements = {
+        minLength: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /[0-9]/.test(password),
+        special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password),
+        noSpaces: !/\s/.test(password) && !/(password|123456|qwerty)/i.test(password)
+    };
 
-    const requirementIds = ['req1', 'req2', 'req3', 'req4', 'req5', 'req6'];
-    const requirementList = Object.values(requirements);
+    const requirementIds = ['req1', 'req2', 'req3', 'req4', 'req5', 'req6'];
+    const requirementList = Object.values(requirements);
 
-    requirementIds.forEach((id, index) => {
-        const element = document.getElementById(id);
-        const checkmark = element ? element.querySelector('.checkmark') : null;
-        if (element) {
-            if (requirementList[index]) {
-                element.classList.add('active');
-                 if(checkmark) checkmark.textContent = '✓';
-            } else {
-                element.classList.remove('active');
-                 if(checkmark) checkmark.textContent = '☐';
-            }
-        }
-    });
+    requirementIds.forEach((id, index) => {
+        const element = document.getElementById(id);
+        const checkmark = element ? element.querySelector('.checkmark') : null;
+        if (element) {
+            if (requirementList[index]) {
+                element.classList.add('active');
+                 if(checkmark) checkmark.textContent = '✓';
+            } else {
+                element.classList.remove('active');
+                 if(checkmark) checkmark.textContent = '☐';
+            }
+        }
+    });
 
-    const allMet = requirementList.every(req => req);
-    const passwordsMatch = password === confirmPass && password.length > 0;
+    const allMet = requirementList.every(req => req);
+    const passwordsMatch = password === confirmPass && password.length > 0;
 
-    // --- NEW: Real-time password match error logic ---
-    if (messageDiv) {
-        // Only show this error if all strength rules are met
-        if (allMet) { 
-            if (!passwordsMatch && confirmPass.length > 0) {
-                // If passwords don't match AND user has started typing in confirm box
-                messageDiv.textContent = 'Passwords do not match.';
-                messageDiv.style.display = 'block';
-            } else {
-                // Clear the "Passwords do not match" error if they now match or if confirm box is empty
-                if (messageDiv.textContent === 'Passwords do not match.') {
-                     messageDiv.textContent = '';
-                     messageDiv.style.display = 'none';
-                }
-            }
-        } else {
-             // If strength rules are broken, hide the "match" error 
-             // to avoid clutter. The strength rules are primary.
-            if (messageDiv.textContent === 'Passwords do not match.') {
-                 messageDiv.textContent = '';
-                 messageDiv.style.display = 'none';
-            }
-        }
-    }
-    // --- END NEW LOGIC ---
+    // --- NEW: Real-time password match error logic ---
+    if (messageDiv) {
+        // Only show this error if all strength rules are met
+        if (allMet) { 
+            if (!passwordsMatch && confirmPass.length > 0) {
+                // If passwords don't match AND user has started typing in confirm box
+                messageDiv.textContent = 'Passwords do not match.';
+                messageDiv.style.display = 'block';
+            } else {
+                // Clear the "Passwords do not match" error if they now match or if confirm box is empty
+                if (messageDiv.textContent === 'Passwords do not match.') {
+                     messageDiv.textContent = '';
+                     messageDiv.style.display = 'none';
+                }
+            }
+        } else {
+             // If strength rules are broken, hide the "match" error 
+             // to avoid clutter. The strength rules are primary.
+            if (messageDiv.textContent === 'Passwords do not match.') {
+                 messageDiv.textContent = '';
+                 messageDiv.style.display = 'none';
+            }
+        }
+    }
+    // --- END NEW LOGIC ---
 
-    if (changePasswordBtn) {
-        if (allMet && passwordsMatch) {
-            changePasswordBtn.disabled = false;
-            changePasswordBtn.style.opacity = '1';
-        } else {
-            changePasswordBtn.disabled = true;
-            changePasswordBtn.style.opacity = '0.6';
-        }
-    }
+    if (changePasswordBtn) {
+        if (allMet && passwordsMatch) {
+            changePasswordBtn.disabled = false;
+            changePasswordBtn.style.opacity = '1';
+        } else {
+            changePasswordBtn.disabled = true;
+            changePasswordBtn.style.opacity = '0.6';
+        }
+    }
 }
 // ===== END OF UPDATED FUNCTION =====
 
 
 function clearOtpInputs() {
-    otpInputs.forEach(input => {
-        if (input) input.value = '';
-    });
-    if (otpInputs.length > 0 && otpInputs[0]) otpInputs[0].focus();
+    otpInputs.forEach(input => {
+        if (input) input.value = '';
+    });
+    if (otpInputs.length > 0 && otpInputs[0]) otpInputs[0].focus();
 }
 
 function clearUsernameOtpInputs() {
-    usernameOtpInputs.forEach(input => {
-        if (input) input.value = '';
-    });
-    if (usernameOtpInputs.length > 0 && usernameOtpInputs[0]) usernameOtpInputs[0].focus();
+    usernameOtpInputs.forEach(input => {
+        if (input) input.value = '';
+    });
+    if (usernameOtpInputs.length > 0 && usernameOtpInputs[0]) usernameOtpInputs[0].focus();
 }
 
+// **MODIFIED** clearAllForms Function
 function clearAllForms() {
-    clearLoginForm();
+  clearLoginForm(); // Resets login form fields and icon
 
-    const resetEmailInput = document.getElementById('resetEmail');
-    if (resetEmailInput) resetEmailInput.value = '';
+  const resetEmailInput = document.getElementById('resetEmail');
+  if (resetEmailInput) resetEmailInput.value = '';
 
-    const recoverUsernameEmailInput = document.getElementById('recoverUsernameEmail');
-     if(recoverUsernameEmailInput) recoverUsernameEmailInput.value = '';
+  const recoverUsernameEmailInput = document.getElementById('recoverUsernameEmail');
+   if(recoverUsernameEmailInput) recoverUsernameEmailInput.value = '';
 
-    if (newPasswordInput) newPasswordInput.value = '';
-    if (confirmPasswordInput) confirmPasswordInput.value = '';
+  // Reset the create-password fields and their icons
+  if (newPasswordInput) {
+      newPasswordInput.value = '';
+      newPasswordInput.type = 'password';
+      const wrapper = newPasswordInput.parentElement;
+      if(wrapper) {
+          const iconImg = wrapper.querySelector('.eyeIconImg');
+          if(iconImg) iconImg.src = 'assets/icons/eye-closed.png'; // Reset icon
+      }
+  }
+  if (confirmPasswordInput) {
+      confirmPasswordInput.value = '';
+      confirmPasswordInput.type = 'password';
+      const wrapper = confirmPasswordInput.parentElement;
+      if(wrapper) {
+          const iconImg = wrapper.querySelector('.eyeIconImg');
+          if(iconImg) iconImg.src = 'assets/icons/eye-closed.png'; // Reset icon
+      }
+  }
 
-    clearOtpInputs();
-    clearUsernameOtpInputs();
+  clearOtpInputs();
+  clearUsernameOtpInputs();
 
-    // Reset password validation display
-    const requirementIds = ['req1', 'req2', 'req3', 'req4', 'req5', 'req6'];
-    requirementIds.forEach(id => {
-        const element = document.getElementById(id);
-         const checkmark = element ? element.querySelector('.checkmark') : null;
-        if (element) {
-             element.classList.remove('active');
-             if (checkmark) checkmark.textContent = '☐';
-        }
-    });
+  // Reset password validation display
+  const requirementIds = ['req1', 'req2', 'req3', 'req4', 'req5', 'req6'];
+  requirementIds.forEach(id => {
+      const element = document.getElementById(id);
+       const checkmark = element ? element.querySelector('.checkmark') : null;
+      if (element) {
+           element.classList.remove('active');
+           if (checkmark) checkmark.textContent = '☐';
+      }
+  });
 
-    // Reset change password button state
-    if (changePasswordBtn) {
-        changePasswordBtn.disabled = true;
-        changePasswordBtn.style.opacity = '0.6';
-    }
-    
-    const errorDivs = document.querySelectorAll('.formErrorMessage');
-    errorDivs.forEach(div => {
-        if (div) {
-            div.textContent = '';
-            div.style.display = 'none';
-        }
-    });
+  // Reset change password button state
+  if (changePasswordBtn) {
+      changePasswordBtn.disabled = true;
+      changePasswordBtn.style.opacity = '0.6';
+  }
+  
+  const errorDivs = document.querySelectorAll('.formErrorMessage');
+  errorDivs.forEach(div => {
+      if (div) {
+          div.textContent = '';
+          div.style.display = 'none';
+      }
+  });
 }

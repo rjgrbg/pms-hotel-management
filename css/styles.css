@@ -877,3 +877,37 @@ html, body {
 .successPanel .verificationHeader p {
   color: #4a7c4e;
 }
+/* --- Styles for PNG Eye Icons --- */
+
+/* Style the image itself */
+.eyeIconImg {
+  width: 20px; /* Adjust size as needed */
+  height: auto; /* Maintain aspect ratio */
+  display: block; /* Helps prevent extra space */
+}
+
+/* Adjust the button containing the image */
+.togglePassword {
+  background: none;
+  border: none;
+  padding: 0; /* Remove padding */
+  position: absolute;
+  right: 12px; /* Adjust position as needed */
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  /* Ensure the button is large enough to click easily */
+  width: 30px; 
+  height: 30px; 
+  display: flex; /* Center the image inside the button */
+  align-items: center;
+  justify-content: center;
+}
+
+/* Optional: Remove hover effect if not desired for image */
+.createPasswordModal .passwordInputWrapper .togglePassword:hover {
+  color: inherit; /* Prevent color change if using images */
+}
+.togglePassword:hover .eyeIconImg {
+  opacity: 0.8; /* Example hover effect for image */
+}
