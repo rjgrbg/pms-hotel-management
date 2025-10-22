@@ -121,16 +121,16 @@ if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
     </footer>
 
     <div class="modalBackdrop" id="loginModal" style="display: none;">
-    <div class="loginModal">
+    <div class="emailVerificationPanel">
         <button class="closeButton" id="closeLoginBtn">×</button>
         
-        <div class="loginHeader">
+        <div class="verificationHeader">
             <img src="assets/images/celestia-logo.png" alt="Logo" class="modalLogo" />
             <h2>THE CELESTIA HOTEL</h2>
             <p>Property Management System</p>
         </div>
 
-        <form class="loginForm" id="loginForm"> 
+        <form class="verificationForm" id="loginForm"> 
             
             <div id="loginError" style="color: red; text-align: center; margin-bottom: 10px; display: none; font-weight: bold;"></div>
 
@@ -146,23 +146,26 @@ if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
 
             <div class="formGroup">
                 <label for="password">Password</label>
-                <input 
+                <div class="passwordInputWrapper">
+                  <input 
                     type="password" 
                     id="password" 
-                    name="password" placeholder="Enter your password"
+                    name="password" 
+                    class="passwordInput" 
+                    placeholder="Enter your password"
                     required
-                />
+                  />
+                  <button type="button" class="togglePassword" id="toggleLoginPassword">
+  <img src="assets/icons/eye-closed.png" alt="Toggle Password Visibility" class="eyeIconImg">
+</button>
+                </div>
             </div>
+           
+           <div style="text-align: right; margin-bottom: 15px;">
+                <a href="#" class="forgotPassword" id="forgotPasswordLink" style="color: black;">Forgot Password?</a>
+           </div>
 
-           <div class="formOptions">
-    <label class="rememberMe">
-        <input type="checkbox" name="remember_me" />
-        <span>Remember me</span>
-    </label>
-    <a href="#" class="forgotPassword" id="forgotPasswordLink">Forgot Password?</a>
-</div>
-
-            <button type="submit" class="submitButton" id="submitBtn"> Sign In
+            <button type="submit" class="verificationButton" id="submitBtn"> Sign In
             </button>
         </form>
 
@@ -246,12 +249,12 @@ if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
           <div id="usernameOtpErrorMessage" class="formErrorMessage" style="display: none;"></div>
           
           <div class="otpInputContainer" id="usernameOtpContainer">
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required />
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required/>
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required/>
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required/>
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required/>
-            <input type="text" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required/>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required />
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required />
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required />
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required />
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required />
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput usernameOtpInput" maxlength="1" placeholder="0" required />
           </div>
 
           <p class="resendCode">
@@ -343,12 +346,12 @@ if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
           <div id="passwordOtpErrorMessage" class="formErrorMessage" style="display: none;"></div>
           
           <div class="otpInputContainer">
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
-            <input type="text" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput" maxlength="1" placeholder="0" required/>
+            <input type="text" inputmode="numeric" pattern="[0-9]*" class="otpInput" maxlength="1" placeholder="0" required/>    
           </div>
 
           <p class="resendCode">
@@ -380,19 +383,20 @@ if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
           <div id="createPasswordErrorMessage" class="formErrorMessage" style="display: none;"></div>
           
           <div class="formGroup">
-            <label for="newPassword">New Password:</label>
-            <div class="passwordInputWrapper">
-              <input 
-                type="password" 
-                id="newPassword" 
-                class="passwordInput"
-                placeholder="Enter your new password"
-              />
-              <button type="button" class="togglePassword" id="togglePassword1">
-                <span class="eyeIcon">👁️</span>
-              </button>
-            </div>
-          </div>
+    <label for="newPassword">New Password:</label>
+    <div class="passwordInputWrapper">
+        <input 
+            type="password" 
+            id="newPassword" 
+            class="passwordInput"
+            placeholder="Enter your new password"
+            required
+        />
+        <button type="button" class="togglePassword" id="togglePassword1">
+            <img src="assets/icons/eye-closed.png" alt="Toggle Password Visibility" class="eyeIconImg">
+        </button>
+    </div>
+</div>
 
           <div class="formGroup">
             <label for="confirmPassword">Confirm New Password:</label>
@@ -402,9 +406,10 @@ if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
                 id="confirmPassword"
                 class="passwordInput"
                 placeholder="Confirm your new password"
+                required
               />
               <button type="button" class="togglePassword" id="togglePassword2">
-                <span class="eyeIcon">👁️</span>
+                <img src="assets/icons/eye-closed.png" alt="Toggle Password Visibility" class="eyeIconImg">
               </button>
             </div>
           </div>
