@@ -5,6 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Celestia Hotel - Maintenance Management</title>
   <link rel="stylesheet" href="css/maintenance.css">
+
+  <?php
+// ======================================================
+// === PHP Logic Orchestration (REQUIRED FILES) ===
+// ======================================================
+
+// 1. Load the database configuration and connection ($conn is now available)
+require_once('db_connection.php'); 
+
+// 2. Load the user data function
+require_once('User.php');       
+
+// 3. Execute the function to get dynamic data
+$userData = getUserData($conn);
+
+// Set the variables used in the HTML, applying security (htmlspecialchars)
+$Fname = htmlspecialchars($userData['Name']);
+$Accounttype = htmlspecialchars($userData['Accounttype']); // Using Accounttype to match your error
+// Close the DB connection (optional, but good practice)
+$conn->close();
+
+?>
 </head>
 <body>
   <!-- Header -->
@@ -23,8 +45,8 @@
         <div class="profile-pic-container">
             <i class="fas fa-user-tie"></i>
         </div>
-        <h3>Juan Baguian</h3>
-        <p>B-VERIFYC-01</p>
+        <h3><?php echo $Fname; ?></h3>
+        <p><?php echo $Accounttype; ?></p>
     </div>
 
     <nav class="profile-nav">
