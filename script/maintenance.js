@@ -262,15 +262,83 @@ successModal.addEventListener('click', (e) => {
   }
 });
 
+
 // ===== PROFILE BUTTON =====
 const profileBtn = document.getElementById('profileBtn');
-if (profileBtn) {
-  profileBtn.addEventListener('click', () => {
-    console.log('Profile clicked');
-    alert('Profile menu would open here');
-  });
-}
+        const sidebar = document.getElementById('profile-sidebar');
+        const closeBtn = document.getElementById('sidebar-close-btn');
 
+        // 2. Add an event listener to the profile icon
+        // When clicked, add the 'active' class to the sidebar to show it
+        profileBtn.addEventListener('click', () => {
+            sidebar.classList.add('active');
+        });
+
+        // 3. Add an event listener to the close button
+        // When clicked, remove the 'active' class from the sidebar to hide it
+        closeBtn.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+        });
+
+
+                  // ===== LOGOUT FUNCTIONALITY =====
+            const logoutBtn = document.getElementById('logoutBtn');
+            const logoutModal = document.getElementById('logoutModal');
+            const closeLogoutBtn = document.getElementById('closeLogoutBtn');
+            const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+            const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+
+            // Helper function to handle hiding the modal
+            const hideModal = () => {
+                if (logoutModal) {
+                    logoutModal.style.display = 'none';
+                }
+            };
+
+            // Helper function to handle showing the modal
+            const showModal = () => {
+                if (logoutModal) {
+                    // Use 'flex' (or 'block' if your CSS requires it) to make the modal visible
+                    logoutModal.style.display = 'flex'; 
+                }
+            };
+
+            // --- 1. OPEN MODAL ---
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', (e) => {
+                    e.preventDefault(); // Good practice for a link
+                    showModal();
+                });
+            }
+
+            // --- 2. CLOSE MODAL (X and CANCEL buttons) ---
+            if (closeLogoutBtn) {
+                closeLogoutBtn.addEventListener('click', hideModal);
+            }
+            if (cancelLogoutBtn) {
+                cancelLogoutBtn.addEventListener('click', hideModal);
+            }
+
+            // --- 3. CLOSE MODAL (Clicking Backdrop) ---
+            if (logoutModal) {
+                logoutModal.addEventListener('click', (e) => {
+                    // e.target is the specific element clicked
+                    // e.currentTarget is the element the listener is attached to (logoutModal)
+                    // If they are the same, it means the backdrop was clicked
+                    if (e.target === e.currentTarget) {
+                        hideModal();
+                    }
+                });
+            }
+
+            // --- 4. CONFIRM LOGOUT ---
+            if (confirmLogoutBtn) {
+                confirmLogoutBtn.addEventListener('click', () => {
+                    console.log('Logout confirmed - redirecting to login page');
+                    // Perform the actual redirect or API call here
+                    window.location.href = '/logout.php'; 
+                });
+            }
 // ===== SEARCH INPUTS =====
 document.getElementById('searchInput').addEventListener('input', filterRequests);
 document.getElementById('historySearchInput').addEventListener('input', filterHistory);

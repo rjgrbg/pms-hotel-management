@@ -13,7 +13,7 @@ if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
     
     // Use the same redirect map from your signin.php
     $redirect_map = [
-        'admin'           => 'admin.php', // Use .php
+        'admin'           => 'admin.html', // Use .php
         'housekeeping_manager' => 'housekeeping.php', // Use .php
         'housekeeping_staff'   => 'housekeeping_staff.php', // Use .php
         'maintenance_manager'  => 'maintenance.php', // Use .php
