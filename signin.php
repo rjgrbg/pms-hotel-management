@@ -36,7 +36,7 @@ include('db_connection.php'); // Assumes this file correctly establishes $conn
 
 $redirect_map = [
 
-    'admin'           => 'admin.php',
+    'admin'           => 'admin.html',
 
     'housekeeping_manager' => 'housekeeping.html',
 
