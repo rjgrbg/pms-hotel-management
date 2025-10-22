@@ -245,13 +245,61 @@ successModal.addEventListener('click', (e) => {
 
 // ===== PROFILE BUTTON =====
 const profileBtn = document.getElementById('profileBtn');
-if (profileBtn) {
-  profileBtn.addEventListener('click', () => {
-    console.log('Profile clicked');
-    alert('Profile menu would open here');
-  });
-}
+        const sidebar = document.getElementById('profile-sidebar');
+        const closeBtn = document.getElementById('sidebar-close-btn');
 
+        // 2. Add an event listener to the profile icon
+        // When clicked, add the 'active' class to the sidebar to show it
+        profileBtn.addEventListener('click', () => {
+            sidebar.classList.add('active');
+        });
+
+        // 3. Add an event listener to the close button
+        // When clicked, remove the 'active' class from the sidebar to hide it
+        closeBtn.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+        });
+
+
+                // ===== LOGOUT FUNCTIONALITY =====
+        const logoutBtn = document.getElementById('logoutBtn');
+        const logoutModal = document.getElementById('logoutModal');
+        const closeLogoutBtn = document.getElementById('closeLogoutBtn');
+        const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+        const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+
+        if (logoutBtn) {
+          logoutBtn.addEventListener('click', () => {
+            logoutModal.style.display = 'flex';
+          });
+        }
+
+        if (closeLogoutBtn) {
+          closeLogoutBtn.addEventListener('click', () => {
+            logoutModal.style.display = 'none';
+          });
+        }
+
+        if (cancelLogoutBtn) {
+          cancelLogoutBtn.addEventListener('click', () => {
+            logoutModal.style.display = 'none';
+          });
+        }
+
+        if (confirmLogoutBtn) {
+          confirmLogoutBtn.addEventListener('click', () => {
+            console.log('Logout confirmed - redirecting to login page');
+            window.location.href = '/logout.php'; // adjusted to logout.php
+          });
+        }
+
+        if (logoutModal) {
+          logoutModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+              logoutModal.style.display = 'none';
+            }
+          });
+        }
 // ===== SEARCH INPUTS =====
 document.getElementById('searchInput').addEventListener('input', filterRequests);
 document.getElementById('historySearchInput').addEventListener('input', filterHistory);

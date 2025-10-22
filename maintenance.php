@@ -13,11 +13,49 @@
       <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" />
       <span class="hotelName">THE CELESTIA HOTEL</span>
     </div>
+  <!-- profile sidebar -->
+  <img src="assets/icons/profile-icon.png" alt="Profile" class="profileIcon" id="profileBtn" />
+
+<aside class="profile-sidebar" id="profile-sidebar">
+    <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
     
-    <img src="assets/icons/profile-icon.png" alt="Profile" class="profileIcon" id="profileBtn" />
+    <div class="profile-header">
+        <div class="profile-pic-container">
+            <i class="fas fa-user-tie"></i>
+        </div>
+        <h3>Juan Baguian</h3>
+        <p>B-VERIFYC-01</p>
+    </div>
+
+    <nav class="profile-nav">
+        <a href="#" id="account-details-link">
+            <i class="fas fa-user-edit" style="margin-right: 10px;"></i> Account Details
+        </a>
+    </nav>
+    
+    <div class="profile-footer">
+        <a id="logoutBtn">
+            <i class="fas fa-sign-out-alt" style="margin-right: 10px;"></i> Logout
+        </a>
+    </div>
+</aside>
    
   </header>
-
+<!-- Logout Confirmation Modal -->
+<div class="modalBackdrop" id="logoutModal" style="display: none;">
+    <div class="logoutModal">
+        <button class="closeBtn" id="closeLogoutBtn">×</button>
+        <div class="modalIcon">
+            <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
+        </div>
+        <h2>Are you sure you want to logout?</h2>
+        <p>You will be logged out from your account and redirected to the login page.</p>
+        <div class="modalButtons">
+            <button class="modalBtn cancelBtn" id="cancelLogoutBtn">CANCEL</button>
+            <button class="modalBtn confirmBtn" id="confirmLogoutBtn">YES, LOGOUT</button>
+        </div>
+    </div>
+</div>
   <!-- Main Container -->
   <div class="mainContainer">
     <!-- Page Title -->

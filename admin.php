@@ -160,7 +160,7 @@
             <div class="statCard">
               <h3 class="statLabel">Total Employees</h3>
               <p class="statValue">40</p>
-              <p class="statSubtext">in</p>
+              <p class="statSubtext"></p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Housekeeping</h3>

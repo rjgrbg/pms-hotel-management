@@ -594,7 +594,7 @@ if (cancelLogoutBtn) {
 if (confirmLogoutBtn) {
   confirmLogoutBtn.addEventListener('click', () => {
     console.log('Logout confirmed - redirecting to login page');
-    window.location.href = '/login';
+    window.location.href = '/logout.php'; // adjusted to logout.php
   });
 }
 
