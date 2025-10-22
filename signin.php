@@ -36,19 +36,19 @@ include('db_connection.php'); // Assumes this file correctly establishes $conn
 
 $redirect_map = [
 
-    'admin'           => 'admin.html',
+    'admin'           => 'admin.php',
 
-    'housekeeping_manager' => 'housekeeping.html',
+    'housekeeping_manager' => 'housekeeping.php',
 
-    'housekeeping_staff'   => 'housekeeping_staff.html',
+    'housekeeping_staff'   => 'housekeeping_staff.php',
 
-    'maintenance_manager'  => 'maintenance.html',
+    'maintenance_manager'  => 'maintenance.php',
 
-    'maintenance_staff'    => 'maintenance_staff.html',
+    'maintenance_staff'    => 'maintenance_staff.php',
 
-    'parking_manager'      => 'parking.html',
+    'parking_manager'      => 'parking.php',
 
-    'default'              => 'index.html' // Fallback page
+    'default'              => 'index.php' // Fallback page
 
 ];
 
