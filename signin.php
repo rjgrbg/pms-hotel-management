@@ -18,31 +18,13 @@ include('db_connection.php'); // Assumes this file correctly establishes $conn
 // --- 1. Centralize Redirection Links ---
 // ***** UPDATED THIS SECTION *****
 $redirect_map = [
-<<<<<<< Updated upstream
     'admin'           => 'admin.php',
     'housekeeping_manager' => 'housekeeping.html',
     'housekeeping_staff'   => 'housekeeping_staff.html',
     'maintenance_manager'  => 'maintenance.html', // Corrected spelling from 'maintenace'
-=======
-
-    'admin'           => 'admin.php',
-
-    'housekeeping_manager' => 'housekeeping.php',
-
-    'housekeeping_staff'   => 'housekeeping_staff.html',
-
-    'maintenance_manager'  => 'maintenance.php',
-
->>>>>>> Stashed changes
     'maintenance_staff'    => 'maintenance_staff.html',
     'parking_manager'      => 'parking.html',
-<<<<<<< Updated upstream
     'default'              => 'index.html' // Fallback page
-=======
-
-    'default'              => 'index.php' // Fallback page
-
->>>>>>> Stashed changes
 ];
 // ********************************
 
