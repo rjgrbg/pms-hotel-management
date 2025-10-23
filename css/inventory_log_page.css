@@ -1,0 +1,362 @@
+/* ===== HEADER ===== */
+.header {
+  background-color: #480c1b;
+  padding: 15px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.headerLogo {
+  width: 35px;
+  height: 35px;
+  object-fit: contain;
+}
+
+.hotelName {
+  color: #d4af78;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  font-family: Forum;
+}
+
+            /* ===== PROFILE SIDEBAR ===== */
+
+            .profileIcon {
+              width: 30px;
+              height: 30px;
+              object-fit: contain;
+              cursor: pointer;
+            }
+
+            /* Sidebar Container */
+            .profile-sidebar {
+              position: fixed;
+              top: 0;
+              right: 0;
+              width: 280px;
+              height: 100%;
+              background-color: rgb(72, 12, 27);
+              box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+              display: flex;
+              flex-direction: column;
+
+              /* --- Core functionality: Hide sidebar off-screen by default --- */
+              transform: translateX(100%);
+              transition: transform 0.3s ease-in-out;
+            }
+
+            /* --- State when sidebar is active/visible --- */
+            .profile-sidebar.active {
+              transform: translateX(0);
+            }
+
+            /* Close Button */
+            .sidebar-close-btn {
+              position: absolute;
+              top: 10px;
+              right: 15px;
+              background: none;
+              border: none;
+              font-size: 24px;
+              cursor: pointer;
+              color: #fff;
+            }
+
+            /* Profile Header Styling */
+            .profile-header {
+              text-align: center;
+              padding: 20px;
+              border-bottom: 1px solid #fff;
+            }
+
+            .profile-pic-container {
+              font-size: 50px;
+              /* Icon size */
+              color: #fff;
+              margin-bottom: 10px;
+            }
+
+            .profile-header h3 {
+              margin: 5px 0;
+              color: #fff;
+            }
+
+            .profile-header p {
+              margin: 0;
+              color: #fff;
+              font-size: 14px;
+            }
+
+            /* Navigation Links */
+            .profile-nav {
+              flex-grow: 1;
+              /* Pushes the footer down */
+              padding: 20px 0;
+            }
+
+            .profile-nav a,
+            .profile-footer a {
+              display: block;
+              padding: 15px 20px;
+              text-decoration: none;
+              color: #fff;
+              transition: color 0.5s;
+            }
+
+            .profile-nav a:hover,
+            .profile-footer a:hover {
+              color: #ffa237;
+            }
+
+            /* Footer/Logout Link */
+            .profile-footer {
+              border-top: 1px solid #fff;
+              padding: 10px 0;
+            }
+.logoutModal {
+    /* Styles the main box for the logout confirmation */
+    background-color: #480c1b; /* Dark background matching the header/sidebar */
+    border-radius: 8px;
+    padding: 35px;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.closeBtn {
+    /* Styles the 'X' button to close the modal */
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #fff;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.closeBtn:hover {
+    opacity: 1;
+}
+
+.modalIcon {
+    /* Container for the logout icon */
+    margin-bottom: 50px;
+    margin-top: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.logoutIcon {
+    /* Size for the specific logout icon image */
+    height: 50px;
+    width: 50px;
+}
+
+.logoutModal h2 {
+    /* Styles for the main question/title */
+    color: #fff;
+    font-size: 18px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+.logoutModal p {
+    /* Styles for the subtext/description */
+    color: #dcc8b0;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.modalButtons {
+    /* Container for the CANCEL and CONFIRM buttons */
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.modalBtn {
+    /* Base style for all buttons in the modal */
+    padding: 11px 28px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+}
+
+.cancelBtn {
+    /* Style for the CANCEL button */
+    background-color: #fff;
+    color: #480c1b;
+    min-width: 120px;
+}
+
+.cancelBtn:hover {
+    opacity: 0.9;
+}
+
+.confirmBtn {
+    /* Style for the YES, LOGOUT button */
+    background-color: #ffb400; /* Gold/Orange primary color */
+    color: #480c1b;
+    min-width: 160px;
+}
+
+.confirmBtn:hover {
+    opacity: 0.9;
+}
+
+/* ===== RESPONSIVE STYLES (for small screens) ===== */
+@media (max-width: 768px) {
+    .logoutModal {
+        width: 90%;
+        max-width: 380px;
+        padding: 25px;
+    }
+
+    .modalButtons {
+        flex-direction: column; /* Stacks buttons vertically on mobile */
+    }
+
+    .modalBtn {
+        width: 100%; /* Makes buttons full-width */
+    }
+}
+/* --- Media Query for Responsiveness --- */
+@media (max-width: 900px) {
+    .main-container {
+        flex-direction: column;
+        gap: 4rem;
+        text-align: center;
+    }
+    .branding-section {
+        order: -1;
+    }
+     .header {
+    padding: 12px 15px;
+  }
+    .login-section {
+        width: 100%;
+    }
+    .welcome-title {
+        text-align: center;
+    }
+    .divider {
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .mainContainer {
+    padding: 20px 20px;
+  }
+
+  .filterControls {
+    flex-direction: column;
+  }
+
+  .filterDropdown,
+  .searchBox,
+  .refreshBtn,
+  .downloadBtn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .mainContainer {
+    padding: 15px 15px 15px 15px;
+  }
+
+  .pageTitle {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  .header {
+    padding: 12px 15px;
+  }
+
+  .tabNavigation {
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 15px;
+  }
+
+  .tabBtn {
+    padding: 10px 16px;
+    font-size: 12px;
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .filterControls {
+    flex-direction: column;
+  }
+
+  .filterDropdown,
+  .searchBox,
+  .refreshBtn,
+  .downloadBtn {
+    width: 100%;
+  }
+
+  table {
+    font-size: 11px;
+  }
+
+  th,
+  td {
+    padding: 8px 6px;
+  }
+
+  .assignModal,
+  .successModal,
+  .staffSelectionModal {
+    width: 90%;
+    max-width: 380px;
+    padding: 25px;
+  }
+
+  .modalButtons {
+    flex-direction: column;
+  }
+
+  .modalBtn {
+    width: 100%;
+  }
+}
