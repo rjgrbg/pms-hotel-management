@@ -47,8 +47,6 @@ $redirect_map = [
     'maintenance_staff'    => 'maintenance_staff.php',
 
     'parking_manager'      => 'parking.php',
-    
-    'inventory_manager'    => 'inventory.php',
 
     'default'              => 'index.php' // Fallback page
 

@@ -15,138 +15,9 @@ let mtData = [...maintenanceHistory];
 let roomData = []; // This will be replaced by live data from fetchAndRenderRooms()
 let parkingDataList = typeof parkingData !== 'undefined' ? [...parkingData] : [];
 let inventoryDataList = typeof inventoryData !== 'undefined' ? [...inventoryData] : [];
-let usersDataList = typeof usersData !== 'undefined' ? [...usersData] : []; 
-
 let dashData = dashboardStats;
 
-console.log('Data Loaded:', { roomData, parkingDataList, inventoryDataList, usersDataList });
-
-// Helper to map AccountType display string to internal role identifier
-const roleMap = {
-    "Administrator": "admin",
-    "Housekeeping Manager": "housekeeping",
-    "Maintenance Manager": "maintenance",
-    "Inventory Manager": "inventory",
-    "Parking Manager": "parking",
-    "Housekeeping Staff": "housekeeping", 
-    "Maintenance Staff": "maintenance"
-};
-
-const errorDisplay = document.getElementById('userFormError');
-
-// ======================================================
-// ===== VALIDATION FUNCTIONS =====
-// ======================================================
-
-/**
- * Displays a validation error message in the modal footer.
- * @param {string} message - The error message.
- * @param {string} fieldId - Optional ID of the field to focus/highlight.
- */
-function showModalError(message, fieldId) {
-    if (errorDisplay) {
-        errorDisplay.textContent = message;
-        errorDisplay.style.display = 'block';
-        
-        if (fieldId) {
-            const input = document.getElementById(fieldId);
-            if (input) {
-                input.focus();
-                input.style.border = '2px solid red'; // Highlight error
-                setTimeout(() => { input.style.border = ''; }, 3000);
-            }
-        }
-    }
-}
-
-/**
- * Hides any validation error message.
- */
-function hideModalError() {
-    if (errorDisplay) {
-        errorDisplay.style.display = 'none';
-        errorDisplay.textContent = '';
-    }
-}
-
-/**
- * Validates the contact number: must start with '09' and be exactly 11 digits long.
- * @param {string} contact - The contact number string.
- * @returns {boolean} True if validation passes.
- */
-function validateContact(contact) {
-    // Regex: starts with '09', followed by exactly 9 more digits (total 11)
-    const regex = /^09\d{9}$/;
-    return regex.test(contact);
-}
-
-/**
- * Validates a name field: must contain only letters, spaces, apostrophes, and hyphens.
- * @param {string} name - The name string.
- * @returns {boolean} True if validation passes.
- */
-function validateNameCharacters(name) {
-    // Regex: allows letters (a-z, A-Z), spaces, hyphens (-), and apostrophes (').
-    const regex = /^[a-zA-Z\s'-]+$/;
-    return regex.test(name);
-}
-
-/**
- * Validates all required fields for non-empty string content and prevents whitespace only input.
- * Also checks name fields for invalid characters and contact field for format.
- * @returns {boolean} True if all validations pass.
- */
-function validateFormFields() {
-    hideModalError();
-
-    const fields = [
-        { id: 'userFirstName', name: 'First Name', type: 'name', required: true },
-        { id: 'userLastName', name: 'Last Name', type: 'name', required: true },
-        { id: 'userMiddleName', name: 'Middle Name', type: 'name', required: false }, // Optional
-        { id: 'userEmail', name: 'Email Address', required: true },
-        { id: 'userUsername', name: 'Username', required: true },
-        { id: 'userBirthday', name: 'Birthday', required: true },
-        { id: 'userAddress', name: 'Address', required: true },
-        { id: 'userAccountType', name: 'Account Type', required: true },
-    ];
-    
-    // Check required fields for emptiness and whitespace, and character validation for names
-    for (const field of fields) {
-        const input = document.getElementById(field.id);
-        const rawValue = input.value;
-        const value = rawValue.trim();
-        
-        // 1. Check required fields for emptiness/whitespace
-        if (field.required && (value === '' || rawValue === '')) {
-            showModalError(`${field.name} is required and cannot be empty.`, field.id);
-            return false;
-        }
-
-        // 2. Check Name Character Validation (only if field has content)
-        if (field.type === 'name' && value !== '') {
-            if (!validateNameCharacters(value)) {
-                showModalError(`${field.name} can only contain letters, spaces, hyphens, or apostrophes.`, field.id);
-                return false;
-            }
-        }
-    }
-
-    // 3. Special Contact Validation
-    const contact = document.getElementById('userContact').value.trim();
-    if (!validateContact(contact)) {
-        showModalError("Contact must start with '09' and be exactly 11 digits long.", 'userContact');
-        return false;
-    }
-    
-    // 4. Check password field specifically for new users
-    const passwordInput = document.getElementById('userPassword');
-    if (!editingUserId && passwordInput.value.trim() === '') {
-        showModalError("Password is required for new users.", 'userPassword');
-        return false;
-    }
-
-    return true;
-}
+console.log('Data Loaded:', { roomData, parkingDataList, inventoryDataList });
 
 // --- Room Management DOM Elements ---
 const roomsTableBody = document.getElementById('roomsTableBody');
@@ -696,50 +567,46 @@ function updateStatCard(index, value) {
   }
 }
 
-// ===== PAGE NAVIGATION (No Change) =====
+// ===== PAGE NAVIGATION =====
 const navLinks = document.querySelectorAll('.navLink');
 const pages = document.querySelectorAll('.page');
 
 navLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
-        e.preventDefault();
-        
-        navLinks.forEach(l => l.classList.remove('active'));
-        pages.forEach(p => p.classList.remove('active'));
-        
-        link.classList.add('active');
-        
-        const pageName = link.getAttribute('data-page');
-        const page = document.getElementById(`${pageName}-page`);
-        
-        if (page) {
-            page.classList.add('active');
-            // Initial render for the newly activated page
-            if (pageName === 'manage-users') {
-                renderUsersTable(usersDataList);
-            }
-        }
-    });
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    
+    navLinks.forEach(l => l.classList.remove('active'));
+    pages.forEach(p => p.classList.remove('active'));
+    
+    link.classList.add('active');
+    
+    const pageName = link.getAttribute('data-page');
+    const page = document.getElementById(`${pageName}-page`);
+    
+    if (page) {
+      page.classList.add('active');
+    }
+  });
 });
 
-// ===== HOUSEKEEPING TAB NAVIGATION (Keep existing implementation) =====
+// ===== HOUSEKEEPING TAB NAVIGATION =====
 const hkTabBtns = document.querySelectorAll('[data-admin-tab]');
 
 hkTabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const tabName = btn.getAttribute('data-admin-tab');
-        
-        hkTabBtns.forEach(b => b.classList.remove('active'));
-        
-        const hkReqTab = document.getElementById('hk-requests-tab');
-        const hkHistTab = document.getElementById('hk-history-tab');
-        if (hkReqTab) hkReqTab.classList.remove('active');
-        if (hkHistTab) hkHistTab.classList.remove('active');
+  btn.addEventListener('click', () => {
+    const tabName = btn.getAttribute('data-admin-tab');
+    
+    hkTabBtns.forEach(b => b.classList.remove('active'));
+    
+    const hkReqTab = document.getElementById('hk-requests-tab');
+    const hkHistTab = document.getElementById('hk-history-tab');
+    if (hkReqTab) hkReqTab.classList.remove('active');
+    if (hkHistTab) hkHistTab.classList.remove('active');
 
-        btn.classList.add('active');
-        const selectedTab = document.getElementById(`${tabName}-tab`);
-        if (selectedTab) selectedTab.classList.add('active');
-    });
+    btn.classList.add('active');
+    const selectedTab = document.getElementById(`${tabName}-tab`);
+    if (selectedTab) selectedTab.classList.add('active');
+  });
 });
 
 // ===== HOUSEKEEPING FILTERS (Pagination added) =====
@@ -1132,11 +999,11 @@ if (confirmLogoutBtn) {
 }
 
 if (logoutModal) {
-    logoutModal.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) {
-            logoutModal.style.display = 'none';
-        }
-    });
+  logoutModal.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+      logoutModal.style.display = 'none';
+    }
+  });
 }
 
 
