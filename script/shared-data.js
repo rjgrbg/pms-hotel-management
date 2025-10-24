@@ -1,55 +1,95 @@
 // script/shared-data.js
 
-// ===== SHARED DATA FILE =====
-// This file contains all data shared between housekeeping.html and admin.html
-// Include this file in both HTML files before their respective JS files
-
 // ======================================================
-// ===== USER MANAGEMENT DATA (MERGED) =====
+// ===== USER MANAGEMENT DATA (UPDATED) =====
 // ======================================================
 const usersData = [
     {
         id: "EID001",
-        name: "Alice Johnson",
+        firstName: "Alice",
+        middleName: "", // Optional
+        lastName: "Johnson",
+        name: "Alice Johnson", // Keep for compatibility with renderUsersTable
         email: "alice.j@celestia.com",
-        role: "admin",
+        username: "alice_j",
+        role: "admin", // Internal role for logic/permissions
+        accountType: "Administrator", // Display role/Account Type
         status: "active",
-        passwordHash: "dummyhash123" // In a real app, this wouldn't be accessible
+        birthday: "1985-05-15",
+        contact: "09123456789",
+        address: "123 Main St, Anytown",
+        shift: "Day",
+        passwordHash: "dummyhash123"
     },
     {
         id: "EID002",
+        firstName: "Bob",
+        middleName: "A.",
+        lastName: "Smith",
         name: "Bob Smith",
         email: "bob.s@celestia.com",
+        username: "bob_s",
         role: "housekeeping",
+        accountType: "Housekeeping Manager",
         status: "active",
+        birthday: "1990-11-22",
+        contact: "09234567890",
+        address: "456 Oak Ave, Somewhere",
+        shift: "Night",
         passwordHash: "dummyhash456"
     },
     {
         id: "EID003",
+        firstName: "Charlie",
+        middleName: "",
+        lastName: "Brown",
         name: "Charlie Brown",
         email: "charlie.b@celestia.com",
+        username: "charlie_b",
         role: "maintenance",
+        accountType: "Maintenance Staff",
         status: "inactive",
+        birthday: "1988-03-01",
+        contact: "09345678901",
+        address: "789 Pine Ln, Nowhere",
+        shift: "Day",
         passwordHash: "dummyhash789"
     },
     {
         id: "EID004",
+        firstName: "Diana",
+        middleName: "",
+        lastName: "Prince",
         name: "Diana Prince",
         email: "diana.p@celestia.com",
+        username: "diana_p",
         role: "parking",
+        accountType: "Parking Manager",
         status: "active",
+        birthday: "1992-07-07",
+        contact: "09456789012",
+        address: "101 Galaxy Rd, Metropolis",
+        shift: "Night",
         passwordHash: "dummyhash012"
     },
     {
         id: "EID005",
+        firstName: "Eve",
+        middleName: "K.",
+        lastName: "Adams",
         name: "Eve Adams",
         email: "eve.a@celestia.com",
+        username: "eve_a",
         role: "housekeeping",
+        accountType: "Housekeeping Staff",
         status: "active",
+        birthday: "1995-09-30",
+        contact: "09567890123",
+        address: "202 Sunset Blvd, Coastville",
+        shift: "Day",
         passwordHash: "dummyhash345"
     }
 ];
-
 
 // ======================================================
 // ===== HOUSEKEEPING REQUESTS DATA =====
