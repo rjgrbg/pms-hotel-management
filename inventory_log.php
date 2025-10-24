@@ -1,27 +1,3 @@
-<?php
-// 1. Start the session with the same secure settings
-session_start([
-  'cookie_httponly' => true,
-  'cookie_secure' => isset($_SERVER['HTTPS']),
-  'use_strict_mode' => true
-]);
-
-// 2. !! THE FIX !! 
-// Tell the browser to not cache this page
-header('Cache-Control: no-cache, no-store, must-revalidate'); // HTTP 1.1.
-header('Pragma: no-cache'); // HTTP 1.0.
-header('Expires: 0'); // Proxies.
-
-// 3. Check if the user is actually logged in.
-// If no UserID is in the session, they aren't logged in.
-if (!isset($_SESSION['UserID'])) {
-  // Redirect them to the login page
-  header("Location: inventory_log_signin.php");
-  exit();
-}
-
-// If they ARE logged in, the rest of the page will load.
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,8 +57,7 @@ if (!isset($_SESSION['UserID'])) {
             </table>
         </div>
 
-        <!-- Item Details Section -->
-         <div class="item-details-section">
+        <!-- Item Details Section --><div class="item-details-section">
             <h2 class="section-title">ITEM DETAILS</h2>
             <!-- This content area will be populated by JS with a list of items --><div class="item-details-content" id="itemDetailsContent">
                 <!-- JavaScript will inject the list of items to be issued here --></div>
@@ -97,8 +72,7 @@ if (!isset($_SESSION['UserID'])) {
      <div class="message-box-backdrop" id="messageBoxBackdrop">
         <div class="message-box-content">
             <h3 id="messageBoxTitle">Notice</h3>
-            <!-- Use <pre> tag to preserve line breaks in the message -->
-              <pre id="messageBoxText">This is a sample message.</pre>
+            <!-- Use <pre> tag to preserve line breaks in the message --><pre id="messageBoxText">This is a sample message.</pre>
             <button class="action-btn" id="messageBoxClose">OK</button>
         </div>
     </div>
@@ -115,9 +89,7 @@ if (!isset($_SESSION['UserID'])) {
             </div>
         </div>
     </div>
-    <!-- ===== End of Confirmation Modal ===== -->
-     <!-- ===== Logout Confirmation Modal ===== -->
-      <div class="logout-modal-backdrop" id="logoutModalBackdrop">
+    <!-- ===== End of Confirmation Modal ===== --><!-- ===== Logout Confirmation Modal ===== --><div class="logout-modal-backdrop" id="logoutModalBackdrop">
         <div class="logout-modal-content">
             <div class="logout-modal-icon">
                 <i class="fas fa-sign-out-alt"></i>
@@ -129,10 +101,10 @@ if (!isset($_SESSION['UserID'])) {
             </div>
         </div>
     </div>
-    <!-- ===== End of Logout Modal ===== -->
-    <!-- JavaScript Logic -->
+    <!-- ===== End of Logout Modal ===== --><!-- JavaScript Logic -->
      <script src="script/shared-data.js"></script>
     <script src="script/inventory_log.js"></script>
 
 </body>
 </html>
+

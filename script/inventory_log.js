@@ -368,7 +368,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Logout Modal: "Confirm"
     confirmLogoutBtn.addEventListener('click', () => {
-        // In a real app, this would redirect to a logout script
         hideModal(logoutModalBackdrop);
         window.location.href = 'inventory_log_logout.php';
     });
@@ -379,4 +378,3 @@ document.addEventListener('DOMContentLoaded', () => {
     renderItemDetailsList();
 
 });
-
