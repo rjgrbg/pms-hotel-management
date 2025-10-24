@@ -1,3 +1,13 @@
+// ===== PAGINATION STATE =====
+const paginationState = {
+  rooms: { currentPage: 1, itemsPerPage: 10 },
+  housekeeping: { currentPage: 1, itemsPerPage: 10 },
+  housekeepingHistory: { currentPage: 1, itemsPerPage: 10 },
+  maintenance: { currentPage: 1, itemsPerPage: 10 },
+  parking: { currentPage: 1, itemsPerPage: 10 },
+  inventory: { currentPage: 1, itemsPerPage: 10 }
+};
+
 // ===== USE SHARED DATA (Kept for other tabs) =====
 let hkData = [...housekeepingRequests];
 let hkHistData = [...housekeepingHistory];
@@ -55,7 +65,6 @@ function showFormMessage(message, type = 'error') {
   formMessage.className = `formMessage ${type}`;
   formMessage.style.display = 'block';
   
-  // Auto-hide success messages after 3 seconds
   if (type === 'success') {
     setTimeout(() => {
       hideFormMessage();
@@ -69,11 +78,88 @@ function hideFormMessage() {
   formMessage.className = 'formMessage';
 }
 
-// ===== UTILITY FUNCTIONS FOR DB INTERACTION =====
+// ===== PAGINATION UTILITY FUNCTIONS =====
+function paginateData(data, page, itemsPerPage) {
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  return data.slice(startIndex, endIndex);
+}
 
-/**
- * Generic function to make API calls to the PHP endpoint
- */
+function getTotalPages(dataLength, itemsPerPage) {
+  return Math.ceil(dataLength / itemsPerPage);
+}
+
+function renderPaginationControls(containerId, totalPages, currentPage, onPageChange) {
+  const container = document.querySelector(`#${containerId} .paginationControls`);
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  // Previous button
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'paginationBtn';
+  prevBtn.textContent = '←';
+  prevBtn.disabled = currentPage === 1;
+  prevBtn.onclick = () => onPageChange(currentPage - 1);
+  container.appendChild(prevBtn);
+  
+  // Page numbers
+  const maxVisiblePages = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  
+  if (endPage - startPage < maxVisiblePages - 1) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
+  
+  if (startPage > 1) {
+    const firstBtn = document.createElement('button');
+    firstBtn.className = 'paginationBtn';
+    firstBtn.textContent = '1';
+    firstBtn.onclick = () => onPageChange(1);
+    container.appendChild(firstBtn);
+    
+    if (startPage > 2) {
+      const dots = document.createElement('span');
+      dots.className = 'paginationDots';
+      dots.textContent = '...';
+      container.appendChild(dots);
+    }
+  }
+  
+  for (let i = startPage; i <= endPage; i++) {
+    const pageBtn = document.createElement('button');
+    pageBtn.className = `paginationBtn ${i === currentPage ? 'active' : ''}`;
+    pageBtn.textContent = i;
+    pageBtn.onclick = () => onPageChange(i);
+    container.appendChild(pageBtn);
+  }
+  
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      const dots = document.createElement('span');
+      dots.className = 'paginationDots';
+      dots.textContent = '...';
+      container.appendChild(dots);
+    }
+    
+    const lastBtn = document.createElement('button');
+    lastBtn.className = 'paginationBtn';
+    lastBtn.textContent = totalPages;
+    lastBtn.onclick = () => onPageChange(totalPages);
+    container.appendChild(lastBtn);
+  }
+  
+  // Next button
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'paginationBtn';
+  nextBtn.textContent = '→';
+  nextBtn.disabled = currentPage === totalPages;
+  nextBtn.onclick = () => onPageChange(currentPage + 1);
+  container.appendChild(nextBtn);
+}
+
+// ===== UTILITY FUNCTIONS FOR DB INTERACTION =====
 async function apiCall(action, data = {}, method = 'GET') {
     const url = 'room_actions.php' + (method === 'GET' ? `?action=${action}` : '');
     const options = { method: method };
@@ -99,20 +185,21 @@ async function apiCall(action, data = {}, method = 'GET') {
     }
 }
 
+// ===== MODIFIED FUNCTION: Fixes dashboard count =====
 /**
  * Updates dashboard statistics based on room data
  */
 function updateDashboardFromRooms(rooms) {
   const totalRooms = rooms.length;
-  const occupied = rooms.filter(r => r.Status === 'occupied').length;
-  const available = rooms.filter(r => r.Status === 'available').length;
-  const maintenance = rooms.filter(r => r.Status === 'maintenance').length;
+  // Use Capitalized strings to match database
+  const occupied = rooms.filter(r => r.Status === 'Occupied').length;
+  const needsCleaning = rooms.filter(r => r.Status === 'Needs Cleaning').length;
+  const maintenance = rooms.filter(r => r.Status === 'Maintenance').length;
   
-  // Update the housekeeping and maintenance section
+  // Update the 4 stat cards in order
   updateStatCard(0, totalRooms);
   updateStatCard(1, occupied);
-  // You can update "Needs Cleaning" based on your logic
-  // updateStatCard(2, needsCleaning);
+  updateStatCard(2, needsCleaning); // Correctly targets index 2
   updateStatCard(3, maintenance);
 }
 
@@ -123,47 +210,40 @@ async function fetchAndRenderRooms() {
     roomsTableBody.innerHTML = '<tr><td colspan="7">Loading rooms...</td></tr>';
     
     const result = await apiCall('fetch_rooms');
-    roomsTableBody.innerHTML = ''; // Clear loading message
+    roomsTableBody.innerHTML = ''; 
 
     if (result.success && result.data.length > 0) {
-        // Update global roomData used by filters
         roomData = result.data; 
-        
-        // Update dashboard with room statistics
         updateDashboardFromRooms(roomData);
-        
-        // Populate filters *after* fetching data
         populateDynamicFilters(roomData); 
         
-        // Pass data to the rendering function
-        renderRoomsTable(roomData); 
-        document.getElementById('roomsRecordCount').textContent = result.totalRecords;
+        // Reset to page 1 for new data fetch
+        paginationState.rooms.currentPage = 1;
+        renderRoomsTable(roomData); // Render the first page
+        // No totalRecords in user's file, so we use roomData.length
+        document.getElementById('roomsRecordCount').textContent = roomData.length;
 
     } else if (result.success && result.data.length === 0) {
          roomsTableBody.innerHTML = '<tr><td colspan="7">No rooms found.</td></tr>';
          document.getElementById('roomsRecordCount').textContent = 0;
-         populateDynamicFilters([]); // Clear filters if no data
-         updateDashboardFromRooms([]); // Reset dashboard
+         populateDynamicFilters([]); 
+         updateDashboardFromRooms([]); 
+         renderPaginationControls('rooms-page', 0, 1, () => {}); // Clear pagination
     } else {
          roomsTableBody.innerHTML = `<tr><td colspan="7">Failed to load data: ${result.message}</td></tr>`;
          document.getElementById('roomsRecordCount').textContent = 0;
+         updateDashboardFromRooms([]);
+         renderPaginationControls('rooms-page', 0, 1, () => {}); // Clear pagination
     }
 }
 
 // ===== NEW: DYNAMIC FILTER POPULATION FUNCTIONS =====
-
-/**
- * Populates the Floor filter and initializes the Room filter.
- * @param {Array} data The full roomData array.
- */
 function populateDynamicFilters(data) {
     if (!roomsFloorFilter || !roomsRoomFilter) return;
 
-    // 1. Populate Floor Filter
-    // Get unique, sorted floor numbers
     const floors = [...new Set(data.map(room => room.Floor))].sort((a, b) => a - b);
     
-    roomsFloorFilter.innerHTML = '<option value="">Floor</option>'; // Reset
+    roomsFloorFilter.innerHTML = '<option value="">Floor</option>';
     floors.forEach(floor => {
         const option = document.createElement('option');
         option.value = floor;
@@ -171,32 +251,23 @@ function populateDynamicFilters(data) {
         roomsFloorFilter.appendChild(option);
     });
 
-    // 2. Populate Room Filter (initially with all rooms)
     updateRoomFilterOptions(data);
 }
 
-/**
- * Updates the Room filter options based on the selected floor.
- * @param {Array} data The full roomData array.
- * @param {string} selectedFloor The currently selected floor (optional).
- */
 function updateRoomFilterOptions(data, selectedFloor = '') {
     if (!roomsRoomFilter) return;
 
     let roomsOnFloor;
     if (selectedFloor) {
-        // Filter rooms by the selected floor
         roomsOnFloor = data.filter(room => room.Floor.toString() === selectedFloor);
     } else {
-        // Show all rooms if no floor is selected
         roomsOnFloor = data; 
     }
 
-    // Get unique, sorted room numbers from the filtered list
     const roomNumbers = [...new Set(roomsOnFloor.map(room => room.Room))].sort((a, b) => a - b);
     
-    const currentRoomValue = roomsRoomFilter.value; // Preserve selection if possible
-    roomsRoomFilter.innerHTML = '<option value="">Room</option>'; // Reset
+    const currentRoomValue = roomsRoomFilter.value;
+    roomsRoomFilter.innerHTML = '<option value="">Room</option>';
     
     roomNumbers.forEach(roomNum => {
         const option = document.createElement('option');
@@ -205,7 +276,6 @@ function updateRoomFilterOptions(data, selectedFloor = '') {
         roomsRoomFilter.appendChild(option);
     });
 
-    // Re-select old value if it's still valid in the new list
     if (roomNumbers.includes(parseInt(currentRoomValue))) {
         roomsRoomFilter.value = currentRoomValue;
     }
@@ -213,14 +283,13 @@ function updateRoomFilterOptions(data, selectedFloor = '') {
 
 // ===== ROOM CAPACITY MAPPING =====
 const ROOM_CAPACITY_MAP = {
-    'Standard Room': '1â€“2 guests',
-    'Deluxe Room': '2â€“3 guests',
-    'Suite': '2â€“4 guests',
-    'Penthouse Suite': '4â€“6 guests',
+    'Standard Room': '1–2 guests',
+    'Deluxe Room': '2–3 guests',
+    'Suite': '2–4 guests',
+    'Penthouse Suite': '4–6 guests',
 };
 
 // ===== ROOM MODAL INPUT LOGIC =====
-
 function updateGuestCapacity() {
     const selectedType = roomTypeInput.value;
     roomGuestsInput.value = ROOM_CAPACITY_MAP[selectedType] || '';
@@ -250,172 +319,224 @@ function enforceFloorPrefix() {
     }
 }
 
-// ===== RENDER FUNCTIONS =====
+// ===== RENDER FUNCTIONS (NOW WITH PAGINATION) =====
 function renderHKTable(data = hkData) {
   const tbody = document.getElementById('hkTableBody');
-  if (data.length === 0) {
+  const state = paginationState.housekeeping;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+
+  if (paginatedData.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-    return;
+  } else {
+    tbody.innerHTML = paginatedData.map(row => `
+      <tr>
+        <td>${row.floor}</td>
+        <td>${row.room}</td>
+        <td>${row.guest}</td>
+        <td>${row.date}</td>
+        <td>${row.requestTime}</td>
+        <td>${row.lastCleaned}</td>
+        <td><span class="statusBadge ${row.status}">${row.status === 'dirty' ? 'Dirty / Unoccupied' : 'Request Clean / Occupied'}</span></td>
+        <td>${row.staff}</td>
+      </tr>
+    `).join('');
   }
   
-  tbody.innerHTML = data.map(row => `
-    <tr>
-      <td>${row.floor}</td>
-      <td>${row.room}</td>
-      <td>${row.guest}</td>
-      <td>${row.date}</td>
-      <td>${row.requestTime}</td>
-      <td>${row.lastCleaned}</td>
-      <td><span class="statusBadge ${row.status}">${row.status === 'dirty' ? 'Dirty / Unoccupied' : 'Request Clean / Occupied'}</span></td>
-      <td>${row.staff}</td>
-    </tr>
-  `).join('');
-  
   document.getElementById('hkRecordCount').textContent = data.length;
+  renderPaginationControls('hk-requests-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderHKTable(data);
+  });
 }
 
 function renderHKHistTable(data = hkHistData) {
   const tbody = document.getElementById('hkHistTableBody');
-  if (data.length === 0) {
+  const state = paginationState.housekeepingHistory;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-    return;
+  } else {
+    tbody.innerHTML = paginatedData.map(row => `
+      <tr>
+        <td>${row.floor}</td>
+        <td>${row.room}</td>
+        <td>${row.guest}</td>
+        <td>${row.date}</td>
+        <td>${row.requestedTime}</td>
+        <td>${row.completedTime}</td>
+        <td>${row.staff}</td>
+        <td><span class="statusBadge cleaned">${row.status === 'cleaned' ? 'Cleaned' : row.status}</span></td>
+        <td>${row.remarks}</td>
+      </tr>
+    `).join('');
   }
   
-  tbody.innerHTML = data.map(row => `
-    <tr>
-      <td>${row.floor}</td>
-      <td>${row.room}</td>
-      <td>${row.guest}</td>
-      <td>${row.date}</td>
-      <td>${row.requestedTime}</td>
-      <td>${row.completedTime}</td>
-      <td>${row.staff}</td>
-      <td><span class="statusBadge cleaned">${row.status === 'cleaned' ? 'Cleaned' : row.status}</span></td>
-      <td>${row.remarks}</td>
-    </tr>
-  `).join('');
-  
   document.getElementById('hkHistRecordCount').textContent = data.length;
+  renderPaginationControls('hk-history-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderHKHistTable(data);
+  });
 }
 
 function renderMTTable(data = mtData) {
   const tbody = document.getElementById('mtTableBody');
-  if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-    return;
-  }
+  const state = paginationState.maintenance;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
   
-  tbody.innerHTML = data.map(row => `
-    <tr>
-      <td>${row.floor}</td>
-      <td>${row.room}</td>
-      <td>${row.issue}</td>
-      <td>${row.date}</td>
-      <td>${row.requestedTime}</td>
-      <td>${row.completedTime}</td>
-      <td><span class="statusBadge repaired">${row.status === 'repaired' ? 'Repaired' : row.status}</span></td>
-      <td>${row.staff}</td>
-      <td>${row.remarks}</td>
-    </tr>
-  `).join('');
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => `
+      <tr>
+        <td>${row.floor}</td>
+        <td>${row.room}</td>
+        <td>${row.issue}</td>
+        <td>${row.date}</td>
+        <td>${row.requestedTime}</td>
+        <td>${row.completedTime}</td>
+        <td><span class="statusBadge repaired">${row.status === 'repaired' ? 'Repaired' : row.status}</span></td>
+        <td>${row.staff}</td>
+        <td>${row.remarks}</td>
+      </tr>
+    `).join('');
+  }
   
   document.getElementById('mtRecordCount').textContent = data.length;
+  renderPaginationControls('maintenance-page', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderMTTable(data);
+  });
 }
 
+// ===== MODIFIED FUNCTION: Fixes badges and uses pagination =====
 function renderRoomsTable(data) {
   const tbody = document.getElementById('roomsTableBody');
-  if (data.length === 0) {
+  const state = paginationState.rooms;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-    return;
+  } else {
+    tbody.innerHTML = paginatedData.map(row => {
+      // Create CSS-friendly class (e.g., "needs-cleaning")
+      const statusClass = row.Status.toLowerCase().replace(/ /g, '-');
+      // Create display-friendly text (e.g., "Needs Cleaning")
+      const statusDisplay = row.Status.split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1)
+      ).join(' ');
+
+      return `
+        <tr>
+          <td>${row.Floor}</td>
+          <td>${row.Room}</td>
+          <td>${row.Type}</td>
+          <td>${row.NoGuests}</td>
+          <td>$${parseFloat(row.Rate).toFixed(2)}</td>
+          <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
+          <td>
+            <div class="actionButtons">
+              <button class="actionBtn editBtn" data-room-data='${JSON.stringify(row)}'>
+                <img src="assets/icons/edit-icon.png" alt="Edit" />
+              </button>
+              <button class="actionBtn deleteBtn" data-room-id="${row.RoomID}" data-room-number="${row.Room}">
+                <img src="assets/icons/delete-icon.png" alt="Delete" />
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.querySelectorAll('.editBtn').forEach(btn => {
+        btn.addEventListener('click', handleEditClick);
+    });
+    tbody.querySelectorAll('.deleteBtn').forEach(btn => {
+        btn.addEventListener('click', handleDeleteClick);
+    });
   }
   
-  tbody.innerHTML = data.map(row => `
-    <tr>
-      <td>${row.Floor}</td>
-      <td>${row.Room}</td>
-      <td>${row.Type}</td>
-      <td>${row.NoGuests}</td>
-      <td>$${parseFloat(row.Rate).toFixed(2)}</td>
-      <td><span class="statusBadge ${row.Status.toLowerCase()}">${row.Status.charAt(0).toUpperCase() + row.Status.slice(1)}</span></td>
-      <td>
-        <div class="actionButtons">
-          <button class="actionBtn editBtn" data-room-data='${JSON.stringify(row)}'>
-            <img src="assets/icons/edit-icon.png" alt="Edit" />
-          </button>
-          <button class="actionBtn deleteBtn" data-room-id="${row.RoomID}" data-room-number="${row.Room}">
-            <img src="assets/icons/delete-icon.png" alt="Delete" />
-          </button>
-        </div>
-      </td>
-    </tr>
-  `).join('');
-
-  // Attach event listeners dynamically for edit and delete
-  tbody.querySelectorAll('.editBtn').forEach(btn => {
-      btn.addEventListener('click', handleEditClick);
-  });
-  tbody.querySelectorAll('.deleteBtn').forEach(btn => {
-      btn.addEventListener('click', handleDeleteClick);
-  });
-  
   document.getElementById('roomsRecordCount').textContent = data.length;
+  renderPaginationControls('rooms-page', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderRoomsTable(data); // Re-render with new page
+  });
 }
 
 function renderParkingTable(data = parkingDataList) {
   const tbody = document.getElementById('parkingTableBody');
-  if (data.length === 0) {
+  const state = paginationState.parking;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+
+  if (paginatedData.length === 0) {
     tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-    return;
+  } else {
+    tbody.innerHTML = paginatedData.map(row => `
+      <tr>
+        <td>${row.plateNumber}</td>
+        <td>${row.room}</td>
+        <td>${row.guestName}</td>
+        <td>${row.vehicleType}</td>
+        <td>${row.entryTime}</td>
+        <td>${row.exitTime}</td>
+        <td>${row.slotNumber}</td>
+        <td><span class="statusBadge ${row.status}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
+      </tr>
+    `).join('');
   }
   
-  tbody.innerHTML = data.map(row => `
-    <tr>
-      <td>${row.plateNumber}</td>
-      <td>${row.room}</td>
-      <td>${row.guestName}</td>
-      <td>${row.vehicleType}</td>
-      <td>${row.entryTime}</td>
-      <td>${row.exitTime}</td>
-      <td>${row.slotNumber}</td>
-      <td><span class="statusBadge ${row.status}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
-    </tr>
-  `).join('');
-  
   document.getElementById('parkingRecordCount').textContent = data.length;
+  renderPaginationControls('parking-page', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderParkingTable(data);
+  });
 }
 
 function renderInventoryTable(data = inventoryDataList) {
   const tbody = document.getElementById('inventoryTableBody');
-  if (data.length === 0) {
+  const state = paginationState.inventory;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+
+  if (paginatedData.length === 0) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-    return;
+  } else {
+    tbody.innerHTML = paginatedData.map(row => {
+      const statusText = row.status === 'in-stock' ? 'In Stock' : 
+                           row.status === 'low-stock' ? 'Low Stock' : 'Out of Stock';
+      return `
+        <tr>
+          <td>${row.id}</td>
+          <td>${row.name}</td>
+          <td>${row.category}</td>
+          <td>${row.quantity !== undefined && row.quantity !== null ? row.quantity : '-'}</td>
+          <td>${row.description}</td>
+          <td><span class="statusBadge ${row.status}">${statusText}</span></td>
+          <td>${row.damage}</td>
+          <td>${row.stockInDate}</td>
+          <td>${row.stockOutDate}</td>
+        </tr>
+      `;
+    }).join('');
   }
   
-  tbody.innerHTML = data.map(row => {
-    const statusText = row.status === 'in-stock' ? 'In Stock' : 
-                         row.status === 'low-stock' ? 'Low Stock' : 'Out of Stock';
-    return `
-      <tr>
-        <td>${row.id}</td>
-        <td>${row.name}</td>
-        <td>${row.category}</td>
-        <td>${row.quantity !== undefined && row.quantity !== null ? row.quantity : '-'}</td>
-        <td>${row.description}</td>
-        <td><span class="statusBadge ${row.status}">${statusText}</span></td>
-        <td>${row.damage}</td>
-        <td>${row.stockInDate}</td>
-        <td>${row.stockOutDate}</td>
-      </tr>
-    `;
-  }).join('');
-  
   document.getElementById('inventoryRecordCount').textContent = data.length;
+  renderPaginationControls('inventory-page', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderInventoryTable(data);
+  });
 }
 
 
 // ===== DASHBOARD AND FILTER LOGIC =====
 function updateDashboardStats(data) {
   const hkm = data.housekeepingMaintenance || dashboardStats.housekeepingMaintenance;
+  // These will be overridden by fetchAndRenderRooms()
   updateStatCard(0, hkm.totalRooms);
   updateStatCard(1, hkm.occupied);
   updateStatCard(2, hkm.needsCleaning);
@@ -488,7 +609,7 @@ hkTabBtns.forEach(btn => {
   });
 });
 
-// ===== HOUSEKEEPING FILTERS =====
+// ===== HOUSEKEEPING FILTERS (Pagination added) =====
 document.getElementById('hkSearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
   const filtered = hkData.filter(row => 
@@ -496,24 +617,28 @@ document.getElementById('hkSearchInput')?.addEventListener('input', (e) => {
     row.staff.toLowerCase().includes(search) ||
     row.room.toString().includes(search)
   );
+  paginationState.housekeeping.currentPage = 1;
   renderHKTable(filtered);
 });
 
 document.getElementById('floorFilter')?.addEventListener('change', (e) => {
   const floor = e.target.value;
   const filtered = floor ? hkData.filter(row => row.floor.toString() === floor) : hkData;
+  paginationState.housekeeping.currentPage = 1;
   renderHKTable(filtered);
 });
 
 document.getElementById('roomFilter')?.addEventListener('change', (e) => {
   const room = e.target.value;
   const filtered = room ? hkData.filter(row => row.room.toString() === room) : hkData;
+  paginationState.housekeeping.currentPage = 1;
   renderHKTable(filtered);
 });
 
 document.getElementById('statusFilter')?.addEventListener('change', (e) => {
   const status = e.target.value;
   const filtered = status ? hkData.filter(row => row.status === status) : hkData;
+  paginationState.housekeeping.currentPage = 1;
   renderHKTable(filtered);
 });
 
@@ -523,6 +648,7 @@ document.getElementById('hkRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('roomFilter').value = '';
   document.getElementById('statusFilter').value = '';
   hkData = [...housekeepingRequests];
+  paginationState.housekeeping.currentPage = 1;
   renderHKTable(hkData);
 });
 
@@ -542,7 +668,7 @@ document.getElementById('hkDownloadBtn')?.addEventListener('click', () => {
   window.URL.revokeObjectURL(url);
 });
 
-// ===== HOUSEKEEPING HISTORY FILTERS =====
+// ===== HOUSEKEEPING HISTORY FILTERS (Pagination added) =====
 document.getElementById('hkHistSearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
   const filtered = hkHistData.filter(row => 
@@ -550,18 +676,21 @@ document.getElementById('hkHistSearchInput')?.addEventListener('input', (e) => {
     row.staff.toLowerCase().includes(search) ||
     row.room.toString().includes(search)
   );
+  paginationState.housekeepingHistory.currentPage = 1;
   renderHKHistTable(filtered);
 });
 
 document.getElementById('floorFilterHkHist')?.addEventListener('change', (e) => {
   const floor = e.target.value;
   const filtered = floor ? hkHistData.filter(row => row.floor.toString() === floor) : hkHistData;
+  paginationState.housekeepingHistory.currentPage = 1;
   renderHKHistTable(filtered);
 });
 
 document.getElementById('roomFilterHkHist')?.addEventListener('change', (e) => {
   const room = e.target.value;
   const filtered = room ? hkHistData.filter(row => row.room.toString() === room) : hkHistData;
+  paginationState.housekeepingHistory.currentPage = 1;
   renderHKHistTable(filtered);
 });
 
@@ -570,6 +699,7 @@ document.getElementById('hkHistRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('floorFilterHkHist').value = '';
   document.getElementById('roomFilterHkHist').value = '';
   hkHistData = [...housekeepingHistory];
+  paginationState.housekeepingHistory.currentPage = 1;
   renderHKHistTable(hkHistData);
 });
 
@@ -589,7 +719,7 @@ document.getElementById('hkHistDownloadBtn')?.addEventListener('click', () => {
   window.URL.revokeObjectURL(url);
 });
 
-// ===== MAINTENANCE FILTERS =====
+// ===== MAINTENANCE FILTERS (Pagination added) =====
 document.getElementById('mtSearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
   const filtered = mtData.filter(row => 
@@ -597,24 +727,28 @@ document.getElementById('mtSearchInput')?.addEventListener('input', (e) => {
     row.staff.toLowerCase().includes(search) ||
     row.room.toString().includes(search)
   );
+  paginationState.maintenance.currentPage = 1;
   renderMTTable(filtered);
 });
 
 document.getElementById('mtFloorFilter')?.addEventListener('change', (e) => {
   const floor = e.target.value;
   const filtered = floor ? mtData.filter(row => row.floor.toString() === floor) : mtData;
+  paginationState.maintenance.currentPage = 1;
   renderMTTable(filtered);
 });
 
 document.getElementById('mtRoomFilter')?.addEventListener('change', (e) => {
   const room = e.target.value;
   const filtered = room ? mtData.filter(row => row.room.toString() === room) : mtData;
+  paginationState.maintenance.currentPage = 1;
   renderMTTable(filtered);
 });
 
 document.getElementById('mtStatusFilter')?.addEventListener('change', (e) => {
   const status = e.target.value;
   const filtered = status ? mtData.filter(row => row.status === status) : mtData;
+  paginationState.maintenance.currentPage = 1;
   renderMTTable(filtered);
 });
 
@@ -624,6 +758,7 @@ document.getElementById('mtRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('mtRoomFilter').value = '';
   document.getElementById('mtStatusFilter').value = '';
   mtData = [...maintenanceHistory];
+  paginationState.maintenance.currentPage = 1;
   renderMTTable(mtData);
 });
 
@@ -643,7 +778,7 @@ document.getElementById('mtDownloadBtn')?.addEventListener('click', () => {
   window.URL.revokeObjectURL(url);
 });
 
-// ===== PARKING FILTERS =====
+// ===== PARKING FILTERS (Pagination added) =====
 document.getElementById('parkingSearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
   const filtered = parkingDataList.filter(row => 
@@ -652,24 +787,28 @@ document.getElementById('parkingSearchInput')?.addEventListener('input', (e) => 
     row.vehicleType.toLowerCase().includes(search) ||
     row.slotNumber.toLowerCase().includes(search)
   );
+  paginationState.parking.currentPage = 1;
   renderParkingTable(filtered);
 });
 
 document.getElementById('parkingLevelFilter')?.addEventListener('change', (e) => {
   const level = e.target.value;
   const filtered = level ? parkingDataList.filter(row => row.level.toString() === level) : parkingDataList;
+  paginationState.parking.currentPage = 1;
   renderParkingTable(filtered);
 });
 
 document.getElementById('parkingBlockFilter')?.addEventListener('change', (e) => {
   const block = e.target.value;
   const filtered = block ? parkingDataList.filter(row => row.block === block) : parkingDataList;
+  paginationState.parking.currentPage = 1;
   renderParkingTable(filtered);
 });
 
 document.getElementById('parkingStatusFilter')?.addEventListener('change', (e) => {
   const status = e.target.value;
   const filtered = status ? parkingDataList.filter(row => row.status === status) : parkingDataList;
+  paginationState.parking.currentPage = 1;
   renderParkingTable(filtered);
 });
 
@@ -679,6 +818,7 @@ document.getElementById('parkingRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('parkingBlockFilter').value = '';
   document.getElementById('parkingStatusFilter').value = '';
   parkingDataList = [...parkingData];
+  paginationState.parking.currentPage = 1;
   renderParkingTable(parkingDataList);
 });
 
@@ -698,7 +838,7 @@ document.getElementById('parkingDownloadBtn')?.addEventListener('click', () => {
   window.URL.revokeObjectURL(url);
 });
 
-// ===== INVENTORY FILTERS =====
+// ===== INVENTORY FILTERS (Pagination added) =====
 document.getElementById('inventorySearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
   const filtered = inventoryDataList.filter(row => 
@@ -706,18 +846,21 @@ document.getElementById('inventorySearchInput')?.addEventListener('input', (e) =
     row.category.toLowerCase().includes(search) ||
     row.description.toLowerCase().includes(search)
   );
+  paginationState.inventory.currentPage = 1;
   renderInventoryTable(filtered);
 });
 
 document.getElementById('inventoryCategoryFilter')?.addEventListener('change', (e) => {
   const category = e.target.value;
   const filtered = category ? inventoryDataList.filter(row => row.category === category) : inventoryDataList;
+  paginationState.inventory.currentPage = 1;
   renderInventoryTable(filtered);
 });
 
 document.getElementById('inventoryStatusFilter')?.addEventListener('change', (e) => {
   const status = e.target.value;
   const filtered = status ? inventoryDataList.filter(row => row.status === status) : inventoryDataList;
+  paginationState.inventory.currentPage = 1;
   renderInventoryTable(filtered);
 });
 
@@ -726,6 +869,7 @@ document.getElementById('inventoryRefreshBtn')?.addEventListener('click', () => 
   document.getElementById('inventoryCategoryFilter').value = '';
   document.getElementById('inventoryStatusFilter').value = '';
   inventoryDataList = [...inventoryData];
+  paginationState.inventory.currentPage = 1;
   renderInventoryTable(inventoryDataList);
 });
 
@@ -749,7 +893,7 @@ document.getElementById('inventoryDownloadBtn')?.addEventListener('click', () =>
   window.URL.revokeObjectURL(url);
 });
 
-// ===== ROOMS FILTERS (UPDATED) =====
+// ===== ROOMS FILTERS (Pagination added) =====
 document.getElementById('roomsSearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
   const filtered = roomData.filter(row => 
@@ -757,47 +901,45 @@ document.getElementById('roomsSearchInput')?.addEventListener('input', (e) => {
     row.Room.toString().includes(search) ||
     row.Status.toLowerCase().includes(search)
   );
+  paginationState.rooms.currentPage = 1;
   renderRoomsTable(filtered);
 });
 
-// ===== UPDATED: Floor filter listener now updates room filter as well =====
 roomsFloorFilter?.addEventListener('change', (e) => {
     const floor = e.target.value;
-    
-    // 1. Update the Room dropdown based on the selected floor
     updateRoomFilterOptions(roomData, floor);
-
-    // 2. Filter the table (as before)
     const filtered = floor ? roomData.filter(row => row.Floor.toString() === floor) : roomData;
+    paginationState.rooms.currentPage = 1;
     renderRoomsTable(filtered);
 });
 
 roomsRoomFilter?.addEventListener('change', (e) => {
   const room = e.target.value;
-  // Get the current floor filter value
   const floor = roomsFloorFilter.value;
-
-  // Start with all data or floor-filtered data
   let dataToFilter = floor ? roomData.filter(row => row.Floor.toString() === floor) : roomData;
-
-  // Now filter by room
   const filtered = room ? dataToFilter.filter(row => row.Room.toString() === room) : dataToFilter;
+  paginationState.rooms.currentPage = 1;
   renderRoomsTable(filtered);
 });
 
 document.getElementById('roomsTypeFilter')?.addEventListener('change', (e) => {
   const type = e.target.value;
   const filtered = type ? roomData.filter(row => row.Type === type) : roomData;
+  paginationState.rooms.currentPage = 1;
   renderRoomsTable(filtered);
 });
 
+// ===== MODIFIED FUNCTION: Fixes status filter =====
 document.getElementById('roomsStatusFilter')?.addEventListener('change', (e) => {
-  const status = e.target.value;
+  const status = e.target.value; // This is "Needs Cleaning", "Available", etc.
+  
+  // This logic filters the data by the exact dropdown value.
   const filtered = status ? roomData.filter(row => row.Status === status) : roomData;
+  
+  paginationState.rooms.currentPage = 1;
   renderRoomsTable(filtered);
 });
 
-// ===== UPDATED: Refresh button now re-fetches from DB without alert =====
 document.getElementById('roomsRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('roomsSearchInput').value = '';
   document.getElementById('roomsFloorFilter').value = '';
@@ -805,7 +947,7 @@ document.getElementById('roomsRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('roomsTypeFilter').value = '';
   document.getElementById('roomsStatusFilter').value = '';
   
-  fetchAndRenderRooms(); // This re-fetches data AND re-populates filters
+  fetchAndRenderRooms(); // Re-fetches data, re-populates filters, renders table
 });
 
 document.getElementById('roomsDownloadBtn')?.addEventListener('click', () => {
@@ -833,30 +975,29 @@ const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
 
 if (logoutBtn) {
   logoutBtn.addEventListener('click', () => {
-    if (logoutModal) logoutModal.style.display = 'flex'; // Show the modal
+    if (logoutModal) logoutModal.style.display = 'flex'; 
   });
 }
 
 if (closeLogoutBtn) {
   closeLogoutBtn.addEventListener('click', () => {
-    if (logoutModal) logoutModal.style.display = 'none'; // Hide modal on close
+    if (logoutModal) logoutModal.style.display = 'none'; 
   });
 }
 
 if (cancelLogoutBtn) {
   cancelLogoutBtn.addEventListener('click', () => {
-    if (logoutModal) logoutModal.style.display = 'none'; // Hide modal on cancel
+    if (logoutModal) logoutModal.style.display = 'none'; 
   });
 }
 
 if (confirmLogoutBtn) {
   confirmLogoutBtn.addEventListener('click', () => {
     console.log('Logout confirmed - redirecting to logout script');
-    window.location.href = 'logout.php'; // Redirect to logout.php
+    window.location.href = 'logout.php'; 
   });
 }
 
-// Optional: Close modal if backdrop is clicked
 if (logoutModal) {
   logoutModal.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) {
@@ -867,10 +1008,8 @@ if (logoutModal) {
 
 
 // ===== ROOM MODAL HANDLERS (UPDATED WITH DB LOGIC) =====
-
-// Open Add Modal
 document.getElementById('addRoomBtn')?.addEventListener('click', () => {
-    hideFormMessage(); // Clear any previous messages
+    hideFormMessage(); 
     roomModalTitle.textContent = 'Add New Room';
     roomForm.reset();
     hiddenRoomIdInput.value = '';
@@ -878,7 +1017,6 @@ document.getElementById('addRoomBtn')?.addEventListener('click', () => {
     roomModal.style.display = 'flex';
 });
 
-// Close Modal Buttons
 closeRoomModalBtn?.addEventListener('click', () => {
     roomModal.style.display = 'none';
     hideFormMessage();
@@ -889,9 +1027,9 @@ cancelRoomBtn?.addEventListener('click', () => {
     hideFormMessage();
 });
 
-// Handle Edit Click (fetches data from the button's data attribute)
+// ===== MODIFIED FUNCTION: Fixes status selection in modal =====
 function handleEditClick(event) {
-    hideFormMessage(); // Clear any previous messages
+    hideFormMessage(); 
     const room = JSON.parse(event.currentTarget.dataset.roomData);
     
     roomModalTitle.textContent = 'Edit Room ' + room.Room;
@@ -903,17 +1041,18 @@ function handleEditClick(event) {
     roomTypeInput.value = room.Type;
     roomGuestsInput.value = room.NoGuests;
     roomRateInput.value = room.Rate;
-    roomStatusInput.value = room.Status.toLowerCase();
+    
+    // Set dropdown value to the exact string from the database (e.g., "Needs Cleaning")
+    // This now matches the <option> values in admin.php
+    roomStatusInput.value = room.Status;
 
     roomModal.style.display = 'flex';
 }
 
-// Handle Form Submission (Add or Edit)
 roomForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    hideFormMessage(); // Clear previous messages
+    hideFormMessage(); 
     
-    // ===== Validation =====
     const floor = roomFloorInput.value;
     const roomNum = roomNumberInput.value;
     if (!roomNum.startsWith(floor)) {
@@ -931,7 +1070,7 @@ roomForm?.addEventListener('submit', async (e) => {
         roomType: roomTypeInput.value,
         roomGuests: roomGuestsInput.value,
         roomRate: roomRateInput.value,
-        roomStatus: roomStatusInput.value,
+        roomStatus: roomStatusInput.value, // This now sends "Needs Cleaning"
     };
 
     const result = await apiCall(action, data, 'POST');
@@ -941,7 +1080,6 @@ roomForm?.addEventListener('submit', async (e) => {
         roomForm.reset();
         await fetchAndRenderRooms(); // Refresh table, filters, and dashboard from DB
         
-        // Close modal after a short delay for success message visibility
         setTimeout(() => {
             roomModal.style.display = 'none';
             hideFormMessage();
@@ -961,11 +1099,9 @@ function handleDeleteClick(event) {
     deleteRoomModal.style.display = 'flex';
 }
 
-// Close Delete Modal Buttons
 closeDeleteModalBtn?.addEventListener('click', () => deleteRoomModal.style.display = 'none');
 cancelDeleteBtn?.addEventListener('click', () => deleteRoomModal.style.display = 'none');
 
-// Confirm Delete Room (DB interaction)
 confirmDeleteBtn?.addEventListener('click', async () => {
     if (!roomToDeleteID) return;
 
@@ -976,7 +1112,7 @@ confirmDeleteBtn?.addEventListener('click', async () => {
         deleteRoomModal.style.display = 'none';
         await fetchAndRenderRooms(); // Refresh table, filters, and dashboard from DB
     } else {
-        alert(result.message); // Keep alert for delete errors as they're critical
+        alert(result.message); 
     }
 });
 
@@ -998,7 +1134,6 @@ deleteRoomModal?.addEventListener('click', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Admin page loaded - initializing with shared data');
   
-  // *** Attach New Event Listeners for Room Modal Logic ***
   roomTypeInput?.addEventListener('change', updateGuestCapacity);
   roomFloorInput?.addEventListener('change', enforceFloorPrefix);
   roomNumberInput?.addEventListener('input', enforceFloorPrefix);
@@ -1012,16 +1147,17 @@ document.addEventListener('DOMContentLoaded', () => {
     dashboardPage.classList.add('active');
   }
 
-  updateDashboardStats(dashData);
+  updateDashboardStats(dashData); // Load static data first
+  
+  // Render tables with static data and pagination
   renderHKTable(hkData);
   renderHKHistTable(hkHistData);
   renderMTTable(mtData);
+  renderParkingTable(parkingDataList);
+  renderInventoryTable(inventoryDataList);
   
-  // *** Initial Load for Rooms must use the DB function ***
+  // Fetch dynamic data for Rooms (which also updates dashboard stats)
   if(document.getElementById('rooms-page')) {
       fetchAndRenderRooms();
   }
-  
-  renderParkingTable(parkingDataList);
-  renderInventoryTable(inventoryDataList);
 });

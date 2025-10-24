@@ -441,22 +441,42 @@ tbody tr:hover {
   background-color: #5cb85c;
 }
 
-/* ===== ROOM STATUS BADGES ===== */
+/* ===== STATUS BADGES ===== */
+.statusBadge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  display: inline-block;
+}
+
 .statusBadge.available {
   background-color: #5cb85c;
+  color: #fff;
 }
 
 .statusBadge.occupied {
   background-color: #ff9500;
+  color: #fff;
 }
 
 .statusBadge.reserved {
   background-color: #007bff;
+  color: #fff;
+}
+
+/* CHANGED: Purple color for Needs Cleaning (was orange #ff6b35) */
+.statusBadge.needs-cleaning {
+  background-color: #9b59b6; /* Purple - distinct from all other statuses */
+  color: #fff;
 }
 
 .statusBadge.maintenance {
   background-color: #c9302c;
+  color: #fff;
 }
+
 
 /* ===== INVENTORY STATUS BADGES ===== */
 .statusBadge.in-stock {
