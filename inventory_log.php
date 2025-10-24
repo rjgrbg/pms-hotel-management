@@ -1,110 +1,144 @@
+<?php
+// 1. Start the session with the same secure settings
+session_start([
+    'cookie_httponly' => true,
+    'cookie_secure' => isset($_SERVER['HTTPS']),
+    'use_strict_mode' => true
+]);
+
+// 2. !! THE FIX !! 
+// Tell the browser to not cache this page
+header('Cache-Control: no-cache, no-store, must-revalidate'); // HTTP 1.1.
+header('Pragma: no-cache'); // HTTP 1.0.
+header('Expires: 0'); // Proxies.
+
+// 3. Check if the user is actually logged in.
+// If no UserID is in the session, they aren't logged in.
+if (!isset($_SESSION['UserID'])) {
+    // Redirect them to the login page
+    header("Location: inventory_log_signin.php");
+    exit();
+}
+
+// If they ARE logged in, the rest of the page will load.
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>The Celestia Hotel - Inventory</title>
-    <!-- Google Fonts --><link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Forum&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome for icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <!-- Main Stylesheet --><link rel="stylesheet" href="css/inventory_log_page.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Celestia Hotel - Housekeeping Management</title>
+  <link rel="stylesheet" href="css/housekeeping.css">
+    <?php
+// ======================================================
+// === PHP Logic Orchestration (REQUIRED FILES) ===
+// ======================================================
+
+// 1. Load the database configuration and connection ($conn is now available)
+require_once('db_connection.php'); 
+
+// 2. Load the user data function
+require_once('User.php');       
+
+// 3. Execute the function to get dynamic data
+$userData = getUserData($conn);
+
+// Set the variables used in the HTML, applying security (htmlspecialchars)
+$Fname = htmlspecialchars($userData['Name']);
+$Accounttype = htmlspecialchars($userData['Accounttype']); // Using Accounttype to match your error
+// Close the DB connection (optional, but good practice)
+$conn->close();
+
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Celestia Hotel - Housekeeping Management</title>
+  <link rel="stylesheet" href="css/housekeeping.css">
 </head>
 <body>
-
-    <!-- Header --><header class="header">
-        <div class="header-left">
-            <img src="assets/images/celestia-logo.png" alt="Logo" class="header-logo" />
-            <span class="hotel-name">THE CELESTIA HOTEL</span>
-        </div>
-        <div class="header-right">
-            <i class="fas fa-sign-out-alt logout-icon"></i>
-        </div>
-    </header>
-
-    <!-- Main Container --><div class="main-container">
-        <h1 class="page-title">INVENTORY</h1>
-
-        <!-- Controls Row --><div class="controls-row">
-            <div class="filter-controls">
-                <select class="filter-dropdown" id="categoryFilter">
-                    <option value="">All Categories</option>
-                    <!-- Categories will be populated by JS --></select>
-            </div>
-            <div class="search-box">
-                <input type="text" placeholder="Search by name or description..." class="search-input" id="searchInput" />
-                <button class="search-btn">
-                    <i class="fas fa-search"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- Inventory Table -->
-         <div class="table-wrapper">
-            <table class="inventory-table">
-                <thead>
-                    <tr>
-                        <th>NAME</th>
-                        <th>CATEGORY</th>
-                        <th>QUANTITY</th>
-                        <th>DESCRIPTION</th>
-                        <th>ITEMS TO ISSUE</th>
-                    </tr>
-                </thead>
-                <tbody id="inventoryTableBody">
-                    <!-- Rows will be injected by JavaScript -->
-                    </tbody>
-            </table>
-        </div>
-
-        <!-- Item Details Section --><div class="item-details-section">
-            <h2 class="section-title">ITEM DETAILS</h2>
-            <!-- This content area will be populated by JS with a list of items --><div class="item-details-content" id="itemDetailsContent">
-                <!-- JavaScript will inject the list of items to be issued here --></div>
-            <div class="item-details-actions">
-                <button class="action-btn cancel-btn" id="cancelBtn">CANCEL</button>
-                <button class="action-btn done-btn" id="doneBtn">DONE</button>
-            </div>
-        </div>
+  <!-- Header -->
+  <header class="header">
+    <div class="headerLeft">
+      <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" />
+      <span class="hotelName">THE CELESTIA HOTEL</span>
+      <link rel="stylesheet" href="css/inventory_log_page.css">
     </div>
 
-    <!-- ===== Custom Message Box (Modal) ===== -->
-     <div class="message-box-backdrop" id="messageBoxBackdrop">
-        <div class="message-box-content">
-            <h3 id="messageBoxTitle">Notice</h3>
-            <!-- Use <pre> tag to preserve line breaks in the message --><pre id="messageBoxText">This is a sample message.</pre>
-            <button class="action-btn" id="messageBoxClose">OK</button>
-        </div>
-    </div>
-    <!-- ===== End of Message Box ===== --><!-- ===== Confirmation Modal ===== --><div class="confirmation-modal-backdrop" id="confirmationModalBackdrop">
-        <div class="confirmation-modal-content">
-            <div class="confirmation-modal-header">
-                ITEM DETAILS
-            </div>
-            <div class="confirmation-modal-body" id="confirmationModalBody">
-                <!-- Confirmation list will be injected here --></div>
-            <div class="confirmation-modal-actions">
-                <button class="action-btn-outline" id="cancelConfirmBtn">CANCEL</button>
-                <button class="action-btn-confirm" id="confirmBtn">CONFIRM</button>
-            </div>
-        </div>
-    </div>
-    <!-- ===== End of Confirmation Modal ===== --><!-- ===== Logout Confirmation Modal ===== --><div class="logout-modal-backdrop" id="logoutModalBackdrop">
-        <div class="logout-modal-content">
-            <div class="logout-modal-icon">
-                <i class="fas fa-sign-out-alt"></i>
-            </div>
-            <p class="logout-modal-message">Are you sure you want to log out on your account?</p>
-            <div class="logout-modal-actions">
-                <button class="logout-action-btn cancel" id="cancelLogoutBtn">CANCEL</button>
-                <button class="logout-action-btn confirm" id="confirmLogoutBtn">YES, LOGOUT</button>
-            </div>
-        </div>
-    </div>
-    <!-- ===== End of Logout Modal ===== --><!-- JavaScript Logic -->
-     <script src="script/shared-data.js"></script>
-    <script src="script/inventory_log.js"></script>
+    <!-- profile sidebar -->
+    <img src="assets/icons/profile-icon.png" alt="Profile" class="profileIcon" id="profileBtn" />
 
+    <aside class="profile-sidebar" id="profile-sidebar">
+      <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
+
+      <div class="profile-header">
+        <div class="profile-pic-container">
+          <i class="fas fa-user-tie"></i>
+        </div>
+        <h3><?php echo $Fname; ?></h3>
+        <p><?php echo $Accounttype; ?></p>
+      </div>
+
+      <nav class="profile-nav">
+        <a href="#" id="account-details-link">
+          <i class="fas fa-user-edit" style="margin-right: 10px;"></i> Account Details
+        </a>
+      </nav>
+
+      <div class="profile-footer">
+        <a id="logoutBtn">
+          <i class="fas fa-sign-out-alt" style="margin-right: 10px;"></i> Logout
+        </a>
+      </div>
+    </aside>
+
+  </header>
+  <!-- Logout Confirmation Modal -->
+  <div class="modalBackdrop" id="logoutModal" style="display: none;">
+    <div class="logoutModal">
+      <button class="closeBtn" id="closeLogoutBtn">×</button>
+      <div class="modalIcon">
+        <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
+      </div>
+      <h2>Are you sure you want to logout?</h2>
+      <p>You will be logged out from your account and redirected to the login page.</p>
+      <div class="modalButtons">
+        <button class="modalBtn cancelBtn" id="cancelLogoutBtn">CANCEL</button>
+        <button class="modalBtn confirmBtn" id="confirmLogoutBtn">YES, LOGOUT</button>
+      </div>
+    </div>
+  </div>
+<!-- Main Container -->
+  <div class="mainContainer">
+    <h1>Inventory Log</h1>
+    <p>Welcome to the Inventory Log System.</p>
+  <form action="inventory_log_logout.php" method="POST" style="display: inline;">
+    <button type="submit" class="logout-button">Logout</button>
+  </form>
+
+  <!-- 
+  You can add this basic styling to your css/inventory_log.css file 
+  to make the button look good.
+-->
+  <style>
+    .logout-button {
+      padding: 0.5rem 1rem;
+      font-family: Arial, sans-serif;
+      font-weight: bold;
+      color: #FFA237;
+      background-color: #6a2424;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .logout-button:hover {
+      background-color: #853838;
+    }
+  </style>
+   <script src="script/inventory_log.js"></script>
 </body>
 </html>
-

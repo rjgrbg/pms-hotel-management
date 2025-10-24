@@ -50,6 +50,7 @@ $Accounttype = htmlspecialchars($userData['Accounttype']); // Using Accounttype 
 $conn->close();
 
 ?>
+</head>
 <body>
   <!-- Header -->
   <header class="header">
