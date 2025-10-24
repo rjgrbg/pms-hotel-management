@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 21, 2025 at 03:49 PM
+-- Generation Time: Oct 24, 2025 at 10:44 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -48,7 +48,9 @@ INSERT INTO `auth_tokens` (`id`, `selector`, `hashed_validator`, `user_id`, `exp
 (6, 'b3c83cf9348fba6bfbdc95bf62846e8b', '$2y$10$zb.7rGa9GSXC/qAm5lqlZuOH7.ntsRdrToYKsWda7aLamXDQP2oxq', 1, '2025-11-20 11:38:07'),
 (7, '8010b32db512ef8df57a0b9ef31c14d8', '$2y$10$SiZR5tOKDuGGh6fAFm3rWuqhl676CxHtL3Z/UorGp58U9Ho6XPi.W', 1, '2025-11-20 11:50:32'),
 (8, '980b6a14cb6b535f1de2cb1eef3ed89f', '$2y$10$HsXHr.wk33qFrX8nqmuvM.gotUPaQbK0ZYDkanGdz24sMpHqf/1R2', 1, '2025-11-20 14:28:08'),
-(9, '680070b8cc1f43c09d4169348edc0ba6', '$2y$10$eiTcj0syJkdpkWuj7k3xp.QkZeIpFlmyuOSvm3ThDeEFE/d9vY/te', 1, '2025-11-20 14:33:52');
+(9, '680070b8cc1f43c09d4169348edc0ba6', '$2y$10$eiTcj0syJkdpkWuj7k3xp.QkZeIpFlmyuOSvm3ThDeEFE/d9vY/te', 1, '2025-11-20 14:33:52'),
+(10, '8990b9d5ef5b9023d733b66134c5e672', '$2y$10$w7Tk8IZG/wo2i6B8EHgu7OrIPpJ.lKC50ZGvMN6rXY8H9ZySEYt06', 2, '2025-11-20 18:26:43'),
+(11, 'f9dba26bbd2fad1b541bc5e73a7e76f7', '$2y$10$2Nixep9t/.jOqQq1miyXl.mWHPQHHX4OwZn31dpM6VHJQoW7Z6vC6', 2, '2025-11-20 18:27:01');
 
 -- --------------------------------------------------------
 
@@ -244,7 +246,9 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`UserID`, `Fname`, `Lname`, `Mname`, `Birthday`, `AccountType`, `Username`, `Password`, `EmailAddress`, `Shift`, `Address`) VALUES
 (1, 'admin', 'admin', 'admin', '2025-10-01', 'admin', 'admin', '$2y$10$6MBxQthRLTVLmZrHYapf5.JmU.pBtM6moistQAln3wAMhLkRKnAm2', 'vincevargas90@gmail.com', 'Night', 'asd'),
-(2, 'hk', 'hk', NULL, '2025-08-04', 'housek', '', '', '', '', '');
+(2, 'wilms', 'bagayan', 'timaan', '2025-08-04', 'admin', 'admin12', '$2y$10$YrLYjpb4z.ItkUe04qoeVOcntRB2OAw1dqgcxf8zOtI4V9bVsdX7m', 'bagayan.johnwilmer.timaan@gmail.com', 'day', '1234556'),
+(3, 'dianna', 'zabarte', 'hailer', '2004-08-17', 'housekeeping_manager', 'manager12', '$2y$10$YrLYjpb4z.ItkUe04qoeVOcntRB2OAw1dqgcxf8zOtI4V9bVsdX7m', 'bagayan.johnwilmer.timaan@gmail.com', 'day', '1234556'),
+(4, 'Christine', 'Manalo', 'Mekus', '2004-08-02', 'maintenance_manager', 'manager23', '$2y$10$YrLYjpb4z.ItkUe04qoeVOcntRB2OAw1dqgcxf8zOtI4V9bVsdX7m', 'bagayan.johnwilmer.timaan@gmail.com', 'night', 'hatdog Street');
 
 -- --------------------------------------------------------
 
@@ -478,7 +482,7 @@ ALTER TABLE `workorder`
 -- AUTO_INCREMENT for table `auth_tokens`
 --
 ALTER TABLE `auth_tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `cleaninglog`
@@ -550,7 +554,7 @@ ALTER TABLE `room`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `vehiclecategory`

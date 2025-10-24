@@ -1,0 +1,830 @@
+/* --- General Body & Background Styling --- */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: #333;
+    background-color: #3b1e1e;
+    /* Background Image from Unsplash - Photo by Brad Japhe */
+    background-image: linear-gradient(rgba(78, 30, 30, 0.85), rgba(48, 15, 15, 0.9)), url('https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem;
+    box-sizing: border-box;
+}
+
+/* --- Main container to hold both sections --- */
+.main-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8rem;
+    width: 100%;
+    max-width: 1200px;
+}
+
+/* --- Left Side: Login Form Section --- */
+.login-section {
+    flex: 1;
+    max-width: 400px;
+}
+
+.welcome-title {
+    font-family: 'Forum', serif;
+    font-size: 3.5rem;
+    color: #f0c37b;
+    margin: 0;
+    font-weight: 400;
+}
+
+.divider {
+    height: 2px;
+    width: 150px;
+    background: linear-gradient(to right, #f0c37b, transparent);
+    margin-bottom: 2rem;
+}
+
+.form-box {
+    background-color: #FFF2E0;
+    padding: 2.5rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-box h2 {
+    font-family: 'Forum', serif;
+    text-align: left;
+    margin-top: 0;
+    margin-bottom: 2rem;
+    font-size: 2rem;
+    font-weight: 400;
+    color: #450F1CF7;
+}
+
+.input-group {
+    margin-bottom: 1.5rem;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #450F1CF7;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: none;
+    border-radius: 8px;
+    background-color: #4a2e2e;
+    color: #f0c37b;
+    font-family: Arial, sans-serif;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.input-group input::placeholder {
+    color: #FFFFFF;
+    opacity: 1;
+}
+
+.input-group input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(240, 195, 123, 0.5);
+}
+
+.forgot-link {
+    display: block;
+    text-align: right;
+    margin-top: -1rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    color: #450F1CF7;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.forgot-link:hover {
+    text-decoration: underline;
+}
+
+.login-button {
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 8px;
+    background-color: #6a2424;
+    color: #FFA237;
+    font-family: Arial, sans-serif;
+    font-size: 1.1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+}
+
+.login-button:hover {
+    background-color: #853838;
+}
+
+.login-button:active {
+    transform: scale(0.98);
+}
+
+.login-button:disabled {
+    background-color: #996F6F;
+    cursor: not-allowed;
+}
+
+/* --- Right Side: Branding Section --- */
+.branding-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #f0c37b;
+    text-align: center;
+    max-width: 400px;
+    font-family: 'Forum', serif;
+}
+
+.logo {
+    width: 180px;
+    margin-bottom: 1.5rem;
+}
+
+.hotel-title {
+    font-size: 3.5rem;
+    font-weight: 400;
+    letter-spacing: 4px;
+    line-height: 1;
+}
+
+.hotel-title-sub {
+    font-size: 3.5rem;
+    font-weight: 400;
+    letter-spacing: 4px;
+    line-height: 1;
+    margin-bottom: 1rem;
+}
+
+.hotel-subtitle {
+    font-size: 1.1rem;
+    font-weight: 400;
+    letter-spacing: 2px;
+    margin: 0;
+}
+
+
+/* ===== HEADER ===== */
+.header {
+  background-color: #480c1b;
+  padding: 15px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.headerLogo {
+  width: 35px;
+  height: 35px;
+  object-fit: contain;
+}
+
+.hotelName {
+  color: #d4af78;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  font-family: Forum;
+}
+
+            /* ===== PROFILE SIDEBAR ===== */
+
+            .profileIcon {
+              width: 30px;
+              height: 30px;
+              object-fit: contain;
+              cursor: pointer;
+            }
+
+            /* Sidebar Container */
+            .profile-sidebar {
+              position: fixed;
+              top: 0;
+              right: 0;
+              width: 280px;
+              height: 100%;
+              background-color: rgb(72, 12, 27);
+              box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+              display: flex;
+              flex-direction: column;
+
+              /* --- Core functionality: Hide sidebar off-screen by default --- */
+              transform: translateX(100%);
+              transition: transform 0.3s ease-in-out;
+            }
+
+            /* --- State when sidebar is active/visible --- */
+            .profile-sidebar.active {
+              transform: translateX(0);
+            }
+
+            /* Close Button */
+            .sidebar-close-btn {
+              position: absolute;
+              top: 10px;
+              right: 15px;
+              background: none;
+              border: none;
+              font-size: 24px;
+              cursor: pointer;
+              color: #fff;
+            }
+
+            /* Profile Header Styling */
+            .profile-header {
+              text-align: center;
+              padding: 20px;
+              border-bottom: 1px solid #fff;
+            }
+
+            .profile-pic-container {
+              font-size: 50px;
+              /* Icon size */
+              color: #fff;
+              margin-bottom: 10px;
+            }
+
+            .profile-header h3 {
+              margin: 5px 0;
+              color: #fff;
+            }
+
+            .profile-header p {
+              margin: 0;
+              color: #fff;
+              font-size: 14px;
+            }
+
+            /* Navigation Links */
+            .profile-nav {
+              flex-grow: 1;
+              /* Pushes the footer down */
+              padding: 20px 0;
+            }
+
+            .profile-nav a,
+            .profile-footer a {
+              display: block;
+              padding: 15px 20px;
+              text-decoration: none;
+              color: #fff;
+              transition: color 0.5s;
+            }
+
+            .profile-nav a:hover,
+            .profile-footer a:hover {
+              color: #ffa237;
+            }
+
+            /* Footer/Logout Link */
+            .profile-footer {
+              border-top: 1px solid #fff;
+              padding: 10px 0;
+            }
+.logoutModal {
+    /* Styles the main box for the logout confirmation */
+    background-color: #480c1b; /* Dark background matching the header/sidebar */
+    border-radius: 8px;
+    padding: 35px;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.closeBtn {
+    /* Styles the 'X' button to close the modal */
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #fff;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.closeBtn:hover {
+    opacity: 1;
+}
+
+.modalIcon {
+    /* Container for the logout icon */
+    margin-bottom: 50px;
+    margin-top: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.logoutIcon {
+    /* Size for the specific logout icon image */
+    height: 50px;
+    width: 50px;
+}
+
+.logoutModal h2 {
+    /* Styles for the main question/title */
+    color: #fff;
+    font-size: 18px;
+    margin-bottom: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+.logoutModal p {
+    /* Styles for the subtext/description */
+    color: #dcc8b0;
+    font-size: 13px;
+    line-height: 1.5;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.modalButtons {
+    /* Container for the CANCEL and CONFIRM buttons */
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.modalBtn {
+    /* Base style for all buttons in the modal */
+    padding: 11px 28px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+}
+
+.cancelBtn {
+    /* Style for the CANCEL button */
+    background-color: #fff;
+    color: #480c1b;
+    min-width: 120px;
+}
+
+.cancelBtn:hover {
+    opacity: 0.9;
+}
+
+.confirmBtn {
+    /* Style for the YES, LOGOUT button */
+    background-color: #ffb400; /* Gold/Orange primary color */
+    color: #480c1b;
+    min-width: 160px;
+}
+
+.confirmBtn:hover {
+    opacity: 0.9;
+}
+
+/* ===== RESPONSIVE STYLES (for small screens) ===== */
+@media (max-width: 768px) {
+    .logoutModal {
+        width: 90%;
+        max-width: 380px;
+        padding: 25px;
+    }
+
+    .modalButtons {
+        flex-direction: column; /* Stacks buttons vertically on mobile */
+    }
+
+    .modalBtn {
+        width: 100%; /* Makes buttons full-width */
+    }
+}
+/* --- Media Query for Responsiveness --- */
+@media (max-width: 900px) {
+    .main-container {
+        flex-direction: column;
+        gap: 4rem;
+        text-align: center;
+    }
+    .branding-section {
+        order: -1;
+    }
+     .header {
+    padding: 12px 15px;
+  }
+    .login-section {
+        width: 100%;
+    }
+    .welcome-title {
+        text-align: center;
+    }
+    .divider {
+        margin-left: auto;
+        margin-right: auto;
+    }
+}
+
+/* --- Password Toggle Icon --- */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper input {
+    padding-right: 3rem; /* Make space for the icon */
+    width: 100%;
+}
+
+.togglePassword {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.togglePassword img {
+    width: 20px;
+    height: 20px;
+    opacity: 0.7;
+}
+
+/* --- Error Message Styling --- */
+.error-message {
+    color: #D8000C;
+    background-color: #FFD2D2;
+    border: 1px solid #D8000C;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    display: none; /* Hidden by default */
+}
+
+
+/* =================================== */
+/* === ACCOUNT RECOVERY MODAL CSS === */
+/* =================================== */
+
+.modalBackdrop {
+    /* display: none; /* Hidden by default (already set inline) */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.recoveryModal,
+.emailVerificationPanel {
+    background-color: #FFF2E0;
+    margin: auto;
+    padding: 2.5rem;
+    border: 1px solid #888;
+    width: 90%;
+    max-width: 450px;
+    border-radius: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+    color: #450F1CF7;
+    font-family: Arial, sans-serif;
+}
+
+.closeButton {
+    color: #aaa;
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    font-size: 2rem;
+    font-weight: bold;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.closeButton:hover,
+.closeButton:focus {
+    color: #000;
+    text-decoration: none;
+}
+
+.recoveryHeader h2,
+.verificationHeader h2 {
+    font-family: 'Forum', serif;
+    font-size: 2rem;
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+.recoveryHeader p,
+.verificationHeader p {
+    text-align: center;
+    font-size: 0.95rem;
+    color: #666;
+    margin-bottom: 2rem;
+}
+
+.recoveryOptions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.recoveryButton {
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    font-size: 1rem;
+    padding: 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #6a2424;
+    color: #FFA237;
+}
+
+.recoveryButton:hover {
+    background-color: #853838;
+    transform: translateY(-2px);
+}
+
+.orDivider {
+    text-align: center;
+    font-weight: bold;
+    color: #aaa;
+    margin: 0.5rem 0;
+}
+
+.recoveryFooter,
+.verificationFooter {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.backButton {
+    background: none;
+    border: none;
+    color: #450F1CF7;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+.backButton:hover {
+    text-decoration: underline;
+}
+
+/* --- Verification Form Styles --- */
+.verificationForm {
+    width: 100%;
+}
+
+.formErrorMessage {
+    color: #D8000C;
+    background-color: #FFD2D2;
+    border: 1px solid #D8000C;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    text-align: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    display: none; /* Hidden by default */
+}
+
+.formGroup {
+    margin-bottom: 1.5rem;
+}
+
+.formGroup label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #450F1CF7;
+}
+
+.formGroup input,
+.passwordInput {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #333;
+    font-family: Arial, sans-serif;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.passwordInputWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.passwordInputWrapper .passwordInput {
+    padding-right: 3.5rem;
+}
+.passwordInputWrapper .togglePassword {
+    position: absolute;
+    right: 0.1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+}
+.passwordInputWrapper .togglePassword img {
+    width: 20px;
+    opacity: 0.6;
+}
+
+
+.verificationButton {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 8px;
+    background-color: #6a2424;
+    color: #FFA237;
+    font-family: Arial, sans-serif;
+    font-size: 1.1rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.verificationButton:hover {
+    background-color: #853838;
+}
+
+.verificationButton:disabled {
+    background-color: #996F6F;
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* --- OTP Input Styles --- */
+.otpInputContainer {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 2rem 0;
+}
+
+.otpInput {
+    width: 45px;
+    height: 50px;
+    font-size: 1.5rem;
+    text-align: center;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #fff;
+    color: #333;
+    -moz-appearance: textfield; /* Firefox */
+}
+.otpInput::-webkit-outer-spin-button,
+.otpInput::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.otpInput:focus {
+    outline: none;
+    border-color: #6a2424;
+    box-shadow: 0 0 0 3px rgba(106, 36, 36, 0.3);
+}
+
+.resendCode {
+    text-align: center;
+    font-size: 0.9rem;
+    margin-top: -1rem;
+    margin-bottom: 1.5rem;
+}
+.resendCode a {
+    color: #6a2424;
+    font-weight: bold;
+    text-decoration: none;
+}
+.resendCode a:hover {
+    text-decoration: underline;
+}
+
+/* --- Password Requirements --- */
+.passwordRequirements {
+    margin: 1.5rem 0;
+    padding: 1rem;
+    background-color: #f8f8f8;
+    border-radius: 8px;
+    border: 1px solid #eee;
+}
+.requirementTitle {
+    font-weight: bold;
+    font-size: 0.9rem;
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+}
+.requirementList {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    font-size: 0.85rem;
+    color: #666;
+}
+.requirementList li {
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: center;
+}
+.requirementList li .checkmark {
+    margin-right: 8px;
+    font-weight: bold;
+    color: #D8000C;
+}
+.requirementList li.active {
+    color: #333;
+}
+.requirementList li.active .checkmark {
+    color: #2a8a2a; /* Green checkmark */
+}
+
+
+/* --- Success Panels --- */
+.successPanel .verificationHeader h2 {
+    color: #2a8a2a;
+}
+.usernameDisplay {
+    margin: 2rem 0;
+    text-align: center;
+}
+.usernameBox {
+    background-color: #f8f8f8;
+    border: 1px solid #eee;
+    padding: 1.5rem;
+    border-radius: 8px;
+}
+.usernameLabel {
+    margin: 0;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
