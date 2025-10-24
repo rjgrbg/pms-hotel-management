@@ -442,23 +442,42 @@ tbody tr:hover {
     background-color: #5cb85c;
 }
 
-/* ===== ROOM STATUS BADGES ===== */
+/* ===== STATUS BADGES ===== */
+.statusBadge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  display: inline-block;
+}
+
 .statusBadge.available {
-    background-color: #5cb85c;
+  background-color: #5cb85c;
+  color: #fff;
 }
 
 .statusBadge.occupied {
-    background-color: #ff9500;
+  background-color: #ff9500;
+  color: #fff;
 }
 
 .statusBadge.reserved {
-    background-color: #007bff;
+  background-color: #007bff;
+  color: #fff;
+}
+
+/* CHANGED: Purple color for Needs Cleaning (was orange #ff6b35) */
+.statusBadge.needs-cleaning {
+  background-color: #9b59b6; /* Purple - distinct from all other statuses */
+  color: #fff;
 }
 
 .statusBadge.maintenance {
-    background-color: #c9302c;
-    color: #fff;
+  background-color: #c9302c;
+  color: #fff;
 }
+
 
 /* ===== INVENTORY STATUS BADGES ===== */
 .statusBadge.in-stock {
@@ -1034,166 +1053,43 @@ tbody tr:hover {
     filter: invert(1); 
 }
 
-/* Select dropdown arrow for Account Type and Shift */
-.formGroup select {
-    -webkit-appearance: none; 
-    -moz-appearance: none; 
-    appearance: none; 
-    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path fill="%23fff" d="M5 6l5 5 5-5z"/></svg>'); 
-    background-repeat: no-repeat;
-    background-position: right 10px center;
-    background-size: 12px;
+/* ===== FORM MESSAGE STYLES ===== */
+.formMessage {
+  display: none;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  animation: slideDown 0.3s ease;
 }
 
-input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Modal Buttons - Integrated into the last formRow */
-.modalButtons {
-    flex: 0 0 auto; 
-    margin: 0;
-    padding: 0;
+.formMessage.error {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
 }
 
-.modalBtn.confirmBtn {
-    background-color: #ffb400; 
-    color: #3b0914; 
-    padding: 10px 20px;
-    border-radius: 5px;
-    font-size: 1em;
-    font-weight: bold;
-    height: 44px; 
-    min-width: 150px;
-    transition: background-color 0.2s;
-    text-transform: none; /* Override uppercase from general modalBtn */
+.formMessage.success {
+  background-color: #efe;
+  border: 1px solid #cfc;
+  color: #3c3;
 }
 
-.modalBtn.confirmBtn:hover {
-    background-color: #d4af78;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 1024px) {
-    .mainContent {
-        padding: 20px;
-    }
-
-    .statsGrid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .sidebar {
-        width: 180px;
-    }
-}
-
-@media (max-width: 768px) {
-    .mainWrapper {
-        flex-direction: column;
-        height: auto;
-    }
-
-    .sidebar {
-        width: 100%;
-        max-height: 200px;
-        overflow-x: auto;
-        padding: 15px 0;
-    }
-
-    .sidebarContent {
-        flex-direction: row;
-        gap: 20px;
-    }
-
-    .profileSection {
-        border-bottom: none;
-        border-right: 1px solid rgba(212, 175, 120, 0.2);
-        padding: 0 20px 0 0;
-        margin-bottom: 0;
-        min-width: 120px;
-    }
-    
-    .employeeModal {
-        padding: 20px;
-        max-width: 100%;
-    }
-    
-    .formRow {
-        flex-direction: column;
-        gap: 15px; /* Use vertical gap */
-    }
-
-    .formRow.inline-group {
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .formRow .inline-group .formGroup {
-        min-width: 100%;
-    }
-
-    .modalButtons {
-        width: 100%;
-    }
-    
-    .modalBtn.confirmBtn {
-        width: 100%;
-    }
-
-    .mainContent {
-        padding: 15px;
-    }
-
-    .pageTitle {
-        font-size: 24px;
-        margin-bottom: 20px;
-    }
-
-    .statsGrid {
-        grid-template-columns: 1fr;
-    }
-
-    .logoutModal {
-        width: 90%;
-        max-width: 380px;
-        padding: 25px;
-    }
-
-    .modalButtons {
-        flex-direction: column;
-    }
-
-    .modalBtn {
-        width: 100%;
-    }
-
-    .filterControls {
-        flex-direction: column;
-    }
-
-    .filterDropdown,
-    .searchBox,
-    .refreshBtn,
-    .downloadBtn,
-    .addRoomBtn {
-        width: 100%;
-    }
-}
-.modal-footer-centered { 
-    display: flex;
-    flex-direction: column; /* Force elements to stack vertically */
-    align-items: center; /* Center horizontally */
-}
-
-/* Ensure the error message takes up space and is visible */
-#userFormError {
-    text-align: center;
-    width: 100%;/* Ensure spacing above the button */
-}
-
-/* Ensure the button still centers below the error message */
-.modal-footer-centered .modalBtn.confirmBtn {
-    min-width: 200px; 
-    margin: 0 auto; 
+.formMessage.warning {
+  background-color: #ffc;
+  border: 1px solid #fc9;
+  color: #c93;
 }
