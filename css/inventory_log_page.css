@@ -1,362 +1,611 @@
-/* ===== HEADER ===== */
+/* --- Root Variables (Color Palette) --- */
+:root {
+    --header-bg: #480C1B;
+    --gold-color: #D4AF78;
+    --light-gold-color: #DCC8B0;
+    --text-color-dark: #333333;
+    --button-orange: #FFA237;
+    --table-header-bg: #4a3a3a; /* Dark brown from image */
+    --section-dark-bg: #480C1B;
+    --status-out-of-stock: #dc3545; /* Red */
+    --button-grey: #e0e0e0;
+    --button-grey-hover: #d0d0d0;
+    --row-selected-bg: #e6f7ff; /* Light blue for selected row */
+    --logout-modal-bg: #480C1B; /* Dark red from image */
+    --logout-text-color: #fff;
+    --logout-icon-color: #D4AF78; /* Gold from image */
+    --logout-button-orange: #FFA237;
+    --logout-button-text: #480C1B; /* Dark red for button text */
+    --logout-button-cancel-bg: #FFA237; /* Same as confirm */
+    --logout-button-cancel-text: #480C1B;
+}
+
+/* --- Basic Reset & Body Styles --- */
+body {
+    margin: 0;
+    font-family: 'Open Sans', sans-serif;
+    background-color: #f4f4f4;
+    color: var(--text-color-dark);
+}
+
+/* --- Header --- */
 .header {
-  background-color: #480c1b;
-  padding: 15px 40px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    background-color: var(--header-bg);
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.header-logo {
+    width: 35px;
+    height: 35px;
+    object-fit: contain;
+}
+.hotel-name {
+    color: var(--gold-color);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    font-family: 'Forum', serif;
+}
+.header-right .logout-icon {
+    color: var(--gold-color);
+    font-size: 24px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+.header-right .logout-icon:hover {
+    color: var(--light-gold-color);
 }
 
-.headerLeft {
-  display: flex;
-  align-items: center;
-  gap: 15px;
+/* --- Main Container --- */
+.main-container {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 0 20px;
+}
+.page-title {
+    font-family: 'Forum', serif;
+    font-size: 38px;
+    color: var(--text-color-dark);
+    text-align: left;
+    margin-bottom: 25px;
+    letter-spacing: 2px;
+    font-weight: 400;
 }
 
-.headerLogo {
-  width: 35px;
-  height: 35px;
-  object-fit: contain;
+/* --- Controls Row (Category & Search) --- */
+.controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 15px;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
 }
-
-.hotelName {
-  color: #d4af78;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  font-family: Forum;
+.filter-controls {
+    flex-shrink: 0;
 }
-
-            /* ===== PROFILE SIDEBAR ===== */
-
-            .profileIcon {
-              width: 30px;
-              height: 30px;
-              object-fit: contain;
-              cursor: pointer;
-            }
-
-            /* Sidebar Container */
-            .profile-sidebar {
-              position: fixed;
-              top: 0;
-              right: 0;
-              width: 280px;
-              height: 100%;
-              background-color: rgb(72, 12, 27);
-              box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-              display: flex;
-              flex-direction: column;
-
-              /* --- Core functionality: Hide sidebar off-screen by default --- */
-              transform: translateX(100%);
-              transition: transform 0.3s ease-in-out;
-            }
-
-            /* --- State when sidebar is active/visible --- */
-            .profile-sidebar.active {
-              transform: translateX(0);
-            }
-
-            /* Close Button */
-            .sidebar-close-btn {
-              position: absolute;
-              top: 10px;
-              right: 15px;
-              background: none;
-              border: none;
-              font-size: 24px;
-              cursor: pointer;
-              color: #fff;
-            }
-
-            /* Profile Header Styling */
-            .profile-header {
-              text-align: center;
-              padding: 20px;
-              border-bottom: 1px solid #fff;
-            }
-
-            .profile-pic-container {
-              font-size: 50px;
-              /* Icon size */
-              color: #fff;
-              margin-bottom: 10px;
-            }
-
-            .profile-header h3 {
-              margin: 5px 0;
-              color: #fff;
-            }
-
-            .profile-header p {
-              margin: 0;
-              color: #fff;
-              font-size: 14px;
-            }
-
-            /* Navigation Links */
-            .profile-nav {
-              flex-grow: 1;
-              /* Pushes the footer down */
-              padding: 20px 0;
-            }
-
-            .profile-nav a,
-            .profile-footer a {
-              display: block;
-              padding: 15px 20px;
-              text-decoration: none;
-              color: #fff;
-              transition: color 0.5s;
-            }
-
-            .profile-nav a:hover,
-            .profile-footer a:hover {
-              color: #ffa237;
-            }
-
-            /* Footer/Logout Link */
-            .profile-footer {
-              border-top: 1px solid #fff;
-              padding: 10px 0;
-            }
-.logoutModal {
-    /* Styles the main box for the logout confirmation */
-    background-color: #480c1b; /* Dark background matching the header/sidebar */
-    border-radius: 8px;
-    padding: 35px;
-    max-width: 420px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    position: relative;
-    animation: slideIn 0.3s ease;
+.filter-dropdown {
+    padding: 10px 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 14px;
+    background-color: #fff;
+    cursor: pointer;
+    font-family: 'Open Sans', sans-serif;
+    min-width: 200px;
 }
-
-@keyframes slideIn {
-    from {
-        transform: translateY(-30px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+.search-box {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #fff;
+    padding: 0 10px;
+    flex-grow: 1;
+    max-width: 300px; /* As seen in image */
 }
-
-.closeBtn {
-    /* Styles the 'X' button to close the modal */
-    position: absolute;
-    top: 12px;
-    right: 12px;
+.search-input {
+    border: none;
+    flex: 1;
+    padding: 10px 0;
+    font-size: 14px;
+    outline: none;
+    background-color: transparent;
+    font-family: 'Open Sans', sans-serif;
+}
+.search-btn {
     background: none;
     border: none;
-    font-size: 28px;
-    color: #fff;
     cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 0.2s;
-}
-
-.closeBtn:hover {
-    opacity: 1;
-}
-
-.modalIcon {
-    /* Container for the logout icon */
-    margin-bottom: 50px;
-    margin-top: 50px;
+    padding: 5px;
     display: flex;
+}
+.search-btn img, .search-btn i {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    color: #888;
+}
+
+/* --- Inventory Table --- */
+.table-wrapper {
+    background-color: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    overflow-x: auto; /* Allow horizontal scroll on mobile */
+}
+.inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 700px; /* Prevent wrapping on small content */
+}
+.inventory-table thead {
+    background-color: var(--table-header-bg); /* Changed */
+}
+.inventory-table th {
+    padding: 15px 20px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    color: #fff;
+    border: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+.inventory-table td {
+    padding: 12px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+    color: var(--text-color-dark);
+    vertical-align: middle;
+}
+.inventory-table tbody tr:nth-child(odd) {
+    background-color: #fff; /* Changed */
+}
+.inventory-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9; /* Added */
+}
+.inventory-table tbody tr:hover {
+    background-color: #f0f0f0;
+    cursor: pointer;
+}
+.inventory-table tbody tr.selected-row {
+    background-color: var(--row-selected-bg) !important;
+}
+
+/* --- Quantity Controls in Table --- */
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.qty-btn {
+    border: none;
+    border-radius: 50%;
+    width: 24px; /* Changed */
+    height: 24px; /* Changed */
+    font-size: 16px; /* Changed */
+    font-weight: bold;
+    color: #fff; /* Changed */
+    background-color: #222; /* Changed */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+.qty-btn:hover {
+    background-color: #555; /* Added hover */
+}
+/* Removed .add and .subtract specific color rules */
+.current-qty {
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 20px;
+    text-align: center;
+}
+/* --- Out of Stock Label --- */
+.out-of-stock-label {
+    color: var(--status-out-of-stock); /* Changed */
+    font-weight: bold;
+    font-size: 13px;
+    /* Removed background, padding, etc. to make it simple text */
+}
+
+/* --- Item Details Section --- */
+.item-details-section {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-top: 40px;
+    overflow: hidden;
+}
+.item-details-section .section-title {
+    background-color: var(--section-dark-bg);
+    color: #fff;
+    font-family: 'Forum', serif;
+    font-size: 20px;
+    font-weight: 400;
+    padding: 15px 20px;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.item-details-content {
+    /* This is now a container for a table or list */
+    padding: 0; /* Remove padding as table will have its own */
+    border-bottom: 1px solid #f0f0f0;
+    max-height: 250px; /* Set a max-height for scrolling */
+    overflow-y: auto; /* Add vertical scroll if list is long */
+}
+.empty-details {
+    padding: 20px;
+    font-size: 14px;
+    color: #888;
+    text-align: center;
+}
+.details-list-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.details-list-table th {
+    padding: 12px 20px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    color: #555;
+    background-color: #f9f9f9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #eee;
+}
+.details-list-table td {
+    padding: 12px 20px;
+    font-size: 14px;
+    color: var(--text-color-dark);
+    border-bottom: 1px solid #f0f0f0;
+}
+.details-list-table tbody tr:last-child td {
+    border-bottom: none; /* No border on the last item */
+}
+
+.item-details-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 15px 20px;
+    gap: 15px;
+    background-color: #f9f9f9;
+}
+.action-btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    min-width: 100px;
+}
+.done-btn {
+    background-color: var(--button-orange);
+    color: var(--header-bg);
+}
+.done-btn:hover {
+    background-color: #e68a00;
+}
+.cancel-btn {
+    background-color: var(--button-grey);
+    color: #555;
+}
+.cancel-btn:hover {
+    background-color: var(--button-grey-hover);
+}
+
+/* --- Custom Message Box (Modal) --- */
+.message-box-backdrop {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1000;
     justify-content: center;
     align-items: center;
 }
-
-.logoutIcon {
-    /* Size for the specific logout icon image */
-    height: 50px;
-    width: 50px;
-}
-
-.logoutModal h2 {
-    /* Styles for the main question/title */
-    color: #fff;
-    font-size: 18px;
-    margin-bottom: 12px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-    text-align: center;
-}
-
-.logoutModal p {
-    /* Styles for the subtext/description */
-    color: #dcc8b0;
-    font-size: 13px;
-    line-height: 1.5;
-    text-align: center;
-    margin-bottom: 25px;
-}
-
-.modalButtons {
-    /* Container for the CANCEL and CONFIRM buttons */
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-}
-
-.modalBtn {
-    /* Base style for all buttons in the modal */
-    padding: 11px 28px;
-    border: none;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transition: all 0.2s;
-}
-
-.cancelBtn {
-    /* Style for the CANCEL button */
+.message-box-content {
     background-color: #fff;
-    color: #480c1b;
+    border-radius: 8px;
+    padding: 25px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    text-align: center;
+    animation: modal-fade-in 0.3s ease;
+}
+.message-box-content h3 {
+    font-family: 'Forum', serif;
+    font-size: 22px;
+    color: var(--header-bg);
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+.message-box-content pre { /* Use PRE for the message text */
+    font-family: 'Open Sans', sans-serif; /* Keep consistent font */
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 25px;
+    white-space: pre-wrap; /* Allow wrapping */
+    text-align: left; /* Align list items left */
+}
+.message-box-content .action-btn {
+    background-color: var(--button-orange);
+    color: var(--header-bg);
     min-width: 120px;
 }
-
-.cancelBtn:hover {
-    opacity: 0.9;
+.message-box-content .action-btn:hover {
+    background-color: #e68a00;
 }
 
-.confirmBtn {
-    /* Style for the YES, LOGOUT button */
-    background-color: #ffb400; /* Gold/Orange primary color */
-    color: #480c1b;
-    min-width: 160px;
+@keyframes modal-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.confirmBtn:hover {
-    opacity: 0.9;
+/* --- Confirmation Modal Styles --- */
+.confirmation-modal-backdrop {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1010; /* Higher than message box */
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.confirmation-modal-content {
+    background-color: #fff;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+    overflow: hidden; /* To contain header */
+    animation: modal-fade-in 0.3s ease;
+}
+.confirmation-modal-header {
+    background-color: var(--section-dark-bg);
+    color: #fff;
+    font-family: 'Forum', serif;
+    font-size: 20px;
+    font-weight: 400;
+    padding: 15px 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.confirmation-modal-body {
+    padding: 0; /* Table will provide its own padding */
+    max-height: 300px;
+    overflow-y: auto;
+}
+.confirmation-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 15px 20px;
+    gap: 15px;
+    background-color: #f9f9f9;
+    border-top: 1px solid #f0f0f0;
+}
+/* Re-use .details-list-table for the body */
+.confirmation-modal-body .details-list-table {
+    width: 100%;
+    border: none;
+}
+.confirmation-modal-body .details-list-table th,
+.confirmation-modal-body .details-list-table td {
+    padding: 12px 20px;
+    font-size: 14px;
+}
+.confirmation-modal-body .details-list-table th {
+    font-size: 11px;
+    background-color: #f9f9f9;
 }
 
-/* ===== RESPONSIVE STYLES (for small screens) ===== */
+/* New Button Styles from Image (reused for confirmation modal) */
+.action-btn-confirm {
+    background-color: var(--button-orange);
+    color: var(--header-bg);
+    padding: 12px 25px;
+    border: none;
+    border-radius: 25px; /* Rounded */
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    min-width: 120px;
+}
+.action-btn-confirm:hover {
+    background-color: #e68a00;
+}
+.action-btn-outline {
+    background-color: #fff;
+    color: var(--text-color-dark);
+    padding: 12px 25px;
+    border: 1px solid var(--text-color-dark); /* Dark border */
+    border-radius: 25px; /* Rounded */
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    min-width: 120px;
+}
+.action-btn-outline:hover {
+    background-color: #f9f9f9;
+    color: #000;
+}
+
+
+/* --- NEW Logout Confirmation Modal Styles --- */
+.logout-modal-backdrop {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 1020; /* Highest z-index */
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+.logout-modal-content {
+    background-color: var(--logout-modal-bg); /* Dark red */
+    border-radius: 10px; /* Slightly more rounded */
+    width: 100%;
+    max-width: 500px; /* Width from image */
+    padding: 40px 20px; /* Increased padding */
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    animation: modal-fade-in 0.3s ease;
+    display: flex; /* Flexbox for centering children */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.logout-modal-icon {
+    font-size: 80px; /* Larger icon */
+    color: var(--logout-icon-color); /* Gold color */
+    margin-bottom: 30px; /* Spacing */
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+}
+.logout-modal-message {
+    font-family: 'Open Sans', sans-serif;
+    font-size: 18px; /* Larger text */
+    font-weight: 600; /* Bolder text */
+    color: var(--logout-text-color); /* White text */
+    margin: 0 0 40px 0; /* Spacing below message */
+    line-height: 1.5;
+}
+.logout-modal-actions {
+    display: flex;
+    justify-content: center; /* Center buttons */
+    gap: 20px; /* Space between buttons */
+    width: 100%;
+}
+.logout-action-btn {
+    padding: 12px 30px; /* Generous padding */
+    border: none;
+    border-radius: 25px; /* Fully rounded capsule buttons */
+    font-size: 15px; /* Slightly larger font */
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    min-width: 140px; /* Consistent button width */
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+}
+.logout-action-btn.confirm {
+    background-color: var(--logout-button-orange); /* Orange */
+    color: var(--logout-button-text); /* Dark red text */
+}
+.logout-action-btn.confirm:hover {
+    background-color: #e68a00; /* Darker orange on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+.logout-action-btn.cancel {
+    background-color: var(--logout-button-cancel-bg); /* Orange */
+    color: var(--logout-button-cancel-text); /* Dark red text */
+}
+.logout-action-btn.cancel:hover {
+    background-color: #e68a00; /* Darker orange on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+
+/* --- Responsive Adjustments --- */
 @media (max-width: 768px) {
-    .logoutModal {
-        width: 90%;
-        max-width: 380px;
-        padding: 25px;
+    .header {
+        padding: 10px 15px;
     }
-
-    .modalButtons {
-        flex-direction: column; /* Stacks buttons vertically on mobile */
+    .hotel-name {
+        font-size: 14px;
     }
-
-    .modalBtn {
-        width: 100%; /* Makes buttons full-width */
+    .logout-icon {
+        font-size: 20px;
     }
-}
-/* --- Media Query for Responsiveness --- */
-@media (max-width: 900px) {
     .main-container {
-        flex-direction: column;
-        gap: 4rem;
+        margin: 20px auto;
+        padding: 0 10px;
+    }
+    .page-title {
+        font-size: 30px;
         text-align: center;
     }
-    .branding-section {
-        order: -1;
+    .controls-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
     }
-     .header {
-    padding: 12px 15px;
-  }
-    .login-section {
+    .filter-dropdown,
+    .search-box {
+        width: 100%;
+        max-width: none;
+    }
+    .item-details-content {
+        flex-direction: column;
+        gap: 15px;
+    }
+    .item-details-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .action-btn {
         width: 100%;
     }
-    .welcome-title {
-        text-align: center;
+    .logout-modal-content {
+        padding: 30px 15px;
     }
-    .divider {
-        margin-left: auto;
-        margin-right: auto;
+    .logout-modal-icon {
+        font-size: 60px;
+        margin-bottom: 20px;
+    }
+    .logout-modal-message {
+        font-size: 16px;
+        margin-bottom: 30px;
+    }
+    .logout-modal-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .logout-action-btn {
+        width: 100%;
+        min-width: auto;
     }
 }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 1024px) {
-  .mainContainer {
-    padding: 20px 20px;
-  }
-
-  .filterControls {
-    flex-direction: column;
-  }
-
-  .filterDropdown,
-  .searchBox,
-  .refreshBtn,
-  .downloadBtn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 768px) {
-  .mainContainer {
-    padding: 15px 15px 15px 15px;
-  }
-
-  .pageTitle {
-    font-size: 24px;
-    margin-bottom: 20px;
-  }
-
-  .header {
-    padding: 12px 15px;
-  }
-
-  .tabNavigation {
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-bottom: 15px;
-  }
-
-  .tabBtn {
-    padding: 10px 16px;
-    font-size: 12px;
-    flex: 1;
-    min-width: 100px;
-  }
-
-  .filterControls {
-    flex-direction: column;
-  }
-
-  .filterDropdown,
-  .searchBox,
-  .refreshBtn,
-  .downloadBtn {
-    width: 100%;
-  }
-
-  table {
-    font-size: 11px;
-  }
-
-  th,
-  td {
-    padding: 8px 6px;
-  }
-
-  .assignModal,
-  .successModal,
-  .staffSelectionModal {
-    width: 90%;
-    max-width: 380px;
-    padding: 25px;
-  }
-
-  .modalButtons {
-    flex-direction: column;
-  }
-
-  .modalBtn {
-    width: 100%;
-  }
-}

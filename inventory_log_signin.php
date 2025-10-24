@@ -377,7 +377,7 @@ if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
 
 
     <!-- Linking to the correct JavaScript file -->
-    <script src="script/inventory_log.js"></script>
+    <script src="script/inventory_log_signin.js"></script>
 
 </body>
 </html>
