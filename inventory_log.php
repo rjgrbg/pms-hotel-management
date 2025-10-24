@@ -57,7 +57,8 @@
             </table>
         </div>
 
-        <!-- Item Details Section --><div class="item-details-section">
+        <!-- Item Details Section -->
+         <div class="item-details-section">
             <h2 class="section-title">ITEM DETAILS</h2>
             <!-- This content area will be populated by JS with a list of items --><div class="item-details-content" id="itemDetailsContent">
                 <!-- JavaScript will inject the list of items to be issued here --></div>
@@ -72,7 +73,8 @@
      <div class="message-box-backdrop" id="messageBoxBackdrop">
         <div class="message-box-content">
             <h3 id="messageBoxTitle">Notice</h3>
-            <!-- Use <pre> tag to preserve line breaks in the message --><pre id="messageBoxText">This is a sample message.</pre>
+            <!-- Use <pre> tag to preserve line breaks in the message -->
+              <pre id="messageBoxText">This is a sample message.</pre>
             <button class="action-btn" id="messageBoxClose">OK</button>
         </div>
     </div>
@@ -89,7 +91,9 @@
             </div>
         </div>
     </div>
-    <!-- ===== End of Confirmation Modal ===== --><!-- ===== Logout Confirmation Modal ===== --><div class="logout-modal-backdrop" id="logoutModalBackdrop">
+    <!-- ===== End of Confirmation Modal ===== -->
+     <!-- ===== Logout Confirmation Modal ===== -->
+      <div class="logout-modal-backdrop" id="logoutModalBackdrop">
         <div class="logout-modal-content">
             <div class="logout-modal-icon">
                 <i class="fas fa-sign-out-alt"></i>
@@ -101,10 +105,10 @@
             </div>
         </div>
     </div>
-    <!-- ===== End of Logout Modal ===== --><!-- JavaScript Logic -->
+    <!-- ===== End of Logout Modal ===== -->
+    <!-- JavaScript Logic -->
      <script src="script/shared-data.js"></script>
     <script src="script/inventory_log.js"></script>
 
 </body>
 </html>
-
