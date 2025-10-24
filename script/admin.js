@@ -1,45 +1,253 @@
-// ===== USE SHARED DATA =====
+// ===== USE SHARED DATA (Kept for other tabs) =====
 let hkData = [...housekeepingRequests];
 let hkHistData = [...housekeepingHistory];
 let mtData = [...maintenanceHistory];
-let roomData = typeof roomsData !== 'undefined' ? [...roomsData] : [];
+let roomData = []; // This will be replaced by live data from fetchAndRenderRooms()
 let parkingDataList = typeof parkingData !== 'undefined' ? [...parkingData] : [];
 let inventoryDataList = typeof inventoryData !== 'undefined' ? [...inventoryData] : [];
 let dashData = dashboardStats;
 
 console.log('Data Loaded:', { roomData, parkingDataList, inventoryDataList });
 
-// ===== UPDATE DASHBOARD FUNCTIONS =====
-function updateDashboardStats(data) {
-  const hkm = data.housekeepingMaintenance || dashboardStats.housekeepingMaintenance;
-  updateStatCard(0, hkm.totalRooms);
-  updateStatCard(1, hkm.occupied);
-  updateStatCard(2, hkm.needsCleaning);
-  updateStatCard(3, hkm.maintenanceRequests);
+// --- Room Management DOM Elements ---
+const roomsTableBody = document.getElementById('roomsTableBody');
+const roomModal = document.getElementById('roomModal');
+const closeRoomModalBtn = document.getElementById('closeRoomModalBtn');
+const cancelRoomBtn = document.getElementById('cancelRoomBtn');
+const roomForm = document.getElementById('roomForm');
+const roomModalTitle = document.getElementById('roomModalTitle');
+const deleteRoomModal = document.getElementById('deleteRoomModal');
+const closeDeleteModalBtn = document.getElementById('closeDeleteModalBtn');
+const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 
-  const inventory = data.inventory || dashboardStats.inventory;
-  updateStatCard(4, inventory.totalItems);
-  updateStatCard(5, inventory.lowStock);
-  updateStatCard(6, inventory.outOfStock);
+// Form Inputs
+const roomFloorInput = document.getElementById('roomFloor');
+const roomNumberInput = document.getElementById('roomNumber');
+const roomTypeInput = document.getElementById('roomType');
+const roomGuestsInput = document.getElementById('roomGuests');
+const roomRateInput = document.getElementById('roomRate');
+const roomStatusInput = document.getElementById('roomStatus');
 
-  const parking = data.parking || dashboardStats.parking;
-  updateStatCard(7, parking.totalSlots);
-  updateStatCard(8, parking.occupied);
-  updateStatCard(9, parking.vacant);
-  updateStatCard(10, parking.reserved);
+// ===== NEW: Filter Dropdown Elements =====
+const roomsFloorFilter = document.getElementById('roomsFloorFilter');
+const roomsRoomFilter = document.getElementById('roomsRoomFilter');
 
-  const users = data.users || dashboardStats.users;
-  updateStatCard(11, users.totalEmployees);
-  updateStatCard(12, users.housekeeping);
-  updateStatCard(13, users.maintenance);
-  updateStatCard(14, users.parking);
+// Hidden field to store RoomID for editing/deleting
+const hiddenRoomIdInput = document.createElement('input');
+hiddenRoomIdInput.type = 'hidden';
+hiddenRoomIdInput.id = 'editRoomId';
+hiddenRoomIdInput.name = 'roomID';
+roomForm.appendChild(hiddenRoomIdInput);
+
+// ===== NEW: Form Message Element =====
+let formMessage = document.getElementById('formMessage');
+if (!formMessage) {
+  formMessage = document.createElement('div');
+  formMessage.id = 'formMessage';
+  formMessage.className = 'formMessage';
+  roomForm.insertBefore(formMessage, roomForm.firstChild);
 }
 
-function updateStatCard(index, value) {
-  const statCards = document.querySelectorAll('.statValue');
-  if (statCards[index]) {
-    statCards[index].textContent = value || '0';
+// ===== UTILITY FUNCTIONS FOR FORM MESSAGES =====
+function showFormMessage(message, type = 'error') {
+  formMessage.textContent = message;
+  formMessage.className = `formMessage ${type}`;
+  formMessage.style.display = 'block';
+  
+  // Auto-hide success messages after 3 seconds
+  if (type === 'success') {
+    setTimeout(() => {
+      hideFormMessage();
+    }, 3000);
   }
+}
+
+function hideFormMessage() {
+  formMessage.style.display = 'none';
+  formMessage.textContent = '';
+  formMessage.className = 'formMessage';
+}
+
+// ===== UTILITY FUNCTIONS FOR DB INTERACTION =====
+
+/**
+ * Generic function to make API calls to the PHP endpoint
+ */
+async function apiCall(action, data = {}, method = 'GET') {
+    const url = 'room_actions.php' + (method === 'GET' ? `?action=${action}` : '');
+    const options = { method: method };
+
+    if (method === 'POST') {
+        const formData = new FormData();
+        formData.append('action', action);
+        for (const key in data) {
+            formData.append(key, data[key]);
+        }
+        options.body = formData;
+    }
+
+    try {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('API Call Failed:', error);
+        return { success: false, message: 'Room number already exist.' };
+    }
+}
+
+/**
+ * Updates dashboard statistics based on room data
+ */
+function updateDashboardFromRooms(rooms) {
+  const totalRooms = rooms.length;
+  const occupied = rooms.filter(r => r.Status === 'occupied').length;
+  const available = rooms.filter(r => r.Status === 'available').length;
+  const maintenance = rooms.filter(r => r.Status === 'maintenance').length;
+  
+  // Update the housekeeping and maintenance section
+  updateStatCard(0, totalRooms);
+  updateStatCard(1, occupied);
+  // You can update "Needs Cleaning" based on your logic
+  // updateStatCard(2, needsCleaning);
+  updateStatCard(3, maintenance);
+}
+
+/**
+ * Fetches rooms from the DB and updates the global roomData array and the table.
+ */
+async function fetchAndRenderRooms() {
+    roomsTableBody.innerHTML = '<tr><td colspan="7">Loading rooms...</td></tr>';
+    
+    const result = await apiCall('fetch_rooms');
+    roomsTableBody.innerHTML = ''; // Clear loading message
+
+    if (result.success && result.data.length > 0) {
+        // Update global roomData used by filters
+        roomData = result.data; 
+        
+        // Update dashboard with room statistics
+        updateDashboardFromRooms(roomData);
+        
+        // Populate filters *after* fetching data
+        populateDynamicFilters(roomData); 
+        
+        // Pass data to the rendering function
+        renderRoomsTable(roomData); 
+        document.getElementById('roomsRecordCount').textContent = result.totalRecords;
+
+    } else if (result.success && result.data.length === 0) {
+         roomsTableBody.innerHTML = '<tr><td colspan="7">No rooms found.</td></tr>';
+         document.getElementById('roomsRecordCount').textContent = 0;
+         populateDynamicFilters([]); // Clear filters if no data
+         updateDashboardFromRooms([]); // Reset dashboard
+    } else {
+         roomsTableBody.innerHTML = `<tr><td colspan="7">Failed to load data: ${result.message}</td></tr>`;
+         document.getElementById('roomsRecordCount').textContent = 0;
+    }
+}
+
+// ===== NEW: DYNAMIC FILTER POPULATION FUNCTIONS =====
+
+/**
+ * Populates the Floor filter and initializes the Room filter.
+ * @param {Array} data The full roomData array.
+ */
+function populateDynamicFilters(data) {
+    if (!roomsFloorFilter || !roomsRoomFilter) return;
+
+    // 1. Populate Floor Filter
+    // Get unique, sorted floor numbers
+    const floors = [...new Set(data.map(room => room.Floor))].sort((a, b) => a - b);
+    
+    roomsFloorFilter.innerHTML = '<option value="">Floor</option>'; // Reset
+    floors.forEach(floor => {
+        const option = document.createElement('option');
+        option.value = floor;
+        option.textContent = floor;
+        roomsFloorFilter.appendChild(option);
+    });
+
+    // 2. Populate Room Filter (initially with all rooms)
+    updateRoomFilterOptions(data);
+}
+
+/**
+ * Updates the Room filter options based on the selected floor.
+ * @param {Array} data The full roomData array.
+ * @param {string} selectedFloor The currently selected floor (optional).
+ */
+function updateRoomFilterOptions(data, selectedFloor = '') {
+    if (!roomsRoomFilter) return;
+
+    let roomsOnFloor;
+    if (selectedFloor) {
+        // Filter rooms by the selected floor
+        roomsOnFloor = data.filter(room => room.Floor.toString() === selectedFloor);
+    } else {
+        // Show all rooms if no floor is selected
+        roomsOnFloor = data; 
+    }
+
+    // Get unique, sorted room numbers from the filtered list
+    const roomNumbers = [...new Set(roomsOnFloor.map(room => room.Room))].sort((a, b) => a - b);
+    
+    const currentRoomValue = roomsRoomFilter.value; // Preserve selection if possible
+    roomsRoomFilter.innerHTML = '<option value="">Room</option>'; // Reset
+    
+    roomNumbers.forEach(roomNum => {
+        const option = document.createElement('option');
+        option.value = roomNum;
+        option.textContent = roomNum;
+        roomsRoomFilter.appendChild(option);
+    });
+
+    // Re-select old value if it's still valid in the new list
+    if (roomNumbers.includes(parseInt(currentRoomValue))) {
+        roomsRoomFilter.value = currentRoomValue;
+    }
+}
+
+// ===== ROOM CAPACITY MAPPING =====
+const ROOM_CAPACITY_MAP = {
+    'Standard Room': '1â€“2 guests',
+    'Deluxe Room': '2â€“3 guests',
+    'Suite': '2â€“4 guests',
+    'Penthouse Suite': '4â€“6 guests',
+};
+
+// ===== ROOM MODAL INPUT LOGIC =====
+
+function updateGuestCapacity() {
+    const selectedType = roomTypeInput.value;
+    roomGuestsInput.value = ROOM_CAPACITY_MAP[selectedType] || '';
+}
+
+function enforceFloorPrefix() {
+    const floor = roomFloorInput.value;
+    let room = roomNumberInput.value;
+
+    if (!floor) {
+        if (room.length > 0) {
+             roomNumberInput.value = '';
+        }
+        return;
+    }
+
+    const floorPrefix = floor.toString();
+    
+    if (room.length > 0 && !room.startsWith(floorPrefix)) {
+        roomNumberInput.value = floorPrefix;
+    } else if (room.length === 0) {
+        roomNumberInput.value = floorPrefix;
+    }
+
+    if (roomNumberInput.value.length > 3) {
+        roomNumberInput.value = roomNumberInput.value.substring(0, 3);
+    }
 }
 
 // ===== RENDER FUNCTIONS =====
@@ -114,33 +322,41 @@ function renderMTTable(data = mtData) {
   document.getElementById('mtRecordCount').textContent = data.length;
 }
 
-function renderRoomsTable(data = roomData) {
+function renderRoomsTable(data) {
   const tbody = document.getElementById('roomsTableBody');
   if (data.length === 0) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
     return;
   }
   
-  tbody.innerHTML = data.map((row, index) => `
+  tbody.innerHTML = data.map(row => `
     <tr>
-      <td>${row.floor}</td>
-      <td>${row.room}</td>
-      <td>${row.type}</td>
-      <td>${row.guests}</td>
-      <td>${row.rate}</td>
-      <td><span class="statusBadge ${row.status}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
+      <td>${row.Floor}</td>
+      <td>${row.Room}</td>
+      <td>${row.Type}</td>
+      <td>${row.NoGuests}</td>
+      <td>$${parseFloat(row.Rate).toFixed(2)}</td>
+      <td><span class="statusBadge ${row.Status.toLowerCase()}">${row.Status.charAt(0).toUpperCase() + row.Status.slice(1)}</span></td>
       <td>
         <div class="actionButtons">
-          <button class="actionBtn editBtn" onclick="editRoom(${index})">
+          <button class="actionBtn editBtn" data-room-data='${JSON.stringify(row)}'>
             <img src="assets/icons/edit-icon.png" alt="Edit" />
           </button>
-          <button class="actionBtn deleteBtn" onclick="deleteRoom(${index})">
+          <button class="actionBtn deleteBtn" data-room-id="${row.RoomID}" data-room-number="${row.Room}">
             <img src="assets/icons/delete-icon.png" alt="Delete" />
           </button>
         </div>
       </td>
     </tr>
   `).join('');
+
+  // Attach event listeners dynamically for edit and delete
+  tbody.querySelectorAll('.editBtn').forEach(btn => {
+      btn.addEventListener('click', handleEditClick);
+  });
+  tbody.querySelectorAll('.deleteBtn').forEach(btn => {
+      btn.addEventListener('click', handleDeleteClick);
+  });
   
   document.getElementById('roomsRecordCount').textContent = data.length;
 }
@@ -177,7 +393,7 @@ function renderInventoryTable(data = inventoryDataList) {
   
   tbody.innerHTML = data.map(row => {
     const statusText = row.status === 'in-stock' ? 'In Stock' : 
-                       row.status === 'low-stock' ? 'Low Stock' : 'Out of Stock';
+                         row.status === 'low-stock' ? 'Low Stock' : 'Out of Stock';
     return `
       <tr>
         <td>${row.id}</td>
@@ -194,6 +410,40 @@ function renderInventoryTable(data = inventoryDataList) {
   }).join('');
   
   document.getElementById('inventoryRecordCount').textContent = data.length;
+}
+
+
+// ===== DASHBOARD AND FILTER LOGIC =====
+function updateDashboardStats(data) {
+  const hkm = data.housekeepingMaintenance || dashboardStats.housekeepingMaintenance;
+  updateStatCard(0, hkm.totalRooms);
+  updateStatCard(1, hkm.occupied);
+  updateStatCard(2, hkm.needsCleaning);
+  updateStatCard(3, hkm.maintenanceRequests);
+
+  const inventory = data.inventory || dashboardStats.inventory;
+  updateStatCard(4, inventory.totalItems);
+  updateStatCard(5, inventory.lowStock);
+  updateStatCard(6, inventory.outOfStock);
+
+  const parking = data.parking || dashboardStats.parking;
+  updateStatCard(7, parking.totalSlots);
+  updateStatCard(8, parking.occupied);
+  updateStatCard(9, parking.vacant);
+  updateStatCard(10, parking.reserved);
+
+  const users = data.users || dashboardStats.users;
+  updateStatCard(11, users.totalEmployees);
+  updateStatCard(12, users.housekeeping);
+  updateStatCard(13, users.maintenance);
+  updateStatCard(14, users.parking);
+}
+
+function updateStatCard(index, value) {
+  const statCards = document.querySelectorAll('.statValue');
+  if (statCards[index]) {
+    statCards[index].textContent = value || '0';
+  }
 }
 
 // ===== PAGE NAVIGATION =====
@@ -274,7 +524,6 @@ document.getElementById('hkRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('statusFilter').value = '';
   hkData = [...housekeepingRequests];
   renderHKTable(hkData);
-  alert('Housekeeping requests refreshed!');
 });
 
 document.getElementById('hkDownloadBtn')?.addEventListener('click', () => {
@@ -322,7 +571,6 @@ document.getElementById('hkHistRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('roomFilterHkHist').value = '';
   hkHistData = [...housekeepingHistory];
   renderHKHistTable(hkHistData);
-  alert('Housekeeping history refreshed!');
 });
 
 document.getElementById('hkHistDownloadBtn')?.addEventListener('click', () => {
@@ -377,7 +625,6 @@ document.getElementById('mtRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('mtStatusFilter').value = '';
   mtData = [...maintenanceHistory];
   renderMTTable(mtData);
-  alert('Maintenance data refreshed!');
 });
 
 document.getElementById('mtDownloadBtn')?.addEventListener('click', () => {
@@ -433,7 +680,6 @@ document.getElementById('parkingRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('parkingStatusFilter').value = '';
   parkingDataList = [...parkingData];
   renderParkingTable(parkingDataList);
-  alert('Parking data refreshed!');
 });
 
 document.getElementById('parkingDownloadBtn')?.addEventListener('click', () => {
@@ -481,7 +727,6 @@ document.getElementById('inventoryRefreshBtn')?.addEventListener('click', () => 
   document.getElementById('inventoryStatusFilter').value = '';
   inventoryDataList = [...inventoryData];
   renderInventoryTable(inventoryDataList);
-  alert('Inventory data refreshed!');
 });
 
 document.getElementById('inventoryDownloadBtn')?.addEventListener('click', () => {
@@ -490,7 +735,7 @@ document.getElementById('inventoryDownloadBtn')?.addEventListener('click', () =>
     headers.join(','),
     ...inventoryDataList.map(row => {
       const statusText = row.status === 'in-stock' ? 'In Stock' : 
-                         row.status === 'low-stock' ? 'Low Stock' : 'Out of Stock';
+                          row.status === 'low-stock' ? 'Low Stock' : 'Out of Stock';
       return [row.id, row.name, row.category, row.quantity, row.description, statusText, row.damage, row.stockInDate, row.stockOutDate].join(',');
     })
   ].join('\n');
@@ -504,57 +749,70 @@ document.getElementById('inventoryDownloadBtn')?.addEventListener('click', () =>
   window.URL.revokeObjectURL(url);
 });
 
-// ===== ROOMS FILTERS =====
+// ===== ROOMS FILTERS (UPDATED) =====
 document.getElementById('roomsSearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
   const filtered = roomData.filter(row => 
-    row.type.toLowerCase().includes(search) ||
-    row.room.toString().includes(search) ||
-    row.status.toLowerCase().includes(search)
+    row.Type.toLowerCase().includes(search) ||
+    row.Room.toString().includes(search) ||
+    row.Status.toLowerCase().includes(search)
   );
   renderRoomsTable(filtered);
 });
 
-document.getElementById('roomsFloorFilter')?.addEventListener('change', (e) => {
-  const floor = e.target.value;
-  const filtered = floor ? roomData.filter(row => row.floor.toString() === floor) : roomData;
-  renderRoomsTable(filtered);
+// ===== UPDATED: Floor filter listener now updates room filter as well =====
+roomsFloorFilter?.addEventListener('change', (e) => {
+    const floor = e.target.value;
+    
+    // 1. Update the Room dropdown based on the selected floor
+    updateRoomFilterOptions(roomData, floor);
+
+    // 2. Filter the table (as before)
+    const filtered = floor ? roomData.filter(row => row.Floor.toString() === floor) : roomData;
+    renderRoomsTable(filtered);
 });
 
-document.getElementById('roomsRoomFilter')?.addEventListener('change', (e) => {
+roomsRoomFilter?.addEventListener('change', (e) => {
   const room = e.target.value;
-  const filtered = room ? roomData.filter(row => row.room.toString() === room) : roomData;
+  // Get the current floor filter value
+  const floor = roomsFloorFilter.value;
+
+  // Start with all data or floor-filtered data
+  let dataToFilter = floor ? roomData.filter(row => row.Floor.toString() === floor) : roomData;
+
+  // Now filter by room
+  const filtered = room ? dataToFilter.filter(row => row.Room.toString() === room) : dataToFilter;
   renderRoomsTable(filtered);
 });
 
 document.getElementById('roomsTypeFilter')?.addEventListener('change', (e) => {
   const type = e.target.value;
-  const filtered = type ? roomData.filter(row => row.type === type) : roomData;
+  const filtered = type ? roomData.filter(row => row.Type === type) : roomData;
   renderRoomsTable(filtered);
 });
 
 document.getElementById('roomsStatusFilter')?.addEventListener('change', (e) => {
   const status = e.target.value;
-  const filtered = status ? roomData.filter(row => row.status === status) : roomData;
+  const filtered = status ? roomData.filter(row => row.Status === status) : roomData;
   renderRoomsTable(filtered);
 });
 
+// ===== UPDATED: Refresh button now re-fetches from DB without alert =====
 document.getElementById('roomsRefreshBtn')?.addEventListener('click', () => {
   document.getElementById('roomsSearchInput').value = '';
   document.getElementById('roomsFloorFilter').value = '';
   document.getElementById('roomsRoomFilter').value = '';
   document.getElementById('roomsTypeFilter').value = '';
   document.getElementById('roomsStatusFilter').value = '';
-  roomData = [...roomsData];
-  renderRoomsTable(roomData);
-  alert('Rooms data refreshed!');
+  
+  fetchAndRenderRooms(); // This re-fetches data AND re-populates filters
 });
 
 document.getElementById('roomsDownloadBtn')?.addEventListener('click', () => {
   const headers = ['Floor', 'Room', 'Type', 'No. Guests', 'Rate', 'Status'];
   const csvContent = [
     headers.join(','),
-    ...roomData.map(row => [row.floor, row.room, row.type, row.guests, row.rate, row.status].join(','))
+    ...roomData.map(row => [row.Floor, row.Room, row.Type, row.NoGuests, row.Rate, row.Status].join(','))
   ].join('\n');
   
   const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -575,29 +833,30 @@ const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
 
 if (logoutBtn) {
   logoutBtn.addEventListener('click', () => {
-    logoutModal.style.display = 'flex';
+    if (logoutModal) logoutModal.style.display = 'flex'; // Show the modal
   });
 }
 
 if (closeLogoutBtn) {
   closeLogoutBtn.addEventListener('click', () => {
-    logoutModal.style.display = 'none';
+    if (logoutModal) logoutModal.style.display = 'none'; // Hide modal on close
   });
 }
 
 if (cancelLogoutBtn) {
   cancelLogoutBtn.addEventListener('click', () => {
-    logoutModal.style.display = 'none';
+    if (logoutModal) logoutModal.style.display = 'none'; // Hide modal on cancel
   });
 }
 
 if (confirmLogoutBtn) {
   confirmLogoutBtn.addEventListener('click', () => {
-    console.log('Logout confirmed - redirecting to login page');
-    window.location.href = '/logout.php'; // adjusted to logout.php
+    console.log('Logout confirmed - redirecting to logout script');
+    window.location.href = 'logout.php'; // Redirect to logout.php
   });
 }
 
+// Optional: Close modal if backdrop is clicked
 if (logoutModal) {
   logoutModal.addEventListener('click', (e) => {
     if (e.target === e.currentTarget) {
@@ -606,132 +865,143 @@ if (logoutModal) {
   });
 }
 
-// ===== ROOM MANAGEMENT FUNCTIONS =====
-let editingRoomIndex = -1;
 
-// Add Room Button
+// ===== ROOM MODAL HANDLERS (UPDATED WITH DB LOGIC) =====
+
+// Open Add Modal
 document.getElementById('addRoomBtn')?.addEventListener('click', () => {
-  editingRoomIndex = -1;
-  document.getElementById('roomModalTitle').textContent = 'Add New Room';
-  document.getElementById('roomForm').reset();
-  document.getElementById('roomModal').style.display = 'flex';
+    hideFormMessage(); // Clear any previous messages
+    roomModalTitle.textContent = 'Add New Room';
+    roomForm.reset();
+    hiddenRoomIdInput.value = '';
+    document.getElementById('saveRoomBtn').textContent = 'SAVE ROOM';
+    roomModal.style.display = 'flex';
 });
 
-// Edit Room Function (called from table)
-window.editRoom = function(index) {
-  editingRoomIndex = index;
-  const room = roomData[index];
-  
-  document.getElementById('roomModalTitle').textContent = 'Edit Room';
-  document.getElementById('roomFloor').value = room.floor;
-  document.getElementById('roomNumber').value = room.room;
-  document.getElementById('roomType').value = room.type;
-  document.getElementById('roomGuests').value = room.guests;
-  document.getElementById('roomRate').value = room.rate;
-  document.getElementById('roomStatus').value = room.status;
-  
-  document.getElementById('roomModal').style.display = 'flex';
-};
-
-// Delete Room Function (called from table)
-window.deleteRoom = function(index) {
-  editingRoomIndex = index;
-  const room = roomData[index];
-  document.getElementById('deleteRoomText').textContent = 
-    `Are you sure you want to delete Room ${room.room} (${room.type})? This action cannot be undone.`;
-  document.getElementById('deleteRoomModal').style.display = 'flex';
-};
-
-// Save Room Form
-document.getElementById('roomForm')?.addEventListener('submit', (e) => {
-  e.preventDefault();
-  
-  const roomObj = {
-    floor: parseInt(document.getElementById('roomFloor').value),
-    room: parseInt(document.getElementById('roomNumber').value),
-    type: document.getElementById('roomType').value,
-    guests: document.getElementById('roomGuests').value,
-    rate: document.getElementById('roomRate').value,
-    status: document.getElementById('roomStatus').value
-  };
-  
-  if (editingRoomIndex >= 0) {
-    // Update existing room
-    roomData[editingRoomIndex] = roomObj;
-    alert('Room updated successfully!');
-  } else {
-    // Add new room
-    roomData.push(roomObj);
-    alert('Room added successfully!');
-  }
-  
-  // Update global data
-  if (window.appData) {
-    window.appData.rooms = roomData;
-  }
-  
-  renderRoomsTable(roomData);
-  document.getElementById('roomModal').style.display = 'none';
-  document.getElementById('roomForm').reset();
+// Close Modal Buttons
+closeRoomModalBtn?.addEventListener('click', () => {
+    roomModal.style.display = 'none';
+    hideFormMessage();
 });
 
-// Confirm Delete Room
-document.getElementById('confirmDeleteBtn')?.addEventListener('click', () => {
-  if (editingRoomIndex >= 0) {
-    const deletedRoom = roomData[editingRoomIndex];
-    roomData.splice(editingRoomIndex, 1);
+cancelRoomBtn?.addEventListener('click', () => {
+    roomModal.style.display = 'none';
+    hideFormMessage();
+});
+
+// Handle Edit Click (fetches data from the button's data attribute)
+function handleEditClick(event) {
+    hideFormMessage(); // Clear any previous messages
+    const room = JSON.parse(event.currentTarget.dataset.roomData);
     
-    // Update global data
-    if (window.appData) {
-      window.appData.rooms = roomData;
+    roomModalTitle.textContent = 'Edit Room ' + room.Room;
+    document.getElementById('saveRoomBtn').textContent = 'UPDATE ROOM';
+    
+    hiddenRoomIdInput.value = room.RoomID;
+    roomFloorInput.value = room.Floor;
+    roomNumberInput.value = room.Room;
+    roomTypeInput.value = room.Type;
+    roomGuestsInput.value = room.NoGuests;
+    roomRateInput.value = room.Rate;
+    roomStatusInput.value = room.Status.toLowerCase();
+
+    roomModal.style.display = 'flex';
+}
+
+// Handle Form Submission (Add or Edit)
+roomForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideFormMessage(); // Clear previous messages
+    
+    // ===== Validation =====
+    const floor = roomFloorInput.value;
+    const roomNum = roomNumberInput.value;
+    if (!roomNum.startsWith(floor)) {
+        showFormMessage(`Room Number (${roomNum}) must start with the selected Floor Number (${floor}).`, 'error');
+        return;
     }
+
+    const roomID = hiddenRoomIdInput.value;
+    const action = roomID ? 'edit_room' : 'add_room';
     
-    alert(`Room ${deletedRoom.room} deleted successfully!`);
-    renderRoomsTable(roomData);
-  }
-  document.getElementById('deleteRoomModal').style.display = 'none';
+    const data = {
+        roomID: roomID,
+        roomFloor: roomFloorInput.value,
+        roomNumber: roomNumberInput.value,
+        roomType: roomTypeInput.value,
+        roomGuests: roomGuestsInput.value,
+        roomRate: roomRateInput.value,
+        roomStatus: roomStatusInput.value,
+    };
+
+    const result = await apiCall(action, data, 'POST');
+
+    if (result.success) {
+        showFormMessage(result.message, 'success');
+        roomForm.reset();
+        await fetchAndRenderRooms(); // Refresh table, filters, and dashboard from DB
+        
+        // Close modal after a short delay for success message visibility
+        setTimeout(() => {
+            roomModal.style.display = 'none';
+            hideFormMessage();
+        }, 1500);
+    } else {
+        showFormMessage(result.message, 'error');
+    }
 });
 
-// Close Room Modal
-document.getElementById('closeRoomModalBtn')?.addEventListener('click', () => {
-  document.getElementById('roomModal').style.display = 'none';
-});
+// --- Delete Modal Handlers ---
+let roomToDeleteID = null;
 
-document.getElementById('cancelRoomBtn')?.addEventListener('click', () => {
-  document.getElementById('roomModal').style.display = 'none';
-});
+function handleDeleteClick(event) {
+    roomToDeleteID = event.currentTarget.dataset.roomId;
+    const roomNumber = event.currentTarget.dataset.roomNumber;
+    document.getElementById('deleteRoomText').textContent = `Are you sure you want to delete Room ${roomNumber}? This action cannot be undone.`;
+    deleteRoomModal.style.display = 'flex';
+}
 
-// Close Delete Modal
-document.getElementById('closeDeleteModalBtn')?.addEventListener('click', () => {
-  document.getElementById('deleteRoomModal').style.display = 'none';
-});
+// Close Delete Modal Buttons
+closeDeleteModalBtn?.addEventListener('click', () => deleteRoomModal.style.display = 'none');
+cancelDeleteBtn?.addEventListener('click', () => deleteRoomModal.style.display = 'none');
 
-document.getElementById('cancelDeleteBtn')?.addEventListener('click', () => {
-  document.getElementById('deleteRoomModal').style.display = 'none';
+// Confirm Delete Room (DB interaction)
+confirmDeleteBtn?.addEventListener('click', async () => {
+    if (!roomToDeleteID) return;
+
+    const data = { roomID: roomToDeleteID };
+    const result = await apiCall('delete_room', data, 'POST');
+
+    if (result.success) {
+        deleteRoomModal.style.display = 'none';
+        await fetchAndRenderRooms(); // Refresh table, filters, and dashboard from DB
+    } else {
+        alert(result.message); // Keep alert for delete errors as they're critical
+    }
 });
 
 // Close modals on backdrop click
-document.getElementById('roomModal')?.addEventListener('click', (e) => {
+roomModal?.addEventListener('click', (e) => {
   if (e.target === e.currentTarget) {
-    document.getElementById('roomModal').style.display = 'none';
+    roomModal.style.display = 'none';
+    hideFormMessage();
   }
 });
 
-document.getElementById('deleteRoomModal')?.addEventListener('click', (e) => {
+deleteRoomModal?.addEventListener('click', (e) => {
   if (e.target === e.currentTarget) {
-    document.getElementById('deleteRoomModal').style.display = 'none';
+    deleteRoomModal.style.display = 'none';
   }
 });
 
-// ===== INITIALIZATION =====
+// ===== INITIALIZATION AND EVENT ATTACHMENT =====
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Admin page loaded - initializing with shared data');
-  console.log('HK Data:', hkData);
-  console.log('HK History Data:', hkHistData);
-  console.log('MT Data:', mtData);
-  console.log('Rooms Data:', roomData);
-  console.log('Parking Data:', parkingDataList);
-  console.log('Inventory Data:', inventoryDataList);
+  
+  // *** Attach New Event Listeners for Room Modal Logic ***
+  roomTypeInput?.addEventListener('change', updateGuestCapacity);
+  roomFloorInput?.addEventListener('change', enforceFloorPrefix);
+  roomNumberInput?.addEventListener('input', enforceFloorPrefix);
   
   const dashboardLink = document.querySelector('[data-page="dashboard"]');
   if (dashboardLink) {
@@ -746,7 +1016,12 @@ document.addEventListener('DOMContentLoaded', () => {
   renderHKTable(hkData);
   renderHKHistTable(hkHistData);
   renderMTTable(mtData);
-  renderRoomsTable(roomData);
+  
+  // *** Initial Load for Rooms must use the DB function ***
+  if(document.getElementById('rooms-page')) {
+      fetchAndRenderRooms();
+  }
+  
   renderParkingTable(parkingDataList);
   renderInventoryTable(inventoryDataList);
 });

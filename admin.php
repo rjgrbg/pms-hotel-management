@@ -1,59 +1,66 @@
-
 <?php
-// 1. Start the session with the same secure settings
-session_start([
-    'cookie_httponly' => true,
-    'cookie_secure' => isset($_SERVER['HTTPS']),
-    'use_strict_mode' => true
-]);
+// Include the session check and login requirement logic
+include('check_session.php');
 
-// 2. !! THE FIX !! 
-// Tell the browser to not cache this page
-header('Cache-Control: no-cache, no-store, must-revalidate'); // HTTP 1.1.
-header('Pragma: no-cache'); // HTTP 1.0.
-header('Expires: 0'); // Proxies.
+// Only allow users with the 'admin' AccountType
+require_login(['admin']);
 
-// 3. Check if the user is actually logged in.
-// If no UserID is in the session, they aren't logged in.
-if (!isset($_SESSION['UserID'])) {
-    // Redirect them to the login page
-    header("Location: inventory_log_signin.php");
-    exit();
+// --- Fetch User Data from Database ---
+include('db_connection.php'); // Ensure DB connection is included
+
+$formattedName = 'Admin'; // Default name
+$Accounttype = 'Administrator'; // Default type
+
+if (isset($_SESSION['UserID'])) {
+    $userId = $_SESSION['UserID'];
+    $sql = "SELECT Fname, Mname, Lname, AccountType FROM users WHERE UserID = ?";
+    
+    if ($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param("i", $userId);
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            if ($user = $result->fetch_assoc()) {
+                // Fetch names and sanitize for display
+                $Lname = htmlspecialchars($user['Lname'] ?? 'Admin');
+                $Fname = htmlspecialchars($user['Fname'] ?? '');
+                $Mname = htmlspecialchars($user['Mname'] ?? '');
+                $Accounttype = htmlspecialchars($user['AccountType'] ?? 'Administrator'); // Fetch AccountType as well
+
+                // Format the name: Lname, Fname M.
+                $formattedName = $Lname;
+                if (!empty($Fname)) {
+                    $formattedName .= ', ' . $Fname;
+                    if (!empty($Mname)) {
+                        // Add middle initial with a period if Mname exists
+                        $formattedName .= ' ' . strtoupper(substr($Mname, 0, 1)) . '.';
+                    }
+                }
+            } else {
+                 error_log("No user found with UserID: " . $userId);
+            }
+        } else {
+            error_log("Error executing user query: " . $stmt->error);
+        }
+        $stmt->close();
+    } else {
+         error_log("Error preparing user query: " . $conn->error);
+    }
+    $conn->close(); // Close connection after fetching
+} else {
+     error_log("UserID not found in session for admin.php");
 }
+// --- End Fetch User Data ---
 
-// If they ARE logged in, the rest of the page will load.
-?><!DOCTYPE html>
+?>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Celestia Hotel - Admin Dashboard</title>
   <link rel="stylesheet" href="css/admin.css">
-
-      <?php
-// ======================================================
-// === PHP Logic Orchestration (REQUIRED FILES) ===
-// ======================================================
-
-// 1. Load the database configuration and connection ($conn is now available)
-require_once('db_connection.php'); 
-
-// 2. Load the user data function
-require_once('User.php');       
-
-// 3. Execute the function to get dynamic data
-$userData = getUserData($conn);
-
-// Set the variables used in the HTML, applying security (htmlspecialchars)
-$Fname = htmlspecialchars($userData['Name']);
-$Accounttype = htmlspecialchars($userData['Accounttype']); // Using Accounttype to match your error
-// Close the DB connection (optional, but good practice)
-$conn->close();
-
-?>
 </head>
 <body>
-  <!-- Header -->
   <header class="header">
     <div class="headerLeft">
       <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" />
@@ -61,21 +68,17 @@ $conn->close();
     </div>
   </header>
 
-  <!-- Main Container -->
   <div class="mainWrapper">
-    <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="sidebarContent">
-        <!-- Profile Section -->
         <div class="profileSection">
           <div class="profileAvatar">
             <img src="assets/icons/profile-icon.png" alt="Profile" />
           </div>
-          <h3 class="profileName"><?php echo $Fname; ?></h3>
-          <p class="profileRole"><?php echo $Accounttype; ?></p>
+          <h3 class="profileName"><?php echo $formattedName; // Use the name fetched from DB ?></h3>
+          <p class="profileRole"><?php echo ucfirst($Accounttype); // Use AccountType fetched from DB ?></p>
         </div>
 
-        <!-- Navigation Menu -->
         <nav class="sidebarNav">
           <ul class="navList">
             <li>
@@ -123,18 +126,14 @@ $conn->close();
           </ul>
         </nav>
 
-        <!-- Logout Button -->
         <button class="logoutBtn" id="logoutBtn">Logout</button>
       </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="mainContent">
-      <!-- Dashboard Page -->
       <div class="page active" id="dashboard-page">
         <h1 class="pageTitle">ADMIN DASHBOARD</h1>
 
-        <!-- Housekeeping and Maintenance Section -->
         <section class="dashboardSection">
           <h2 class="sectionTitle">Housekeeping and Maintenance</h2>
           <div class="statsGrid">
@@ -157,7 +156,6 @@ $conn->close();
           </div>
         </section>
 
-        <!-- Inventory Section -->
         <section class="dashboardSection">
           <h2 class="sectionTitle">Inventory</h2>
           <div class="statsGrid">
@@ -176,7 +174,6 @@ $conn->close();
           </div>
         </section>
 
-        <!-- Parking Section -->
         <section class="dashboardSection">
           <h2 class="sectionTitle">Parking</h2>
           <div class="statsGrid">
@@ -199,7 +196,6 @@ $conn->close();
           </div>
         </section>
 
-        <!-- Users Section -->
         <section class="dashboardSection">
           <h2 class="sectionTitle">Users</h2>
           <div class="statsGrid">
@@ -224,11 +220,9 @@ $conn->close();
         </section>
       </div>
 
-      <!-- Housekeeping Page -->
       <div class="page" id="housekeeping-page">
         <h1 class="pageTitle">HOUSEKEEPING</h1>
 
-        <!-- Tab Navigation -->
         <div class="tabNavigation">
           <button class="tabBtn active" data-admin-tab="hk-requests">
             Requests
@@ -238,9 +232,7 @@ $conn->close();
           </button>
         </div>
 
-        <!-- REQUESTS TAB -->
         <div class="tabContent active" id="hk-requests-tab">
-          <!-- Controls Row -->
           <div class="controlsRow">
             <div class="filterControls">
               <select class="filterDropdown" id="floorFilter">
@@ -273,7 +265,6 @@ $conn->close();
             </div>
           </div>
 
-          <!-- Housekeeping Requests Table -->
           <div class="tableWrapper">
             <table>
               <thead>
@@ -293,11 +284,10 @@ $conn->close();
             </table>
           </div>
 
-          <!-- Pagination -->
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="hkRecordCount">0</span></span>
             <div class="paginationControls">
-              <button class="paginationBtn">←</button>
+              <button class="paginationBtn"><</button>
               <button class="paginationBtn active">1</button>
               <button class="paginationBtn">2</button>
               <button class="paginationBtn">3</button>
@@ -305,14 +295,12 @@ $conn->close();
               <button class="paginationBtn">5</button>
               <span class="paginationDots">...</span>
               <button class="paginationBtn">10</button>
-              <button class="paginationBtn">→</button>
+              <button class="paginationBtn">></button>
             </div>
           </div>
         </div>
 
-        <!-- HISTORY TAB -->
         <div class="tabContent" id="hk-history-tab">
-          <!-- Controls Row -->
           <div class="controlsRow">
             <div class="filterControls">
               <select class="filterDropdown" id="floorFilterHkHist">
@@ -340,7 +328,6 @@ $conn->close();
             </div>
           </div>
 
-          <!-- Housekeeping History Table -->
           <div class="tableWrapper">
             <table>
               <thead>
@@ -361,11 +348,10 @@ $conn->close();
             </table>
           </div>
 
-          <!-- Pagination -->
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="hkHistRecordCount">0</span></span>
             <div class="paginationControls">
-              <button class="paginationBtn">←</button>
+              <button class="paginationBtn"><</button>
               <button class="paginationBtn active">1</button>
               <button class="paginationBtn">2</button>
               <button class="paginationBtn">3</button>
@@ -373,17 +359,15 @@ $conn->close();
               <button class="paginationBtn">5</button>
               <span class="paginationDots">...</span>
               <button class="paginationBtn">10</button>
-              <button class="paginationBtn">→</button>
+              <button class="paginationBtn">></button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Maintenance Page -->
       <div class="page" id="maintenance-page">
         <h1 class="pageTitle">MAINTENANCE</h1>
 
-        <!-- Controls Row -->
         <div class="controlsRow">
           <div class="filterControls">
             <select class="filterDropdown" id="mtFloorFilter">
@@ -416,7 +400,6 @@ $conn->close();
           </div>
         </div>
 
-        <!-- Maintenance Table -->
         <div class="tableWrapper">
           <table>
             <thead>
@@ -437,11 +420,10 @@ $conn->close();
           </table>
         </div>
 
-        <!-- Pagination -->
         <div class="pagination">
           <span class="paginationInfo">Display Records <span id="mtRecordCount">0</span></span>
           <div class="paginationControls">
-            <button class="paginationBtn">←</button>
+            <button class="paginationBtn"><</button>
             <button class="paginationBtn active">1</button>
             <button class="paginationBtn">2</button>
             <button class="paginationBtn">3</button>
@@ -449,16 +431,14 @@ $conn->close();
             <button class="paginationBtn">5</button>
             <span class="paginationDots">...</span>
             <button class="paginationBtn">10</button>
-            <button class="paginationBtn">→</button>
+            <button class="paginationBtn">></button>
           </div>
         </div>
       </div>
 
-      <!-- Parking Page -->
       <div class="page" id="parking-page">
         <h1 class="pageTitle">PARKING</h1>
 
-        <!-- Controls Row -->
         <div class="controlsRow">
           <div class="filterControls">
             <select class="filterDropdown" id="parkingLevelFilter">
@@ -495,7 +475,6 @@ $conn->close();
           </div>
         </div>
 
-        <!-- Parking Table -->
         <div class="tableWrapper">
           <table>
             <thead>
@@ -515,11 +494,10 @@ $conn->close();
           </table>
         </div>
 
-        <!-- Pagination -->
         <div class="pagination">
           <span class="paginationInfo">Display Records <span id="parkingRecordCount">0</span></span>
           <div class="paginationControls">
-            <button class="paginationBtn">←</button>
+            <button class="paginationBtn"><</button>
             <button class="paginationBtn active">1</button>
             <button class="paginationBtn">2</button>
             <button class="paginationBtn">3</button>
@@ -527,16 +505,14 @@ $conn->close();
             <button class="paginationBtn">5</button>
             <span class="paginationDots">...</span>
             <button class="paginationBtn">10</button>
-            <button class="paginationBtn">→</button>
+            <button class="paginationBtn">></button>
           </div>
         </div>
       </div>
 
-      <!-- Inventory Page -->
       <div class="page" id="inventory-page">
         <h1 class="pageTitle">INVENTORY</h1>
 
-        <!-- Controls Row -->
         <div class="controlsRow">
           <div class="filterControls">
             <select class="filterDropdown" id="inventoryCategoryFilter">
@@ -568,7 +544,6 @@ $conn->close();
           </div>
         </div>
 
-        <!-- Inventory Table -->
         <div class="tableWrapper">
           <table>
             <thead>
@@ -589,11 +564,10 @@ $conn->close();
           </table>
         </div>
 
-        <!-- Pagination -->
         <div class="pagination">
           <span class="paginationInfo">Display Records <span id="inventoryRecordCount">0</span></span>
           <div class="paginationControls">
-            <button class="paginationBtn">←</button>
+            <button class="paginationBtn"><</button>
             <button class="paginationBtn active">1</button>
             <button class="paginationBtn">2</button>
             <button class="paginationBtn">3</button>
@@ -601,31 +575,25 @@ $conn->close();
             <button class="paginationBtn">5</button>
             <span class="paginationDots">...</span>
             <button class="paginationBtn">10</button>
-            <button class="paginationBtn">→</button>
+            <button class="paginationBtn">></button>
           </div>
         </div>
       </div>
 
-      <!-- Rooms Page -->
       <div class="page" id="rooms-page">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
           <h1 class="pageTitle" style="margin-bottom: 0;">ROOMS</h1>
           
         </div>
 
-        <!-- Controls Row -->
         <div class="controlsRow">
           <div class="filterControls">
             <select class="filterDropdown" id="roomsFloorFilter">
               <option value="">Floor</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-            </select>
+              </select>
             <select class="filterDropdown" id="roomsRoomFilter">
               <option value="">Room</option>
-              <option value="101">101</option>
-              <option value="102">102</option>
-            </select>
+              </select>
             <select class="filterDropdown" id="roomsTypeFilter">
               <option value="">Room Type</option>
               <option value="Standard Room">Standard Room</option>
@@ -658,7 +626,6 @@ $conn->close();
           </div>
         </div>
 
-        <!-- Rooms Table -->
         <div class="tableWrapper">
           <table>
             <thead>
@@ -677,11 +644,10 @@ $conn->close();
           </table>
         </div>
 
-        <!-- Pagination -->
         <div class="pagination">
           <span class="paginationInfo">Display Records <span id="roomsRecordCount">0</span></span>
           <div class="paginationControls">
-            <button class="paginationBtn">←</button>
+            <button class="paginationBtn"><</button>
             <button class="paginationBtn active">1</button>
             <button class="paginationBtn">2</button>
             <button class="paginationBtn">3</button>
@@ -689,12 +655,11 @@ $conn->close();
             <button class="paginationBtn">5</button>
             <span class="paginationDots">...</span>
             <button class="paginationBtn">10</button>
-            <button class="paginationBtn">→</button>
+            <button class="paginationBtn">></button>
           </div>
         </div>
       </div>
 
-      <!-- Manage Users Page -->
       <div class="page" id="manage-users-page">
         <h1 class="pageTitle">MANAGE USERS</h1>
         <p class="pagePlaceholder">User management content will be displayed here.</p>
@@ -702,10 +667,9 @@ $conn->close();
     </main>
   </div>
 
-  <!-- Logout Confirmation Modal -->
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">
-      <button class="closeBtn" id="closeLogoutBtn">×</button>
+      <button class="closeBtn" id="closeLogoutBtn"></button>
       <div class="modalIcon">
         <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
       </div>
@@ -718,10 +682,9 @@ $conn->close();
     </div>
   </div>
 
-  <!-- Add/Edit Room Modal -->
   <div class="modalBackdrop" id="roomModal" style="display: none;">
     <div class="roomModal">
-      <button class="closeBtn" id="closeRoomModalBtn">×</button>
+      <button class="closeBtn" id="closeRoomModalBtn"></button>
       <h2 id="roomModalTitle">Add New Room</h2>
       <form id="roomForm">
         <div class="formGrid">
@@ -746,11 +709,11 @@ $conn->close();
         </div>
         <div class="formGroup">
           <label for="roomGuests">Guest Capacity *</label>
-          <input type="text" id="roomGuests" required placeholder="e.g., 1-2 guests" />
+          <input type="text" id="roomGuests" required placeholder="" readonly />
         </div>
         <div class="formGroup">
           <label for="roomRate">Rate (per night) *</label>
-          <input type="text" id="roomRate" required placeholder="e.g., $120" />
+          <input type="number" id="roomRate" required placeholder="e.g., 120.00" step="0.01" />
         </div>
         <div class="formGroup">
           <label for="roomStatus">Status *</label>
@@ -769,10 +732,9 @@ $conn->close();
     </div>
   </div>
 
-  <!-- Delete Confirmation Modal -->
   <div class="modalBackdrop" id="deleteRoomModal" style="display: none;">
     <div class="logoutModal">
-      <button class="closeBtn" id="closeDeleteModalBtn">×</button>
+      <button class="closeBtn" id="closeDeleteModalBtn"></button>
       
       <h2>Delete Room?</h2>
       <p id="deleteRoomText">Are you sure you want to delete this room? This action cannot be undone.</p>
@@ -783,9 +745,7 @@ $conn->close();
     </div>
   </div>
 
-  <!-- Load Shared Data First -->
   <script src="script/shared-data.js"></script>
-  <!-- Then Load Page-Specific Script -->
   <script src="script/admin.js"></script>
 </body>
 </html>
