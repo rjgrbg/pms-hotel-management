@@ -606,6 +606,7 @@ if (isset($_SESSION['UserID'])) {
               <option value="available">Available</option>
               <option value="occupied">Occupied</option>
               <option value="reserved">Reserved</option>
+              <option value="Needs Cleaning">Needs Cleaning</option>
               <option value="maintenance">Maintenance</option>
             </select>
             <div class="searchBox">
@@ -721,6 +722,7 @@ if (isset($_SESSION['UserID'])) {
             <option value="available">Available</option>
             <option value="occupied">Occupied</option>
             <option value="reserved">Reserved</option>
+            <option value="Needs Cleaning">Needs Cleaning</option>
             <option value="maintenance">Maintenance</option>
           </select>
         </div>
