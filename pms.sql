@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 24, 2025 at 11:29 AM
+-- Generation Time: Oct 25, 2025 at 02:09 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -226,10 +226,13 @@ CREATE TABLE `room` (
 --
 
 INSERT INTO `room` (`RoomID`, `UserID`, `RoomNumber`, `RoomType`, `GuestCapacity`, `Rate`, `RoomStatus`, `LastClean`, `LastMaintenance`, `FloorNumber`) VALUES
-(2, 1, 202, 'Penthouse Suite', '4–6 guests', 123.02, 'available', NULL, NULL, 2),
-(5, 1, 203, 'Deluxe Room', '2–3 guests', 120.00, 'available', NULL, NULL, 2),
+(2, 1, 202, 'Penthouse Suite', '4–6 guests', 123.02, 'Needs Cleaning', NULL, NULL, 2),
+(5, 1, 203, 'Deluxe Room', '2–3 guests', 120.00, 'Needs Cleaning', NULL, NULL, 2),
 (6, 1, 402, 'Penthouse Suite', '4–6 guests', 230.00, 'available', NULL, NULL, 4),
-(17, 1, 404, 'Deluxe Room', '2–3 guests', 66.00, 'available', NULL, NULL, 4);
+(17, 1, 404, 'Deluxe Room', '2–3 guests', 66.00, 'maintenance', NULL, NULL, 4),
+(19, 1, 223, 'Penthouse Suite', '4–6 guests', 2.00, 'available', NULL, NULL, 2),
+(20, 1, 407, 'Standard Room', '1–2 guests', 2.00, 'occupied', NULL, NULL, 4),
+(21, 1, 244, 'Deluxe Room', '2–3 guests', 2.00, 'maintenance', NULL, NULL, 2);
 
 -- --------------------------------------------------------
 
@@ -256,8 +259,12 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`UserID`, `Fname`, `Lname`, `Mname`, `Birthday`, `AccountType`, `Username`, `Password`, `EmailAddress`, `Shift`, `Address`) VALUES
-(1, 'vince', 'vargas', 'gonzales', '2025-10-01', 'admin', 'admin', '$2y$10$DVZR.vQA1KJThRDLAp9O0.7yd7xDOpW8UacsBskBk16Fg1APyRv7a', 'vincevargas90@gmail.com', 'Night', 'asd'),
-(2, 'hk', 'hk', NULL, '2025-08-04', 'housek', '', '', '', '', '');
+(1, 'vincew', 'vargas', 'gonzales', '2025-10-01', 'admin', 'admin', '$2y$10$DVZR.vQA1KJThRDLAp9O0.7yd7xDOpW8UacsBskBk16Fg1APyRv7a', 'vincevargas90@gmail.com', 'Night', 'asd'),
+(6, 'asd', 'asd', 'asd', '2014-03-25', 'housekeeping_manager', 'housekeeping', '$2y$10$dshhvB8tZswOVgvfEZCXYeweeNdaANbmNNMzZ9hEwt6mptERiAN2C', 'dayvoice993@gmail.com', 'Morning', 'asdsd'),
+(7, 'gg', 'gg', 'gg', '2016-04-25', 'maintenance_manager', 'maintenance', '$2y$10$oYcrQxYqMdlEF2B7FvGh1ut1Wcui9QvrnX05XkwyZvobBdxi0I/kK', 'farmday96@gmail.com', 'Afternoon', 'asd'),
+(8, 'tt', 'tt', 'tt', '2019-03-25', 'parking_manager', 'parking', '$2y$10$PA.YXB4esV6OfFgrQvk1SOWsnnA1gLKSsx63D.yN/24uNJhFHhcqm', 'farmersday96@gmail.com', 'Night', 'asd'),
+(9, 'dd', 'dd', 'dd', '2020-03-25', 'housekeeping_staff', 'hstaff', '$2y$10$.g51qyaIKHXHtRAOiO1FuOs55S9DBmDAn1Z/0bi.dJohXSsvFGI9W', 'da@gmail.com', 'Morning', 'asd'),
+(10, 'asd', 'asd', 'asd', '2023-03-25', 'maintenance_staff', 'mstaff', '$2y$10$qZ6MD8qszXTpWKx7Ee5Thu3QTT35yjH0Jf1GONOKelBKYW0qAtskC', 'sda@gmail.com', 'Afternoon', 'asd');
 
 -- --------------------------------------------------------
 
@@ -557,13 +564,13 @@ ALTER TABLE `rate`
 -- AUTO_INCREMENT for table `room`
 --
 ALTER TABLE `room`
-  MODIFY `RoomID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `RoomID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `vehiclecategory`
