@@ -40,11 +40,11 @@ $redirect_map = [
 
     'housekeeping_manager' => 'housekeeping.php',
 
-    'housekeeping_staff'   => 'housekeeping_staff.php',
+    'housekeeping_staff'   => 'inventory_log.php',
 
     'maintenance_manager'  => 'maintenance.php',
 
-    'maintenance_staff'    => 'maintenance_staff.php',
+    'maintenance_staff'    => 'inventory_log.php',
 
     'parking_manager'      => 'parking.php',
     

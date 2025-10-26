@@ -1,3 +1,36 @@
+<?php
+// 1. Start the session with the same secure settings
+// (Handled by check_session.php)
+
+// 2. Cache Control Headers
+header('Cache-Control: no-cache, no-store, must-revalidate'); // HTTP 1.1.
+header('Pragma: no-cache'); // HTTP 1.0.
+header('Expires: 0'); // Proxies.
+
+// 3. Check Login Status and Role (Allowing staff and manager)
+include('check_session.php');
+// *** MODIFIED: Allow manager AND staff ***
+require_login(['housekeeping_staff', 'maintenance_staff']); 
+
+// ======================================================
+// === PHP Logic Orchestration (REQUIRED FILES) ===
+// ======================================================
+
+// 1. Load the database configuration and connection ($conn is now available)
+require_once('db_connection.php'); 
+
+// 2. Load the user data function to get current user info for header
+require_once('User.php'); 
+$userData = getUserData($conn); 
+$Fname = htmlspecialchars($userData['Name']); 
+$Accounttype = htmlspecialchars($userData['Accounttype']); 
+
+// 3. Close the DB connection
+// (Note: Page-specific data for this log is fetched 
+//  client-side by inventory_log.js, so no PHP data fetch is needed.)
+$conn->close(); 
+
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
