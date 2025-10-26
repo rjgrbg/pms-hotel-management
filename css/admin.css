@@ -1058,3 +1058,102 @@ tbody tr:hover {
   border: 1px solid #fc9;
   color: #c93;
 }
+
+/* Add to admin.css */
+
+/* User Modal Styles (similar to roomModal) */
+.userModal {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 35px;
+  max-width: 600px; /* Slightly wider for more fields */
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideIn 0.3s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.userModal h2 {
+  color: #480c1b;
+  font-size: 22px;
+  margin-bottom: 25px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.userModal .formGrid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid */
+    gap: 15px 20px;
+}
+
+.userModal .formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.userModal .formGroup input,
+.userModal .formGroup select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Arial', sans-serif;
+  transition: border 0.2s;
+}
+
+ /* Password toggle specific to user modal */
+.userModal .passwordInputWrapper {
+    position: relative;
+}
+.userModal .passwordInputWrapper input {
+    padding-right: 40px; /* Make space for icon */
+}
+ .userModal .togglePassword {
+    position: absolute;
+    right: 1px;
+    top: 1px;
+    bottom: 1px;
+    width: 38px;
+    background: #eee;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+ .userModal .togglePassword img {
+    width: 18px;
+    height: 18px;
+    opacity: 0.7;
+}
+
+.userModal .formGroup input:focus,
+.userModal .formGroup select:focus {
+  outline: none;
+  border-color: #d4af78;
+}
+
+ .userModal .formGroup input[type="date"] {
+    padding: 9px 12px; /* Adjust padding for date picker icon */
+ }
+
+ /* Full width for Address */
+ .userModal .formGroup.full-width {
+    grid-column: 1 / -1; /* Span all columns */
+ }
+
+/* Action buttons in user table */
+#manage-users-page .actionButtons {
+  justify-content: center; /* Center buttons */
+}
+#manage-users-page .tableWrapper table td:last-child {
+     text-align: center; /* Center align action column content */
+}

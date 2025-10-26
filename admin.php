@@ -117,13 +117,13 @@ if (isset($_SESSION['UserID'])) {
                 Rooms
               </a>
             </li>
-            <li>
-              <a href="#manage-users" class="navLink" data-page="manage-users">
+             <li>
+              <a href="#manage-users" class="navLink" data-page="manage-users"> 
                 <img src="assets/icons/users-icon.png" alt="Manage Users" class="navIcon" />
                 Manage Users
               </a>
             </li>
-          </ul>
+             </ul>
         </nav>
 
         <button class="logoutBtn" id="logoutBtn">Logout</button>
@@ -139,11 +139,11 @@ if (isset($_SESSION['UserID'])) {
           <div class="statsGrid">
             <div class="statCard">
               <h3 class="statLabel">Total Rooms</h3>
-              <p class="statValue">40</p>
+              <p class="statValue">0</p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Occupied</h3>
-              <p class="statValue">15</p>
+              <p class="statValue">0</p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Needs Cleaning</h3>
@@ -161,15 +161,15 @@ if (isset($_SESSION['UserID'])) {
           <div class="statsGrid">
             <div class="statCard">
               <h3 class="statLabel">Total Items</h3>
-              <p class="statValue">40</p>
+              <p class="statValue">0</p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Low Stock</h3>
-              <p class="statValue">15</p>
+              <p class="statValue">0</p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Out of Stock</h3>
-              <p class="statValue">15</p>
+              <p class="statValue">0</p>
             </div>
           </div>
         </section>
@@ -179,19 +179,19 @@ if (isset($_SESSION['UserID'])) {
           <div class="statsGrid">
             <div class="statCard">
               <h3 class="statLabel">Total Slots</h3>
-              <p class="statValue">40</p>
+              <p class="statValue">0</p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Occupied</h3>
-              <p class="statValue">15</p>
+              <p class="statValue">0</p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Vacant</h3>
-              <p class="statValue">15</p>
+              <p class="statValue">0</p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Reserved</h3>
-              <p class="statValue">15</p>
+              <p class="statValue">0</p>
             </div>
           </div>
         </section>
@@ -201,20 +201,20 @@ if (isset($_SESSION['UserID'])) {
           <div class="statsGrid">
             <div class="statCard">
               <h3 class="statLabel">Total Employees</h3>
-              <p class="statValue">40</p>
+              <p class="statValue">0</p>
               <p class="statSubtext"></p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Housekeeping</h3>
-              <p class="statValue">10</p>
+              <p class="statValue">0</p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Maintenance</h3>
-              <p class="statValue">8</p>
+              <p class="statValue">0</p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Parking</h3>
-              <p class="statValue">5</p>
+              <p class="statValue">0</p>
             </div>
           </div>
         </section>
@@ -280,23 +280,14 @@ if (isset($_SESSION['UserID'])) {
                 </tr>
               </thead>
               <tbody id="hkTableBody">
-              </tbody>
+                 </tbody>
             </table>
           </div>
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="hkRecordCount">0</span></span>
             <div class="paginationControls">
-              <button class="paginationBtn"><</button>
-              <button class="paginationBtn active">1</button>
-              <button class="paginationBtn">2</button>
-              <button class="paginationBtn">3</button>
-              <button class="paginationBtn">4</button>
-              <button class="paginationBtn">5</button>
-              <span class="paginationDots">...</span>
-              <button class="paginationBtn">10</button>
-              <button class="paginationBtn">></button>
-            </div>
+              </div>
           </div>
         </div>
 
@@ -344,23 +335,14 @@ if (isset($_SESSION['UserID'])) {
                 </tr>
               </thead>
               <tbody id="hkHistTableBody">
-              </tbody>
+                 </tbody>
             </table>
           </div>
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="hkHistRecordCount">0</span></span>
             <div class="paginationControls">
-              <button class="paginationBtn"><</button>
-              <button class="paginationBtn active">1</button>
-              <button class="paginationBtn">2</button>
-              <button class="paginationBtn">3</button>
-              <button class="paginationBtn">4</button>
-              <button class="paginationBtn">5</button>
-              <span class="paginationDots">...</span>
-              <button class="paginationBtn">10</button>
-              <button class="paginationBtn">></button>
-            </div>
+               </div>
           </div>
         </div>
       </div>
@@ -416,23 +398,14 @@ if (isset($_SESSION['UserID'])) {
               </tr>
             </thead>
             <tbody id="mtTableBody">
-            </tbody>
+              </tbody>
           </table>
         </div>
 
         <div class="pagination">
           <span class="paginationInfo">Display Records <span id="mtRecordCount">0</span></span>
           <div class="paginationControls">
-            <button class="paginationBtn"><</button>
-            <button class="paginationBtn active">1</button>
-            <button class="paginationBtn">2</button>
-            <button class="paginationBtn">3</button>
-            <button class="paginationBtn">4</button>
-            <button class="paginationBtn">5</button>
-            <span class="paginationDots">...</span>
-            <button class="paginationBtn">10</button>
-            <button class="paginationBtn">></button>
-          </div>
+            </div>
         </div>
       </div>
 
@@ -490,23 +463,14 @@ if (isset($_SESSION['UserID'])) {
               </tr>
             </thead>
             <tbody id="parkingTableBody">
-            </tbody>
+              </tbody>
           </table>
         </div>
 
         <div class="pagination">
           <span class="paginationInfo">Display Records <span id="parkingRecordCount">0</span></span>
           <div class="paginationControls">
-            <button class="paginationBtn"><</button>
-            <button class="paginationBtn active">1</button>
-            <button class="paginationBtn">2</button>
-            <button class="paginationBtn">3</button>
-            <button class="paginationBtn">4</button>
-            <button class="paginationBtn">5</button>
-            <span class="paginationDots">...</span>
-            <button class="paginationBtn">10</button>
-            <button class="paginationBtn">></button>
-          </div>
+             </div>
         </div>
       </div>
 
@@ -560,23 +524,14 @@ if (isset($_SESSION['UserID'])) {
               </tr>
             </thead>
             <tbody id="inventoryTableBody">
-            </tbody>
+              </tbody>
           </table>
         </div>
 
         <div class="pagination">
           <span class="paginationInfo">Display Records <span id="inventoryRecordCount">0</span></span>
           <div class="paginationControls">
-            <button class="paginationBtn"><</button>
-            <button class="paginationBtn active">1</button>
-            <button class="paginationBtn">2</button>
-            <button class="paginationBtn">3</button>
-            <button class="paginationBtn">4</button>
-            <button class="paginationBtn">5</button>
-            <span class="paginationDots">...</span>
-            <button class="paginationBtn">10</button>
-            <button class="paginationBtn">></button>
-          </div>
+            </div>
         </div>
       </div>
 
@@ -603,11 +558,11 @@ if (isset($_SESSION['UserID'])) {
             </select>
             <select class="filterDropdown" id="roomsStatusFilter">
               <option value="">Status</option>
-              <option value="available">Available</option>
-              <option value="occupied">Occupied</option>
-              <option value="reserved">Reserved</option>
+              <option value="Available">Available</option>
+              <option value="Occupied">Occupied</option>
+              <option value="Reserved">Reserved</option>
               <option value="Needs Cleaning">Needs Cleaning</option>
-              <option value="maintenance">Maintenance</option>
+              <option value="Maintenance">Maintenance</option>
             </select>
             <div class="searchBox">
               <input type="text" placeholder="Search" class="searchInput" id="roomsSearchInput" />
@@ -641,36 +596,84 @@ if (isset($_SESSION['UserID'])) {
               </tr>
             </thead>
             <tbody id="roomsTableBody">
-            </tbody>
+              </tbody>
           </table>
         </div>
 
         <div class="pagination">
           <span class="paginationInfo">Display Records <span id="roomsRecordCount">0</span></span>
           <div class="paginationControls">
-            <button class="paginationBtn"><</button>
-            <button class="paginationBtn active">1</button>
-            <button class="paginationBtn">2</button>
-            <button class="paginationBtn">3</button>
-            <button class="paginationBtn">4</button>
-            <button class="paginationBtn">5</button>
-            <span class="paginationDots">...</span>
-            <button class="paginationBtn">10</button>
-            <button class="paginationBtn">></button>
-          </div>
+            </div>
         </div>
       </div>
 
       <div class="page" id="manage-users-page">
-        <h1 class="pageTitle">MANAGE USERS</h1>
-        <p class="pagePlaceholder">User management content will be displayed here.</p>
+         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+          <h1 class="pageTitle" style="margin-bottom: 0;">MANAGE USERS</h1>
+        </div>
+
+        <div class="controlsRow">
+          <div class="filterControls">
+           <select class="filterDropdown" id="usersRoleFilter">
+  <option value="">Role</option>
+  <option value="admin">Admin</option>
+  <option value="housekeeping_manager">Housekeeping Manager</option>
+  <option value="maintenance_manager">Maintenance Manager</option>
+  <option value="parking_manager">Parking Manager</option>
+  <option value="housekeeping_staff">Housekeeping Staff</option>
+  <option value="maintenance_staff">Maintenance Staff</option>
+</select>
+            <select class="filterDropdown" id="usersShiftFilter">
+              <option value="">Shift</option>
+              <option value="Morning">Morning</option>
+              <option value="Afternoon">Afternoon</option>
+              <option value="Night">Night</option>
+            </select>
+             <div class="searchBox">
+              <input type="text" placeholder="Search Name or Username" class="searchInput" id="usersSearchInput" />
+              <button class="searchBtn">
+                <img src="assets/icons/search-icon.png" alt="Search" />
+              </button>
+            </div>
+            <button class="refreshBtn" id="usersRefreshBtn">
+              <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+            </button>
+            <button class="downloadBtn" id="usersDownloadBtn" title="Download User Data (CSV)">
+              <img src="assets/icons/download-icon.png" alt="Download" />
+            </button>
+            <button class="addRoomBtn" id="addUserBtn" title="Add New User"> <img src="assets/icons/add-user.png" alt="Add User" /> </button>
+          </div>
+        </div>
+
+         <div class="tableWrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Full Name</th>
+                <th>Role</th>
+                <th>Email</th>
+                <th>Shift</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+               </tbody>
+          </table>
+        </div>
+
+         <div class="pagination">
+          <span class="paginationInfo">Display Records <span id="usersRecordCount">0</span></span>
+          <div class="paginationControls">
+            </div>
+        </div>
       </div>
-    </main>
+      </main>
   </div>
 
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">
-      <button class="closeBtn" id="closeLogoutBtn"></button>
+      <button class="closeBtn" id="closeLogoutBtn">&times;</button>
       <div class="modalIcon">
         <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
       </div>
@@ -683,24 +686,23 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
 
-  <div class="modalBackdrop" id="roomModal" style="display: none;">
-    <div class="roomModal">
-      <button class="closeBtn" id="closeRoomModalBtn"></button>
+   <div class="modalBackdrop" id="roomModal" style="display: none;">
+    <div class="roomModal"> <button class="closeBtn" id="closeRoomModalBtn">&times;</button>
       <h2 id="roomModalTitle">Add New Room</h2>
-      <form id="roomForm">
-        <div class="formGrid">
+       <div id="roomFormMessage" class="formMessage" style="display:none;"></div> <form id="roomForm">
+        <input type="hidden" id="editRoomId" name="roomID"> <div class="formGrid">
           <div class="formGroup">
             <label for="roomFloor">Floor *</label>
-            <input type="number" id="roomFloor" required min="1" max="10" />
+            <input type="number" id="roomFloor" name="roomFloor" required min="1" max="10" />
           </div>
           <div class="formGroup">
             <label for="roomNumber">Room Number *</label>
-            <input type="number" id="roomNumber" required min="100" max="999" />
+            <input type="number" id="roomNumber" name="roomNumber" required min="100" max="999" />
           </div>
         </div>
         <div class="formGroup">
           <label for="roomType">Room Type *</label>
-          <select id="roomType" required>
+          <select id="roomType" name="roomType" required>
             <option value="">Select Type</option>
             <option value="Standard Room">Standard Room</option>
             <option value="Deluxe Room">Deluxe Room</option>
@@ -710,20 +712,20 @@ if (isset($_SESSION['UserID'])) {
         </div>
         <div class="formGroup">
           <label for="roomGuests">Guest Capacity *</label>
-          <input type="text" id="roomGuests" required placeholder="" readonly />
+          <input type="text" id="roomGuests" name="roomGuests" required placeholder="" readonly />
         </div>
         <div class="formGroup">
           <label for="roomRate">Rate (per night) *</label>
-          <input type="number" id="roomRate" required placeholder="e.g., 120.00" step="0.01" />
+          <input type="number" id="roomRate" name="roomRate" required placeholder="e.g., 120.00" step="0.01" />
         </div>
         <div class="formGroup">
           <label for="roomStatus">Status *</label>
-          <select id="roomStatus" required>
-            <option value="available">Available</option>
-            <option value="occupied">Occupied</option>
-            <option value="reserved">Reserved</option>
+          <select id="roomStatus" name="roomStatus" required>
+             <option value="Available">Available</option>
+            <option value="Occupied">Occupied</option>
+            <option value="Reserved">Reserved</option>
             <option value="Needs Cleaning">Needs Cleaning</option>
-            <option value="maintenance">Maintenance</option>
+            <option value="Maintenance">Maintenance</option>
           </select>
         </div>
         <div class="modalButtons">
@@ -734,15 +736,100 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
 
-  <div class="modalBackdrop" id="deleteRoomModal" style="display: none;">
-    <div class="logoutModal">
-      <button class="closeBtn" id="closeDeleteModalBtn"></button>
-      
+   <div class="modalBackdrop" id="deleteRoomModal" style="display: none;">
+    <div class="logoutModal"> <button class="closeBtn" id="closeDeleteModalBtn">&times;</button>
       <h2>Delete Room?</h2>
       <p id="deleteRoomText">Are you sure you want to delete this room? This action cannot be undone.</p>
       <div class="modalButtons">
         <button class="modalBtn cancelBtn" id="cancelDeleteBtn" style="background-color: rgb(175, 175, 175)">CANCEL</button>
-        <button class="modalBtn confirmBtn" id="confirmDeleteBtn" style="background-color: FFA237">YES, DELETE</button>
+        <button class="modalBtn confirmBtn" id="confirmDeleteBtn" style="background-color: #FFA237">YES, DELETE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modalBackdrop" id="userModal" style="display: none;">
+    <div class="roomModal">
+      <button class="closeBtn" id="closeUserModalBtn">&times;</button>
+      <h2 id="userModalTitle">Add New User</h2>
+      <div id="userFormMessage" class="formMessage" style="display:none;"></div>
+      <form id="userForm">
+        <input type="hidden" id="editUserId" name="userID">
+        <div class="formGrid">
+          <div class="formGroup">
+            <label for="userFname">First Name *</label>
+            <input type="text" id="userFname" name="fname" required />
+          </div>
+          <div class="formGroup">
+            <label for="userLname">Last Name *</label>
+            <input type="text" id="userLname" name="lname" required />
+          </div>
+        </div>
+        <div class="formGroup">
+          <label for="userMname">Middle Name</label>
+          <input type="text" id="userMname" name="mname" />
+        </div>
+        <div class="formGroup">
+          <label for="userBirthday">Birthday *</label>
+          <input type="date" id="userBirthday" name="birthday" required />
+        </div>
+       <div class="formGroup">
+  <label for="userAccountType">Account Type *</label>
+  <select id="userAccountType" name="accountType" required>
+    <option value="">Select Role</option>
+    <option value="admin">Admin</option>
+    <option value="housekeeping_manager">Housekeeping Manager</option>
+    <option value="maintenance_manager">Maintenance Manager</option>
+    <option value="parking_manager">Parking Manager</option>
+    <option value="housekeeping_staff">Housekeeping Staff</option>
+    <option value="maintenance_staff">Maintenance Staff</option>
+  </select>
+</div>
+        <div class="formGroup">
+          <label for="userUsername">Username *</label>
+          <input type="text" id="userUsername" name="username" required autocomplete="username"/>
+        </div>
+        <div class="formGroup">
+          <label for="userEmail">Email Address *</label>
+          <input type="email" id="userEmail" name="email" required />
+        </div>
+        <div class="formGroup">
+          <label for="userShift">Shift *</label>
+          <select id="userShift" name="shift" required>
+            <option value="">Select Shift</option>
+            <option value="Morning">Morning</option>
+            <option value="Afternoon">Afternoon</option>
+            <option value="Night">Night</option>
+          </select>
+        </div>
+        <div class="formGroup">
+          <label for="userAddress">Address *</label>
+          <textarea id="userAddress" name="address" rows="3" required></textarea>
+        </div>
+        <div class="formGrid">
+          <div class="formGroup">
+            <label for="userPassword">Password * </label>
+            <input type="password" id="userPassword" name="password" autocomplete="new-password"/>
+          </div>
+          <div class="formGroup">
+            <label for="userConfirmPassword">Confirm Password *</label>
+            <input type="password" id="userConfirmPassword" name="confirmPassword" autocomplete="new-password"/>
+          </div>
+        </div>
+        <div class="modalButtons">
+          <button type="button" class="modalBtn cancelBtn" id="cancelUserBtn">CANCEL</button>
+          <button type="submit" class="modalBtn confirmBtn" id="saveUserBtn">SAVE USER</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modalBackdrop" id="deleteUserModal" style="display: none;">
+    <div class="logoutModal"> <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
+      <h2>Delete User?</h2>
+      <p id="deleteUserText">Are you sure you want to delete this user? This action cannot be undone.</p>
+      <div class="modalButtons">
+        <button class="modalBtn cancelBtn" id="cancelDeleteUserBtn" style="background-color: rgb(175, 175, 175)">CANCEL</button>
+        <button class="modalBtn confirmBtn" id="confirmDeleteUserBtn" style="background-color: #FFA237">YES, DELETE</button>
       </div>
     </div>
   </div>

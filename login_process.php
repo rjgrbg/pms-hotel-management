@@ -124,4 +124,3 @@ $conn->close();
 echo json_encode($response);
 exit(); // Ensure script stops here
 ?>
-
