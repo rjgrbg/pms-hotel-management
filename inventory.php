@@ -28,8 +28,8 @@ if (!isset($_SESSION['UserID'])) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Celestia Hotel - Housekeeping Management</title>
-  <link rel="stylesheet" href="css/housekeeping.css">
+  <title>The Celestia Hotel - Inventory Management</title>
+  <link rel="stylesheet" href="css/inventory.css">
   <?php
   // ======================================================
   // === PHP Logic Orchestration (REQUIRED FILES) ===
@@ -55,15 +55,13 @@ if (!isset($_SESSION['UserID'])) {
   <html lang="en">
 
 <body>
-  <!-- Header -->
   <header class="header">
     <div class="headerLeft">
       <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" />
       <span class="hotelName">THE CELESTIA HOTEL</span>
     </div>
 
-    <!-- profile sidebar -->
-  <img src="assets/icons/profile-icon.png" alt="Profile" class="profileIcon" id="profileBtn" />
+    <img src="assets/icons/profile-icon.png" alt="Profile" class="profileIcon" id="profileBtn" />
 
 <aside class="profile-sidebar" id="profile-sidebar">
     <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
@@ -156,18 +154,18 @@ if (!isset($_SESSION['UserID'])) {
       <div class="tableWrapper">
         <table class="requestsTable">
           <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Category</th>
-                                <th>Quantity</th>
-                                <th>Description</th>
-                                <th>Status</th>
-                                <th>Damage</th>
-                                <th>Stock In Date</th>
-                                <th>Stock Out Date</th>
-                                <th></th> 
-                            </tr>
+                      <tr>
+                          <th>ID</th>
+                          <th>Name</th>
+                          <th>Category</th>
+                          <th>Quantity</th>
+                          <th>Description</th>
+                          <th>Status</th>
+                          <th>Damage</th>
+                          <th>Stock In Date</th>
+                          <th>Stock Out Date</th>
+                          <th></th> 
+                      </tr>
           </thead>
           <tbody id="requestsTableBody">
             </tbody>
@@ -210,20 +208,20 @@ if (!isset($_SESSION['UserID'])) {
       <div class="tableWrapper">
         <table class="historyTable">
           <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Category</th>
-                                <th>Quantity</th>
-                                <th>Quantity Change</th>
-                                <th>Status</th>
-                                <th>Damage</th>
-                                <th>Stock In Date</th>
-                                <th>Stock Out Date</th>
-                                <th>Action Type</th>
-                                <th>Performed By</th>
-                            </tr>
-                        </thead>
+                      <tr>
+                          <th>ID</th>
+                          <th>Name</th>
+                          <th>Category</th>
+                          <th>Quantity</th>
+                          <th>Quantity Change</th>
+                          <th>Status</th>
+                          <th>Damage</th>
+                          <th>Stock In Date</th>
+                          <th>Stock Out Date</th>
+                          <th>Action Type</th>
+                          <th>Performed By</th>
+                      </tr>
+                    </thead>
           <tbody id="historyTableBody">
             </tbody>
         </table>
@@ -245,6 +243,11 @@ if (!isset($_SESSION['UserID'])) {
     </div>
   </div>
   
+<button class="add-item-btn" id="addItemBtn">
+    ADD ITEM
+    <i class="fas fa-plus"></i>
+</button>
+
 <div class="modal-overlay" id="add-item-modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -401,7 +404,6 @@ if (!isset($_SESSION['UserID'])) {
     </div>
 </div>
 
-  </style>
   <script src="script/shared-data.js"></script>
   <script src="script/inventory.js"></script>
 </body>
