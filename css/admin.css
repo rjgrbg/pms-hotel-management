@@ -442,15 +442,6 @@ tbody tr:hover {
 }
 
 /* ===== STATUS BADGES ===== */
-.statusBadge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: capitalize;
-  display: inline-block;
-}
-
 .statusBadge.available {
   background-color: #5cb85c;
   color: #fff;
@@ -466,9 +457,8 @@ tbody tr:hover {
   color: #fff;
 }
 
-/* CHANGED: Purple color for Needs Cleaning (was orange #ff6b35) */
 .statusBadge.needs-cleaning {
-  background-color: #9b59b6; /* Purple - distinct from all other statuses */
+  background-color: #9b59b6;
   color: #fff;
 }
 
@@ -476,7 +466,6 @@ tbody tr:hover {
   background-color: #c9302c;
   color: #fff;
 }
-
 
 /* ===== INVENTORY STATUS BADGES ===== */
 .statusBadge.in-stock {
@@ -494,6 +483,27 @@ tbody tr:hover {
 /* ===== PARKING STATUS BADGES ===== */
 .statusBadge.vacant {
   background-color: #5cb85c;
+}
+
+/* ===== ACTION BADGES (for User Logs) ===== */
+.actionBadge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.actionBadge.logged-in {
+  background-color: #5cb85c;
+  color: #fff;
+}
+
+.actionBadge.logged-out {
+  background-color: #ff9500;
+  color: #fff;
 }
 
 /* ===== ACTION BUTTONS ===== */
@@ -543,7 +553,6 @@ tbody tr:hover {
 }
 
 /* ===== STRONG ACTIONS COLUMN ALIGNMENT FIX ===== */
-/* Only target the Rooms table to avoid affecting other tables */
 #rooms-page .tableWrapper table th:last-child,
 #rooms-page .tableWrapper table td:last-child {
   text-align: center;
@@ -606,20 +615,13 @@ tbody tr:hover {
   text-align: center;
 }
 
-@media (max-width: 760px) {
-  #rooms-page .tableWrapper table td:last-child {
-    width: auto;
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-  #rooms-page .actionBtn {
-    width: 32px;
-    height: 32px;
-  }
-  #rooms-page .actionBtn img {
-    width: 16px;
-    height: 16px;
-  }
+/* ===== USER MANAGEMENT ACTIONS ALIGNMENT ===== */
+#manage-users-page .actionButtons {
+  justify-content: center;
+}
+
+#manage-users-page .tableWrapper table td:last-child {
+  text-align: center;
 }
 
 /* ===== ROOM MODAL ===== */
@@ -665,7 +667,8 @@ tbody tr:hover {
 }
 
 .formGroup input,
-.formGroup select {
+.formGroup select,
+.formGroup textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #ccc;
@@ -676,9 +679,15 @@ tbody tr:hover {
 }
 
 .formGroup input:focus,
-.formGroup select:focus {
+.formGroup select:focus,
+.formGroup textarea:focus {
   outline: none;
   border-color: #d4af78;
+}
+
+.formGroup textarea {
+  resize: vertical;
+  min-height: 70px;
 }
 
 .formGroup input[type="number"]::-webkit-inner-spin-button,
@@ -910,6 +919,291 @@ tbody tr:hover {
   display: block;
 }
 
+#user-management-tab,
+#user-logs-tab {
+  display: none;
+}
+
+#user-management-tab.active,
+#user-logs-tab.active {
+  display: block;
+}
+
+/* ===== FORM MESSAGE STYLES ===== */
+.formMessage {
+  display: none;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.formMessage.error {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+}
+
+.formMessage.success {
+  background-color: #efe;
+  border: 1px solid #cfc;
+  color: #3c3;
+}
+
+.formMessage.warning {
+  background-color: #ffc;
+  border: 1px solid #fc9;
+  color: #c93;
+}
+
+/* ===== DARK BROWN USER MODAL STYLES ===== */
+.addUserModal {
+  background: #4c0b0b;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 450px;
+  width: 90%;
+  position: relative;
+  animation: slideIn 0.3s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.addUserModal .closeBtn {
+  color: #fff;
+  font-size: 30px;
+  top: 15px;
+  right: 15px;
+}
+
+.addUserModal h2 {
+  color: #d49801;
+  font-size: 24px;
+  margin-bottom: 30px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* Employee ID Form Styles */
+#employeeIdForm .formGroup {
+  margin-bottom: 25px;
+}
+
+#employeeIdForm .formGroup label {
+  display: block;
+  margin-bottom: 10px;
+  color: #d4af78;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#employeeIdForm .formGroup input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #5a4332;
+  border-radius: 6px;
+  font-size: 15px;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #333;
+  transition: all 0.3s;
+}
+
+#employeeIdForm .formGroup input:focus {
+  outline: none;
+  border-color: #d4af78;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(212, 175, 120, 0.1);
+}
+
+#employeeIdForm .formGroup input::placeholder {
+  color: #999;
+}
+
+/* Modal Buttons Dark Theme */
+.addUserModal .modalButtons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.addUserModal .modalBtn {
+  padding: 13px 30px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.3s;
+  min-width: 140px;
+}
+
+.addUserModal .cancelBtn {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #d4af78;
+  border: 2px solid #d4af78;
+}
+
+.addUserModal .cancelBtn:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.addUserModal .confirmBtn {
+  background-color: #ffb400;
+  color: #2a1810;
+  border: 2px solid #ffb400;
+}
+
+.addUserModal .confirmBtn:hover {
+  background-color: #ffc933;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 180, 0, 0.4);
+}
+
+/* User Edit Form Profile Section */
+.userProfileSection {
+  text-align: center;
+  padding: 20px 0 30px;
+  border-bottom: 2px solid rgba(212, 175, 120, 0.3);
+  margin-bottom: 25px;
+}
+
+.userProfileSection .profileAvatar {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 15px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: rgba(212, 175, 120, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #d4af78;
+}
+
+.userProfileSection .profileAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(1.1);
+}
+
+.editUserName {
+  color: #d4af78;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.editUserEmployeeId {
+  color: rgba(212, 175, 120, 0.7);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* Edit Form Styles */
+#userEditForm .formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px 20px;
+  margin-bottom: 15px;
+}
+
+#userEditForm .formGroup {
+  margin-bottom: 15px;
+}
+
+#userEditForm .formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  color: #d4af78;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#userEditForm .formGroup input,
+#userEditForm .formGroup select,
+#userEditForm .formGroup textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #5a4332;
+  border-radius: 4px;
+  font-size: 13px;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #333;
+  transition: all 0.2s;
+}
+
+#userEditForm .formGroup input:focus,
+#userEditForm .formGroup select:focus,
+#userEditForm .formGroup textarea:focus {
+  outline: none;
+  border-color: #d4af78;
+  background-color: #fff;
+}
+
+#userEditForm .formGroup textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+/* Form Message in Modal */
+.addUserModal .formMessage {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.addUserModal .formMessage.error {
+  background-color: rgba(255, 107, 53, 0.15);
+  border: 1px solid rgba(255, 107, 53, 0.4);
+  color: #ff6b35;
+}
+
+.addUserModal .formMessage.success {
+  background-color: rgba(92, 184, 92, 0.15);
+  border: 1px solid rgba(92, 184, 92, 0.4);
+  color: #5cb85c;
+}
+
+/* ===== USER LOGS TABLE STYLES ===== */
+#user-logs-tab .tableWrapper table th,
+#user-logs-tab .tableWrapper table td {
+  font-size: 11px;
+  padding: 10px 8px;
+}
+
+#user-logs-tab .tableWrapper {
+  overflow-x: auto;
+}
+
+#user-logs-tab .tableWrapper table {
+  min-width: 1400px;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1024px) {
   .mainContent {
@@ -991,7 +1285,8 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
-  .logoutModal {
+  .logoutModal,
+  .addUserModal {
     width: 90%;
     max-width: 380px;
     padding: 25px;
@@ -1016,144 +1311,35 @@ tbody tr:hover {
   .addRoomBtn {
     width: 100%;
   }
-}
 
-/* ===== FORM MESSAGE STYLES ===== */
-.formMessage {
-  display: none;
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.5;
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+  #user-logs-tab .tableWrapper table {
+    min-width: 1300px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .addUserModal {
+    width: 95%;
+    padding: 30px 25px;
+  }
+
+  #userEditForm .formGrid {
+    grid-template-columns: 1fr;
   }
 }
 
-.formMessage.error {
-  background-color: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
-}
-
-.formMessage.success {
-  background-color: #efe;
-  border: 1px solid #cfc;
-  color: #3c3;
-}
-
-.formMessage.warning {
-  background-color: #ffc;
-  border: 1px solid #fc9;
-  color: #c93;
-}
-
-/* Add to admin.css */
-
-/* User Modal Styles (similar to roomModal) */
-.userModal {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 35px;
-  max-width: 600px; /* Slightly wider for more fields */
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  position: relative;
-  animation: slideIn 0.3s ease;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.userModal h2 {
-  color: #480c1b;
-  font-size: 22px;
-  margin-bottom: 25px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-align: center;
-}
-
-.userModal .formGrid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid */
-    gap: 15px 20px;
-}
-
-.userModal .formGroup label {
-  display: block;
-  margin-bottom: 8px;
-  color: #333;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.userModal .formGroup input,
-.userModal .formGroup select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  font-family: 'Arial', sans-serif;
-  transition: border 0.2s;
-}
-
- /* Password toggle specific to user modal */
-.userModal .passwordInputWrapper {
-    position: relative;
-}
-.userModal .passwordInputWrapper input {
-    padding-right: 40px; /* Make space for icon */
-}
- .userModal .togglePassword {
-    position: absolute;
-    right: 1px;
-    top: 1px;
-    bottom: 1px;
-    width: 38px;
-    background: #eee;
-    border: none;
-    border-radius: 0 4px 4px 0;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
- .userModal .togglePassword img {
-    width: 18px;
-    height: 18px;
-    opacity: 0.7;
-}
-
-.userModal .formGroup input:focus,
-.userModal .formGroup select:focus {
-  outline: none;
-  border-color: #d4af78;
-}
-
- .userModal .formGroup input[type="date"] {
-    padding: 9px 12px; /* Adjust padding for date picker icon */
- }
-
- /* Full width for Address */
- .userModal .formGroup.full-width {
-    grid-column: 1 / -1; /* Span all columns */
- }
-
-/* Action buttons in user table */
-#manage-users-page .actionButtons {
-  justify-content: center; /* Center buttons */
-}
-#manage-users-page .tableWrapper table td:last-child {
-     text-align: center; /* Center align action column content */
+@media (max-width: 760px) {
+  #rooms-page .tableWrapper table td:last-child {
+    width: auto;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+  
+  #rooms-page .actionBtn {
+    width: 32px;
+    height: 32px;
+  }
+  
+  #rooms-page .actionBtn img {
+    width: 16px;
+    height: 16px;
+  }
 }

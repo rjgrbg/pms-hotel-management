@@ -142,3 +142,69 @@
   window.roomsData = roomsData;
   window.parkingData = parkingData;
   window.inventoryData = inventoryData;
+
+  // ===== ADD THIS TO shared-data.js =====
+
+// ===== USER LOGS DATA (Mock Data for Frontend) =====
+const userLogsData = [
+  {
+    LogID: 1,
+    UserID: '019284726475',
+    Lname: 'Bagayan',
+    Fname: 'Juan',
+    Mname: 'Constant',
+    AccountType: 'admin',
+    Role: 'Manager',
+    Shift: 'Day',
+    Username: 'Juana',
+    EmailAddress: 'Juan@gmail.com',
+    ActionType: 'Logged In',
+    Timestamp: '2025-10-21 07:55 AM'
+  },
+  {
+    LogID: 2,
+    UserID: '019284726475',
+    Lname: 'Bagayan',
+    Fname: 'Juan',
+    Mname: 'Constant',
+    AccountType: 'admin',
+    Role: 'Manager',
+    Shift: 'Day',
+    Username: 'Juana',
+    EmailAddress: 'Juan@gmail.com',
+    ActionType: 'Logged Out',
+    Timestamp: '2025-10-21 05:30 PM'
+  },
+  {
+    LogID: 3,
+    UserID: '109093287678',
+    Lname: 'Dela Cruz',
+    Fname: 'Juan',
+    Mname: 'Santos',
+    AccountType: 'housekeeping_manager',
+    Role: 'Manager',
+    Shift: 'Morning',
+    Username: 'juandc',
+    EmailAddress: 'juandc@hotel.com',
+    ActionType: 'Logged In',
+    Timestamp: '2025-10-22 08:00 AM'
+  },
+  {
+    LogID: 4,
+    UserID: '109093287678',
+    Lname: 'Dela Cruz',
+    Fname: 'Juan',
+    Mname: 'Santos',
+    AccountType: 'housekeeping_manager',
+    Role: 'Manager',
+    Shift: 'Morning',
+    Username: 'juandc',
+    EmailAddress: 'juandc@hotel.com',
+    ActionType: 'Logged Out',
+    Timestamp: '2025-10-22 04:00 PM'
+  }
+];
+
+// Add to window global data
+window.appData.userLogs = userLogsData;
+window.userLogsData = userLogsData;

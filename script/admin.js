@@ -6,7 +6,8 @@ const paginationState = {
   maintenance: { currentPage: 1, itemsPerPage: 10 },
   parking: { currentPage: 1, itemsPerPage: 10 },
   inventory: { currentPage: 1, itemsPerPage: 10 },
-  users: { currentPage: 1, itemsPerPage: 10 }
+  users: { currentPage: 1, itemsPerPage: 10 },
+  userLogs: { currentPage: 1, itemsPerPage: 10 }
 };
 
 // ===== ACCOUNT TYPE MAPPING =====
@@ -27,9 +28,10 @@ let roomData = [];
 let parkingDataList = typeof parkingData !== 'undefined' ? [...parkingData] : [];
 let inventoryDataList = typeof inventoryData !== 'undefined' ? [...inventoryData] : [];
 let usersData = [];
+let userLogsDataList = typeof userLogsData !== 'undefined' ? [...userLogsData] : [];
 let dashData = dashboardStats;
 
-console.log('Data Loaded:', { roomData, parkingDataList, inventoryDataList, usersData });
+console.log('Data Loaded:', { roomData, parkingDataList, inventoryDataList, usersData, userLogsDataList });
 
 // --- Room Management DOM Elements ---
 const roomsTableBody = document.getElementById('roomsTableBody');
@@ -47,13 +49,16 @@ const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 const usersTableBody = document.getElementById('usersTableBody');
 const userModal = document.getElementById('userModal');
 const closeUserModalBtn = document.getElementById('closeUserModalBtn');
-const cancelUserBtn = document.getElementById('cancelUserBtn');
-const userForm = document.getElementById('userForm');
+const employeeIdForm = document.getElementById('employeeIdForm');
+const userEditForm = document.getElementById('userEditForm');
 const userModalTitle = document.getElementById('userModalTitle');
 const deleteUserModal = document.getElementById('deleteUserModal');
 const closeDeleteUserModalBtn = document.getElementById('closeDeleteUserModalBtn');
 const cancelDeleteUserBtn = document.getElementById('cancelDeleteUserBtn');
 const confirmDeleteUserBtn = document.getElementById('confirmDeleteUserBtn');
+
+// User Logs DOM Elements
+const logsTableBody = document.getElementById('logsTableBody');
 
 // Form Inputs - Room
 const roomFloorInput = document.getElementById('roomFloor');
@@ -63,7 +68,8 @@ const roomGuestsInput = document.getElementById('roomGuests');
 const roomRateInput = document.getElementById('roomRate');
 const roomStatusInput = document.getElementById('roomStatus');
 
-// Form Inputs - User
+// Form Inputs - User (Edit Form)
+const editUserIdInput = document.getElementById('editUserId');
 const userFnameInput = document.getElementById('userFname');
 const userLnameInput = document.getElementById('userLname');
 const userMnameInput = document.getElementById('userMname');
@@ -73,8 +79,10 @@ const userUsernameInput = document.getElementById('userUsername');
 const userEmailInput = document.getElementById('userEmail');
 const userShiftInput = document.getElementById('userShift');
 const userAddressInput = document.getElementById('userAddress');
-const userPasswordInput = document.getElementById('userPassword');
-const userConfirmPasswordInput = document.getElementById('userConfirmPassword');
+const userContactInput = document.getElementById('userContact');
+
+// Employee ID Input
+const employeeIdInput = document.getElementById('employeeId');
 
 // Filter Elements
 const roomsFloorFilter = document.getElementById('roomsFloorFilter');
@@ -97,11 +105,12 @@ if (!formMessage && roomForm) {
 }
 
 let userFormMessage = document.getElementById('userFormMessage');
-if (!userFormMessage && userForm) {
+if (!userFormMessage && employeeIdForm) {
   userFormMessage = document.createElement('div');
   userFormMessage.id = 'userFormMessage';
   userFormMessage.className = 'formMessage';
-  userForm.insertBefore(userFormMessage, userForm.firstChild);
+  userFormMessage.style.display = 'none';
+  userModal.insertBefore(userFormMessage, employeeIdForm);
 }
 
 // ===== UTILITY FUNCTIONS FOR FORM MESSAGES =====
@@ -459,13 +468,13 @@ async function fetchAndRenderUsers() {
          const recordCount = document.getElementById('usersRecordCount');
          if (recordCount) recordCount.textContent = 0;
          updateDashboardFromUsers([]); 
-         renderPaginationControls('manage-users-page', 0, 1, () => {});
+         renderPaginationControls('user-management-tab', 0, 1, () => {});
     } else {
          usersTableBody.innerHTML = `<tr><td colspan="6">Failed to load data: ${result.message}</td></tr>`;
          const recordCount = document.getElementById('usersRecordCount');
          if (recordCount) recordCount.textContent = 0;
          updateDashboardFromUsers([]);
-         renderPaginationControls('manage-users-page', 0, 1, () => {});
+         renderPaginationControls('user-management-tab', 0, 1, () => {});
     }
 }
 
@@ -515,9 +524,70 @@ function renderUsersTable(data) {
   
   const recordCount = document.getElementById('usersRecordCount');
   if (recordCount) recordCount.textContent = data.length;
-  renderPaginationControls('manage-users-page', totalPages, state.currentPage, (page) => {
+  renderPaginationControls('user-management-tab', totalPages, state.currentPage, (page) => {
     state.currentPage = page;
     renderUsersTable(data);
+  });
+}
+
+// ===== USER LOGS FUNCTIONS =====
+async function fetchAndRenderUserLogs() {
+    if (!logsTableBody) return;
+    console.log('Fetching user logs...');
+    logsTableBody.innerHTML = '<tr><td colspan="12">Loading user logs...</td></tr>';
+    
+    // For frontend, use mock data
+    // In production, you would call: const result = await apiCall('fetch_user_logs', {}, 'GET', 'user_actions.php');
+    setTimeout(() => {
+        userLogsDataList = [...userLogsData];
+        console.log('User logs data loaded:', userLogsDataList);
+        
+        paginationState.userLogs.currentPage = 1;
+        renderUserLogsTable(userLogsDataList);
+        const recordCount = document.getElementById('logsRecordCount');
+        if (recordCount) recordCount.textContent = userLogsDataList.length;
+    }, 300);
+}
+
+function renderUserLogsTable(data) {
+  if (!logsTableBody) return;
+  console.log('Rendering user logs table with data:', data);
+  const tbody = logsTableBody;
+  const state = paginationState.userLogs;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 40px; color: #999;">No logs found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => {
+      const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
+      const actionClass = row.ActionType.toLowerCase().replace(/ /g, '-');
+
+      return `
+        <tr>
+          <td>${row.LogID}</td>
+          <td>${row.UserID}</td>
+          <td>${row.Lname}</td>
+          <td>${row.Fname}</td>
+          <td>${row.Mname}</td>
+          <td>${row.AccountType}</td>
+          <td>${roleName}</td>
+          <td>${row.Shift}</td>
+          <td>${row.Username}</td>
+          <td>${row.EmailAddress}</td>
+          <td><span class="actionBadge ${actionClass}">${row.ActionType}</span></td>
+          <td>${row.Timestamp}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  const recordCount = document.getElementById('logsRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('user-logs-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderUserLogsTable(data);
   });
 }
 
@@ -525,12 +595,12 @@ function renderUsersTable(data) {
 document.getElementById('addUserBtn')?.addEventListener('click', () => {
     hideFormMessage(true);
     userModalTitle.textContent = 'Add New User';
-    userForm.reset();
-    document.getElementById('editUserId').value = '';
-    document.getElementById('saveUserBtn').textContent = 'SAVE USER';
     
-    userPasswordInput.required = true;
-    userConfirmPasswordInput.required = true;
+    // Show employee ID form, hide edit form
+    employeeIdForm.style.display = 'block';
+    userEditForm.style.display = 'none';
+    
+    employeeIdForm.reset();
     
     userModal.style.display = 'flex';
 });
@@ -540,9 +610,46 @@ closeUserModalBtn?.addEventListener('click', () => {
     hideFormMessage(true);
 });
 
-cancelUserBtn?.addEventListener('click', () => {
+document.getElementById('cancelEmployeeIdBtn')?.addEventListener('click', () => {
     userModal.style.display = 'none';
     hideFormMessage(true);
+});
+
+document.getElementById('cancelUserEditBtn')?.addEventListener('click', () => {
+    userModal.style.display = 'none';
+    hideFormMessage(true);
+});
+
+// Handle Employee ID Lookup (Add User)
+employeeIdForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideFormMessage(true);
+    
+    const employeeId = employeeIdInput.value.trim();
+    
+    if (!employeeId) {
+        showFormMessage('Please enter an Employee ID.', 'error', true);
+        return;
+    }
+
+    console.log('Looking up employee:', employeeId);
+    
+    // Call API to add employee by ID
+    const result = await apiCall('add_employee_by_id', { employeeId: employeeId }, 'POST', 'user_actions.php');
+    console.log('Add employee result:', result);
+
+    if (result.success) {
+        showFormMessage(result.message || 'Employee added successfully!', 'success', true);
+        employeeIdForm.reset();
+        await fetchAndRenderUsers();
+        
+        setTimeout(() => {
+            userModal.style.display = 'none';
+            hideFormMessage(true);
+        }, 1500);
+    } else {
+        showFormMessage(result.message || 'Failed to add employee.', 'error', true);
+    }
 });
 
 function handleEditUserClick(event) {
@@ -550,9 +657,17 @@ function handleEditUserClick(event) {
     const user = JSON.parse(event.currentTarget.dataset.userData);
     
     userModalTitle.textContent = 'Edit User: ' + user.Username;
-    document.getElementById('saveUserBtn').textContent = 'UPDATE USER';
     
-    document.getElementById('editUserId').value = user.UserID;
+    // Show edit form, hide employee ID form
+    employeeIdForm.style.display = 'none';
+    userEditForm.style.display = 'block';
+    
+    // Populate profile section
+    document.getElementById('editUserFullName').textContent = `${user.Lname}, ${user.Fname}${user.Mname ? ' ' + user.Mname.charAt(0) + '.' : ''}`;
+    document.getElementById('editUserEmployeeId').textContent = `Employee ID: ${user.UserID}`;
+    
+    // Populate form fields
+    editUserIdInput.value = user.UserID;
     userFnameInput.value = user.Fname;
     userLnameInput.value = user.Lname;
     userMnameInput.value = user.Mname || '';
@@ -562,35 +677,16 @@ function handleEditUserClick(event) {
     userEmailInput.value = user.EmailAddress;
     userShiftInput.value = user.Shift;
     userAddressInput.value = user.Address;
-    
-    userPasswordInput.value = '';
-    userConfirmPasswordInput.value = '';
-    userPasswordInput.required = false;
-    userConfirmPasswordInput.required = false;
+    userContactInput.value = user.Contact || '';
 
     userModal.style.display = 'flex';
 }
 
-userForm?.addEventListener('submit', async (e) => {
+userEditForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     hideFormMessage(true);
-    
-    const password = userPasswordInput.value;
-    const confirmPassword = userConfirmPasswordInput.value;
-    
-    if (password || confirmPassword) {
-        if (password !== confirmPassword) {
-            showFormMessage('Passwords do not match.', 'error', true);
-            return;
-        }
-        if (password.length < 6) {
-            showFormMessage('Password must be at least 6 characters long.', 'error', true);
-            return;
-        }
-    }
 
-    const userID = document.getElementById('editUserId').value;
-    const action = userID ? 'edit_user' : 'add_user';
+    const userID = editUserIdInput.value;
     
     const data = {
         userID: userID,
@@ -603,17 +699,15 @@ userForm?.addEventListener('submit', async (e) => {
         email: userEmailInput.value,
         shift: userShiftInput.value,
         address: userAddressInput.value,
-        password: password,
-        confirmPassword: confirmPassword
+        contact: userContactInput.value
     };
 
-    console.log('Submitting user data:', data);
-    const result = await apiCall(action, data, 'POST', 'user_actions.php');
-    console.log('User submit result:', result);
+    console.log('Updating user data:', data);
+    const result = await apiCall('edit_user', data, 'POST', 'user_actions.php');
+    console.log('User update result:', result);
 
     if (result.success) {
-        showFormMessage(result.message, 'success', true);
-        userForm.reset();
+        showFormMessage(result.message || 'User updated successfully!', 'success', true);
         await fetchAndRenderUsers();
         
         setTimeout(() => {
@@ -621,7 +715,7 @@ userForm?.addEventListener('submit', async (e) => {
             hideFormMessage(true);
         }, 1500);
     } else {
-        showFormMessage(result.message, 'error', true);
+        showFormMessage(result.message || 'Failed to update user.', 'error', true);
     }
 });
 
@@ -650,6 +744,33 @@ confirmDeleteUserBtn?.addEventListener('click', async () => {
     } else {
         alert(result.message);
     }
+});
+
+// ===== USER TAB NAVIGATION =====
+const userTabBtns = document.querySelectorAll('[data-user-tab]');
+
+userTabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabName = btn.getAttribute('data-user-tab');
+    
+    userTabBtns.forEach(b => b.classList.remove('active'));
+    
+    const userMgmtTab = document.getElementById('user-management-tab');
+    const userLogsTab = document.getElementById('user-logs-tab');
+    if (userMgmtTab) userMgmtTab.classList.remove('active');
+    if (userLogsTab) userLogsTab.classList.remove('active');
+
+    btn.classList.add('active');
+    const selectedTab = document.getElementById(`${tabName}-tab`);
+    if (selectedTab) {
+      selectedTab.classList.add('active');
+      
+      // Fetch data when switching to logs tab
+      if (tabName === 'user-logs') {
+        fetchAndRenderUserLogs();
+      }
+    }
+  });
 });
 
 // ===== USER FILTERS =====
@@ -703,6 +824,61 @@ document.getElementById('usersDownloadBtn')?.addEventListener('click', () => {
   const a = document.createElement('a');
   a.href = url;
   a.download = `users-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// ===== USER LOGS FILTERS =====
+document.getElementById('logsSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = userLogsDataList.filter(row => 
+    row.Username.toLowerCase().includes(search) ||
+    row.Fname.toLowerCase().includes(search) ||
+    row.Lname.toLowerCase().includes(search) ||
+    row.EmailAddress.toLowerCase().includes(search) ||
+    row.UserID.toString().includes(search)
+  );
+  paginationState.userLogs.currentPage = 1;
+  renderUserLogsTable(filtered);
+});
+
+document.getElementById('logsRoleFilter')?.addEventListener('change', (e) => {
+  const role = e.target.value;
+  const filtered = role ? userLogsDataList.filter(row => row.AccountType === role) : userLogsDataList;
+  paginationState.userLogs.currentPage = 1;
+  renderUserLogsTable(filtered);
+});
+
+document.getElementById('logsShiftFilter')?.addEventListener('change', (e) => {
+  const shift = e.target.value;
+  const filtered = shift ? userLogsDataList.filter(row => row.Shift === shift) : userLogsDataList;
+  paginationState.userLogs.currentPage = 1;
+  renderUserLogsTable(filtered);
+});
+
+document.getElementById('logsRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('logsSearchInput').value = '';
+  document.getElementById('logsRoleFilter').value = '';
+  document.getElementById('logsShiftFilter').value = '';
+  
+  fetchAndRenderUserLogs();
+});
+
+document.getElementById('logsDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Log ID', 'User ID', 'Last Name', 'First Name', 'Middle Name', 'Account Type', 'Role', 'Shift', 'Username', 'Email Address', 'Action Type', 'Timestamp'];
+  const csvContent = [
+    headers.join(','),
+    ...userLogsDataList.map(row => {
+      const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
+      return [row.LogID, row.UserID, row.Lname, row.Fname, row.Mname, row.AccountType, roleName, row.Shift, row.Username, row.EmailAddress, row.ActionType, row.Timestamp].join(',');
+    })
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `user-logs-${new Date().toISOString().split('T')[0]}.csv`;
   a.click();
   window.URL.revokeObjectURL(url);
 });
