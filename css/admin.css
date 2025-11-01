@@ -467,7 +467,6 @@ tbody tr:hover {
   color: #fff;
 }
 
-/* ===== INVENTORY STATUS BADGES ===== */
 .statusBadge.in-stock {
   background-color: #5cb85c;
 }
@@ -480,12 +479,15 @@ tbody tr:hover {
   background-color: #c9302c;
 }
 
-/* ===== PARKING STATUS BADGES ===== */
 .statusBadge.vacant {
   background-color: #5cb85c;
 }
 
-/* ===== ACTION BADGES (for User Logs) ===== */
+.statusBadge.stocked {
+  background-color: #5cb85c;
+}
+
+/* ===== ACTION BADGES ===== */
 .actionBadge {
   display: inline-block;
   padding: 5px 12px;
@@ -531,11 +533,13 @@ tbody tr:hover {
   object-fit: contain;
 }
 
-.editBtn:hover {
+.editBtn:hover,
+.editUserBtn:hover {
   background-color: #e3f2fd;
 }
 
-.deleteBtn:hover {
+.deleteBtn:hover,
+.deleteUserBtn:hover {
   background-color: #ffebee;
 }
 
@@ -552,7 +556,7 @@ tbody tr:hover {
   background-color: #e68600;
 }
 
-/* ===== STRONG ACTIONS COLUMN ALIGNMENT FIX ===== */
+/* ===== ROOMS ACTION ALIGNMENT ===== */
 #rooms-page .tableWrapper table th:last-child,
 #rooms-page .tableWrapper table td:last-child {
   text-align: center;
@@ -615,131 +619,13 @@ tbody tr:hover {
   text-align: center;
 }
 
-/* ===== USER MANAGEMENT ACTIONS ALIGNMENT ===== */
+/* ===== USER MANAGEMENT ACTIONS ===== */
 #manage-users-page .actionButtons {
   justify-content: center;
 }
 
 #manage-users-page .tableWrapper table td:last-child {
   text-align: center;
-}
-
-/* ===== ROOM MODAL ===== */
-.roomModal {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 35px;
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  position: relative;
-  animation: slideIn 0.3s ease;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.roomModal h2 {
-  color: #480c1b;
-  font-size: 22px;
-  margin-bottom: 25px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-align: center;
-}
-
-.formGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.formGroup {
-  margin-bottom: 15px;
-}
-
-.formGroup label {
-  display: block;
-  margin-bottom: 8px;
-  color: #333;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.formGroup input,
-.formGroup select,
-.formGroup textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  font-family: 'Arial', sans-serif;
-  transition: border 0.2s;
-}
-
-.formGroup input:focus,
-.formGroup select:focus,
-.formGroup textarea:focus {
-  outline: none;
-  border-color: #d4af78;
-}
-
-.formGroup textarea {
-  resize: vertical;
-  min-height: 70px;
-}
-
-.formGroup input[type="number"]::-webkit-inner-spin-button,
-.formGroup input[type="number"]::-webkit-outer-spin-button {
-  opacity: 1;
-}
-
-/* ===== PAGINATION ===== */
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  border-top: 1px solid #f0f0f0;
-  background-color: #f9f9f9;
-  font-size: 12px;
-}
-
-.paginationInfo {
-  color: #666;
-}
-
-.paginationControls {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.paginationBtn {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  padding: 6px 10px;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.2s;
-}
-
-.paginationBtn:hover {
-  border-color: #ffb400;
-  color: #ffb400;
-}
-
-.paginationBtn.active {
-  background-color: #ffb400;
-  border-color: #ffb400;
-  color: #fff;
-}
-
-.paginationDots {
-  color: #999;
-  padding: 0 4px;
 }
 
 /* ===== MODALS ===== */
@@ -767,16 +653,6 @@ tbody tr:hover {
   }
 }
 
-.logoutModal {
-  background-color: #480c1b;
-  border-radius: 8px;
-  padding: 35px;
-  max-width: 420px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  position: relative;
-  animation: slideIn 0.3s ease;
-}
-
 @keyframes slideIn {
   from {
     transform: translateY(-30px);
@@ -786,6 +662,40 @@ tbody tr:hover {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+/* ===== ROOM MODAL ===== */
+.roomModal {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 35px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideIn 0.3s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.roomModal h2 {
+  color: #480c1b;
+  font-size: 22px;
+  margin-bottom: 25px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+/* ===== LOGOUT MODAL ===== */
+.logoutModal {
+  background-color: #480c1b;
+  border-radius: 8px;
+  padding: 35px;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideIn 0.3s ease;
 }
 
 .closeBtn {
@@ -835,6 +745,56 @@ tbody tr:hover {
   margin-bottom: 25px;
 }
 
+/* ===== FORM STYLES ===== */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.formGroup {
+  margin-bottom: 15px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Arial', sans-serif;
+  transition: border 0.2s;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #d4af78;
+}
+
+.formGroup textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.formGroup input[type="number"]::-webkit-inner-spin-button,
+.formGroup input[type="number"]::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+/* ===== MODAL BUTTONS ===== */
 .modalButtons {
   display: flex;
   gap: 12px;
@@ -909,27 +869,67 @@ tbody tr:hover {
 }
 
 /* ===== TAB CONTENT ===== */
-#hk-requests-tab,
-#hk-history-tab {
+.tabContent {
   display: none;
 }
 
-#hk-requests-tab.active,
-#hk-history-tab.active {
+.tabContent.active {
   display: block;
 }
 
-#user-management-tab,
-#user-logs-tab {
-  display: none;
+/* ===== PAGINATION ===== */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-top: 1px solid #f0f0f0;
+  background-color: #f9f9f9;
+  font-size: 12px;
 }
 
-#user-management-tab.active,
-#user-logs-tab.active {
-  display: block;
+.paginationInfo {
+  color: #666;
 }
 
-/* ===== FORM MESSAGE STYLES ===== */
+.paginationControls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.paginationBtn {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 6px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.paginationBtn:hover {
+  border-color: #ffb400;
+  color: #ffb400;
+}
+
+.paginationBtn.active {
+  background-color: #ffb400;
+  border-color: #ffb400;
+  color: #fff;
+}
+
+.paginationBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.paginationDots {
+  color: #999;
+  padding: 0 4px;
+}
+
+/* ===== FORM MESSAGE ===== */
 .formMessage {
   display: none;
   padding: 12px 16px;
@@ -970,7 +970,7 @@ tbody tr:hover {
   color: #c93;
 }
 
-/* ===== DARK BROWN USER MODAL STYLES ===== */
+/* ===== USER MODAL ===== */
 .addUserModal {
   background: #4c0b0b;
   border-radius: 12px;
@@ -1000,7 +1000,7 @@ tbody tr:hover {
   text-transform: uppercase;
 }
 
-/* Employee ID Form Styles */
+/* Employee ID Form */
 #employeeIdForm .formGroup {
   margin-bottom: 25px;
 }
@@ -1037,7 +1037,7 @@ tbody tr:hover {
   color: #999;
 }
 
-/* Modal Buttons Dark Theme */
+/* User Modal Buttons */
 .addUserModal .modalButtons {
   display: flex;
   gap: 15px;
@@ -1081,7 +1081,7 @@ tbody tr:hover {
   box-shadow: 0 5px 15px rgba(255, 180, 0, 0.4);
 }
 
-/* User Edit Form Profile Section */
+/* User Profile Section */
 .userProfileSection {
   text-align: center;
   padding: 20px 0 30px;
@@ -1122,7 +1122,7 @@ tbody tr:hover {
   font-weight: 400;
 }
 
-/* Edit Form Styles */
+/* User Edit Form */
 #userEditForm .formGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -1130,45 +1130,12 @@ tbody tr:hover {
   margin-bottom: 15px;
 }
 
-#userEditForm .formGroup {
-  margin-bottom: 15px;
-}
-
-#userEditForm .formGroup label {
-  display: block;
-  margin-bottom: 8px;
-  color: #d4af78;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-#userEditForm .formGroup input,
-#userEditForm .formGroup select,
-#userEditForm .formGroup textarea {
-  width: 100%;
-  padding: 10px 12px;
-  border: 2px solid #5a4332;
-  border-radius: 4px;
-  font-size: 13px;
-  background-color: rgba(255, 255, 255, 0.95);
-  color: #333;
-  transition: all 0.2s;
-}
-
-#userEditForm .formGroup input:focus,
-#userEditForm .formGroup select:focus,
-#userEditForm .formGroup textarea:focus {
-  outline: none;
-  border-color: #d4af78;
-  background-color: #fff;
-}
-
 #userEditForm .formGroup textarea {
   resize: vertical;
   min-height: 70px;
 }
 
-/* Form Message in Modal */
+/* User Modal Form Message */
 .addUserModal .formMessage {
   margin-bottom: 20px;
   padding: 12px 16px;
@@ -1189,7 +1156,7 @@ tbody tr:hover {
   color: #5cb85c;
 }
 
-/* ===== USER LOGS TABLE STYLES ===== */
+/* ===== USER LOGS TABLE ===== */
 #user-logs-tab .tableWrapper table th,
 #user-logs-tab .tableWrapper table td {
   font-size: 11px;
@@ -1204,7 +1171,7 @@ tbody tr:hover {
   min-width: 1400px;
 }
 
-/* ===== RESPONSIVE ===== */
+/* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 1024px) {
   .mainContent {
     padding: 20px;
@@ -1286,10 +1253,15 @@ tbody tr:hover {
   }
 
   .logoutModal,
-  .addUserModal {
+  .roomModal {
     width: 90%;
     max-width: 380px;
     padding: 25px;
+  }
+
+  .addUserModal {
+    width: 95%;
+    padding: 30px 25px;
   }
 
   .modalButtons {
@@ -1316,30 +1288,344 @@ tbody tr:hover {
     min-width: 1300px;
   }
 
-  .addUserModal {
-    width: 95%;
-    padding: 30px 25px;
-  }
-
   #userEditForm .formGrid {
     grid-template-columns: 1fr;
   }
+
+  .tabNavigation {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .tabBtn {
+    white-space: nowrap;
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+
+  .tableWrapper {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 800px;
+  }
 }
 
-@media (max-width: 760px) {
-  #rooms-page .tableWrapper table td:last-child {
-    width: auto;
-    padding-left: 8px;
-    padding-right: 8px;
+@media (max-width: 480px) {
+  .header {
+    padding: 12px 20px;
   }
-  
-  #rooms-page .actionBtn {
-    width: 32px;
-    height: 32px;
+
+  .headerLogo {
+    width: 28px;
+    height: 28px;
   }
-  
-  #rooms-page .actionBtn img {
+
+  .hotelName {
+    font-size: 14px;
+  }
+
+  .pageTitle {
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .roomModal,
+  .addUserModal {
+    padding: 20px;
+    width: 95%;
+  }
+
+  .roomModal h2,
+  .addUserModal h2 {
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+
+  .statCard {
+    padding: 20px;
+  }
+
+  .statValue {
+    font-size: 32px;
+  }
+
+  .controlsRow {
+    margin-bottom: 15px;
+  }
+
+  th,
+  td {
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+
+  .statusBadge {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .actionBtn {
+    padding: 6px;
+  }
+
+  .actionBtn img {
     width: 16px;
     height: 16px;
   }
+
+  #rooms-page .actionBtn {
+    width: 30px;
+    height: 30px;
+  }
+
+  #rooms-page .actionBtn img {
+    width: 14px;
+    height: 14px;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .paginationInfo {
+    margin-bottom: 5px;
+  }
+
+  .paginationBtn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
 }
+
+/* ===== SCROLLBAR STYLING ===== */
+.mainContent::-webkit-scrollbar,
+.sidebarContent::-webkit-scrollbar,
+.tableWrapper::-webkit-scrollbar,
+.roomModal::-webkit-scrollbar,
+.addUserModal::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.mainContent::-webkit-scrollbar-track,
+.sidebarContent::-webkit-scrollbar-track,
+.tableWrapper::-webkit-scrollbar-track,
+.roomModal::-webkit-scrollbar-track,
+.addUserModal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.mainContent::-webkit-scrollbar-thumb,
+.sidebarContent::-webkit-scrollbar-thumb,
+.tableWrapper::-webkit-scrollbar-thumb,
+.roomModal::-webkit-scrollbar-thumb,
+.addUserModal::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.mainContent::-webkit-scrollbar-thumb:hover,
+.sidebarContent::-webkit-scrollbar-thumb:hover,
+.tableWrapper::-webkit-scrollbar-thumb:hover,
+.roomModal::-webkit-scrollbar-thumb:hover,
+.addUserModal::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  .sidebar,
+  .controlsRow,
+  .pagination,
+  .modalBackdrop {
+    display: none !important;
+  }
+
+  .mainWrapper {
+    display: block;
+  }
+
+  .mainContent {
+    padding: 0;
+  }
+
+  .page {
+    display: block !important;
+    page-break-after: always;
+  }
+
+  .tableWrapper {
+    box-shadow: none;
+  }
+
+  tbody tr {
+    page-break-inside: avoid;
+  }
+}
+
+/* ===== ACCESSIBILITY ===== */
+.navLink:focus,
+.tabBtn:focus,
+.filterDropdown:focus,
+.searchInput:focus,
+.refreshBtn:focus,
+.downloadBtn:focus,
+.addRoomBtn:focus,
+.modalBtn:focus,
+.actionBtn:focus,
+.paginationBtn:focus {
+  outline: 2px solid #d4af78;
+  outline-offset: 2px;
+}
+
+.navLink:focus-visible,
+.tabBtn:focus-visible,
+.filterDropdown:focus-visible,
+.searchInput:focus-visible {
+  outline: 2px solid #d4af78;
+  outline-offset: 2px;
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ===== LOADING STATES ===== */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: wait;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #480c1b;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ===== TOOLTIPS ===== */
+[title] {
+  position: relative;
+  cursor: help;
+}
+
+/* ===== DARK MODE SUPPORT (Optional) ===== */
+@media (prefers-color-scheme: dark) {
+  /* Uncomment to enable dark mode */
+  /*
+  body {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+  }
+
+  .mainContent {
+    background-color: #1a1a1a;
+  }
+
+  .tableWrapper,
+  .statCard {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+  }
+
+  th {
+    background-color: #1a1a1a;
+  }
+
+  td {
+    border-bottom-color: #3d3d3d;
+  }
+
+  tbody tr:nth-child(odd) {
+    background-color: #252525;
+  }
+
+  tbody tr:hover {
+    background-color: #353535;
+  }
+  */
+}
+
+/* ===== CUSTOM ANIMATIONS ===== */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ===== UTILITY CLASSES ===== */
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-left {
+  text-align: left;
+}
+
+.mt-10 {
+  margin-top: 10px;
+}
+
+.mt-20 {
+  margin-top: 20px;
+}
+
+.mb-10 {
+  margin-bottom: 10px;
+}
+
+.mb-20 {
+  margin-bottom: 20px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.visible {
+  display: block !important;
+}
+
+/* ===== END OF CSS ===== */ 

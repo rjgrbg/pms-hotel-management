@@ -220,18 +220,26 @@ if (isset($_SESSION['UserID'])) {
         </section>
       </div>
 
+      <!-- HOUSEKEEPING PAGE -->
       <div class="page" id="housekeeping-page">
         <h1 class="pageTitle">HOUSEKEEPING</h1>
 
         <div class="tabNavigation">
-          <button class="tabBtn active" data-admin-tab="hk-requests">
+          <button class="tabBtn active" data-hk-tab="hk-requests">
             Requests
           </button>
-          <button class="tabBtn" data-admin-tab="hk-history">
+          <button class="tabBtn" data-hk-tab="hk-history">
             History
+          </button>
+          <button class="tabBtn" data-hk-tab="hk-linens">
+            Linens
+          </button>
+          <button class="tabBtn" data-hk-tab="hk-amenities">
+            Amenities
           </button>
         </div>
 
+        <!-- REQUESTS TAB -->
         <div class="tabContent active" id="hk-requests-tab">
           <div class="controlsRow">
             <div class="filterControls">
@@ -291,6 +299,7 @@ if (isset($_SESSION['UserID'])) {
           </div>
         </div>
 
+        <!-- HISTORY TAB -->
         <div class="tabContent" id="hk-history-tab">
           <div class="controlsRow">
             <div class="filterControls">
@@ -345,70 +354,322 @@ if (isset($_SESSION['UserID'])) {
                </div>
           </div>
         </div>
-      </div>
 
-      <div class="page" id="maintenance-page">
-        <h1 class="pageTitle">MAINTENANCE</h1>
-
-        <div class="controlsRow">
-          <div class="filterControls">
-            <select class="filterDropdown" id="mtFloorFilter">
-              <option value="">Floor</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-            </select>
-            <select class="filterDropdown" id="mtRoomFilter">
-              <option value="">Room</option>
-              <option value="101">101</option>
-              <option value="102">102</option>
-            </select>
-            <select class="filterDropdown" id="mtStatusFilter">
-              <option value="">Status</option>
-              <option value="repaired">Repaired</option>
-              <option value="pending">Pending</option>
-            </select>
-            <div class="searchBox">
-              <input type="text" placeholder="Search" class="searchInput" id="mtSearchInput" />
-              <button class="searchBtn">
-                <img src="assets/icons/search-icon.png" alt="Search" />
+        <!-- LINENS TAB -->
+        <div class="tabContent" id="hk-linens-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="floorFilterLinens">
+                <option value="">Floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+              <select class="filterDropdown" id="roomFilterLinens">
+                <option value="">Room</option>
+                <option value="101">101</option>
+                <option value="102">102</option>
+              </select>
+              <select class="filterDropdown" id="statusFilterLinens">
+                <option value="">Status</option>
+                <option value="cleaned">Cleaned</option>
+                <option value="pending">Pending</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="linensSearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="linensRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="linensDownloadBtn">
+                <img src="assets/icons/download-icon.png" alt="Download" />
               </button>
             </div>
-            <button class="refreshBtn" id="mtRefreshBtn">
-              <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-            </button>
-            <button class="downloadBtn" id="mtDownloadBtn">
-              <img src="assets/icons/download-icon.png" alt="Download" />
-            </button>
+          </div>
+
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Floor</th>
+                  <th>Room</th>
+                  <th>Types</th>
+                  <th>Items</th>
+                  <th>Time/Date</th>
+                  <th>Status</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="hkLinensTableBody">
+                 </tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <span class="paginationInfo">Display Records <span id="hkLinensRecordCount">0</span></span>
+            <div class="paginationControls">
+               </div>
           </div>
         </div>
 
-        <div class="tableWrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Floor</th>
-                <th>Room</th>
-                <th>Issue Type</th>
-                <th>Date</th>
-                <th>Requested Time</th>
-                <th>Completed Time</th>
-                <th>Status</th>
-                <th>Staff In Charge</th>
-                <th>Remarks</th>
-              </tr>
-            </thead>
-            <tbody id="mtTableBody">
-              </tbody>
-          </table>
-        </div>
-
-        <div class="pagination">
-          <span class="paginationInfo">Display Records <span id="mtRecordCount">0</span></span>
-          <div class="paginationControls">
+        <!-- AMENITIES TAB -->
+        <div class="tabContent" id="hk-amenities-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="floorFilterAmenities">
+                <option value="">Floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+              <select class="filterDropdown" id="roomFilterAmenities">
+                <option value="">Room</option>
+                <option value="101">101</option>
+                <option value="102">102</option>
+              </select>
+              <select class="filterDropdown" id="statusFilterAmenities">
+                <option value="">Status</option>
+                <option value="stocked">Stocked</option>
+                <option value="pending">Pending</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="amenitiesSearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="amenitiesRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="amenitiesDownloadBtn">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
             </div>
+          </div>
+
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Floor</th>
+                  <th>Room</th>
+                  <th>Types</th>
+                  <th>Items</th>
+                  <th>Time/Date</th>
+                  <th>Status</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="hkAmenitiesTableBody">
+                 </tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <span class="paginationInfo">Display Records <span id="hkAmenitiesRecordCount">0</span></span>
+            <div class="paginationControls">
+               </div>
+          </div>
         </div>
       </div>
 
+      <!-- MAINTENANCE PAGE -->
+      <div class="page" id="maintenance-page">
+        <h1 class="pageTitle">MAINTENANCE</h1>
+
+        <div class="tabNavigation">
+          <button class="tabBtn active" data-mt-tab="mt-requests">
+            Requests
+          </button>
+          <button class="tabBtn" data-mt-tab="mt-history">
+            History
+          </button>
+          <button class="tabBtn" data-mt-tab="mt-appliances">
+            Appliances
+          </button>
+        </div>
+
+        <!-- REQUESTS TAB -->
+        <div class="tabContent active" id="mt-requests-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="mtFloorFilter">
+                <option value="">Floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+              <select class="filterDropdown" id="mtRoomFilter">
+                <option value="">Room</option>
+                <option value="101">101</option>
+                <option value="102">102</option>
+              </select>
+              <select class="filterDropdown" id="mtStatusFilter">
+                <option value="">Status</option>
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="repaired">Repaired</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="mtSearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="mtRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="mtDownloadBtn">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
+            </div>
+          </div>
+
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Floor</th>
+                  <th>Room</th>
+                  <th>Issue Type</th>
+                  <th>Date</th>
+                  <th>Requested Time</th>
+                  <th>Completed Time</th>
+                  <th>Status</th>
+                  <th>Staff In Charge</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="mtRequestsTableBody">
+                </tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <span class="paginationInfo">Display Records <span id="mtRequestsRecordCount">0</span></span>
+            <div class="paginationControls">
+              </div>
+          </div>
+        </div>
+
+        <!-- HISTORY TAB -->
+        <div class="tabContent" id="mt-history-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="mtFloorFilterHist">
+                <option value="">Floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+              <select class="filterDropdown" id="mtRoomFilterHist">
+                <option value="">Room</option>
+                <option value="101">101</option>
+                <option value="102">102</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="mtHistSearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="mtHistRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="mtHistDownloadBtn">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
+            </div>
+          </div>
+
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Floor</th>
+                  <th>Room</th>
+                  <th>Issue Type</th>
+                  <th>Date</th>
+                  <th>Requested Time</th>
+                  <th>Completed Time</th>
+                  <th>Status</th>
+                  <th>Staff In Charge</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="mtHistTableBody">
+                </tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <span class="paginationInfo">Display Records <span id="mtHistRecordCount">0</span></span>
+            <div class="paginationControls">
+              </div>
+          </div>
+        </div>
+
+        <!-- APPLIANCES TAB -->
+        <div class="tabContent" id="mt-appliances-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="appFloorFilter">
+                <option value="">Floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+              <select class="filterDropdown" id="appRoomFilter">
+                <option value="">Room</option>
+                <option value="101">101</option>
+                <option value="102">102</option>
+              </select>
+              <select class="filterDropdown" id="appTypeFilter">
+                <option value="">Type</option>
+                <option value="Electric">Electric</option>
+                <option value="Water System">Water System</option>
+                <option value="HVAC">HVAC</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="appliancesSearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="appliancesRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="appliancesDownloadBtn">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
+            </div>
+          </div>
+
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Floor</th>
+                  <th>Room</th>
+                  <th>Installed Date</th>
+                  <th>Types</th>
+                  <th>Items</th>
+                  <th>Last Maintained</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="mtAppliancesTableBody">
+                </tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <span class="paginationInfo">Display Records <span id="mtAppliancesRecordCount">0</span></span>
+            <div class="paginationControls">
+              </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PARKING PAGE -->
       <div class="page" id="parking-page">
         <h1 class="pageTitle">PARKING</h1>
 
@@ -474,6 +735,7 @@ if (isset($_SESSION['UserID'])) {
         </div>
       </div>
 
+      <!-- INVENTORY PAGE -->
       <div class="page" id="inventory-page">
         <h1 class="pageTitle">INVENTORY</h1>
 
@@ -534,11 +796,11 @@ if (isset($_SESSION['UserID'])) {
             </div>
         </div>
       </div>
-
+      
+      <!-- ROOMS PAGE -->
       <div class="page" id="rooms-page">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
           <h1 class="pageTitle" style="margin-bottom: 0;">ROOMS</h1>
-          
         </div>
 
         <div class="controlsRow">
@@ -607,248 +869,365 @@ if (isset($_SESSION['UserID'])) {
         </div>
       </div>
 
-      <!-- Replace the entire manage-users-page section in admin.php with this -->
-<div class="page" id="manage-users-page">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-    <h1 class="pageTitle" style="margin-bottom: 0;">MANAGE USERS</h1>
-  </div>
+      <!-- MANAGE USERS PAGE -->
+      <div class="page" id="manage-users-page">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+          <h1 class="pageTitle" style="margin-bottom: 0;">MANAGE USERS</h1>
+        </div>
 
-  <!-- Tab Navigation for User Management and User Logs -->
-  <div class="tabNavigation">
-    <button class="tabBtn active" data-user-tab="user-management">
-      User Management
-    </button>
-    <button class="tabBtn" data-user-tab="user-logs">
-      User Logs
-    </button>
-  </div>
-
-  <!-- User Management Tab -->
-  <div class="tabContent active" id="user-management-tab">
-    <div class="controlsRow">
-      <div class="filterControls">
-        <select class="filterDropdown" id="usersRoleFilter">
-          <option value="">Role</option>
-          <option value="admin">Admin</option>
-          <option value="housekeeping_manager">Housekeeping Manager</option>
-          <option value="maintenance_manager">Maintenance Manager</option>
-          <option value="parking_manager">Parking Manager</option>
-          <option value="housekeeping_staff">Housekeeping Staff</option>
-          <option value="maintenance_staff">Maintenance Staff</option>
-        </select>
-        <select class="filterDropdown" id="usersShiftFilter">
-          <option value="">Shift</option>
-          <option value="Morning">Morning</option>
-          <option value="Afternoon">Afternoon</option>
-          <option value="Night">Night</option>
-        </select>
-        <div class="searchBox">
-          <input type="text" placeholder="Search Name or Username" class="searchInput" id="usersSearchInput" />
-          <button class="searchBtn">
-            <img src="assets/icons/search-icon.png" alt="Search" />
+        <!-- Tab Navigation for User Management and User Logs -->
+        <div class="tabNavigation">
+          <button class="tabBtn active" data-user-tab="user-management">
+            User Management
+          </button>
+          <button class="tabBtn" data-user-tab="user-logs">
+            User Logs
           </button>
         </div>
-        <button class="refreshBtn" id="usersRefreshBtn">
-          <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-        </button>
-        <button class="downloadBtn" id="usersDownloadBtn" title="Download User Data (CSV)">
-          <img src="assets/icons/download-icon.png" alt="Download" />
-        </button>
-        <button class="addRoomBtn" id="addUserBtn" title="Add New User">
-          <img src="assets/icons/add-user.png" alt="Add User" />
-        </button>
-      </div>
-    </div>
 
-    <div class="tableWrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Username</th>
-            <th>Full Name</th>
-            <th>Role</th>
-            <th>Email</th>
-            <th>Shift</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="usersTableBody"></tbody>
-      </table>
-    </div>
+        <!-- User Management Tab -->
+        <div class="tabContent active" id="user-management-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="usersRoleFilter">
+                <option value="">Role</option>
+                <option value="admin">Admin</option>
+                <option value="housekeeping_manager">Housekeeping Manager</option>
+                <option value="maintenance_manager">Maintenance Manager</option>
+                <option value="parking_manager">Parking Manager</option>
+                <option value="housekeeping_staff">Housekeeping Staff</option>
+                <option value="maintenance_staff">Maintenance Staff</option>
+              </select>
+              <select class="filterDropdown" id="usersShiftFilter">
+                <option value="">Shift</option>
+                <option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option>
+                <option value="Night">Night</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search Name or Username" class="searchInput" id="usersSearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="usersRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="usersDownloadBtn" title="Download User Data (CSV)">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
+              <button class="addRoomBtn" id="addUserBtn" title="Add New User">
+                <img src="assets/icons/add-user.png" alt="Add User" />
+              </button>
+            </div>
+          </div>
 
-    <div class="pagination">
-      <span class="paginationInfo">Display Records <span id="usersRecordCount">0</span></span>
-      <div class="paginationControls"></div>
-    </div>
-  </div>
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Full Name</th>
+                  <th>Role</th>
+                  <th>Email</th>
+                  <th>Shift</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody"></tbody>
+            </table>
+          </div>
 
-  <!-- User Logs Tab -->
-  <div class="tabContent" id="user-logs-tab">
-    <div class="controlsRow">
-      <div class="filterControls">
-        <select class="filterDropdown" id="logsRoleFilter">
-          <option value="">Role</option>
-          <option value="admin">Admin</option>
-          <option value="housekeeping_manager">Housekeeping Manager</option>
-          <option value="maintenance_manager">Maintenance Manager</option>
-          <option value="parking_manager">Parking Manager</option>
-          <option value="housekeeping_staff">Housekeeping Staff</option>
-          <option value="maintenance_staff">Maintenance Staff</option>
-        </select>
-        <select class="filterDropdown" id="logsShiftFilter">
-          <option value="">Shift</option>
-          <option value="Morning">Morning</option>
-          <option value="Afternoon">Afternoon</option>
-          <option value="Night">Night</option>
-        </select>
-        <div class="searchBox">
-          <input type="text" placeholder="Search" class="searchInput" id="logsSearchInput" />
-          <button class="searchBtn">
-            <img src="assets/icons/search-icon.png" alt="Search" />
-          </button>
+          <div class="pagination">
+            <span class="paginationInfo">Display Records <span id="usersRecordCount">0</span></span>
+            <div class="paginationControls"></div>
+          </div>
         </div>
-        <button class="refreshBtn" id="logsRefreshBtn">
-          <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-        </button>
-        <button class="downloadBtn" id="logsDownloadBtn" title="Download Logs (CSV)">
-          <img src="assets/icons/download-icon.png" alt="Download" />
-        </button>
+
+        <!-- User Logs Tab -->
+        <div class="tabContent" id="user-logs-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="logsRoleFilter">
+                <option value="">Role</option>
+                <option value="admin">Admin</option>
+                <option value="housekeeping_manager">Housekeeping Manager</option>
+                <option value="maintenance_manager">Maintenance Manager</option>
+                <option value="parking_manager">Parking Manager</option>
+                <option value="housekeeping_staff">Housekeeping Staff</option>
+                <option value="maintenance_staff">Maintenance Staff</option>
+              </select>
+              <select class="filterDropdown" id="logsShiftFilter">
+                <option value="">Shift</option>
+                <option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option>
+                <option value="Night">Night</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="logsSearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="logsRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="logsDownloadBtn" title="Download Logs (CSV)">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
+            </div>
+          </div>
+
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Log ID</th>
+                  <th>User ID</th>
+                  <th>Last Name</th>
+                  <th>First Name</th>
+                  <th>Middle Name</th>
+                  <th>Account Type</th>
+                  <th>Role</th>
+                  <th>Shift</th>
+                  <th>Username</th>
+                  <th>Email Address</th>
+                  <th>Action Type</th>
+                  <th>Timestamp</th>
+                </tr>
+              </thead>
+              <tbody id="logsTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="pagination">
+            <span class="paginationInfo">Display Records <span id="logsRecordCount">0</span></span>
+            <div class="paginationControls"></div>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
+  </div>
 
-    <div class="tableWrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Log ID</th>
-            <th>User ID</th>
-            <th>Last Name</th>
-            <th>First Name</th>
-            <th>Middle Name</th>
-            <th>Account Type</th>
-            <th>Role</th>
-            <th>Shift</th>
-            <th>Username</th>
-            <th>Email Address</th>
-            <th>Action Type</th>
-            <th>Timestamp</th>
-          </tr>
-        </thead>
-        <tbody id="logsTableBody"></tbody>
-      </table>
-    </div>
-
-    <div class="pagination">
-      <span class="paginationInfo">Display Records <span id="logsRecordCount">0</span></span>
-      <div class="paginationControls"></div>
+  <!-- ROOM MODAL -->
+  <div class="modalBackdrop" id="roomModal" style="display: none;">
+    <div class="roomModal">
+      <button class="closeBtn" id="closeRoomModalBtn">&times;</button>
+      <h2 id="roomModalTitle">Add New Room</h2>
+      <div id="roomFormMessage" class="formMessage" style="display:none;"></div>
+      
+      <form id="roomForm">
+        <div class="formGrid">
+          <div class="formGroup">
+            <label for="roomFloor">Floor *</label>
+            <select id="roomFloor" name="roomFloor" required>
+              <option value="">Select Floor</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+          <div class="formGroup">
+            <label for="roomNumber">Room Number *</label>
+            <input type="text" id="roomNumber" name="roomNumber" required placeholder="e.g., 101" />
+          </div>
+        </div>
+        
+        <div class="formGroup">
+          <label for="roomType">Room Type *</label>
+          <select id="roomType" name="roomType" required>
+            <option value="">Select Type</option>
+            <option value="Standard Room">Standard Room</option>
+            <option value="Deluxe Room">Deluxe Room</option>
+            <option value="Suite">Suite</option>
+            <option value="Penthouse Suite">Penthouse Suite</option>
+          </select>
+        </div>
+        
+        <div class="formGroup">
+          <label for="roomGuests">Guest Capacity</label>
+          <input type="text" id="roomGuests" name="roomGuests" readonly />
+        </div>
+        
+        <div class="formGroup">
+          <label for="roomRate">Rate (per night) *</label>
+          <input type="number" id="roomRate" name="roomRate" required step="0.01" placeholder="e.g., 120.00" />
+        </div>
+        
+        <div class="formGroup">
+          <label for="roomStatus">Status *</label>
+          <select id="roomStatus" name="roomStatus" required>
+            <option value="">Select Status</option>
+            <option value="Available">Available</option>
+            <option value="Occupied">Occupied</option>
+            <option value="Reserved">Reserved</option>
+            <option value="Needs Cleaning">Needs Cleaning</option>
+            <option value="Maintenance">Maintenance</option>
+          </select>
+        </div>
+        
+        <div class="modalButtons">
+          <button type="button" class="modalBtn cancelBtn" id="cancelRoomBtn">CANCEL</button>
+          <button type="submit" class="modalBtn confirmBtn" id="saveRoomBtn">SAVE ROOM</button>
+        </div>
+      </form>
     </div>
   </div>
-</div>
 
-<!-- Updated User Modal - Simple Employee ID Lookup -->
-<div class="modalBackdrop" id="userModal" style="display: none;">
-  <div class="addUserModal">
-    <button class="closeBtn" id="closeUserModalBtn">&times;</button>
-    <h2 id="userModalTitle">Add New User</h2>
-    <div id="userFormMessage" class="formMessage" style="display:none;"></div>
-    
-    <!-- Employee ID Lookup Form (for adding) -->
-    <form id="employeeIdForm" style="display: block;">
-      <div class="formGroup">
-        <label for="employeeId">Employee ID *</label>
-        <input type="text" id="employeeId" name="employeeId" required placeholder="Enter Employee ID" />
+  <!-- DELETE ROOM MODAL -->
+  <div class="modalBackdrop" id="deleteRoomModal" style="display: none;">
+    <div class="logoutModal">
+      <button class="closeBtn" id="closeDeleteModalBtn">&times;</button>
+      <div class="modalIcon">
+        <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
       </div>
+      <h2>Delete Room</h2>
+      <p id="deleteRoomText">Are you sure you want to delete this room?</p>
       <div class="modalButtons">
-        <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeIdBtn">CANCEL</button>
-        <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn">ADD EMPLOYEE</button>
+        <button class="modalBtn cancelBtn" id="cancelDeleteBtn">CANCEL</button>
+        <button class="modalBtn confirmBtn" id="confirmDeleteBtn">DELETE</button>
       </div>
-    </form>
-
-    <!-- Full User Edit Form (for editing) -->
-    <form id="userEditForm" style="display: none;">
-      <input type="hidden" id="editUserId" name="userID">
-      
-      <div class="userProfileSection">
-        <div class="profileAvatar">
-          <img src="assets/icons/profile-icon.png" alt="Profile" />
-        </div>
-        <h3 id="editUserFullName" class="editUserName"></h3>
-        <p id="editUserEmployeeId" class="editUserEmployeeId"></p>
-      </div>
-
-      <div class="formGrid">
-        <div class="formGroup">
-          <label for="userFname">First Name *</label>
-          <input type="text" id="userFname" name="fname" required />
-        </div>
-        <div class="formGroup">
-          <label for="userLname">Last Name *</label>
-          <input type="text" id="userLname" name="lname" required />
-        </div>
-      </div>
-      
-      <div class="formGroup">
-        <label for="userMname">Middle Name (Optional)</label>
-        <input type="text" id="userMname" name="mname" />
-      </div>
-      
-      <div class="formGroup">
-        <label for="userEmail">Email Address *</label>
-        <input type="email" id="userEmail" name="email" required />
-      </div>
-      
-      <div class="formGroup">
-        <label for="userUsername">Username *</label>
-        <input type="text" id="userUsername" name="username" required />
-      </div>
-      
-      <div class="formGroup">
-        <label for="userAccountType">Account Type *</label>
-        <select id="userAccountType" name="accountType" required>
-          <option value="">Select Role</option>
-          <option value="admin">Administrator</option>
-          <option value="housekeeping_manager">Housekeeping Manager</option>
-          <option value="maintenance_manager">Maintenance Manager</option>
-          <option value="parking_manager">Parking Manager</option>
-          <option value="housekeeping_staff">Housekeeping Staff</option>
-          <option value="maintenance_staff">Maintenance Staff</option>
-        </select>
-      </div>
-
-      <div class="formGroup">
-        <label for="userShift">Shift *</label>
-        <select id="userShift" name="shift" required>
-          <option value="">Select Shift</option>
-          <option value="Day">Day</option>
-          <option value="Morning">Morning</option>
-          <option value="Afternoon">Afternoon</option>
-          <option value="Night">Night</option>
-        </select>
-      </div>
-
-      <div class="formGrid">
-        <div class="formGroup">
-          <label for="userBirthday">Birthday *</label>
-          <input type="date" id="userBirthday" name="birthday" required />
-        </div>
-        <div class="formGroup">
-          <label for="userContact">Contact *</label>
-          <input type="text" id="userContact" name="contact" required />
-        </div>
-      </div>
-      
-      <div class="formGroup">
-        <label for="userAddress">Address *</label>
-        <textarea id="userAddress" name="address" rows="3" required></textarea>
-      </div>
-      
-      <div class="modalButtons">
-        <button type="button" class="modalBtn cancelBtn" id="cancelUserEditBtn">CANCEL</button>
-        <button type="submit" class="modalBtn confirmBtn" id="saveUserBtn">UPDATE USER</button>
-      </div>
-    </form>
+    </div>
   </div>
-</div>
+
+  <!-- USER MODAL -->
+  <div class="modalBackdrop" id="userModal" style="display: none;">
+    <div class="addUserModal">
+      <button class="closeBtn" id="closeUserModalBtn">&times;</button>
+      <h2 id="userModalTitle">Add New User</h2>
+      <div id="userFormMessage" class="formMessage" style="display:none;"></div>
+      
+      <!-- Employee ID Lookup Form (for adding) -->
+      <form id="employeeIdForm" style="display: block;">
+        <div class="formGroup">
+          <label for="employeeId">Employee ID *</label>
+          <input type="text" id="employeeId" name="employeeId" required placeholder="Enter Employee ID" />
+        </div>
+        <div class="modalButtons">
+          <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeIdBtn">CANCEL</button>
+          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn">ADD EMPLOYEE</button>
+        </div>
+      </form>
+
+      <!-- Full User Edit Form (for editing) -->
+      <form id="userEditForm" style="display: none;">
+        <input type="hidden" id="editUserId" name="userID">
+        
+        <div class="userProfileSection">
+          <div class="profileAvatar">
+            <img src="assets/icons/profile-icon.png" alt="Profile" />
+          </div>
+          <h3 id="editUserFullName" class="editUserName"></h3>
+          <p id="editUserEmployeeId" class="editUserEmployeeId"></p>
+        </div>
+
+        <div class="formGrid">
+          <div class="formGroup">
+            <label for="userFname">First Name *</label>
+            <input type="text" id="userFname" name="fname" required />
+          </div>
+          <div class="formGroup">
+            <label for="userLname">Last Name *</label>
+            <input type="text" id="userLname" name="lname" required />
+          </div>
+        </div>
+        
+        <div class="formGroup">
+          <label for="userMname">Middle Name (Optional)</label>
+          <input type="text" id="userMname" name="mname" />
+        </div>
+        
+        <div class="formGroup">
+          <label for="userEmail">Email Address *</label>
+          <input type="email" id="userEmail" name="email" required />
+        </div>
+        
+        <div class="formGroup">
+          <label for="userUsername">Username *</label>
+          <input type="text" id="userUsername" name="username" required />
+        </div>
+        
+        <div class="formGroup">
+          <label for="userAccountType">Account Type *</label>
+          <select id="userAccountType" name="accountType" required>
+            <option value="">Select Role</option>
+            <option value="admin">Administrator</option>
+            <option value="housekeeping_manager">Housekeeping Manager</option>
+            <option value="maintenance_manager">Maintenance Manager</option>
+            <option value="parking_manager">Parking Manager</option>
+            <option value="housekeeping_staff">Housekeeping Staff</option>
+            <option value="maintenance_staff">Maintenance Staff</option>
+          </select>
+        </div>
+
+        <div class="formGroup">
+          <label for="userShift">Shift *</label>
+          <select id="userShift" name="shift" required>
+            <option value="">Select Shift</option>
+            <option value="Day">Day</option>
+            <option value="Morning">Morning</option>
+            <option value="Afternoon">Afternoon</option>
+            <option value="Night">Night</option>
+          </select>
+        </div>
+
+        <div class="formGrid">
+          <div class="formGroup">
+            <label for="userBirthday">Birthday *</label>
+            <input type="date" id="userBirthday" name="birthday" required />
+          </div>
+          <div class="formGroup">
+            <label for="userContact">Contact *</label>
+            <input type="text" id="userContact" name="contact" required />
+          </div>
+        </div>
+        
+        <div class="formGroup">
+          <label for="userAddress">Address *</label>
+          <textarea id="userAddress" name="address" rows="3" required></textarea>
+        </div>
+        
+        <div class="modalButtons">
+          <button type="button" class="modalBtn cancelBtn" id="cancelUserEditBtn">CANCEL</button>
+          <button type="submit" class="modalBtn confirmBtn" id="saveUserBtn">UPDATE USER</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DELETE USER MODAL -->
+  <div class="modalBackdrop" id="deleteUserModal" style="display: none;">
+    <div class="logoutModal">
+      <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
+      <div class="modalIcon">
+        <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
+      </div>
+      <h2>Delete User</h2>
+      <p id="deleteUserText">Are you sure you want to delete this user?</p>
+      <div class="modalButtons">
+        <button class="modalBtn cancelBtn" id="cancelDeleteUserBtn">CANCEL</button>
+        <button class="modalBtn confirmBtn" id="confirmDeleteUserBtn">DELETE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOGOUT MODAL -->
+  <div class="modalBackdrop" id="logoutModal" style="display: none;">
+    <div class="logoutModal">
+      <button class="closeBtn" id="closeLogoutBtn">&times;</button>
+      <div class="modalIcon">
+        <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
+      </div>
+      <h2>Confirm Logout</h2>
+      <p>Are you sure you want to logout?</p>
+      <div class="modalButtons">
+        <button class="modalBtn cancelBtn" id="cancelLogoutBtn">CANCEL</button>
+        <button class="modalBtn confirmBtn" id="confirmLogoutBtn">LOGOUT</button>
+      </div>
+    </div>
+  </div>
 
   <script src="script/shared-data.js"></script>
   <script src="script/admin.js"></script>
