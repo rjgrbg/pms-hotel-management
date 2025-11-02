@@ -877,6 +877,50 @@ tbody tr:hover {
   display: block;
 }
 
+/* ===== SUB-TAB NAVIGATION ===== */
+.subTabNavigation {
+  display: flex;
+  gap: 0;
+  margin-bottom: 25px;
+  border-bottom: 2px solid #e0e0e0;
+  align-items: center;
+}
+
+.subTabBtn {
+  background-color: #fafafa;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  transition: all 0.2s;
+}
+
+.subTabBtn:hover {
+  color: #555;
+  background-color: #f0f0f0;
+}
+
+.subTabBtn.active {
+  color: #d4af78;
+  border-bottom-color: #d4af78;
+  background-color: #fff;
+  font-weight: 700;
+}
+
+/* ===== SUB-TAB CONTENT ===== */
+.subTabContent {
+  display: none;
+}
+
+.subTabContent.active {
+  display: block;
+}
+
 /* ===== PAGINATION ===== */
 .pagination {
   display: flex;
@@ -972,7 +1016,7 @@ tbody tr:hover {
 
 /* ===== USER MODAL ===== */
 .addUserModal {
-  background: #4c0b0b;
+  background: #480c1b;
   border-radius: 12px;
   padding: 40px;
   max-width: 450px;
@@ -1059,26 +1103,26 @@ tbody tr:hover {
 }
 
 .addUserModal .cancelBtn {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: #d4af78;
-  border: 2px solid #d4af78;
+  background-color: rgb(221, 221, 221);
+  color: #0b0700;
+  
 }
 
 .addUserModal .cancelBtn:hover {
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: rgb(145, 145, 145);
   transform: translateY(-2px);
 }
 
 .addUserModal .confirmBtn {
   background-color: #ffb400;
   color: #2a1810;
-  border: 2px solid #ffb400;
+ 
 }
 
 .addUserModal .confirmBtn:hover {
   background-color: #ffc933;
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(255, 180, 0, 0.4);
+  
 }
 
 /* User Profile Section */
@@ -1628,4 +1672,5 @@ tbody tr:hover {
   display: block !important;
 }
 
-/* ===== END OF CSS ===== */ 
+/* ===== END OF CSS ===== */
+ 

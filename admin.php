@@ -231,11 +231,8 @@ if (isset($_SESSION['UserID'])) {
           <button class="tabBtn" data-hk-tab="hk-history">
             History
           </button>
-          <button class="tabBtn" data-hk-tab="hk-linens">
-            Linens
-          </button>
-          <button class="tabBtn" data-hk-tab="hk-amenities">
-            Amenities
+          <button class="tabBtn" data-hk-tab="hk-linens-amenities">
+            Linens & Amenities
           </button>
         </div>
 
@@ -355,121 +352,135 @@ if (isset($_SESSION['UserID'])) {
           </div>
         </div>
 
-        <!-- LINENS TAB -->
-        <div class="tabContent" id="hk-linens-tab">
-          <div class="controlsRow">
-            <div class="filterControls">
-              <select class="filterDropdown" id="floorFilterLinens">
-                <option value="">Floor</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-              </select>
-              <select class="filterDropdown" id="roomFilterLinens">
-                <option value="">Room</option>
-                <option value="101">101</option>
-                <option value="102">102</option>
-              </select>
-              <select class="filterDropdown" id="statusFilterLinens">
-                <option value="">Status</option>
-                <option value="cleaned">Cleaned</option>
-                <option value="pending">Pending</option>
-              </select>
-              <div class="searchBox">
-                <input type="text" placeholder="Search" class="searchInput" id="linensSearchInput" />
-                <button class="searchBtn">
-                  <img src="assets/icons/search-icon.png" alt="Search" />
+        <!-- LINENS & AMENITIES TAB (COMBINED) -->
+        <div class="tabContent" id="hk-linens-amenities-tab">
+          
+          <!-- Sub-tab navigation for Linens and Amenities -->
+          <div class="subTabNavigation">
+            <button class="subTabBtn active" data-hk-subtab="linens">
+              Linens
+            </button>
+            <button class="subTabBtn" data-hk-subtab="amenities">
+              Amenities
+            </button>
+          </div>
+
+          <!-- LINENS SUB-TAB -->
+          <div class="subTabContent active" id="linens-subtab">
+            <div class="controlsRow">
+              <div class="filterControls">
+                <select class="filterDropdown" id="floorFilterLinens">
+                  <option value="">Floor</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                </select>
+                <select class="filterDropdown" id="roomFilterLinens">
+                  <option value="">Room</option>
+                  <option value="101">101</option>
+                  <option value="102">102</option>
+                </select>
+                <select class="filterDropdown" id="statusFilterLinens">
+                  <option value="">Status</option>
+                  <option value="cleaned">Cleaned</option>
+                  <option value="pending">Pending</option>
+                </select>
+                <div class="searchBox">
+                  <input type="text" placeholder="Search" class="searchInput" id="linensSearchInput" />
+                  <button class="searchBtn">
+                    <img src="assets/icons/search-icon.png" alt="Search" />
+                  </button>
+                </div>
+                <button class="refreshBtn" id="linensRefreshBtn">
+                  <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+                </button>
+                <button class="downloadBtn" id="linensDownloadBtn">
+                  <img src="assets/icons/download-icon.png" alt="Download" />
                 </button>
               </div>
-              <button class="refreshBtn" id="linensRefreshBtn">
-                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-              </button>
-              <button class="downloadBtn" id="linensDownloadBtn">
-                <img src="assets/icons/download-icon.png" alt="Download" />
-              </button>
+            </div>
+
+            <div class="tableWrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Floor</th>
+                    <th>Room</th>
+                    <th>Types</th>
+                    <th>Items</th>
+                    <th>Time/Date</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody id="hkLinensTableBody">
+                   </tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <span class="paginationInfo">Display Records <span id="hkLinensRecordCount">0</span></span>
+              <div class="paginationControls">
+                 </div>
             </div>
           </div>
 
-          <div class="tableWrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Floor</th>
-                  <th>Room</th>
-                  <th>Types</th>
-                  <th>Items</th>
-                  <th>Time/Date</th>
-                  <th>Status</th>
-                  <th>Remarks</th>
-                </tr>
-              </thead>
-              <tbody id="hkLinensTableBody">
-                 </tbody>
-            </table>
-          </div>
-
-          <div class="pagination">
-            <span class="paginationInfo">Display Records <span id="hkLinensRecordCount">0</span></span>
-            <div class="paginationControls">
-               </div>
-          </div>
-        </div>
-
-        <!-- AMENITIES TAB -->
-        <div class="tabContent" id="hk-amenities-tab">
-          <div class="controlsRow">
-            <div class="filterControls">
-              <select class="filterDropdown" id="floorFilterAmenities">
-                <option value="">Floor</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-              </select>
-              <select class="filterDropdown" id="roomFilterAmenities">
-                <option value="">Room</option>
-                <option value="101">101</option>
-                <option value="102">102</option>
-              </select>
-              <select class="filterDropdown" id="statusFilterAmenities">
-                <option value="">Status</option>
-                <option value="stocked">Stocked</option>
-                <option value="pending">Pending</option>
-              </select>
-              <div class="searchBox">
-                <input type="text" placeholder="Search" class="searchInput" id="amenitiesSearchInput" />
-                <button class="searchBtn">
-                  <img src="assets/icons/search-icon.png" alt="Search" />
+          <!-- AMENITIES SUB-TAB -->
+          <div class="subTabContent" id="amenities-subtab">
+            <div class="controlsRow">
+              <div class="filterControls">
+                <select class="filterDropdown" id="floorFilterAmenities">
+                  <option value="">Floor</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                </select>
+                <select class="filterDropdown" id="roomFilterAmenities">
+                  <option value="">Room</option>
+                  <option value="101">101</option>
+                  <option value="102">102</option>
+                </select>
+                <select class="filterDropdown" id="statusFilterAmenities">
+                  <option value="">Status</option>
+                  <option value="stocked">Stocked</option>
+                  <option value="pending">Pending</option>
+                </select>
+                <div class="searchBox">
+                  <input type="text" placeholder="Search" class="searchInput" id="amenitiesSearchInput" />
+                  <button class="searchBtn">
+                    <img src="assets/icons/search-icon.png" alt="Search" />
+                  </button>
+                </div>
+                <button class="refreshBtn" id="amenitiesRefreshBtn">
+                  <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+                </button>
+                <button class="downloadBtn" id="amenitiesDownloadBtn">
+                  <img src="assets/icons/download-icon.png" alt="Download" />
                 </button>
               </div>
-              <button class="refreshBtn" id="amenitiesRefreshBtn">
-                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-              </button>
-              <button class="downloadBtn" id="amenitiesDownloadBtn">
-                <img src="assets/icons/download-icon.png" alt="Download" />
-              </button>
             </div>
-          </div>
 
-          <div class="tableWrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Floor</th>
-                  <th>Room</th>
-                  <th>Types</th>
-                  <th>Items</th>
-                  <th>Time/Date</th>
-                  <th>Status</th>
-                  <th>Remarks</th>
-                </tr>
-              </thead>
-              <tbody id="hkAmenitiesTableBody">
-                 </tbody>
-            </table>
-          </div>
+            <div class="tableWrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Floor</th>
+                    <th>Room</th>
+                    <th>Types</th>
+                    <th>Items</th>
+                    <th>Time/Date</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody id="hkAmenitiesTableBody">
+                   </tbody>
+              </table>
+            </div>
 
-          <div class="pagination">
-            <span class="paginationInfo">Display Records <span id="hkAmenitiesRecordCount">0</span></span>
-            <div class="paginationControls">
-               </div>
+            <div class="pagination">
+              <span class="paginationInfo">Display Records <span id="hkAmenitiesRecordCount">0</span></span>
+              <div class="paginationControls">
+                 </div>
+            </div>
           </div>
         </div>
       </div>
