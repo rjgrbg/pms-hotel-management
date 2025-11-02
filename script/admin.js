@@ -2144,3 +2144,4 @@ document.getElementById('linensAmenitiesDownloadBtn')?.addEventListener('click',
 // ===== UPDATE INITIALIZATION TO INCLUDE COMBINED TABLE =====
 // In the DOMContentLoaded section, add:
 // renderHKLinensAmenitiesTable(hkLinensAmenitiesData);
+
