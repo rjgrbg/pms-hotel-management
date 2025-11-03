@@ -352,287 +352,137 @@ if (isset($_SESSION['UserID'])) {
           </div>
         </div>
 
-        <!-- LINENS & AMENITIES TAB (COMBINED WITH CRUD) -->
-<div class="tabContent" id="hk-linens-amenities-tab">
-  
-  <!-- Sub-tab navigation for Linens and Amenities -->
-  <div class="subTabNavigation">
-    <button class="subTabBtn active" data-hk-subtab="linens">
-      Linens
-    </button>
-    <button class="subTabBtn" data-hk-subtab="amenities">
-      Amenities
-    </button>
-  </div>
+        <!-- LINENS & AMENITIES TAB (COMBINED) -->
+        <div class="tabContent" id="hk-linens-amenities-tab">
+          
+          <!-- Sub-tab navigation for Linens and Amenities -->
+          <div class="subTabNavigation">
+            <button class="subTabBtn active" data-hk-subtab="linens">
+              Linens
+            </button>
+            <button class="subTabBtn" data-hk-subtab="amenities">
+              Amenities
+            </button>
+          </div>
 
-  <!-- LINENS SUB-TAB -->
-  <div class="subTabContent active" id="linens-subtab">
-    <div class="controlsRow">
-      <div class="filterControls">
-        <select class="filterDropdown" id="floorFilterLinens">
-          <option value="">Floor</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-        </select>
-        <select class="filterDropdown" id="roomFilterLinens">
-          <option value="">Room</option>
-          <option value="101">101</option>
-          <option value="102">102</option>
-        </select>
-        <select class="filterDropdown" id="statusFilterLinens">
-          <option value="">Status</option>
-          <option value="cleaned">Cleaned</option>
-          <option value="pending">Pending</option>
-        </select>
-        <div class="searchBox">
-          <input type="text" placeholder="Search" class="searchInput" id="linensSearchInput" />
-          <button class="searchBtn">
-            <img src="assets/icons/search-icon.png" alt="Search" />
-          </button>
+          <!-- LINENS SUB-TAB -->
+          <div class="subTabContent active" id="linens-subtab">
+            <div class="controlsRow">
+              <div class="filterControls">
+                <select class="filterDropdown" id="floorFilterLinens">
+                  <option value="">Floor</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                </select>
+                <select class="filterDropdown" id="roomFilterLinens">
+                  <option value="">Room</option>
+                  <option value="101">101</option>
+                  <option value="102">102</option>
+                </select>
+                <select class="filterDropdown" id="statusFilterLinens">
+                  <option value="">Status</option>
+                  <option value="cleaned">Cleaned</option>
+                  <option value="pending">Pending</option>
+                </select>
+                <div class="searchBox">
+                  <input type="text" placeholder="Search" class="searchInput" id="linensSearchInput" />
+                  <button class="searchBtn">
+                    <img src="assets/icons/search-icon.png" alt="Search" />
+                  </button>
+                </div>
+                <button class="refreshBtn" id="linensRefreshBtn">
+                  <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+                </button>
+                <button class="downloadBtn" id="linensDownloadBtn">
+                  <img src="assets/icons/download-icon.png" alt="Download" />
+                </button>
+              </div>
+            </div>
+
+            <div class="tableWrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Floor</th>
+                    <th>Room</th>
+                    <th>Types</th>
+                    <th>Items</th>
+                    <th>Time/Date</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody id="hkLinensTableBody">
+                   </tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <span class="paginationInfo">Display Records <span id="hkLinensRecordCount">0</span></span>
+              <div class="paginationControls">
+                 </div>
+            </div>
+          </div>
+
+          <!-- AMENITIES SUB-TAB -->
+          <div class="subTabContent" id="amenities-subtab">
+            <div class="controlsRow">
+              <div class="filterControls">
+                <select class="filterDropdown" id="floorFilterAmenities">
+                  <option value="">Floor</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                </select>
+                <select class="filterDropdown" id="roomFilterAmenities">
+                  <option value="">Room</option>
+                  <option value="101">101</option>
+                  <option value="102">102</option>
+                </select>
+                <select class="filterDropdown" id="statusFilterAmenities">
+                  <option value="">Status</option>
+                  <option value="stocked">Stocked</option>
+                  <option value="pending">Pending</option>
+                </select>
+                <div class="searchBox">
+                  <input type="text" placeholder="Search" class="searchInput" id="amenitiesSearchInput" />
+                  <button class="searchBtn">
+                    <img src="assets/icons/search-icon.png" alt="Search" />
+                  </button>
+                </div>
+                <button class="refreshBtn" id="amenitiesRefreshBtn">
+                  <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+                </button>
+                <button class="downloadBtn" id="amenitiesDownloadBtn">
+                  <img src="assets/icons/download-icon.png" alt="Download" />
+                </button>
+              </div>
+            </div>
+
+            <div class="tableWrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Floor</th>
+                    <th>Room</th>
+                    <th>Types</th>
+                    <th>Items</th>
+                    <th>Time/Date</th>
+                    <th>Status</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody id="hkAmenitiesTableBody">
+                   </tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <span class="paginationInfo">Display Records <span id="hkAmenitiesRecordCount">0</span></span>
+              <div class="paginationControls">
+                 </div>
+            </div>
+          </div>
         </div>
-        <button class="refreshBtn" id="linensRefreshBtn">
-          <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-        </button>
-        <button class="downloadBtn" id="linensDownloadBtn">
-          <img src="assets/icons/download-icon.png" alt="Download" />
-        </button>
-        <button class="addRoomBtn" id="addLinenBtn">
-          <img src="assets/icons/add-rooms.png" alt="Add Linen" />
-        </button>
-      </div>
-    </div>
-
-    <div class="tableWrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Floor</th>
-            <th>Room</th>
-            <th>Types</th>
-            <th>Items</th>
-            <th>Time/Date</th>
-            <th>Status</th>
-            <th>Remarks</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="hkLinensTableBody"></tbody>
-      </table>
-    </div>
-
-    <div class="pagination">
-      <span class="paginationInfo">Display Records <span id="hkLinensRecordCount">0</span></span>
-      <div class="paginationControls"></div>
-    </div>
-  </div>
-
-  <!-- AMENITIES SUB-TAB -->
-  <div class="subTabContent" id="amenities-subtab">
-    <div class="controlsRow">
-      <div class="filterControls">
-        <select class="filterDropdown" id="floorFilterAmenities">
-          <option value="">Floor</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-        </select>
-        <select class="filterDropdown" id="roomFilterAmenities">
-          <option value="">Room</option>
-          <option value="101">101</option>
-          <option value="102">102</option>
-        </select>
-        <select class="filterDropdown" id="statusFilterAmenities">
-          <option value="">Status</option>
-          <option value="stocked">Stocked</option>
-          <option value="pending">Pending</option>
-        </select>
-        <div class="searchBox">
-          <input type="text" placeholder="Search" class="searchInput" id="amenitiesSearchInput" />
-          <button class="searchBtn">
-            <img src="assets/icons/search-icon.png" alt="Search" />
-          </button>
-        </div>
-        <button class="refreshBtn" id="amenitiesRefreshBtn">
-          <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-        </button>
-        <button class="downloadBtn" id="amenitiesDownloadBtn">
-          <img src="assets/icons/download-icon.png" alt="Download" />
-        </button>
-        <button class="addRoomBtn" id="addAmenityBtn">
-          <img src="assets/icons/add-rooms.png" alt="Add Amenity" />
-        </button>
-      </div>
-    </div>
-
-    <div class="tableWrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Floor</th>
-            <th>Room</th>
-            <th>Types</th>
-            <th>Items</th>
-            <th>Time/Date</th>
-            <th>Status</th>
-            <th>Remarks</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="hkAmenitiesTableBody"></tbody>
-      </table>
-    </div>
-
-    <div class="pagination">
-      <span class="paginationInfo">Display Records <span id="hkAmenitiesRecordCount">0</span></span>
-      <div class="paginationControls"></div>
-    </div>
-  </div>
-</div>
-
-<!-- LINEN MODAL -->
-<div class="modalBackdrop" id="linenModal" style="display: none;">
-  <div class="roomModal">
-    <button class="closeBtn" id="closeLinenModalBtn">&times;</button>
-    <h2 id="linenModalTitle">Add New Linen Item</h2>
-    <div id="linenFormMessage" class="formMessage" style="display:none;"></div>
-    
-    <form id="linenForm">
-      <input type="hidden" id="editLinenId" name="linenID">
-      
-      <div class="formGrid">
-        <div class="formGroup">
-          <label for="linenFloor">Floor *</label>
-          <select id="linenFloor" name="linenFloor" required>
-            <option value="">Select Floor</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-          </select>
-        </div>
-        <div class="formGroup">
-          <label for="linenRoom">Room Number *</label>
-          <input type="text" id="linenRoom" name="linenRoom" required placeholder="e.g., 101" />
-        </div>
-      </div>
-      
-      <div class="formGroup">
-        <label for="linenTypes">Type *</label>
-        <input type="text" id="linenTypes" name="linenTypes" required placeholder="e.g., Guest Room Linens" />
-      </div>
-      
-      <div class="formGroup">
-        <label for="linenItems">Items *</label>
-        <input type="text" id="linenItems" name="linenItems" required placeholder="e.g., Bed Linen, Bath Towels" />
-      </div>
-      
-      <div class="formGroup">
-        <label for="linenStatus">Status *</label>
-        <select id="linenStatus" name="linenStatus" required>
-          <option value="">Select Status</option>
-          <option value="cleaned">Cleaned</option>
-          <option value="pending">Pending</option>
-        </select>
-      </div>
-      
-      <div class="formGroup">
-        <label for="linenRemarks">Remarks</label>
-        <textarea id="linenRemarks" name="linenRemarks" rows="3" placeholder="Enter remarks"></textarea>
-      </div>
-      
-      <div class="modalButtons">
-        <button type="button" class="modalBtn cancelBtn" id="cancelLinenBtn">CANCEL</button>
-        <button type="submit" class="modalBtn confirmBtn" id="saveLinenBtn">SAVE</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- DELETE LINEN MODAL -->
-<div class="modalBackdrop" id="deleteLinenModal" style="display: none;">
-  <div class="logoutModal">
-    <button class="closeBtn" id="closeDeleteLinenModalBtn">&times;</button>
-    <div class="modalIcon">
-      <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
-    </div>
-    <h2>Delete Linen Item</h2>
-    <p id="deleteLinenText">Are you sure you want to delete this linen item?</p>
-    <div class="modalButtons">
-      <button class="modalBtn cancelBtn" id="cancelDeleteLinenBtn">CANCEL</button>
-      <button class="modalBtn confirmBtn" id="confirmDeleteLinenBtn">DELETE</button>
-    </div>
-  </div>
-</div>
-
-<!-- AMENITY MODAL -->
-<div class="modalBackdrop" id="amenityModal" style="display: none;">
-  <div class="roomModal">
-    <button class="closeBtn" id="closeAmenityModalBtn">&times;</button>
-    <h2 id="amenityModalTitle">Add New Amenity Item</h2>
-    <div id="amenityFormMessage" class="formMessage" style="display:none;"></div>
-    
-    <form id="amenityForm">
-      <input type="hidden" id="editAmenityId" name="amenityID">
-      
-      <div class="formGrid">
-        <div class="formGroup">
-          <label for="amenityFloor">Floor *</label>
-          <select id="amenityFloor" name="amenityFloor" required>
-            <option value="">Select Floor</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-          </select>
-        </div>
-        <div class="formGroup">
-          <label for="amenityRoom">Room Number *</label>
-          <input type="text" id="amenityRoom" name="amenityRoom" required placeholder="e.g., 101" />
-        </div>
-      </div>
-      
-      <div class="formGroup">
-        <label for="amenityTypes">Type *</label>
-        <input type="text" id="amenityTypes" name="amenityTypes" required placeholder="e.g., Guest Room Amenities" />
-      </div>
-      
-      <div class="formGroup">
-        <label for="amenityItems">Items *</label>
-        <input type="text" id="amenityItems" name="amenityItems" required placeholder="e.g., Toiletries, Mini Bar" />
-      </div>
-      
-      <div class="formGroup">
-        <label for="amenityStatus">Status *</label>
-        <select id="amenityStatus" name="amenityStatus" required>
-          <option value="">Select Status</option>
-          <option value="stocked">Stocked</option>
-          <option value="pending">Pending</option>
-        </select>
-      </div>
-      
-      <div class="formGroup">
-        <label for="amenityRemarks">Remarks</label>
-        <textarea id="amenityRemarks" name="amenityRemarks" rows="3" placeholder="Enter remarks"></textarea>
-      </div>
-      
-      <div class="modalButtons">
-        <button type="button" class="modalBtn cancelBtn" id="cancelAmenityBtn">CANCEL</button>
-        <button type="submit" class="modalBtn confirmBtn" id="saveAmenityBtn">SAVE</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- DELETE AMENITY MODAL -->
-<div class="modalBackdrop" id="deleteAmenityModal" style="display: none;">
-  <div class="logoutModal">
-    <button class="closeBtn" id="closeDeleteAmenityModalBtn">&times;</button>
-    <div class="modalIcon">
-      <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
-    </div>
-    <h2>Delete Amenity Item</h2>
-    <p id="deleteAmenityText">Are you sure you want to delete this amenity item?</p>
-    <div class="modalButtons">
-      <button class="modalBtn cancelBtn" id="cancelDeleteAmenityBtn">CANCEL</button>
-      <button class="modalBtn confirmBtn" id="confirmDeleteAmenityBtn">DELETE</button>
-    </div>
-  </div>
-</div>
       </div>
 
       <!-- MAINTENANCE PAGE -->
@@ -769,147 +619,65 @@ if (isset($_SESSION['UserID'])) {
           </div>
         </div>
 
-        <!-- APPLIANCES TAB WITH CRUD -->
-<div class="tabContent" id="mt-appliances-tab">
-  <div class="controlsRow">
-    <div class="filterControls">
-      <select class="filterDropdown" id="appFloorFilter">
-        <option value="">Floor</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-      </select>
-      <select class="filterDropdown" id="appRoomFilter">
-        <option value="">Room</option>
-        <option value="101">101</option>
-        <option value="102">102</option>
-      </select>
-      <select class="filterDropdown" id="appTypeFilter">
-        <option value="">Type</option>
-        <option value="Electric">Electric</option>
-        <option value="Water System">Water System</option>
-        <option value="HVAC">HVAC</option>
-      </select>
-      <div class="searchBox">
-        <input type="text" placeholder="Search" class="searchInput" id="appliancesSearchInput" />
-        <button class="searchBtn">
-          <img src="assets/icons/search-icon.png" alt="Search" />
-        </button>
-      </div>
-      <button class="refreshBtn" id="appliancesRefreshBtn">
-        <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-      </button>
-      <button class="downloadBtn" id="appliancesDownloadBtn">
-        <img src="assets/icons/download-icon.png" alt="Download" />
-      </button>
-      <button class="addRoomBtn" id="addApplianceBtn">
-        <img src="assets/icons/add-rooms.png" alt="Add Appliance" />
-      </button>
-    </div>
-  </div>
+        <!-- APPLIANCES TAB -->
+        <div class="tabContent" id="mt-appliances-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="appFloorFilter">
+                <option value="">Floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+              <select class="filterDropdown" id="appRoomFilter">
+                <option value="">Room</option>
+                <option value="101">101</option>
+                <option value="102">102</option>
+              </select>
+              <select class="filterDropdown" id="appTypeFilter">
+                <option value="">Type</option>
+                <option value="Electric">Electric</option>
+                <option value="Water System">Water System</option>
+                <option value="HVAC">HVAC</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="appliancesSearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="appliancesRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="appliancesDownloadBtn">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
+            </div>
+          </div>
 
-  <div class="tableWrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Floor</th>
-          <th>Room</th>
-          <th>Installed Date</th>
-          <th>Types</th>
-          <th>Items</th>
-          <th>Last Maintained</th>
-          <th>Remarks</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="mtAppliancesTableBody"></tbody>
-    </table>
-  </div>
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Floor</th>
+                  <th>Room</th>
+                  <th>Installed Date</th>
+                  <th>Types</th>
+                  <th>Items</th>
+                  <th>Last Maintained</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="mtAppliancesTableBody">
+                </tbody>
+            </table>
+          </div>
 
-  <div class="pagination">
-    <span class="paginationInfo">Display Records <span id="mtAppliancesRecordCount">0</span></span>
-    <div class="paginationControls"></div>
-  </div>
-</div>
-
-<!-- APPLIANCE MODAL -->
-<div class="modalBackdrop" id="applianceModal" style="display: none;">
-  <div class="roomModal">
-    <button class="closeBtn" id="closeApplianceModalBtn">&times;</button>
-    <h2 id="applianceModalTitle">Add New Appliance</h2>
-    <div id="applianceFormMessage" class="formMessage" style="display:none;"></div>
-    
-    <form id="applianceForm">
-      <input type="hidden" id="editApplianceId" name="applianceID">
-      
-      <div class="formGrid">
-        <div class="formGroup">
-          <label for="applianceFloor">Floor *</label>
-          <select id="applianceFloor" name="applianceFloor" required>
-            <option value="">Select Floor</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-          </select>
+          <div class="pagination">
+            <span class="paginationInfo">Display Records <span id="mtAppliancesRecordCount">0</span></span>
+            <div class="paginationControls">
+              </div>
+          </div>
         </div>
-        <div class="formGroup">
-          <label for="applianceRoom">Room Number *</label>
-          <input type="text" id="applianceRoom" name="applianceRoom" required placeholder="e.g., 101" />
-        </div>
-      </div>
-      
-      <div class="formGrid">
-        <div class="formGroup">
-          <label for="applianceInstalledDate">Installed Date *</label>
-          <input type="date" id="applianceInstalledDate" name="applianceInstalledDate" required />
-        </div>
-        <div class="formGroup">
-          <label for="applianceTypes">Type *</label>
-          <select id="applianceTypes" name="applianceTypes" required>
-            <option value="">Select Type</option>
-            <option value="Electric">Electric</option>
-            <option value="Water System">Water System</option>
-            <option value="HVAC">HVAC</option>
-          </select>
-        </div>
-      </div>
-      
-      <div class="formGroup">
-        <label for="applianceItems">Items *</label>
-        <input type="text" id="applianceItems" name="applianceItems" required placeholder="e.g., TV (Brand), Refrigerator" />
-      </div>
-      
-      <div class="formGroup">
-        <label for="applianceLastMaintained">Last Maintained</label>
-        <input type="datetime-local" id="applianceLastMaintained" name="applianceLastMaintained" />
-      </div>
-      
-      <div class="formGroup">
-        <label for="applianceRemarks">Remarks</label>
-        <textarea id="applianceRemarks" name="applianceRemarks" rows="3" placeholder="Enter remarks"></textarea>
-      </div>
-      
-      <div class="modalButtons">
-        <button type="button" class="modalBtn cancelBtn" id="cancelApplianceBtn">CANCEL</button>
-        <button type="submit" class="modalBtn confirmBtn" id="saveApplianceBtn">SAVE</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- DELETE APPLIANCE MODAL -->
-<div class="modalBackdrop" id="deleteApplianceModal" style="display: none;">
-  <div class="logoutModal">
-    <button class="closeBtn" id="closeDeleteApplianceModalBtn">&times;</button>
-    <div class="modalIcon">
-      <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
-    </div>
-    <h2>Delete Appliance</h2>
-    <p id="deleteApplianceText">Are you sure you want to delete this appliance?</p>
-    <div class="modalButtons">
-      <button class="modalBtn cancelBtn" id="cancelDeleteApplianceBtn">CANCEL</button>
-      <button class="modalBtn confirmBtn" id="confirmDeleteApplianceBtn">DELETE</button>
-    </div>
-  </div>
-</div>
       </div>
 
       <!-- PARKING PAGE -->

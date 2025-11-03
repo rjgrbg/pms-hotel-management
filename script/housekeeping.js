@@ -1,468 +1,815 @@
 // ===== GLOBAL VARIABLES =====
-let currentRequestsData = []; // Holds the full list of requests from PHP
-let currentStaffData = [];    // Holds the full list of staff from PHP
-let currentHistoryData = []; // Holds history data (if implemented)
+let currentRequestsData = [];
+let currentStaffData = [];
+let currentHistoryData = [];
+let currentLinensData = [];
+let allRooms = [];
+let linensTypes = [];
+let amenitiesTypes = [];
 
-let filteredRequests = [];    // Holds currently displayed requests
-let filteredStaff = [];       // Holds staff filtered in the modal
-let filteredHistory = [];     // Holds filtered history
+let filteredRequests = [];
+let filteredStaff = [];
+let filteredHistory = [];
+let filteredLinens = [];
 
 let selectedStaffId = null;
-let currentRequestId = null;  // Store RoomID instead of index for assigning
+let currentRequestId = null;
+let currentSubTab = 'linens'; // 'linens' or 'amenities'
+let currentItemId = null; // For edit/delete operations
+let pendingAction = null; // For confirmation modal
 
 // Pagination State
 const paginationState = {
   requests: { currentPage: 1, itemsPerPage: 10 },
-  history: { currentPage: 1, itemsPerPage: 10 }
+  history: { currentPage: 1, itemsPerPage: 10 },
+  linens: { currentPage: 1, itemsPerPage: 10 }
 };
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
   // Load data passed from PHP
-  currentRequestsData = typeof initialRequestsData !== 'undefined' ? initialRequestsData : []; //
-  currentStaffData = typeof availableStaffData !== 'undefined' ? availableStaffData : []; //
-  // Load history if passed, e.g., currentHistoryData = typeof initialHistoryData !== 'undefined' ? initialHistoryData : [];
+  currentRequestsData = typeof initialRequestsData !== 'undefined' ? initialRequestsData : [];
+  currentStaffData = typeof availableStaffData !== 'undefined' ? availableStaffData : [];
+  currentLinensData = typeof initialLinensAmenitiesData !== 'undefined' ? initialLinensAmenitiesData : [];
+  allRooms = typeof allRoomsData !== 'undefined' ? allRoomsData : [];
+  linensTypes = typeof linensTypesData !== 'undefined' ? linensTypesData : [];
+  amenitiesTypes = typeof amenitiesTypesData !== 'undefined' ? amenitiesTypesData : [];
 
   // Initial render
-  applyRequestFiltersAndRender(); // Render requests initially
-  // applyHistoryFiltersAndRender(); // Render history initially if data is available
+  applyRequestFiltersAndRender();
+  applyLinensFiltersAndRender();
 
   // Setup event listeners
   setupEventListeners();
-  populateStaticFilters(); // Populate floor/room filters based on initial data
+  populateStaticFilters();
+  populateLinensFilters();
 });
-
 
 // ===== SETUP EVENT LISTENERS =====
 function setupEventListeners() {
-    // Tab Navigation
-    const tabBtns = document.querySelectorAll('.tabBtn'); //
-    tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const tabName = btn.getAttribute('data-tab'); //
-        document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active')); //
-        document.querySelectorAll('.tabContent').forEach(content => content.classList.remove('active')); //
-        btn.classList.add('active'); //
-        const activeTab = document.getElementById(`${tabName}-tab`); //
-        if (activeTab) activeTab.classList.add('active'); //
-      });
+  // Tab Navigation
+  const tabBtns = document.querySelectorAll('.tabBtn');
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabName = btn.getAttribute('data-tab');
+      document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tabContent').forEach(content => content.classList.remove('active'));
+      btn.classList.add('active');
+      const activeTab = document.getElementById(`${tabName}-tab`);
+      if (activeTab) activeTab.classList.add('active');
     });
+  });
 
-    // Request Filters
-    document.getElementById('floorFilter')?.addEventListener('change', applyRequestFiltersAndRender); //
-    document.getElementById('roomFilter')?.addEventListener('change', applyRequestFiltersAndRender); //
-    document.getElementById('searchInput')?.addEventListener('input', applyRequestFiltersAndRender); //
-    document.getElementById('refreshBtn')?.addEventListener('click', resetRequestFilters); //
-    document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsCSV); //
-
-    // History Filters (Add if history tab is implemented)
-    document.getElementById('floorFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender); //
-    document.getElementById('roomFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender); //
-    document.getElementById('dateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender); // Needs date picker //
-    document.getElementById('historySearchInput')?.addEventListener('input', applyHistoryFiltersAndRender); //
-    document.getElementById('historyRefreshBtn')?.addEventListener('click', resetHistoryFilters); //
-    document.getElementById('historyDownloadBtn')?.addEventListener('click', downloadHistoryCSV); //
-
-
-    // Staff Modal
-    document.getElementById('closeStaffModalBtn')?.addEventListener('click', hideStaffModal); //
-    document.getElementById('cancelStaffBtn')?.addEventListener('click', hideStaffModal); // This button now acts as the primary close //
-    // *** REMOVED listener for confirmStaffBtn ***
-    document.getElementById('staffModalSearchInput')?.addEventListener('input', filterStaffInModal); //
-    document.getElementById('staffModal')?.addEventListener('click', (e) => { //
-      if (e.target === e.currentTarget) hideStaffModal(); //
+  // Sub-tab Navigation (Linens/Amenities)
+  const subTabBtns = document.querySelectorAll('.subTabBtn');
+  subTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const subTab = btn.getAttribute('data-subtab');
+      currentSubTab = subTab;
+      document.querySelectorAll('.subTabBtn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyLinensFiltersAndRender();
+      updateTypesFilter();
     });
+  });
 
-    // *** REMOVED listeners for Assign Confirmation Modal ***
-    // *** REMOVED listeners for Success Modal ***
+  // Request Filters
+  document.getElementById('floorFilter')?.addEventListener('change', applyRequestFiltersAndRender);
+  document.getElementById('roomFilter')?.addEventListener('change', applyRequestFiltersAndRender);
+  document.getElementById('searchInput')?.addEventListener('input', applyRequestFiltersAndRender);
+  document.getElementById('refreshBtn')?.addEventListener('click', resetRequestFilters);
+  document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsCSV);
 
+  // Linens Filters
+  document.getElementById('floorFilterLinens')?.addEventListener('change', applyLinensFiltersAndRender);
+  document.getElementById('roomFilterLinens')?.addEventListener('change', applyLinensFiltersAndRender);
+  document.getElementById('statusFilterLinens')?.addEventListener('change', applyLinensFiltersAndRender);
+  document.getElementById('linensSearchInput')?.addEventListener('input', applyLinensFiltersAndRender);
+  document.getElementById('linensRefreshBtn')?.addEventListener('click', resetLinensFilters);
+  document.getElementById('linensDownloadBtn')?.addEventListener('click', downloadLinensCSV);
 
-    // Profile Sidebar & Logout
-    const profileBtn = document.getElementById('profileBtn'); //
-    const sidebar = document.getElementById('profile-sidebar'); //
-    const closeSidebarBtn = document.getElementById('sidebar-close-btn'); //
-    profileBtn?.addEventListener('click', () => sidebar?.classList.add('active')); //
-    closeSidebarBtn?.addEventListener('click', () => sidebar?.classList.remove('active')); //
+  // Add Item Button
+  document.getElementById('addItemBtn')?.addEventListener('click', showAddItemModal);
 
-    const logoutBtn = document.getElementById('logoutBtn'); //
-    const logoutModal = document.getElementById('logoutModal'); //
-    const closeLogoutBtn = document.getElementById('closeLogoutBtn'); //
-    const cancelLogoutBtn = document.getElementById('cancelLogoutBtn'); //
-    const confirmLogoutBtn = document.getElementById('confirmLogoutBtn'); //
+  // Add/Edit Item Modal
+  document.getElementById('closeAddItemBtn')?.addEventListener('click', hideAddItemModal);
+  document.getElementById('cancelAddItemBtn')?.addEventListener('click', hideAddItemModal);
+  document.getElementById('addItemForm')?.addEventListener('submit', handleAddItemSubmit);
+  document.getElementById('itemFloor')?.addEventListener('change', updateRoomDropdown);
 
-    logoutBtn?.addEventListener('click', (e) => { e.preventDefault(); if(logoutModal) logoutModal.style.display = 'flex'; }); //
-    closeLogoutBtn?.addEventListener('click', () => { if(logoutModal) logoutModal.style.display = 'none'; }); //
-    cancelLogoutBtn?.addEventListener('click', () => { if(logoutModal) logoutModal.style.display = 'none'; }); //
-    confirmLogoutBtn?.addEventListener('click', () => { window.location.href = 'logout.php'; }); //
-    logoutModal?.addEventListener('click', (e) => { if (e.target === e.currentTarget) logoutModal.style.display = 'none'; }); //
+  // Confirmation Modal
+  document.getElementById('cancelConfirmBtn')?.addEventListener('click', hideConfirmModal);
+  document.getElementById('confirmActionBtn')?.addEventListener('click', handleConfirmAction);
+
+  // Success Modal
+  document.getElementById('closeSuccessBtn')?.addEventListener('click', hideSuccessModal);
+  document.getElementById('okaySuccessBtn')?.addEventListener('click', hideSuccessModal);
+
+  // Delete Modal
+  document.getElementById('closeDeleteBtn')?.addEventListener('click', hideDeleteModal);
+  document.getElementById('cancelDeleteBtn')?.addEventListener('click', hideDeleteModal);
+  document.getElementById('confirmDeleteBtn')?.addEventListener('click', handleConfirmDelete);
+
+  // Staff Modal
+  document.getElementById('closeStaffModalBtn')?.addEventListener('click', hideStaffModal);
+  document.getElementById('cancelStaffBtn')?.addEventListener('click', hideStaffModal);
+  document.getElementById('staffModalSearchInput')?.addEventListener('input', filterStaffInModal);
+  document.getElementById('staffModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) hideStaffModal();
+  });
+
+  // Profile Sidebar & Logout
+  const profileBtn = document.getElementById('profileBtn');
+  const sidebar = document.getElementById('profile-sidebar');
+  const closeSidebarBtn = document.getElementById('sidebar-close-btn');
+  profileBtn?.addEventListener('click', () => sidebar?.classList.add('active'));
+  closeSidebarBtn?.addEventListener('click', () => sidebar?.classList.remove('active'));
+
+  const logoutBtn = document.getElementById('logoutBtn');
+  const logoutModal = document.getElementById('logoutModal');
+  const closeLogoutBtn = document.getElementById('closeLogoutBtn');
+  const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+  const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+
+  logoutBtn?.addEventListener('click', (e) => { e.preventDefault(); if(logoutModal) logoutModal.style.display = 'flex'; });
+  closeLogoutBtn?.addEventListener('click', () => { if(logoutModal) logoutModal.style.display = 'none'; });
+  cancelLogoutBtn?.addEventListener('click', () => { if(logoutModal) logoutModal.style.display = 'none'; });
+  confirmLogoutBtn?.addEventListener('click', () => { window.location.href = 'logout.php'; });
+  logoutModal?.addEventListener('click', (e) => { if (e.target === e.currentTarget) logoutModal.style.display = 'none'; });
 }
-
 
 // ===== PAGINATION UTILITIES =====
-function paginateData(data, page, itemsPerPage) { //
-  const startIndex = (page - 1) * itemsPerPage; //
-  const endIndex = startIndex + itemsPerPage; //
-  return data.slice(startIndex, endIndex); //
+function paginateData(data, page, itemsPerPage) {
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  return data.slice(startIndex, endIndex);
 }
 
-function getTotalPages(dataLength, itemsPerPage) { //
-  return Math.ceil(dataLength / itemsPerPage); //
+function getTotalPages(dataLength, itemsPerPage) {
+  return Math.ceil(dataLength / itemsPerPage);
 }
 
-function renderPaginationControls(containerId, totalPages, currentPage, onPageChange) { //
-  const container = document.getElementById(containerId); //
-  if (!container) return; //
-  container.innerHTML = ''; // Clear previous controls //
-  if (totalPages <= 1) return; // Don't render if only one page or less //
+function renderPaginationControls(containerId, totalPages, currentPage, onPageChange) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  if (totalPages <= 1) return;
 
   // Previous Button
-  const prevBtn = document.createElement('button'); //
-  prevBtn.className = 'paginationBtn'; //
-  prevBtn.textContent = '←'; //
-  prevBtn.disabled = currentPage === 1; //
-  prevBtn.onclick = () => onPageChange(currentPage - 1); //
-  container.appendChild(prevBtn); //
+  const prevBtn = document.createElement('button');
+  prevBtn.className = 'paginationBtn';
+  prevBtn.textContent = '←';
+  prevBtn.disabled = currentPage === 1;
+  prevBtn.onclick = () => onPageChange(currentPage - 1);
+  container.appendChild(prevBtn);
 
-  // Page Number Logic (simplified for brevity, can enhance later)
-   const maxVisiblePages = 5; //
-   let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2)); //
-   let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1); //
-   if (endPage - startPage + 1 < maxVisiblePages) { //
-       startPage = Math.max(1, endPage - maxVisiblePages + 1); //
-   }
+  // Page Number Logic
+  const maxVisiblePages = 5;
+  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+  if (endPage - startPage + 1 < maxVisiblePages) {
+    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+  }
 
-    if (startPage > 1) { //
-        const firstPageBtn = document.createElement('button'); //
-        firstPageBtn.className = 'paginationBtn'; firstPageBtn.textContent = '1'; //
-        firstPageBtn.onclick = () => onPageChange(1); container.appendChild(firstPageBtn); //
-        if (startPage > 2) { const dots = document.createElement('span'); dots.textContent = '...'; dots.className = 'paginationDots'; container.appendChild(dots); } //
+  if (startPage > 1) {
+    const firstPageBtn = document.createElement('button');
+    firstPageBtn.className = 'paginationBtn';
+    firstPageBtn.textContent = '1';
+    firstPageBtn.onclick = () => onPageChange(1);
+    container.appendChild(firstPageBtn);
+    if (startPage > 2) {
+      const dots = document.createElement('span');
+      dots.textContent = '...';
+      dots.className = 'paginationDots';
+      container.appendChild(dots);
     }
-    for (let i = startPage; i <= endPage; i++) { //
-        const pageBtn = document.createElement('button'); //
-        pageBtn.className = `paginationBtn ${i === currentPage ? 'active' : ''}`; //
-        pageBtn.textContent = i; pageBtn.onclick = () => onPageChange(i); container.appendChild(pageBtn); //
-    }
-    if (endPage < totalPages) { //
-        if (endPage < totalPages - 1) { const dots = document.createElement('span'); dots.textContent = '...'; dots.className = 'paginationDots'; container.appendChild(dots); } //
-        const lastPageBtn = document.createElement('button'); lastPageBtn.className = 'paginationBtn'; lastPageBtn.textContent = totalPages; //
-        lastPageBtn.onclick = () => onPageChange(totalPages); container.appendChild(lastPageBtn); //
-    }
+  }
 
+  for (let i = startPage; i <= endPage; i++) {
+    const pageBtn = document.createElement('button');
+    pageBtn.className = `paginationBtn ${i === currentPage ? 'active' : ''}`;
+    pageBtn.textContent = i;
+    pageBtn.onclick = () => onPageChange(i);
+    container.appendChild(pageBtn);
+  }
+
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      const dots = document.createElement('span');
+      dots.textContent = '...';
+      dots.className = 'paginationDots';
+      container.appendChild(dots);
+    }
+    const lastPageBtn = document.createElement('button');
+    lastPageBtn.className = 'paginationBtn';
+    lastPageBtn.textContent = totalPages;
+    lastPageBtn.onclick = () => onPageChange(totalPages);
+    container.appendChild(lastPageBtn);
+  }
 
   // Next Button
-  const nextBtn = document.createElement('button'); //
-  nextBtn.className = 'paginationBtn'; //
-  nextBtn.textContent = '→'; //
-  nextBtn.disabled = currentPage === totalPages; //
-  nextBtn.onclick = () => onPageChange(currentPage + 1); //
-  container.appendChild(nextBtn); //
+  const nextBtn = document.createElement('button');
+  nextBtn.className = 'paginationBtn';
+  nextBtn.textContent = '→';
+  nextBtn.disabled = currentPage === totalPages;
+  nextBtn.onclick = () => onPageChange(currentPage + 1);
+  container.appendChild(nextBtn);
 }
-
 
 // ===== RENDER REQUESTS TABLE =====
 function renderRequestsTable() {
-    const tbody = document.getElementById('requestsTableBody'); //
-    const recordCountEl = document.getElementById('requestsRecordCount'); //
-    const paginationControlsContainerId = 'requestsPaginationControls'; //
-    const state = paginationState.requests; //
+  const tbody = document.getElementById('requestsTableBody');
+  const recordCountEl = document.getElementById('requestsRecordCount');
+  const paginationControlsContainerId = 'requestsPaginationControls';
+  const state = paginationState.requests;
 
-    if (!tbody || !recordCountEl) return;
+  if (!tbody || !recordCountEl) return;
 
-    const totalPages = getTotalPages(filteredRequests.length, state.itemsPerPage); //
-    // Adjust current page if it's invalid (e.g., after filtering/deletion)
-    if (state.currentPage > totalPages) { //
-        state.currentPage = Math.max(1, totalPages); //
-    }
+  const totalPages = getTotalPages(filteredRequests.length, state.itemsPerPage);
+  if (state.currentPage > totalPages) {
+    state.currentPage = Math.max(1, totalPages);
+  }
 
-    const paginatedData = paginateData(filteredRequests, state.currentPage, state.itemsPerPage); //
+  const paginatedData = paginateData(filteredRequests, state.currentPage, state.itemsPerPage);
 
-    if (paginatedData.length === 0 && state.currentPage === 1) { //
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No rooms need cleaning or match filters.</td></tr>'; //
-    } else if (paginatedData.length === 0 && state.currentPage > 1) { //
-        // If current page is empty but not the first, go back one page
-        state.currentPage--; //
-        renderRequestsTable(); // Re-render the previous page
-        return; // Stop current rendering //
-    } else {
-        tbody.innerHTML = paginatedData.map(req => `
+  if (paginatedData.length === 0 && state.currentPage === 1) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No rooms need cleaning or match filters.</td></tr>';
+  } else if (paginatedData.length === 0 && state.currentPage > 1) {
+    state.currentPage--;
+    renderRequestsTable();
+    return;
+  } else {
+    tbody.innerHTML = paginatedData.map(req => `
       <tr>
-        <td>${req.floor ?? 'N/A'}</td> 
+        <td>${req.floor ?? 'N/A'}</td>
         <td>${req.room ?? 'N/A'}</td>
-        <td>${req.date ?? 'N/A'}</td>       
-        <td>${req.requestTime ?? 'N/A'}</td> 
+        <td>${req.date ?? 'N/A'}</td>
+        <td>${req.requestTime ?? 'N/A'}</td>
         <td>${req.lastCleaned ?? 'N/A'}</td>
-        <td><span class="statusBadge needs-cleaning">Needs Cleaning</span></td> 
+        <td><span class="statusBadge needs-cleaning">Needs Cleaning</span></td>
         <td>
-          <button class="assignBtn" data-room-id="${req.id}">Assign Staff</button> 
+          <button class="assignBtn" data-room-id="${req.id}">Assign Staff</button>
         </td>
       </tr>
-    `).join(''); //
+    `).join('');
 
-        // Add event listeners AFTER updating innerHTML
-        tbody.querySelectorAll('.assignBtn').forEach(btn => { //
-            btn.addEventListener('click', (e) => {
-                currentRequestId = parseInt(e.target.getAttribute('data-room-id')); // Store RoomID just in case, though not used for assignment now //
-                showStaffModal(); // Directly show the staff list modal
-            });
-        });
-    }
-
-    recordCountEl.textContent = filteredRequests.length; // Update total count based on filtered data //
-    renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => { //
-        state.currentPage = page; // Update current page in state //
-        renderRequestsTable(); // Re-render the table for the new page //
+    tbody.querySelectorAll('.assignBtn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        currentRequestId = parseInt(e.target.getAttribute('data-room-id'));
+        showStaffModal();
+      });
     });
+  }
+
+  recordCountEl.textContent = filteredRequests.length;
+  renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderRequestsTable();
+  });
+}
+
+// ===== RENDER LINENS & AMENITIES TABLE =====
+function renderLinensTable() {
+  const tbody = document.getElementById('linensTableBody');
+  const recordCountEl = document.getElementById('linensRecordCount');
+  const paginationControlsContainerId = 'linensPaginationControls';
+  const state = paginationState.linens;
+
+  if (!tbody || !recordCountEl) return;
+
+  const totalPages = getTotalPages(filteredLinens.length, state.itemsPerPage);
+  if (state.currentPage > totalPages) {
+    state.currentPage = Math.max(1, totalPages);
+  }
+
+  const paginatedData = paginateData(filteredLinens, state.currentPage, state.itemsPerPage);
+
+  if (paginatedData.length === 0 && state.currentPage === 1) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No items found matching filters.</td></tr>';
+  } else if (paginatedData.length === 0 && state.currentPage > 1) {
+    state.currentPage--;
+    renderLinensTable();
+    return;
+  } else {
+    tbody.innerHTML = paginatedData.map(item => `
+      <tr>
+        <td>${item.floor ?? 'N/A'}</td>
+        <td>${item.room ?? 'N/A'}</td>
+        <td>${item.type ?? 'N/A'}</td>
+        <td>${item.item ?? 'N/A'}</td>
+        <td>${item.lastCleaned ?? 'Never'}</td>
+        <td><span class="statusBadge cleaned">Available</span></td>
+        <td>${item.remarks ?? ''}</td>
+        <td>
+          <button class="actionIconBtn editBtn" data-item-id="${item.id}" title="Edit">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="actionIconBtn deleteBtn" data-item-id="${item.id}" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    // IMPORTANT: Add event listeners AFTER innerHTML is set
+    const editButtons = tbody.querySelectorAll('.editBtn');
+    const deleteButtons = tbody.querySelectorAll('.deleteBtn');
+
+    editButtons.forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const itemId = parseInt(this.getAttribute('data-item-id'));
+        console.log('Edit clicked for item:', itemId); // Debug log
+        handleEditItem(itemId);
+      });
+    });
+
+    deleteButtons.forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const itemId = parseInt(this.getAttribute('data-item-id'));
+        console.log('Delete clicked for item:', itemId); // Debug log
+        handleDeleteItem(itemId);
+      });
+    });
+  }
+
+  recordCountEl.textContent = filteredLinens.length;
+  renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderLinensTable();
+  });
 }
 
 // ===== RENDER STAFF LIST MODAL =====
-function renderStaffList(staffToRender = filteredStaff) { // Use filteredStaff by default
-    const staffList = document.getElementById('staffList'); //
-    if (!staffList) return;
+function renderStaffList(staffToRender = filteredStaff) {
+  const staffList = document.getElementById('staffList');
+  if (!staffList) return;
 
-    if (staffToRender.length === 0) { //
-        staffList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No available staff found.</div>'; //
-        return;
-    }
+  if (staffToRender.length === 0) {
+    staffList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No available staff found.</div>';
+    return;
+  }
 
-    // Only show staff from currentStaffData (which contains only housekeeping_staff)
-    staffList.innerHTML = staffToRender.map(staff => `
-      <div class="staffListItem ${staff.assigned ? 'assigned' : ''}" data-staff-id="${staff.id}"> 
-        <div class="staffListName">${staff.name}</div> 
-        <span class="staffListStatus ${staff.assigned ? 'assigned' : 'available'}">${staff.assigned ? 'Assigned' : 'Available'}</span> 
-      </div>
-    `).join(''); //
-
-    // *** REMOVED: Click listeners for selecting staff ***
+  staffList.innerHTML = staffToRender.map(staff => `
+    <div class="staffListItem ${staff.assigned ? 'assigned' : ''}" data-staff-id="${staff.id}">
+      <div class="staffListName">${staff.name}</div>
+      <span class="staffListStatus ${staff.assigned ? 'assigned' : 'available'}">${staff.assigned ? 'Assigned' : 'Available'}</span>
+    </div>
+  `).join('');
 }
-
-
-// ===== RENDER HISTORY TABLE (Placeholder/Example) =====
-function renderHistoryTable() {
-    const tbody = document.getElementById('historyTableBody'); //
-    const recordCountEl = document.getElementById('historyRecordCount'); //
-    const paginationControlsContainerId = 'historyPaginationControls'; //
-    const state = paginationState.history; //
-
-    if (!tbody || !recordCountEl) return;
-
-    // --- Replace with actual history data fetching and filtering ---
-    filteredHistory = []; // Placeholder - Fetch/filter real data here
-    // --- ---------------------------------------------------- ---
-
-    const totalPages = getTotalPages(filteredHistory.length, state.itemsPerPage); //
-    if (state.currentPage > totalPages) { //
-        state.currentPage = Math.max(1, totalPages); //
-    }
-    const paginatedData = paginateData(filteredHistory, state.currentPage, state.itemsPerPage); //
-
-    if (paginatedData.length === 0) { //
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history records found matching criteria.</td></tr>'; //
-    } else {
-        // Populate with actual history data structure
-        tbody.innerHTML = paginatedData.map(hist => `
-      <tr>
-        <td>${hist.floor ?? 'N/A'}</td>
-        <td>${hist.room ?? 'N/A'}</td>
-        <td>${hist.guest ?? 'N/A'}</td> 
-        <td>${hist.date ?? 'N/A'}</td>
-        <td>${hist.requestedTime ?? 'N/A'}</td>
-        <td>${hist.completedTime ?? 'N/A'}</td>
-        <td>${hist.staff ?? 'N/A'}</td>
-        <td><span class="statusBadge cleaned">Cleaned</span></td> 
-        <td>${hist.remarks ?? ''}</td>
-      </tr>
-    `).join(''); //
-    }
-
-    recordCountEl.textContent = filteredHistory.length; //
-    renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => { //
-        state.currentPage = page; //
-        renderHistoryTable(); //
-    });
-}
-
 
 // ===== FILTERING LOGIC =====
 function applyRequestFiltersAndRender() {
-    const floor = document.getElementById('floorFilter')?.value || ''; //
-    const room = document.getElementById('roomFilter')?.value || ''; //
-    const search = document.getElementById('searchInput')?.value.toLowerCase() || ''; //
+  const floor = document.getElementById('floorFilter')?.value || '';
+  const room = document.getElementById('roomFilter')?.value || '';
+  const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
 
-    filteredRequests = currentRequestsData.filter(req => { //
-        const matchFloor = !floor || req.floor.toString() === floor; //
-        const matchRoom = !room || req.room.toString() === room; //
-        const matchSearch = !search || req.room.toString().includes(search); // Search only by room number //
+  filteredRequests = currentRequestsData.filter(req => {
+    const matchFloor = !floor || req.floor.toString() === floor;
+    const matchRoom = !room || req.room.toString() === room;
+    const matchSearch = !search || req.room.toString().includes(search);
 
-        return matchFloor && matchRoom && matchSearch; //
-    });
+    return matchFloor && matchRoom && matchSearch;
+  });
 
-    paginationState.requests.currentPage = 1; // Reset page on filter change //
-    renderRequestsTable();
-    updateRoomFilterOptions(); // Update room dropdown based on selected floor
+  paginationState.requests.currentPage = 1;
+  renderRequestsTable();
+  updateRoomFilterOptions();
+}
+
+function applyLinensFiltersAndRender() {
+  const floor = document.getElementById('floorFilterLinens')?.value || '';
+  const room = document.getElementById('roomFilterLinens')?.value || '';
+  const status = document.getElementById('statusFilterLinens')?.value || '';
+  const search = document.getElementById('linensSearchInput')?.value.toLowerCase() || '';
+
+  filteredLinens = currentLinensData.filter(item => {
+    const matchCategory = item.category.toLowerCase() === currentSubTab;
+    const matchFloor = !floor || item.floor.toString() === floor;
+    const matchRoom = !room || item.room.toString() === room;
+    const matchStatus = !status; // Status filter logic can be added here
+    const matchSearch = !search || item.item.toLowerCase().includes(search) || item.type.toLowerCase().includes(search);
+
+    return matchCategory && matchFloor && matchRoom && matchStatus && matchSearch;
+  });
+
+  paginationState.linens.currentPage = 1;
+  renderLinensTable();
+  updateLinensRoomFilterOptions();
 }
 
 function filterStaffInModal() {
-    const search = document.getElementById('staffModalSearchInput')?.value.toLowerCase() || ''; //
-    filteredStaff = currentStaffData.filter(staff => //
-        staff.name.toLowerCase().includes(search) //
-    );
-    renderStaffList(); // Render the filtered list in the modal
+  const search = document.getElementById('staffModalSearchInput')?.value.toLowerCase() || '';
+  filteredStaff = currentStaffData.filter(staff =>
+    staff.name.toLowerCase().includes(search)
+  );
+  renderStaffList();
 }
-
-function applyHistoryFiltersAndRender() {
-    // Implement history filtering based on floor, room, date, search
-    // Update filteredHistory array
-    paginationState.history.currentPage = 1; //
-    renderHistoryTable();
-}
-
 
 // ===== FILTER UTILITIES =====
 function populateStaticFilters() {
-    // Populate Floor filter
-    const floorFilter = document.getElementById('floorFilter'); //
-    const floors = [...new Set(currentRequestsData.map(r => r.floor))].sort((a, b) => a - b); //
-    if (floorFilter) { //
-        // Keep the "Floor" default option
-        floors.forEach(f => { //
-            const option = document.createElement('option'); //
-            option.value = f; option.textContent = f; //
-            floorFilter.appendChild(option); //
-        });
-    }
-    // Initially populate Room filter with all rooms
-    updateRoomFilterOptions();
-    // Populate History filters similarly if needed
+  // Populate Floor filter for Requests
+  const floorFilter = document.getElementById('floorFilter');
+  const floors = [...new Set(currentRequestsData.map(r => r.floor))].sort((a, b) => a - b);
+  if (floorFilter) {
+    floors.forEach(f => {
+      const option = document.createElement('option');
+      option.value = f;
+      option.textContent = f;
+      floorFilter.appendChild(option);
+    });
+  }
+  updateRoomFilterOptions();
+}
+
+function populateLinensFilters() {
+  // Populate Floor filter
+  const floorFilter = document.getElementById('floorFilterLinens');
+  const floors = [...new Set(allRooms.map(r => r.floor))].sort((a, b) => a - b);
+  if (floorFilter) {
+    floors.forEach(f => {
+      const option = document.createElement('option');
+      option.value = f;
+      option.textContent = f;
+      floorFilter.appendChild(option);
+    });
+  }
+
+  updateLinensRoomFilterOptions();
 }
 
 function updateRoomFilterOptions() {
-    const floorFilter = document.getElementById('floorFilter'); //
-    const roomFilter = document.getElementById('roomFilter'); //
-    if (!roomFilter) return; //
+  const floorFilter = document.getElementById('floorFilter');
+  const roomFilter = document.getElementById('roomFilter');
+  if (!roomFilter) return;
 
-    const selectedFloor = floorFilter?.value; //
-    const currentRoomValue = roomFilter.value; // Save current selection //
+  const selectedFloor = floorFilter?.value;
+  const currentRoomValue = roomFilter.value;
 
-    // Clear existing room options (except the default "Room")
-    roomFilter.innerHTML = '<option value="">Room</option>'; //
+  roomFilter.innerHTML = '<option value="">Room</option>';
 
-    const roomsToShow = selectedFloor //
-        ? currentRequestsData.filter(r => r.floor.toString() === selectedFloor) //
-        : currentRequestsData; // Show all if no floor selected //
+  const roomsToShow = selectedFloor
+    ? currentRequestsData.filter(r => r.floor.toString() === selectedFloor)
+    : currentRequestsData;
 
-    const roomNumbers = [...new Set(roomsToShow.map(r => r.room))].sort((a, b) => a - b); //
+  const roomNumbers = [...new Set(roomsToShow.map(r => r.room))].sort((a, b) => a - b);
 
-    roomNumbers.forEach(roomNum => { //
-        const option = document.createElement('option'); //
-        option.value = roomNum; option.textContent = roomNum; //
-        roomFilter.appendChild(option); //
-    });
+  roomNumbers.forEach(roomNum => {
+    const option = document.createElement('option');
+    option.value = roomNum;
+    option.textContent = roomNum;
+    roomFilter.appendChild(option);
+  });
 
-    // Try to restore previous selection if it's still valid
-    if (roomNumbers.includes(parseInt(currentRoomValue))) { //
-        roomFilter.value = currentRoomValue; //
-    }
+  if (roomNumbers.includes(parseInt(currentRoomValue))) {
+    roomFilter.value = currentRoomValue;
+  }
+}
+
+function updateLinensRoomFilterOptions() {
+  const floorFilter = document.getElementById('floorFilterLinens');
+  const roomFilter = document.getElementById('roomFilterLinens');
+  if (!roomFilter) return;
+
+  const selectedFloor = floorFilter?.value;
+  const currentRoomValue = roomFilter.value;
+
+  roomFilter.innerHTML = '<option value="">Room</option>';
+
+  const roomsToShow = selectedFloor
+    ? allRooms.filter(r => r.floor.toString() === selectedFloor)
+    : allRooms;
+
+  const roomNumbers = [...new Set(roomsToShow.map(r => r.room))].sort((a, b) => a - b);
+
+  roomNumbers.forEach(roomNum => {
+    const option = document.createElement('option');
+    option.value = roomNum;
+    option.textContent = roomNum;
+    roomFilter.appendChild(option);
+  });
+
+  if (roomNumbers.includes(parseInt(currentRoomValue))) {
+    roomFilter.value = currentRoomValue;
+  }
+}
+
+function updateTypesFilter() {
+  // This function is called when sub-tab changes
+  // Types filter is now Status filter in the new design
 }
 
 function resetRequestFilters() {
-    document.getElementById('floorFilter').value = ''; //
-    document.getElementById('roomFilter').value = ''; //
-    document.getElementById('searchInput').value = ''; //
-    applyRequestFiltersAndRender();
+  document.getElementById('floorFilter').value = '';
+  document.getElementById('roomFilter').value = '';
+  document.getElementById('searchInput').value = '';
+  applyRequestFiltersAndRender();
 }
 
-function resetHistoryFilters() {
-    // Reset history filters and re-render
-    document.getElementById('floorFilterHistory').value = ''; //
-    document.getElementById('roomFilterHistory').value = ''; //
-    document.getElementById('dateFilterHistory').value = ''; // Reset date picker if implemented //
-    document.getElementById('historySearchInput').value = ''; //
-    applyHistoryFiltersAndRender();
+function resetLinensFilters() {
+  document.getElementById('floorFilterLinens').value = '';
+  document.getElementById('roomFilterLinens').value = '';
+  document.getElementById('statusFilterLinens').value = '';
+  document.getElementById('linensSearchInput').value = '';
+  applyLinensFiltersAndRender();
 }
-
 
 // ===== MODAL VISIBILITY =====
 function showStaffModal() {
-    selectedStaffId = null; // Reset just in case
-    // *** REMOVED: Disabling confirmBtn as it doesn't exist ***
-    document.getElementById('staffModalSearchInput').value = ''; // Clear search //
-    filteredStaff = [...currentStaffData]; // Reset staff filter //
-    renderStaffList(); // Render the full list of available staff
-    document.getElementById('staffModal').style.display = 'flex'; //
+  selectedStaffId = null;
+  document.getElementById('staffModalSearchInput').value = '';
+  filteredStaff = [...currentStaffData];
+  renderStaffList();
+  document.getElementById('staffModal').style.display = 'flex';
 }
 
-function hideStaffModal() { document.getElementById('staffModal').style.display = 'none'; } //
+function hideStaffModal() {
+  document.getElementById('staffModal').style.display = 'none';
+}
 
-// *** REMOVED: showAssignModal, hideAssignModal, showSuccessModal, hideSuccessModal functions ***
-// *** These modals are no longer shown in this simplified flow ***
+function showAddItemModal(isEdit = false, itemData = null) {
+  const modal = document.getElementById('addItemModal');
+  const modalTitle = document.getElementById('addItemModalTitle');
+  const submitBtn = document.getElementById('submitItemBtn');
+  
+  if (isEdit && itemData) {
+    modalTitle.textContent = 'Edit Item';
+    submitBtn.textContent = 'UPDATE ITEM';
+    
+    document.getElementById('itemId').value = itemData.id;
+    populateFloorDropdown();
+    document.getElementById('itemFloor').value = itemData.floor;
+    
+    updateRoomDropdown();
+    setTimeout(() => {
+      const roomSelect = document.getElementById('itemRoom');
+      const roomOption = Array.from(roomSelect.options).find(opt => opt.textContent == itemData.room);
+      if (roomOption) {
+        roomSelect.value = roomOption.value;
+      }
+    }, 50);
+    
+    document.getElementById('itemName').value = itemData.item;
+    document.getElementById('itemType').value = itemData.type;
+    
+    if (itemData.lastCleaned && itemData.lastCleaned !== 'Never') {
+      const date = new Date(itemData.lastCleaned);
+      const dateStr = date.toISOString().split('T')[0];
+      document.getElementById('itemLastReplaced').value = dateStr;
+    }
+  } else {
+    modalTitle.textContent = 'Add Item';
+    submitBtn.textContent = 'ADD ITEM';
+    document.getElementById('itemId').value = '';
+    document.getElementById('addItemForm').reset();
+    populateFloorDropdown();
+  }
+  
+  modal.style.display = 'flex';
+}
 
+function hideAddItemModal() {
+  document.getElementById('addItemModal').style.display = 'none';
+  document.getElementById('addItemForm').reset();
+}
 
-// ===== ACTIONS =====
-// *** REMOVED: handleConfirmAssignment function entirely ***
-// *** No assignment logic is needed on the frontend now ***
+function showConfirmModal(title, text, actionText) {
+  document.getElementById('confirmModalTitle').textContent = title;
+  document.getElementById('confirmModalText').textContent = text;
+  document.getElementById('confirmActionBtn').textContent = actionText;
+  document.getElementById('confirmModal').style.display = 'flex';
+}
 
+function hideConfirmModal() {
+  document.getElementById('confirmModal').style.display = 'none';
+  pendingAction = null;
+}
+
+function showSuccessModal(message) {
+  document.getElementById('successModalMessage').textContent = message;
+  document.getElementById('successModal').style.display = 'flex';
+}
+
+function hideSuccessModal() {
+  document.getElementById('successModal').style.display = 'none';
+}
+
+function showDeleteModal() {
+  document.getElementById('deleteModal').style.display = 'flex';
+}
+
+function hideDeleteModal() {
+  document.getElementById('deleteModal').style.display = 'none';
+  currentItemId = null;
+}
+
+// ===== FORM HANDLING =====
+function populateFloorDropdown() {
+  const floorSelect = document.getElementById('itemFloor');
+  floorSelect.innerHTML = '<option value="">Select Floor</option>';
+  
+  const floors = [...new Set(allRooms.map(r => r.floor))].sort((a, b) => a - b);
+  floors.forEach(floor => {
+    const option = document.createElement('option');
+    option.value = floor;
+    option.textContent = floor;
+    floorSelect.appendChild(option);
+  });
+}
+
+function updateRoomDropdown() {
+  const floorSelect = document.getElementById('itemFloor');
+  const roomSelect = document.getElementById('itemRoom');
+  const selectedFloor = floorSelect.value;
+  
+  roomSelect.innerHTML = '<option value="">Select Room</option>';
+  
+  if (!selectedFloor) return;
+  
+  const rooms = allRooms.filter(r => r.floor.toString() === selectedFloor);
+  rooms.forEach(room => {
+    const option = document.createElement('option');
+    option.value = room.id;
+    option.textContent = room.room;
+    roomSelect.appendChild(option);
+  });
+}
+
+function handleAddItemSubmit(e) {
+  e.preventDefault();
+  
+  const itemId = document.getElementById('itemId').value;
+  const isEdit = itemId !== '';
+  
+  const formData = {
+    id: itemId,
+    roomId: document.getElementById('itemRoom').value,
+    item: document.getElementById('itemName').value,
+    type: document.getElementById('itemType').value,
+    lastReplaced: document.getElementById('itemLastReplaced').value,
+    category: currentSubTab
+  };
+  
+  const room = allRooms.find(r => r.id.toString() === formData.roomId);
+  if (!room) {
+    alert('Please select a valid room');
+    return;
+  }
+  
+  formData.floor = room.floor;
+  formData.room = room.room;
+  
+  pendingAction = {
+    type: isEdit ? 'edit' : 'add',
+    data: formData
+  };
+  
+  hideAddItemModal();
+  
+  if (isEdit) {
+    showConfirmModal(
+      'Are you sure you want to update this item?',
+      'Please review the details before confirming. Once updated, the changes will be reflected in the maintenance records.',
+      'YES, UPDATE ITEM'
+    );
+  } else {
+    showConfirmModal(
+      'Are you sure you want to add this item?',
+      'Please review the details before confirming. Once added, the item will be recorded and visible in the maintenance records.',
+      'YES, ADD ITEM'
+    );
+  }
+}
+
+function handleConfirmAction() {
+  if (!pendingAction) return;
+  
+  if (pendingAction.type === 'add') {
+    const newItem = {
+      id: Date.now(),
+      roomId: parseInt(pendingAction.data.roomId),
+      floor: pendingAction.data.floor,
+      room: pendingAction.data.room,
+      type: pendingAction.data.type,
+      item: pendingAction.data.item,
+      category: pendingAction.data.category,
+      lastCleaned: pendingAction.data.lastReplaced || 'Never',
+      remarks: ''
+    };
+    
+    currentLinensData.push(newItem);
+    
+    hideConfirmModal();
+    showSuccessModal('Item Added Successfully');
+    applyLinensFiltersAndRender();
+    
+  } else if (pendingAction.type === 'edit') {
+    const itemIndex = currentLinensData.findIndex(item => item.id.toString() === pendingAction.data.id);
+    if (itemIndex !== -1) {
+      currentLinensData[itemIndex] = {
+        ...currentLinensData[itemIndex],
+        roomId: parseInt(pendingAction.data.roomId),
+        floor: pendingAction.data.floor,
+        room: pendingAction.data.room,
+        type: pendingAction.data.type,
+        item: pendingAction.data.item,
+        category: pendingAction.data.category,
+        lastCleaned: pendingAction.data.lastReplaced || currentLinensData[itemIndex].lastCleaned
+      };
+      
+      hideConfirmModal();
+      showSuccessModal('Item Updated Successfully');
+      applyLinensFiltersAndRender();
+    }
+  }
+  
+  pendingAction = null;
+}
+
+function handleEditItem(itemId) {
+  const item = currentLinensData.find(i => i.id === itemId);
+  if (!item) return;
+  
+  currentItemId = itemId;
+  showAddItemModal(true, item);
+}
+
+function handleDeleteItem(itemId) {
+  currentItemId = itemId;
+  showDeleteModal();
+}
+
+function handleConfirmDelete() {
+  if (!currentItemId) return;
+  
+  const itemIndex = currentLinensData.findIndex(item => item.id === currentItemId);
+  if (itemIndex !== -1) {
+    currentLinensData.splice(itemIndex, 1);
+    hideDeleteModal();
+    showSuccessModal('Item Deleted Successfully');
+    applyLinensFiltersAndRender();
+  }
+}
 
 // ===== CSV DOWNLOAD =====
-function downloadRequestsCSV() { //
-    if (filteredRequests.length === 0) { //
-        alert("No request data to export based on current filters."); //
-        return; //
-    }
-    const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Cleaned', 'Status', 'Staff In Charge']; //
-    const csvContent = [ //
-        headers.join(','), //
-        ...filteredRequests.map(req => //
-            [ //
-                req.floor, //
-                req.room, //
-                req.date, //
-                req.requestTime, //
-                req.lastCleaned, //
-                'Needs Cleaning', // Status is always this for requests //
-                req.staff // This will be 'Not Assigned' initially //
-             ].join(',') //
-        ) //
-    ].join('\n'); //
-    downloadCSV(csvContent, 'housekeeping-requests'); //
+function downloadRequestsCSV() {
+  if (filteredRequests.length === 0) {
+    alert("No request data to export based on current filters.");
+    return;
+  }
+  const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Cleaned', 'Status', 'Staff In Charge'];
+  const csvContent = [
+    headers.join(','),
+    ...filteredRequests.map(req =>
+      [
+        req.floor,
+        req.room,
+        req.date,
+        req.requestTime,
+        req.lastCleaned,
+        'Needs Cleaning',
+        req.staff
+      ].join(',')
+    )
+  ].join('\n');
+  downloadCSV(csvContent, 'housekeeping-requests');
 }
 
-function downloadHistoryCSV() { //
-    if (filteredHistory.length === 0) { //
-        alert("No history data to export based on current filters."); //
-        return; //
-    }
-    // Adjust headers/data mapping based on your actual history data structure
-    const headers = ['Floor', 'Room', 'Guest', 'Date', 'Requested Time', 'Completed Time', 'Staff In Charge', 'Status', 'Remarks']; //
-    const csvContent = [ //
-        headers.join(','), //
-        ...filteredHistory.map(hist => //
-            [ //
-                hist.floor, hist.room, hist.guest, hist.date, hist.requestedTime, //
-                hist.completedTime, hist.staff, 'Cleaned', //
-                `"${(hist.remarks || '').replace(/"/g, '""')}"` // Escape quotes in remarks //
-             ].join(',') //
-        ) //
-    ].join('\n'); //
-    downloadCSV(csvContent, 'housekeeping-history'); //
+function downloadLinensCSV() {
+  if (filteredLinens.length === 0) {
+    alert("No linens/amenities data to export based on current filters.");
+    return;
+  }
+  const headers = ['Floor', 'Room', 'Type', 'Items', 'Time/Date', 'Status', 'Remarks'];
+  const csvContent = [
+    headers.join(','),
+    ...filteredLinens.map(item =>
+      [
+        item.floor,
+        item.room,
+        item.type,
+        `"${item.item.replace(/"/g, '""')}"`,
+        item.lastCleaned,
+        'Available',
+        `"${(item.remarks || '').replace(/"/g, '""')}"`
+      ].join(',')
+    )
+  ].join('\n');
+  downloadCSV(csvContent, `housekeeping-${currentSubTab}`);
 }
 
-function downloadCSV(csvContent, filenamePrefix) { //
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' }); //
-    const url = URL.createObjectURL(blob); //
-    const link = document.createElement('a'); //
-    link.setAttribute('href', url); //
-    link.setAttribute('download', `${filenamePrefix}-${new Date().toISOString().split('T')[0]}.csv`); //
-    link.style.visibility = 'hidden'; //
-    document.body.appendChild(link); //
-    link.click(); //
-    document.body.removeChild(link); //
-    URL.revokeObjectURL(url); //
+function downloadCSV(csvContent, filenamePrefix) {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filenamePrefix}-${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 }
-
-// ===== API Call Utility (Optional - useful if making AJAX calls) =====
-/*
-async function apiCall(endpoint, action, data = {}, method = 'GET') {
-    // Implementation similar to admin.js apiCall function
-    // Needed for handleConfirmAssignment when using a real backend
-}
-*/

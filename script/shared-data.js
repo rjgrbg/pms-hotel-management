@@ -21,18 +21,18 @@ const housekeepingHistory = [
 
 // ===== HOUSEKEEPING LINENS DATA =====
 const housekeepingLinens = [
-  { LinenID: 1, floor: 1, room: 101, types: 'Guest Room Linens', items: 'Bed Linen', timeDate: '3:30PM/10.25.2025', status: 'cleaned', remarks: 'Fresh linens provided' },
-  { LinenID: 2, floor: 1, room: 101, types: 'Guest Room Linens', items: 'Bath Towels', timeDate: '3:30PM/10.25.2025', status: 'cleaned', remarks: 'All towels replaced' },
-  { LinenID: 3, floor: 2, room: 201, types: 'Guest Room Linens', items: 'Bed Linen', timeDate: '2:15PM/10.25.2025', status: 'pending', remarks: 'Awaiting replacement' },
-  { LinenID: 4, floor: 2, room: 202, types: 'Guest Room Linens', items: 'Pillowcases', timeDate: '4:00PM/10.25.2025', status: 'cleaned', remarks: 'Completed' },
+  { floor: 1, room: 101, types: 'Guest Room Linens', items: 'Bed Linen', timeDate: '3:30PM/10.25.2025', status: 'cleaned', remarks: 'Fresh linens provided' },
+  { floor: 1, room: 101, types: 'Guest Room Linens', items: 'Bath Towels', timeDate: '3:30PM/10.25.2025', status: 'cleaned', remarks: 'All towels replaced' },
+  { floor: 2, room: 201, types: 'Guest Room Linens', items: 'Bed Linen', timeDate: '2:15PM/10.25.2025', status: 'pending', remarks: 'Awaiting replacement' },
+  { floor: 2, room: 202, types: 'Guest Room Linens', items: 'Pillowcases', timeDate: '4:00PM/10.25.2025', status: 'cleaned', remarks: 'Completed' },
 ];
 
 // ===== HOUSEKEEPING AMENITIES DATA =====
 const housekeepingAmenities = [
-  { AmenityID: 1, floor: 1, room: 101, types: 'Guest Room Amenities', items: 'Toiletries', timeDate: '3:30PM/10.25.2025', status: 'stocked', remarks: 'Fully restocked' },
-  { AmenityID: 2, floor: 1, room: 102, types: 'Guest Room Amenities', items: 'Mini Bar', timeDate: '2:45PM/10.25.2025', status: 'pending', remarks: 'Needs refill' },
-  { AmenityID: 3, floor: 2, room: 201, types: 'Guest Room Amenities', items: 'Coffee Maker', timeDate: '1:30PM/10.25.2025', status: 'stocked', remarks: 'Coffee pods refilled' },
-  { AmenityID: 4, floor: 2, room: 202, types: 'Guest Room Amenities', items: 'Toiletries', timeDate: '4:15PM/10.25.2025', status: 'stocked', remarks: 'Completed' },
+  { floor: 1, room: 101, types: 'Guest Room Amenities', items: 'Toiletries', timeDate: '3:30PM/10.25.2025', status: 'stocked', remarks: 'Fully restocked' },
+  { floor: 1, room: 102, types: 'Guest Room Amenities', items: 'Mini Bar', timeDate: '2:45PM/10.25.2025', status: 'pending', remarks: 'Needs refill' },
+  { floor: 2, room: 201, types: 'Guest Room Amenities', items: 'Coffee Maker', timeDate: '1:30PM/10.25.2025', status: 'stocked', remarks: 'Coffee pods refilled' },
+  { floor: 2, room: 202, types: 'Guest Room Amenities', items: 'Toiletries', timeDate: '4:15PM/10.25.2025', status: 'stocked', remarks: 'Completed' },
 ];
 
 // ===== STAFF DATA =====
@@ -62,10 +62,10 @@ const maintenanceHistory = [
 
 // ===== MAINTENANCE APPLIANCES DATA =====
 const maintenanceAppliances = [
-  { ApplianceID: 1, floor: 1, room: 101, installedDate: '10.25.2025', types: 'Electric', items: 'TV (Brand)', lastMaintained: '3:30PM/10.25.2025', remarks: 'Working properly' },
-  { ApplianceID: 2, floor: 1, room: 101, installedDate: '10.25.2025', types: 'Water System', items: 'Heater (Brand)', lastMaintained: '3:30PM/10.25.2025', remarks: 'Serviced' },
-  { ApplianceID: 3, floor: 2, room: 201, installedDate: '10.20.2025', types: 'Electric', items: 'Refrigerator', lastMaintained: '2:00PM/10.24.2025', remarks: 'Needs check' },
-  { ApplianceID: 4, floor: 2, room: 202, installedDate: '10.22.2025', types: 'HVAC', items: 'Air Conditioner', lastMaintained: '4:00PM/10.25.2025', remarks: 'Filter replaced' },
+  { floor: 1, room: 101, installedDate: '10.25.2025', types: 'Electric', items: 'TV (Brand)', lastMaintained: '3:30PM/10.25.2025', remarks: 'Working properly' },
+  { floor: 1, room: 101, installedDate: '10.25.2025', types: 'Water System', items: 'Heater (Brand)', lastMaintained: '3:30PM/10.25.2025', remarks: 'Serviced' },
+  { floor: 2, room: 201, installedDate: '10.20.2025', types: 'Electric', items: 'Refrigerator', lastMaintained: '2:00PM/10.24.2025', remarks: 'Needs check' },
+  { floor: 2, room: 202, installedDate: '10.22.2025', types: 'HVAC', items: 'Air Conditioner', lastMaintained: '4:00PM/10.25.2025', remarks: 'Filter replaced' },
 ];
 
 // ===== PARKING DATA =====
@@ -92,18 +92,6 @@ const inventoryData = [
   { id: 106, name: 'Towels (Bath)', category: 'Linens', quantity: 8, description: 'White cotton bath towels', status: 'low-stock', damage: 'Minor Stains', stockInDate: '09/20/25 11:00', stockOutDate: '-' },
   { id: 107, name: 'Bed Sheets', category: 'Linens', quantity: 120, description: 'Queen size white cotton sheets', status: 'in-stock', damage: 'No Damage', stockInDate: '10/05/25 08:00', stockOutDate: '-' },
   { id: 108, name: 'Vacuum Cleaner Bags', category: 'Cleaning Equipment', quantity: 0, description: 'Replacement bags for vacuum', status: 'out-of-stock', damage: 'No Damage', stockInDate: '08/15/25 13:00', stockOutDate: '10/01/25 16:00' },
-];
-
-// ===== INVENTORY HISTORY DATA =====
-const inventoryHistory = [
-  { id: 101, name: 'Liquid Detergent', category: 'Cleaning solution', quantity: 50, action: 'Stock In', transactionDate: '10/10/25 14:30', performedBy: 'Anna Martinez', remarks: 'Regular restock' },
-  { id: 102, name: 'Electrical Tape', category: 'Electrical', quantity: 5, action: 'Stock Out', transactionDate: '10/15/25 09:00', performedBy: 'James Wilson', remarks: 'Used for room repairs' },
-  { id: 103, name: 'Light Bulb', category: 'Electrical', quantity: 10, action: 'Stock Out', transactionDate: '10/10/25 14:30', performedBy: 'Michael Brown', remarks: 'Replaced burnt bulbs' },
-  { id: 104, name: 'Toilet Paper', category: 'Bathroom Supplies', quantity: 250, action: 'Stock In', transactionDate: '10/15/25 10:00', performedBy: 'Sofia Rodriguez', remarks: 'Bulk purchase' },
-  { id: 105, name: 'Hand Soap', category: 'Bathroom Supplies', quantity: 30, action: 'Stock In', transactionDate: '10/12/25 09:30', performedBy: 'Emma Davis', remarks: 'Monthly supply' },
-  { id: 106, name: 'Towels (Bath)', category: 'Linens', quantity: 12, action: 'Stock Out', transactionDate: '10/18/25 11:30', performedBy: 'Anna Martinez', remarks: 'Replaced damaged towels' },
-  { id: 107, name: 'Bed Sheets', category: 'Linens', quantity: 120, action: 'Stock In', transactionDate: '10/05/25 08:00', performedBy: 'James Wilson', remarks: 'New inventory' },
-  { id: 108, name: 'Vacuum Cleaner Bags', category: 'Cleaning Equipment', quantity: 20, action: 'Stock Out', transactionDate: '10/01/25 16:00', performedBy: 'Michael Brown', remarks: 'All used' },
 ];
 
 // Inventory Categories for filters
@@ -244,7 +232,6 @@ window.appData = {
   rooms: roomsData,
   parking: parkingData,
   inventory: inventoryData,
-  inventoryHistory: inventoryHistory,
   userLogs: userLogsData
 };
 
@@ -252,7 +239,6 @@ window.appData = {
 window.roomsData = roomsData;
 window.parkingData = parkingData;
 window.inventoryData = inventoryData;
-window.inventoryHistory = inventoryHistory;
 window.housekeepingLinens = housekeepingLinens;
 window.housekeepingAmenities = housekeepingAmenities;
 window.maintenanceRequests = maintenanceRequests;
