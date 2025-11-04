@@ -105,15 +105,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${item.category}</td>
         <td>${item.quantity}</td>
         <td>${item.description}</td>
-        <td><span class...</span></td>
+        <td><span class="status-badge status-${item.status.replace(/\s+/g, '-')}">${item.status}</span></td>
         <td>${item.damage}</td>
         <td>${item.stockInDate}</td>
         <td>${item.stockOutDate || 'N/A'}</td>
-        
-        <td class="action-cell">
-            <button class="action-btn edit-btn" data-id="${item.id}">Edit</button>
-            <button class="action-btn delete-btn" data-id="${item.id}">Delete</button>
-        </td>
+        <td>${item.actionType}</td>
+        <td>${item.performedBy}</td>
         </tr>
     `).join('');
     

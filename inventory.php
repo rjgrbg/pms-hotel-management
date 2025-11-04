@@ -164,7 +164,7 @@ if (!isset($_SESSION['UserID'])) {
                           <th>Damage</th>
                           <th>Stock In Date</th>
                           <th>Stock Out Date</th>
-                          <th></th> 
+                          <th>Action</th> 
                       </tr>
           </thead>
           <tbody id="requestsTableBody">

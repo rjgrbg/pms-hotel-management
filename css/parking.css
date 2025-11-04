@@ -1,0 +1,1125 @@
+/* ========================================================= */
+/* VARIABLES & GLOBAL STYLES */
+/* ========================================================= */
+:root {
+    /* Colors from the new image */
+    --bg-main: #e8e8e8;
+    --bg-content: #ffffff;
+    --bg-header: #480C1B;
+    --bg-section-header: #352C24;
+    --bg-table-header: #d9d9d9;
+    --bg-table-row-alt: #f5f5f5;
+    --bg-card: #f0f0f0;
+    
+    --text-light: #f5f5f5;
+    --text-dark: #352C24;
+    --text-header: #FFF2E0; 
+    
+    --accent-gold: #FFA237; 
+    --color-success: #28a745;
+    --color-error: #dc3545;
+    
+    --font-primary: 'Abril Fatface', serif;
+    --font-secondary: Arial, sans-serif;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-secondary);
+    background-color: var(--bg-main);
+    min-height: 100vh;
+    color: var(--text-dark);
+}
+
+/* ========================================================= */
+/* TYPOGRAPHY OVERRIDES */
+/* ========================================================= */
+.hotel-name, .title {
+    font-family: var(--font-primary);
+}
+
+/* ========================================================= */
+/* HEADER STYLES */
+/* ========================================================= */
+
+.header {
+    background: var(--bg-header); 
+    background-image: url('background.png'); 
+    background-size: cover; 
+    background-position: center;
+    background-blend-mode: overlay; 
+    color: var(--text-header);
+    padding: 0.5rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: none; 
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.logo {
+    width: 45px;
+    height: 45px;
+    background-color: transparent;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo img {
+    width: 45px;
+    height: 45px;
+    object-fit: contain;
+}
+
+.hotel-name {
+    font-family: var(--font-primary);
+    font-size: 1rem;
+    letter-spacing: 2px;
+    font-weight: normal;
+    color: var(--text-header);
+}
+
+.user-icon {
+    width: 40px;
+    height: 40px;
+    background-color: var(--text-header);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.25rem;
+    position: relative;
+    color: var(--text-dark);
+}
+
+/* User Menu (Dropdown) */
+.user-menu {
+    position: absolute;
+    right: 0;
+    top: 50px;
+    width: 280px;
+    background-color: var(--bg-content);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    z-index: 1000;
+    color: var(--text-dark);
+    display: none;
+}
+.user-menu.active { display: block; }
+.user-menu-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--bg-table-row-alt);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.user-avatar {
+    width: 60px;
+    height: 60px;
+    background-color: var(--accent-gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: var(--text-dark);
+}
+.user-info h3 { font-size: 1rem; margin-bottom: 0.25rem; }
+.user-role { font-size: 0.75rem; color: #666; }
+.user-menu button {
+    width: 100%;
+    padding: 1rem 1.5rem;
+    background: none;
+    border: none;
+    color: var(--text-dark);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+}
+.user-menu button:hover { background-color: var(--bg-table-row-alt); }
+
+/* ========================================================= */
+/* CONTAINER AND TITLE BAR */
+/* ========================================================= */
+
+.container {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.title-bar {
+    background-color: var(--bg-content);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--bg-table-row-alt);
+}
+
+.title {
+    font-family: var(--font-primary);
+    font-size: 1.75rem;
+    font-weight: normal;
+    letter-spacing: 4px;
+    color: var(--text-dark);
+}
+
+.controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.download-icon {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.5rem;
+    color: var(--text-dark);
+    display: none;
+}
+.download-icon.active { display: block; }
+
+/* Form Controls (Select/Input) */
+select, input[type="text"], input[type="email"], input[type="password"], input[type="date"], input[type="number"] {
+    padding: 0.4rem 1rem;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    background-color: white;
+    font-family: var(--font-secondary);
+}
+
+.search-box {
+    position: relative;
+}
+
+.search-box input {
+    padding-right: 2.5rem;
+    width: 200px;
+}
+
+.search-btn {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--accent-gold);
+}
+
+/* ========================================================= */
+/* TABS */
+/* ========================================================= */
+
+.tabs {
+    background-color: var(--bg-content);
+    display: flex;
+    border-bottom: 1px solid var(--bg-table-row-alt);
+}
+
+.tab {
+    padding: 0.6rem 1.5rem;
+    background: var(--bg-content);
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    color: #666;
+    font-size: 0.875rem;
+    border-right: 1px solid var(--bg-table-row-alt);
+}
+
+.tab:hover {
+    background-color: var(--bg-table-row-alt);
+}
+
+.tab.active {
+    background-color: var(--bg-section-header);
+    color: var(--text-light);
+}
+
+/* ========================================================= */
+/* CONTENT AREA */
+/* ========================================================= */
+
+.content {
+    background-color: var(--bg-content);
+    padding: 1.5rem;
+    /* Nagdagdag ng min-height para sa "empty state" */
+    min-height: 400px;
+}
+
+.content.hidden {
+    display: none;
+}
+
+.section-header {
+    background-color: var(--bg-section-header);
+    color: var(--text-light);
+    padding: 0.5rem 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.card {
+    background-color: var(--bg-card);
+    padding: 2rem;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.card-label {
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    font-weight: normal;
+}
+
+/* Inayos 'to para ipakita 'yung value */
+.card-value {
+    display: block; 
+    font-family: var(--font-primary);
+    font-size: 2.5rem;
+    font-weight: normal;
+    color: var(--text-dark);
+}
+
+/* ========================================================= */
+/* TABLE STYLES */
+/* ========================================================= */
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--bg-content);
+}
+
+thead {
+    background-color: var(--bg-table-header);
+}
+
+th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text-dark);
+}
+
+td {
+    padding: 0.75rem;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--text-dark);
+    border-bottom: 1px solid var(--bg-table-row-alt);
+}
+
+tbody tr {
+    background-color: var(--bg-content);
+}
+
+tbody tr:nth-child(even) {
+    background-color: var(--bg-table-row-alt);
+}
+
+tbody tr.full-row {
+    background-color: var(--bg-content);
+}
+tbody tr.full-row td {
+    border-bottom: 1px solid var(--bg-table-row-alt);
+}
+
+.text-red {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.text-right {
+    text-align: left; 
+}
+/* Inalis 'yung comment, gagawin nating right align 'yung huling column */
+td.text-right {
+    text-align: right;
+}
+
+.table-header {
+    background-color: var(--bg-section-header);
+    color: var(--text-light);
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    display: grid;
+    gap: 1rem;
+    text-align: left;
+}
+
+.grid-5 { grid-template-columns: 80px 150px 200px 150px 1fr; }
+.grid-8 { grid-template-columns: 100px 100px 100px 150px 120px 120px 120px 120px 100px; }
+.grid-9 { grid-template-columns: 100px 100px 100px 150px 120px 120px 120px 120px 120px; }
+
+.table-row {
+    padding: 1rem;
+    border-bottom: 1px solid var(--bg-table-row-alt);
+    display: grid;
+    gap: 1rem;
+    align-items: center;
+    font-size: 0.875rem;
+    background-color: white;
+    text-align: left;
+}
+.table-row:nth-child(even) { background-color: var(--bg-table-row-alt); }
+
+.status-badge {
+    padding: 0.35rem 1.5rem;
+    border-radius: 20px;
+    color: white;
+    font-size: 0.75rem;
+    display: inline-block;
+    font-weight: 600;
+}
+.status-available { background-color: #5cb85c; }
+.status-occupied { background-color: var(--accent-gold); }
+
+/* ========================================================= */
+/* BUTTONS */
+/* ========================================================= */
+
+.btn-enter {
+    background-color: #c62828;
+    color: white;
+    padding: 0.4rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.btn-enter:hover { background-color: #b71c1c; }
+
+.btn-enter-gray {
+    background-color: #999;
+    color: white;
+    padding: 0.4rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: not-allowed;
+}
+
+.btn-yellow {
+    background-color: var(--accent-gold);
+    color: var(--text-dark);
+    font-weight: 600;
+    padding: 0.6rem 2.5rem;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+.btn-yellow:hover { filter: brightness(0.9); }
+
+.exit-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0; /* Para sakto lang 'yung image */
+    line-height: 1; /* Para 'di magulo 'yung alignment */
+}
+
+/* Magdagdag ng bagong style para sa <img> sa loob ng button */
+.exit-btn img {
+    width: 28px;  /* Pwede mong i-adjust 'yung laki */
+    height: 28px; /* Pwede mong i-adjust 'yung laki */
+    display: block; /* Para iwasan 'yung extra space sa ilalim */
+}
+
+/* Opsyonal: Lagyan ng effect 'pag tinapat 'yung mouse */
+.exit-btn:hover img {
+    opacity: 0.7;
+}
+
+.edit-btn {
+    padding: 0.5rem 0.75rem;
+    background-color: var(--accent-gold);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+/* ========================================================= */
+/* PAGINATION (BAGO 'TO) */
+/* ========================================================= */
+
+.pagination {
+    padding: 1rem;
+    background-color: var(--bg-content);
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Inayos 'to */
+    font-size: 0.875rem;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.pagination button {
+    padding: 0.25rem 0.75rem;
+    border: 1px solid #999;
+    border-radius: 4px;
+    background-color: white;
+    cursor: pointer;
+}
+.pagination button:disabled {
+    cursor: not-allowed;
+    background-color: var(--bg-table-row-alt);
+    color: #999;
+}
+.pagination button.active {
+    background-color: var(--bg-section-header);
+    color: white;
+    border-color: var(--bg-section-header);
+    font-weight: bold;
+}
+
+/* ========================================================= */
+/* MODAL STYLES (NEW THEME) */
+/* ========================================================= */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+.modal-overlay.active { display: flex; }
+
+.modal {
+    background: var(--bg-content);
+    border-radius: 12px;
+    padding: 0;
+    max-width: 500px;
+    width: 90%;
+    color: var(--text-dark);
+    position: relative;
+    max-height: 90vh;
+    overflow: hidden;
+}
+.modal-large { max-width: 700px; }
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+    z-index: 10;
+}
+
+.modal-header {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    margin-bottom: 0;
+    align-items: flex-start;
+    background-color: var(--bg-section-header);
+    color: var(--text-light);
+}
+
+.modal-icon { font-size: 5rem; color: var(--accent-gold); }
+.modal-title {
+    font-family: var(--font-primary);
+    font-size: 1.75rem;
+    font-weight: bold;
+    color: var(--accent-gold);
+    margin-bottom: 0.5rem;
+}
+.modal-text {
+    font-size: 0.75rem;
+    color: var(--text-light);
+    line-height: 1.5;
+}
+
+.modal-gradient {
+    background: var(--bg-section-header);
+    color: var(--text-light);
+    text-align: center;
+    padding: 2rem;
+}
+.modal-gradient .modal-close {
+    color: var(--text-light);
+}
+
+.modal-title-yellow {
+    font-family: var(--font-primary);
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--accent-gold);
+    margin-bottom: 1rem;
+}
+.modal-text-gray {
+    font-size: 0.875rem;
+    color: var(--text-light);
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+.modal-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+.modal-icon-large {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    font-weight: bold;
+    border-radius: 8px;
+    background-color: var(--accent-gold);
+    color: var(--text-dark);
+}
+.modal-subtitle {
+    font-family: var(--font-primary);
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    color: var(--text-light);
+}
+
+/* ... (Existing Modal Styles for Damage, Form, Info, Category, Account) ... */
+/* Walang binago sa mga 'to */
+
+/* ========================================================= */
+/* TOAST NOTIFICATION (BAGO 'TO) */
+/* ========================================================= */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    background-color: var(--bg-section-header);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-family: var(--font-secondary);
+    font-size: 0.9rem;
+    transform: translateX(120%);
+    opacity: 0;
+    transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+}
+
+.toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.toast.success {
+    background-color: var(--color-success);
+}
+.toast.error {
+    background-color: var(--color-error);
+}
+
+/* ========================================================= */
+/* EMPTY STATE (BAGO 'TO) */
+/* ========================================================= */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4rem 2rem;
+    text-align: center;
+    color: #999;
+}
+
+.empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-family: var(--font-primary);
+    font-size: 1.5rem;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+}
+
+/* ========================================================= */
+/* MOBILE RESPONSIVENESS (BAGO 'TO) */
+/* ========================================================= */
+
+@media (max-width: 992px) {
+    /* Para sa "Vehicle In" at "History" tables */
+    .grid-8, .grid-9 {
+        grid-template-columns: 100px 100px 1fr 1fr 100px; /* Pinaliit 'yung columns */
+    }
+    .grid-8 > div:nth-child(5), /* Vehicle Type */
+    .grid-8 > div:nth-child(6), /* Category */
+    .grid-8 > div:nth-child(7)  /* Enter Time */
+    {
+        display: none;
+    }
+    .grid-9 > div:nth-child(5), /* Vehicle Type */
+    .grid-9 > div:nth-child(6), /* Category */
+    .grid-9 > div:nth-child(7), /* Parking Time */
+    .grid-9 > div:nth-child(8)  /* Enter Time */
+    {
+        display: none;
+    }
+}
+
+
+@media (max-width: 768px) {
+    .title-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    .controls {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    .search-box {
+        flex-grow: 1;
+    }
+    .search-box input {
+        width: 100%;
+    }
+    
+    .summary-cards {
+        grid-template-columns: 1fr; /* Isa-isa na lang 'yung cards */
+    }
+
+    /* Ito 'yung magic para sa responsive tables */
+    .table-header {
+        display: none; /* Itago 'yung header */
+    }
+    
+    .table-row {
+        display: block; /* Gawing block para mag-stack */
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border: 1px solid var(--bg-table-row-alt);
+        border-radius: 8px;
+    }
+
+    .table-row > div {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px dotted var(--bg-table-row-alt);
+    }
+    .table-row > div:last-child {
+        border-bottom: none;
+    }
+
+    /* Maglagay ng label bago 'yung data */
+    .table-row > div::before {
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+    
+    /* Slots Tab */
+    .grid-5 > div:nth-child(1)::before { content: 'Area:'; }
+    .grid-5 > div:nth-child(2)::before { content: 'Slot Number:'; }
+    .grid-5 > div:nth-child(3)::before { content: 'Allowed Vehicle:'; }
+    .grid-5 > div:nth-child(4)::before { content: 'Status:'; }
+    .grid-5 > div:nth-child(5)::before { content: 'Action:'; }
+
+    /* Vehicle In Tab */
+    .grid-8 > div { display: flex; } /* I-override 'yung "display: none" kanina */
+    .grid-8 > div:nth-child(1)::before { content: 'Slot Number:'; }
+    .grid-8 > div:nth-child(2)::before { content: 'Plate #:'; }
+    .grid-8 > div:nth-child(3)::before { content: 'Room:'; }
+    .grid-8 > div:nth-child(4)::before { content: 'Name:'; }
+    .grid-8 > div:nth-child(5)::before { content: 'Vehicle Type:'; }
+    .grid-8 > div:nth-child(6)::before { content: 'Category:'; }
+    .grid-8 > div:nth-child(7)::before { content: 'Enter Time:'; }
+    .grid-8 > div:nth-child(8)::before { content: 'Enter Date:'; }
+    .grid-8 > div:nth-child(9)::before { content: 'Action:'; }
+    
+    /* History Tab */
+    .grid-9 > div { display: flex; } /* I-override 'yung "display: none" kanina */
+    .grid-9 > div:nth-child(1)::before { content: 'Slot Number:'; }
+    .grid-9 > div:nth-child(2)::before { content: 'Plate #:'; }
+    .grid-9 > div:nth-child(3)::before { content: 'Room:'; }
+    .grid-9 > div:nth-child(4)::before { content: 'Name:'; }
+    .grid-9 > div:nth-child(5)::before { content: 'Vehicle Type:'; }
+    .grid-9 > div:nth-child(6)::before { content: 'Category:'; }
+    .grid-9 > div:nth-child(7)::before { content: 'Parking Time:'; }
+    .grid-9 > div:nth-child(8)::before { content: 'Enter Time:'; }
+    .grid-9 > div:nth-child(9)::before { content: 'Enter Date:'; }
+
+    .pagination {
+        flex-direction: column;
+        gap: 1rem;
+    }
+}
+
+/* ========================================================= */
+/* ACCOUNT DETAILS MODAL STYLES (NEW) */
+/* ========================================================= */
+
+.account-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--bg-section-header) 0%, #2a231c 100%);
+    color: var(--text-light);
+    border-radius: 12px 12px 0 0;
+}
+
+.account-header .user-avatar {
+    width: 80px;
+    height: 80px;
+    background-color: var(--accent-gold);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: var(--text-dark);
+    border: 4px solid var(--accent-gold);
+}
+
+.account-info h2 {
+    font-family: var(--font-primary);
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-light);
+}
+
+.account-info p {
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+    color: var(--text-light);
+    opacity: 0.9;
+}
+
+.account-info p:first-of-type {
+    font-weight: 600;
+    color: var(--accent-gold);
+}
+
+/* Form Grid for Account Details */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    padding: 2rem;
+}
+
+.form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-field.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-field label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.change-password {
+    color: var(--accent-gold);
+    font-weight: normal;
+    font-size: 0.75rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.change-password:hover {
+    color: #e69100;
+}
+
+.form-field input,
+.form-field select {
+    padding: 0.75rem 1rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    background-color: white;
+    transition: all 0.3s ease;
+    font-family: var(--font-secondary);
+}
+
+.form-field input:focus,
+.form-field select:focus {
+    outline: none;
+    border-color: var(--accent-gold);
+    box-shadow: 0 0 0 3px rgba(255, 162, 55, 0.1);
+}
+
+.form-field input[type="date"] {
+    padding: 0.6rem 1rem;
+}
+
+/* Text Center for Save Button */
+.text-center {
+    text-align: center;
+    padding: 0 2rem 2rem 2rem;
+}
+
+/* Modal Large Specific Styles */
+.modal-large .modal-close {
+    color: var(--text-light);
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s ease;
+}
+
+.modal-large .modal-close:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Responsive Design for Account Modal */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .account-header {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem;
+    }
+    
+    .account-header .user-avatar {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+    
+    .modal-large {
+        margin: 1rem;
+        width: calc(100% - 2rem);
+    }
+}
+
+@media (max-width: 480px) {
+    .form-grid {
+        padding: 1rem;
+    }
+    
+    .account-header {
+        padding: 1rem;
+    }
+    
+    .account-info h2 {
+        font-size: 1.25rem;
+    }
+    
+    .text-center {
+        padding: 0 1rem 1rem 1rem;
+    }
+}
+
+/* --- BAGONG CSS PARA SA MGA LOGO SA MODAL --- */
+
+/* 1. Para sa parkinglot_2.png icon sa "Enter Vehicle" modal */
+.modal-icon .modal-img-icon {
+    width: 50px;  /* Pwede mong baguhin 'yung laki */
+    height: 50px;
+    object-fit: contain;
+}
+
+/* 2. Para sa "Edit Category" modal icons (edit.png at minus.png) */
+.category-item {
+    /* Tinitiyak lang na magkatabi 'yung text at 'yung mga button */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0; /* Nagdagdag lang ako ng kaunting space */
+}
+
+.category-actions {
+    display: flex;
+    gap: 0.5rem; /* Space sa pagitan ng dalawang buttons */
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 4px; /* Para 'di sharp 'yung kanto */
+}
+
+.btn-icon img {
+    width: 24px;   /* Pwede mong baguhin 'yung laki */
+    height: 24px;
+    display: block;
+}
+
+/* Opsyonal: Lagyan ng effect 'pag tinapat 'yung mouse */
+.btn-icon:hover {
+    opacity: 0.8; 
+}
+
+/* ========================================================= */
+/* FONT FIX (Para sigurado) */
+/* ========================================================= */
+
+/* Tinitiyak na 'yung table headers, table data, at 
+  'yung mga dynamic na table rows ay gumagamit 
+  ng tamang --font-secondary (Arial).
+*/
+th, td, .table-row > div {
+    font-family: var(--font-secondary);
+}
+
+/* ========================================================= */
+/* I-AYUSIN ANG "ENTER VEHICLE" MODAL (Target Image Fix) */
+/* ========================================================= */
+
+/* 1. Gawing dark brown ang BUONG modal, hindi lang header */
+#enterVehicleModal .modal {
+    background: #352C24; /* --bg-section-header */
+    color: #FFF2E0; /* --text-header */
+    border-radius: 20px; /* Mas rounded 'yung kanto */
+    padding: 0; 
+    overflow: hidden; /* Para sure na rounded lahat */
+}
+
+/* 2. Tanggalin 'yung separate background ng header */
+#enterVehicleModal .modal-header {
+    background-color: transparent;
+    color: inherit; 
+    padding: 1.5rem 2rem 1rem 2rem;
+}
+
+/* 3. Ayusin 'yung kulay ng text (labels) sa loob ng modal */
+#enterVehicleModal .form-field label {
+    color: #FFF2E0; /* --text-header */
+    font-weight: normal;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+    display: flex; /* Para sa icon */
+    align-items: center; /* Para sa icon */
+    gap: 0.5rem; /* Para sa icon */
+}
+
+/* 4. Ayusin 'yung kulay ng text sa modal header */
+#enterVehicleModal .modal-text {
+    color: #FFF2E0;
+    opacity: 0.8;
+}
+
+#enterVehicleModal .modal-title {
+    color: #FFA237; /* --accent-gold */
+}
+
+/* 5. Ayusin ang itsura ng mga input field at select */
+#enterVehicleModal .form-field input,
+#enterVehicleModal .form-field select {
+    background-color: #ECE0D1; /* Light beige color */
+    border: 1px solid #352C24; 
+    color: #352C24; /* Dark text */
+    border-radius: 8px; 
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+}
+
+/* 6. Itago 'yung 'edit' button (pencil) katabi ng Category */
+#enterVehicleModal .edit-btn {
+    display: none; 
+}
+
+/* 7. Ayusin 'yung pwesto ng close button (X) */
+#enterVehicleModal .modal-close {
+    color: #FFF2E0; 
+    top: 1.5rem; 
+    right: 1.5rem;
+    line-height: 1;
+}
+
+/* 8. Ayusin 'yung "SAVE" button */
+#enterVehicleModal .btn-yellow {
+    background-color: #FFA237; 
+    color: #352C24; 
+    border-radius: 8px; 
+    padding: 0.75rem 2.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+/* 9. Ayusin 'yung spacing ng button area */
+#enterVehicleModal .text-center {
+    padding: 0.5rem 2rem 2rem 2rem;
+}
+
+/* 10. Bagong style para sa mga icon mo sa label */
+.label-icon {
+    width: 16px; /* Pwede mong i-adjust 'yung laki */
+    height: 16px;
+    object-fit: contain;
+}
