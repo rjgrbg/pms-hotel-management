@@ -119,30 +119,32 @@ if (!userFormMessage && employeeIdForm) {
   userFormMessage.id = 'userFormMessage';
   userFormMessage.className = 'formMessage';
   userFormMessage.style.display = 'none';
-  userModal.insertBefore(userFormMessage, employeeIdForm);
+  // Insert before the first form in the modal
+  userModal.querySelector('.addUserModal').insertBefore(userFormMessage, employeeIdForm);
 }
 
-// ===== UTILITY FUNCTIONS FOR FORM MESSAGES =====
+
+// ===== UTILITY FUNCTIONS FOR FORM MESSAGES (FIXED) =====
 function showFormMessage(message, type = 'error', isUserForm = false) {
-  const msgElement = isUserForm ? userFormMessage : formMessage;
-  if (!msgElement) return;
-  msgElement.textContent = message;
-  msgElement.className = `formMessage ${type}`;
-  msgElement.style.display = 'block';
-  
-  if (type === 'success') {
-    setTimeout(() => {
-      hideFormMessage(isUserForm);
-    }, 3000);
-  }
+    const msgElement = isUserForm ? document.getElementById('userFormMessage') : document.getElementById('roomFormMessage');
+    if (!msgElement) return;
+    msgElement.textContent = message;
+    msgElement.className = `formMessage ${type}`;
+    msgElement.style.display = 'block';
+        
+    if (type === 'success') {
+        setTimeout(() => {
+            hideFormMessage(isUserForm);
+        }, 3000);
+    }
 }
 
 function hideFormMessage(isUserForm = false) {
-  const msgElement = isUserForm ? userFormMessage : formMessage;
-  if (!msgElement) return;
-  msgElement.style.display = 'none';
-  msgElement.textContent = '';
-  msgElement.className = 'formMessage';
+    const msgElement = isUserForm ? document.getElementById('userFormMessage') : document.getElementById('roomFormMessage');
+    if (!msgElement) return;
+    msgElement.style.display = 'none';
+    msgElement.textContent = '';
+    msgElement.className = 'formMessage';
 }
 
 // ===== PAGINATION UTILITY FUNCTIONS =====
@@ -223,18 +225,38 @@ function renderPaginationControls(containerId, totalPages, currentPage, onPageCh
   container.appendChild(nextBtn);
 }
 
-// ===== API CALL FUNCTIONS =====
+// ===== API CALL FUNCTIONS (FIX 1) =====
 async function apiCall(action, data = {}, method = 'GET', endpoint = 'room_actions.php') {
-    const url = endpoint + (method === 'GET' ? `?action=${action}` : '');
-    const options = { method: method };
+    const url = endpoint;
+    const options = {
+         method: method,
+        credentials: 'same-origin' // Include cookies for session
+    };
 
     if (method === 'POST') {
         const formData = new FormData();
         formData.append('action', action);
         for (const key in data) {
-            formData.append(key, data[key]);
+            if (data.hasOwnProperty(key)) {
+                formData.append(key, data[key]);
+            }
         }
         options.body = formData;
+    } else {
+        // For GET requests, append action to URL
+        const params = new URLSearchParams({ action: action });
+        options.method = 'GET';
+        return fetch(`${url}?${params.toString()}`, options)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .catch(error => {
+                console.error('API Call Failed:', error);
+                return { success: false, message: 'Network error. Please check your connection.' };
+            });
     }
 
     try {
@@ -242,10 +264,11 @@ async function apiCall(action, data = {}, method = 'GET', endpoint = 'room_actio
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return await response.json();
+        const result = await response.json();
+        return result;
     } catch (error) {
         console.error('API Call Failed:', error);
-        return { success: false, message: 'Request failed. Please try again.' };
+        return { success: false, message: 'Network error. Please try again.' };
     }
 }
 
@@ -452,40 +475,46 @@ function renderRoomsTable(data) {
   });
 }
 
-// ===== USER MANAGEMENT FUNCTIONS =====
+// ===== USER MANAGEMENT FUNCTIONS (FIX 6) =====
 async function fetchAndRenderUsers() {
+    const usersTableBody = document.getElementById('usersTableBody');
     if (!usersTableBody) return;
-    console.log('Fetching users...');
-    usersTableBody.innerHTML = '<tr><td colspan="6">Loading users...</td></tr>';
-    
-    const result = await apiCall('fetch_users', {}, 'GET', 'user_actions.php');
-    console.log('User fetch result:', result);
-    usersTableBody.innerHTML = ''; 
-
-    if (result.success && result.data && result.data.length > 0) {
-        usersData = result.data; 
-        console.log('Users data loaded:', usersData);
-        updateDashboardFromUsers(usersData);
         
-        paginationState.users.currentPage = 1;
-        renderUsersTable(usersData);
-        const recordCount = document.getElementById('usersRecordCount');
-        if (recordCount) recordCount.textContent = usersData.length;
-
-    } else if (result.success && (!result.data || result.data.length === 0)) {
-         usersTableBody.innerHTML = '<tr><td colspan="6">No users found.</td></tr>';
-         const recordCount = document.getElementById('usersRecordCount');
-         if (recordCount) recordCount.textContent = 0;
-         updateDashboardFromUsers([]); 
-         renderPaginationControls('user-management-tab', 0, 1, () => {});
-    } else {
-         usersTableBody.innerHTML = `<tr><td colspan="6">Failed to load data: ${result.message}</td></tr>`;
-         const recordCount = document.getElementById('usersRecordCount');
-         if (recordCount) recordCount.textContent = 0;
-         updateDashboardFromUsers([]);
-         renderPaginationControls('user-management-tab', 0, 1, () => {});
+    console.log('Fetching users...');
+    usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Loading users...</td></tr>';
+        
+    try {
+        const result = await apiCall('fetch_users', {}, 'GET', 'user_actions.php');
+        console.log('User fetch result:', result);
+                
+        if (result.success && result.data && result.data.length > 0) {
+            window.usersData = result.data; 
+            console.log('Users data loaded:', window.usersData);
+            updateDashboardFromUsers(window.usersData);
+                        
+            paginationState.users.currentPage = 1;
+            renderUsersTable(window.usersData);
+            const recordCount = document.getElementById('usersRecordCount');
+            if (recordCount) recordCount.textContent = window.usersData.length;
+        } else if (result.success && (!result.data || result.data.length === 0)) {
+            usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No users found.</td></tr>';
+            const recordCount = document.getElementById('usersRecordCount');
+            if (recordCount) recordCount.textContent = 0;
+            updateDashboardFromUsers([]); 
+            renderPaginationControls('user-management-tab', 0, 1, () => {});
+        } else {
+            usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 40px; color: #c33;">Failed to load users: ${result.message || 'Unknown error'}</td></tr>`;
+            const recordCount = document.getElementById('usersRecordCount');
+            if (recordCount) recordCount.textContent = 0;
+            updateDashboardFromUsers([]);
+            renderPaginationControls('user-management-tab', 0, 1, () => {});
+        }
+    } catch (error) {
+        console.error('Error fetching users:', error);
+        usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #c33;">Network error. Please refresh the page.</td></tr>';
     }
 }
+
 
 function renderUsersTable(data) {
   if (!usersTableBody) return;
@@ -932,35 +961,51 @@ document.getElementById('cancelUserEditBtn')?.addEventListener('click', () => {
     hideFormMessage(true);
 });
 
-employeeIdForm?.addEventListener('submit', async (e) => {
+// ===== KEY FIXES FOR USER MANAGEMENT =====
+// Fix 2: Update the employee ID form submission
+document.getElementById('employeeIdForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     hideFormMessage(true);
-    
-    const employeeId = employeeIdInput.value.trim();
-    
+        
+    const employeeId = document.getElementById('employeeId').value.trim();
+        
     if (!employeeId) {
         showFormMessage('Please enter an Employee ID.', 'error', true);
         return;
     }
-
     console.log('Looking up employee:', employeeId);
-    
-    const result = await apiCall('add_employee_by_id', { employeeId: employeeId }, 'POST', 'user_actions.php');
-    console.log('Add employee result:', result);
-
-    if (result.success) {
-        showFormMessage(result.message || 'Employee added successfully!', 'success', true);
-        employeeIdForm.reset();
-        await fetchAndRenderUsers();
         
-        setTimeout(() => {
-            userModal.style.display = 'none';
-            hideFormMessage(true);
-        }, 1500);
-    } else {
-        showFormMessage(result.message || 'Failed to add employee.', 'error', true);
+    // Show loading state
+    const lookupBtn = document.getElementById('lookupEmployeeBtn');
+    const originalText = lookupBtn.textContent;
+    lookupBtn.disabled = true;
+    lookupBtn.textContent = 'ADDING...';
+        
+    try {
+        const result = await apiCall('add_employee_by_id', { employeeId: employeeId }, 'POST', 'user_actions.php');
+        console.log('Add employee result:', result);
+        
+        if (result.success) {
+            showFormMessage(result.message || 'Employee added successfully!', 'success', true);
+            document.getElementById('employeeIdForm').reset();
+            await fetchAndRenderUsers();
+                        
+            setTimeout(() => {
+                document.getElementById('userModal').style.display = 'none';
+                hideFormMessage(true);
+            }, 2000);
+        } else {
+            showFormMessage(result.message || 'Failed to add employee.', 'error', true);
+        }
+    } catch (error) {
+        console.error('Error adding employee:', error);
+        showFormMessage('An unexpected error occurred. Please try again.', 'error', true);
+    } finally {
+        lookupBtn.disabled = false;
+        lookupBtn.textContent = originalText;
     }
 });
+
 
 function handleEditUserClick(event) {
     hideFormMessage(true);
@@ -972,7 +1017,8 @@ function handleEditUserClick(event) {
     userEditForm.style.display = 'block';
     
     document.getElementById('editUserFullName').textContent = `${user.Lname}, ${user.Fname}${user.Mname ? ' ' + user.Mname.charAt(0) + '.' : ''}`;
-    document.getElementById('editUserEmployeeId').textContent = `Employee ID: ${user.UserID}`;
+    // Use UserID for the static display
+    document.getElementById('editUserEmployeeId').textContent = `User ID: ${user.UserID}`; 
     
     editUserIdInput.value = user.UserID;
     userFnameInput.value = user.Fname;
@@ -984,74 +1030,139 @@ function handleEditUserClick(event) {
     userEmailInput.value = user.EmailAddress;
     userShiftInput.value = user.Shift;
     userAddressInput.value = user.Address;
-    userContactInput.value = user.Contact || '';
+    
+    // EmployeeID (from HRIS) is now an editable field, needs to be in the form
+    const userEmployeeIdInput = document.getElementById('userEmployeeId'); // This ID is assumed from your HTML
+    if(userEmployeeIdInput) {
+        userEmployeeIdInput.value = user.EmployeeID || '';
+    } else {
+        console.warn('Missing input field with id="userEmployeeId" in the edit form.');
+    }
+    
+    // Clear the (optional) contact field as it's not in the DB
+    if(userContactInput) {
+        userContactInput.value = ''; 
+    }
+    
+    // Clear password fields
+    const userPasswordInput = document.getElementById('userPassword');
+    const userConfirmPasswordInput = document.getElementById('userConfirmPassword');
+    if (userPasswordInput) userPasswordInput.value = '';
+    if (userConfirmPasswordInput) userConfirmPasswordInput.value = '';
 
     userModal.style.display = 'flex';
 }
 
-userEditForm?.addEventListener('submit', async (e) => {
+// Fix 3: Update the user edit form submission
+document.getElementById('userEditForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     hideFormMessage(true);
-
-    const userID = editUserIdInput.value;
     
+    const userID = document.getElementById('editUserId').value;
+    
+    // Get EmployeeID from the form (assuming an input with id 'userEmployeeId' exists)
+    const employeeIdValue = document.getElementById('userEmployeeId') ? document.getElementById('userEmployeeId').value.trim() : null;
+
     const data = {
         userID: userID,
-        fname: userFnameInput.value,
-        lname: userLnameInput.value,
-        mname: userMnameInput.value,
-        birthday: userBirthdayInput.value,
-        accountType: userAccountTypeInput.value,
-        username: userUsernameInput.value,
-        email: userEmailInput.value,
-        shift: userShiftInput.value,
-        address: userAddressInput.value,
-        contact: userContactInput.value
+        fname: document.getElementById('userFname').value.trim(),
+        lname: document.getElementById('userLname').value.trim(),
+        mname: document.getElementById('userMname').value.trim(),
+        birthday: document.getElementById('userBirthday').value,
+        accountType: document.getElementById('userAccountType').value,
+        username: document.getElementById('userUsername').value.trim(),
+        email: document.getElementById('userEmail').value.trim(),
+        shift: document.getElementById('userShift').value,
+        address: document.getElementById('userAddress').value.trim(),
+        employeeID: employeeIdValue, // Send EmployeeID to PHP
+        password: document.getElementById('userPassword') ? document.getElementById('userPassword').value : '', // Assumed password fields
+        confirmPassword: document.getElementById('userConfirmPassword') ? document.getElementById('userConfirmPassword').value : ''
     };
-
+    
+    // Validation
+    if (!data.fname || !data.lname || !data.username || !data.email || !data.accountType || !data.shift) {
+        showFormMessage('Please fill in all required fields.', 'error', true);
+        return;
+    }
+    
     console.log('Updating user data:', data);
-    const result = await apiCall('edit_user', data, 'POST', 'user_actions.php');
-    console.log('User update result:', result);
-
-    if (result.success) {
-        showFormMessage(result.message || 'User updated successfully!', 'success', true);
-        await fetchAndRenderUsers();
         
-        setTimeout(() => {
-            userModal.style.display = 'none';
-            hideFormMessage(true);
-        }, 1500);
-    } else {
-        showFormMessage(result.message || 'Failed to update user.', 'error', true);
+    // Show loading state
+    const saveBtn = document.getElementById('saveUserBtn');
+    const originalText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'UPDATING...';
+        
+    try {
+        const result = await apiCall('edit_user', data, 'POST', 'user_actions.php');
+        console.log('User update result:', result);
+        
+        if (result.success) {
+            showFormMessage(result.message || 'User updated successfully!', 'success', true);
+            await fetchAndRenderUsers();
+                        
+            setTimeout(() => {
+                document.getElementById('userModal').style.display = 'none';
+                hideFormMessage(true);
+            }, 2000);
+        } else {
+            showFormMessage(result.message || 'Failed to update user.', 'error', true);
+        }
+    } catch (error) {
+        console.error('Error updating user:', error);
+        showFormMessage('An unexpected error occurred. Please try again.', 'error', true);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
     }
 });
 
-// ===== DELETE USER HANDLERS =====
-let userToDeleteID = null;
+
+// ===== DELETE USER HANDLERS (FIX 5) =====
+window.userToDeleteID = null;
 
 function handleDeleteUserClick(event) {
-    userToDeleteID = event.currentTarget.dataset.userId;
+    window.userToDeleteID = event.currentTarget.dataset.userId;
     const username = event.currentTarget.dataset.username;
     document.getElementById('deleteUserText').textContent = `Are you sure you want to delete user "${username}"? This action cannot be undone.`;
-    deleteUserModal.style.display = 'flex';
+    document.getElementById('deleteUserModal').style.display = 'flex';
 }
 
 closeDeleteUserModalBtn?.addEventListener('click', () => deleteUserModal.style.display = 'none');
 cancelDeleteUserBtn?.addEventListener('click', () => deleteUserModal.style.display = 'none');
 
-confirmDeleteUserBtn?.addEventListener('click', async () => {
+// Fix 4: Update the delete user confirmation
+document.getElementById('confirmDeleteUserBtn')?.addEventListener('click', async () => {
+    const userToDeleteID = window.userToDeleteID; // Use global variable
     if (!userToDeleteID) return;
-
-    const data = { userID: userToDeleteID };
-    const result = await apiCall('delete_user', data, 'POST', 'user_actions.php');
-
-    if (result.success) {
-        deleteUserModal.style.display = 'none';
-        await fetchAndRenderUsers();
-    } else {
-        alert(result.message);
+    
+    const confirmBtn = document.getElementById('confirmDeleteUserBtn');
+    const originalText = confirmBtn.textContent;
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'DELETING...';
+    
+    try {
+        const data = { userID: userToDeleteID };
+        const result = await apiCall('delete_user', data, 'POST', 'user_actions.php');
+        
+        if (result.success) {
+            document.getElementById('deleteUserModal').style.display = 'none';
+            await fetchAndRenderUsers();
+            // Show success notification (using alert for simplicity, but a toast/modal is better)
+            alert('User deleted successfully!'); 
+        } else {
+            alert(result.message || 'Failed to delete user');
+        }
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        alert('An unexpected error occurred. Please try again.');
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = originalText;
+        window.userToDeleteID = null;
     }
 });
+
 
 // ===== ROOM MODAL HANDLERS =====
 document.getElementById('addRoomBtn')?.addEventListener('click', () => {

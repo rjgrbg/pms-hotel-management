@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 26, 2025 at 03:53 PM
+-- Generation Time: Nov 04, 2025 at 07:11 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -226,14 +226,13 @@ CREATE TABLE `room` (
 --
 
 INSERT INTO `room` (`RoomID`, `UserID`, `RoomNumber`, `RoomType`, `GuestCapacity`, `Rate`, `RoomStatus`, `LastClean`, `LastMaintenance`, `FloorNumber`) VALUES
-(2, 1, 202, 'Standard Room', '1–2 guests', 123.02, 'Needs Cleaning', NULL, NULL, 2),
 (5, 1, 203, 'Deluxe Room', '2–3 guests', 120.00, 'Needs Cleaning', NULL, NULL, 2),
 (6, 1, 402, 'Penthouse Suite', '4–6 guests', 230.00, 'available', NULL, NULL, 4),
 (17, 1, 404, 'Deluxe Room', '2–3 guests', 66.00, 'maintenance', NULL, NULL, 4),
 (19, 1, 223, 'Penthouse Suite', '4–6 guests', 2.00, 'available', NULL, NULL, 2),
 (20, 1, 407, 'Standard Room', '1–2 guests', 2.00, 'occupied', NULL, NULL, 4),
-(21, 1, 244, 'Deluxe Room', '2–3 guests', 2.00, 'maintenance', NULL, NULL, 2),
-(24, 1, 501, 'Deluxe Room', '2–3 guests', 230.00, 'Reserved', NULL, NULL, 5);
+(22, 1, 226, 'Standard Room', '1–2 guests', 32.00, 'Occupied', NULL, NULL, 2),
+(23, 1, 235, 'Deluxe Room', '2–3 guests', 223.00, 'Needs Cleaning', NULL, NULL, 2);
 
 -- --------------------------------------------------------
 
@@ -243,31 +242,30 @@ INSERT INTO `room` (`RoomID`, `UserID`, `RoomNumber`, `RoomType`, `GuestCapacity
 
 CREATE TABLE `users` (
   `UserID` int(11) NOT NULL,
+  `EmployeeID` varchar(50) DEFAULT NULL,
   `Fname` varchar(255) NOT NULL,
   `Lname` varchar(255) NOT NULL,
   `Mname` varchar(255) DEFAULT NULL,
   `Birthday` date NOT NULL,
   `AccountType` varchar(255) NOT NULL,
   `Username` varchar(255) NOT NULL,
-  `Password` varchar(255) NOT NULL,
+  `Password` varchar(255) DEFAULT NULL,
   `EmailAddress` varchar(255) NOT NULL,
   `Shift` varchar(255) NOT NULL,
-  `Address` varchar(255) NOT NULL
+  `Address` varchar(255) NOT NULL,
+  `ContactNumber` varchar(50) DEFAULT NULL,
+  `ActivationToken` varchar(64) DEFAULT NULL,
+  `TokenExpiry` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`UserID`, `Fname`, `Lname`, `Mname`, `Birthday`, `AccountType`, `Username`, `Password`, `EmailAddress`, `Shift`, `Address`) VALUES
-(1, 'Wilms', 'Bags', 'Tite', '2005-09-08', 'admin', 'admin', '$2y$10$tFkFJ9ec3OrZTqAehu421OLSNA3cI8LM4FaX21ny3Q/5BoKBXfsu6', 'bagayan.johnwilmer.timaan@gmail.com', 'Night', 'asd'),
-(6, 'asd', 'asd', 'qww', '2014-03-25', 'housekeeping_manager', 'housekeeping', '$2y$10$CJJ9MT3wuh.RB6gQWM5TN.CLt2sny7O1BeUmAf3yjZ11CD3S1f99K', 'dayvoice993@gmail.com', 'Morning', 'asdsd'),
-(7, 'gg', 'gg', 'gg', '2016-04-25', 'maintenance_manager', 'maintenance', '$2y$10$Qr8n1qqwDN19Sy9qArIw1uaSljgUL5i.2FOt5JEjIBUsC9a7zEDWi', 'garabiag.arjay04@gmail.com', 'Afternoon', 'asd'),
-(8, 'tt', 'tt', 'tt', '2019-03-25', 'parking_manager', 'parking', '$2y$10$QWZY.tx3h03AbVMnBeAUYusqSVa.UesM0g29tFn.qL/7M1ylZrgvO', 'farmersday96@gmail.com', 'Night', 'asd'),
-(9, 'dd', 'dd', 'dd', '2020-03-25', 'housekeeping_staff', 'hstaff', '$2y$10$c1xhsoAmkquyE6hvTZvIMOzaxpDj5aLTcXKKNcsqvj/fo2OVUKaW6', 'da@gmail.com', 'Morning', 'asd'),
-(10, 'asd', 'asd', 'asd', '2023-03-25', 'maintenance_staff', 'mstaff', '$2y$10$TDu.Jb0HEajidUsDTbuOvutInRB163Xb64A2xHkcG3SUNm7eWgoVS', 'sda@gmail.com', 'Afternoon', 'asd'),
-(11, 'haha', 'hehe', 'huhu', '2025-10-11', 'admin', 'admin12', '$2y$10$a0R7zDlByaTpOw/EzYnHpOGUH3wisHehr.iwuWFQeqcYHd9hLZnni', 'johnwilmerbagayan@gmail.com', 'Morning', 'qwdefrsdtty6u7i'),
-(12, 'gege', 'gaga', 'gogo', '2025-10-11', 'inventory_manager', 'admin123', '$2y$10$a0R7zDlByaTpOw/EzYnHpOGUH3wisHehr.iwuWFQeqcYHd9hLZnni', 'johnwilmerbagayan@gmail.com', 'Morning', 'qwdefrsdtty6u7i');
+INSERT INTO `users` (`UserID`, `EmployeeID`, `Fname`, `Lname`, `Mname`, `Birthday`, `AccountType`, `Username`, `Password`, `EmailAddress`, `Shift`, `Address`, `ContactNumber`, `ActivationToken`, `TokenExpiry`) VALUES
+(1, NULL, 'vincew', 'vargas', 'gonzales', '2025-10-01', 'admin', 'admin', '$2y$10$a5mhWLQUB088C5zlEfOcpOwFi3XtYHzAlIL3kvUWiPydzb6q3oCNu', 'vincevargas90@gmail.com', 'Night', 'asd', NULL, NULL, NULL),
+(34, 'E1011', 'house', 'keeping', 'manager', '2015-11-10', 'housekeeping_manager', 'housekeeping', 'asdasd', 'asd@gmail.com', 'asd', 'asd', '324', NULL, NULL),
+(35, 'E1012', 'maintain', 'nance', 'manager', '2015-11-02', 'maintenance_manager', 'maintenance', 'asdasd', 'asd@sf.com', 'ss', 'asd', 'asd', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -451,7 +449,10 @@ ALTER TABLE `room`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`UserID`),
-  ADD UNIQUE KEY `Username` (`Username`);
+  ADD UNIQUE KEY `Username` (`Username`),
+  ADD UNIQUE KEY `EmployeeID` (`EmployeeID`),
+  ADD UNIQUE KEY `idx_activation_token` (`ActivationToken`),
+  ADD KEY `idx_employee_id` (`EmployeeID`);
 
 --
 -- Indexes for table `vehiclecategory`
@@ -567,13 +568,13 @@ ALTER TABLE `rate`
 -- AUTO_INCREMENT for table `room`
 --
 ALTER TABLE `room`
-  MODIFY `RoomID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `RoomID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `vehiclecategory`
