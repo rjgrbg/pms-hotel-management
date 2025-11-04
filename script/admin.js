@@ -19,6 +19,7 @@ const ACCOUNT_TYPE_MAP = {
   'admin': 'Admin',
   'housekeeping_manager': 'Housekeeping Manager',
   'maintenance_manager': 'Maintenance Manager',
+  'Inventory_manager': 'Inventory Manager',
   'parking_manager': 'Parking Manager',
   'housekeeping_staff': 'Housekeeping Staff',
   'maintenance_staff': 'Maintenance Staff'
