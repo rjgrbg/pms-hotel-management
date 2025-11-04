@@ -442,15 +442,6 @@ tbody tr:hover {
 }
 
 /* ===== STATUS BADGES ===== */
-.statusBadge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: capitalize;
-  display: inline-block;
-}
-
 .statusBadge.available {
   background-color: #5cb85c;
   color: #fff;
@@ -466,9 +457,8 @@ tbody tr:hover {
   color: #fff;
 }
 
-/* CHANGED: Purple color for Needs Cleaning (was orange #ff6b35) */
 .statusBadge.needs-cleaning {
-  background-color: #9b59b6; /* Purple - distinct from all other statuses */
+  background-color: #9b59b6;
   color: #fff;
 }
 
@@ -477,8 +467,6 @@ tbody tr:hover {
   color: #fff;
 }
 
-
-/* ===== INVENTORY STATUS BADGES ===== */
 .statusBadge.in-stock {
   background-color: #5cb85c;
 }
@@ -491,9 +479,60 @@ tbody tr:hover {
   background-color: #c9302c;
 }
 
-/* ===== PARKING STATUS BADGES ===== */
 .statusBadge.vacant {
   background-color: #5cb85c;
+}
+
+.statusBadge.stocked {
+  background-color: #5cb85c;
+}
+/* ===== USER BADGES ===== */
+.statusBadge.admin{
+  background-color: #480c1b; 
+}
+
+.statusBadge.housekeeping_manager {
+    background-color: #007bff; /* Blue - Standard for Service/Cleaning */
+}
+
+.statusBadge.maintenance_manager {
+    background-color: #ff9500; /* Orange - Standard for Caution/Work-in-progress */
+}
+
+.statusBadge.parking_manager {
+    background-color: #5cb85c; /* Green - Standard for Availability/Logistics */
+}
+.statusBadge.inventory_manager {
+    background-color: #9b59b6; /* Purple - Standard for Inventory/Stock */
+}
+
+.statusBadge.housekeeping_staff {
+    background-color: #17a2b8; /* Teal - Standard for Support/Assistance */
+}
+
+.statusBadge.maintenance_staff {
+    background-color: #ffc107; /* Yellow - Standard for Maintenance/Repairs */
+}
+
+/* ===== ACTION BADGES ===== */
+.actionBadge {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.actionBadge.logged-in {
+  background-color: #5cb85c;
+  color: #fff;
+}
+
+.actionBadge.logged-out {
+  background-color: #ff9500;
+  color: #fff;
 }
 
 /* ===== ACTION BUTTONS ===== */
@@ -521,11 +560,13 @@ tbody tr:hover {
   object-fit: contain;
 }
 
-.editBtn:hover {
+.editBtn:hover,
+.editUserBtn:hover {
   background-color: #e3f2fd;
 }
 
-.deleteBtn:hover {
+.deleteBtn:hover,
+.deleteUserBtn:hover {
   background-color: #ffebee;
 }
 
@@ -542,8 +583,7 @@ tbody tr:hover {
   background-color: #e68600;
 }
 
-/* ===== STRONG ACTIONS COLUMN ALIGNMENT FIX ===== */
-/* Only target the Rooms table to avoid affecting other tables */
+/* ===== ROOMS ACTION ALIGNMENT ===== */
 #rooms-page .tableWrapper table th:last-child,
 #rooms-page .tableWrapper table td:last-child {
   text-align: center;
@@ -606,131 +646,13 @@ tbody tr:hover {
   text-align: center;
 }
 
-@media (max-width: 760px) {
-  #rooms-page .tableWrapper table td:last-child {
-    width: auto;
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-  #rooms-page .actionBtn {
-    width: 32px;
-    height: 32px;
-  }
-  #rooms-page .actionBtn img {
-    width: 16px;
-    height: 16px;
-  }
+/* ===== USER MANAGEMENT ACTIONS ===== */
+#manage-users-page .actionButtons {
+  justify-content: center;
 }
 
-/* ===== ROOM MODAL ===== */
-.roomModal {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 35px;
-  max-width: 500px;
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  position: relative;
-  animation: slideIn 0.3s ease;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.roomModal h2 {
-  color: #480c1b;
-  font-size: 22px;
-  margin-bottom: 25px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+#manage-users-page .tableWrapper table td:last-child {
   text-align: center;
-}
-
-.formGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 15px;
-}
-
-.formGroup {
-  margin-bottom: 15px;
-}
-
-.formGroup label {
-  display: block;
-  margin-bottom: 8px;
-  color: #333;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.formGroup input,
-.formGroup select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  font-family: 'Arial', sans-serif;
-  transition: border 0.2s;
-}
-
-.formGroup input:focus,
-.formGroup select:focus {
-  outline: none;
-  border-color: #d4af78;
-}
-
-.formGroup input[type="number"]::-webkit-inner-spin-button,
-.formGroup input[type="number"]::-webkit-outer-spin-button {
-  opacity: 1;
-}
-
-/* ===== PAGINATION ===== */
-.pagination {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
-  border-top: 1px solid #f0f0f0;
-  background-color: #f9f9f9;
-  font-size: 12px;
-}
-
-.paginationInfo {
-  color: #666;
-}
-
-.paginationControls {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.paginationBtn {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  padding: 6px 10px;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: all 0.2s;
-}
-
-.paginationBtn:hover {
-  border-color: #ffb400;
-  color: #ffb400;
-}
-
-.paginationBtn.active {
-  background-color: #ffb400;
-  border-color: #ffb400;
-  color: #fff;
-}
-
-.paginationDots {
-  color: #999;
-  padding: 0 4px;
 }
 
 /* ===== MODALS ===== */
@@ -758,16 +680,6 @@ tbody tr:hover {
   }
 }
 
-.logoutModal {
-  background-color: #480c1b;
-  border-radius: 8px;
-  padding: 35px;
-  max-width: 420px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  position: relative;
-  animation: slideIn 0.3s ease;
-}
-
 @keyframes slideIn {
   from {
     transform: translateY(-30px);
@@ -777,6 +689,40 @@ tbody tr:hover {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+/* ===== ROOM MODAL ===== */
+.roomModal {
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 35px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideIn 0.3s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.roomModal h2 {
+  color: #480c1b;
+  font-size: 22px;
+  margin-bottom: 25px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+/* ===== LOGOUT MODAL ===== */
+.logoutModal {
+  background-color: #480c1b;
+  border-radius: 8px;
+  padding: 35px;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideIn 0.3s ease;
 }
 
 .closeBtn {
@@ -826,6 +772,56 @@ tbody tr:hover {
   margin-bottom: 25px;
 }
 
+/* ===== FORM STYLES ===== */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.formGroup {
+  margin-bottom: 15px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'Arial', sans-serif;
+  transition: border 0.2s;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #d4af78;
+}
+
+.formGroup textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.formGroup input[type="number"]::-webkit-inner-spin-button,
+.formGroup input[type="number"]::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+/* ===== MODAL BUTTONS ===== */
 .modalButtons {
   display: flex;
   gap: 12px;
@@ -900,17 +896,353 @@ tbody tr:hover {
 }
 
 /* ===== TAB CONTENT ===== */
-#hk-requests-tab,
-#hk-history-tab {
+.tabContent {
   display: none;
 }
 
-#hk-requests-tab.active,
-#hk-history-tab.active {
+.tabContent.active {
   display: block;
 }
 
-/* ===== RESPONSIVE ===== */
+/* ===== SUB-TAB NAVIGATION ===== */
+.subTabNavigation {
+  display: flex;
+  gap: 0;
+  margin-bottom: 25px;
+  border-bottom: 2px solid #e0e0e0;
+  align-items: center;
+}
+
+.subTabBtn {
+  background-color: #fafafa;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  transition: all 0.2s;
+}
+
+.subTabBtn:hover {
+  color: #555;
+  background-color: #f0f0f0;
+}
+
+.subTabBtn.active {
+  color: #d4af78;
+  border-bottom-color: #d4af78;
+  background-color: #fff;
+  font-weight: 700;
+}
+
+/* ===== SUB-TAB CONTENT ===== */
+.subTabContent {
+  display: none;
+}
+
+.subTabContent.active {
+  display: block;
+}
+
+/* ===== PAGINATION ===== */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-top: 1px solid #f0f0f0;
+  background-color: #f9f9f9;
+  font-size: 12px;
+}
+
+.paginationInfo {
+  color: #666;
+}
+
+.paginationControls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.paginationBtn {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 6px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.paginationBtn:hover {
+  border-color: #ffb400;
+  color: #ffb400;
+}
+
+.paginationBtn.active {
+  background-color: #ffb400;
+  border-color: #ffb400;
+  color: #fff;
+}
+
+.paginationBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.paginationDots {
+  color: #999;
+  padding: 0 4px;
+}
+
+/* ===== FORM MESSAGE ===== */
+.formMessage {
+  display: none;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.formMessage.error {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+}
+
+.formMessage.success {
+  background-color: #efe;
+  border: 1px solid #cfc;
+  color: #3c3;
+}
+
+.formMessage.warning {
+  background-color: #ffc;
+  border: 1px solid #fc9;
+  color: #c93;
+}
+
+/* ===== USER MODAL ===== */
+.addUserModal {
+  background: #480c1b;
+  border-radius: 12px;
+  padding: 40px;
+  max-width: 450px;
+  width: 90%;
+  position: relative;
+  animation: slideIn 0.3s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.addUserModal .closeBtn {
+  color: #fff;
+  font-size: 30px;
+  top: 15px;
+  right: 15px;
+}
+
+.addUserModal h2 {
+  color: #d49801;
+  font-size: 24px;
+  margin-bottom: 30px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* Employee ID Form */
+#employeeIdForm .formGroup {
+  margin-bottom: 25px;
+}
+
+#employeeIdForm .formGroup label {
+  display: block;
+  margin-bottom: 10px;
+  color: #d4af78;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#employeeIdForm .formGroup input {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #5a4332;
+  border-radius: 6px;
+  font-size: 15px;
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #333;
+  transition: all 0.3s;
+}
+
+#employeeIdForm .formGroup input:focus {
+  outline: none;
+  border-color: #d4af78;
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(212, 175, 120, 0.1);
+}
+
+#employeeIdForm .formGroup input::placeholder {
+  color: #999;
+}
+
+/* User Modal Buttons */
+.addUserModal .modalButtons {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+.addUserModal .modalBtn {
+  padding: 13px 30px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.3s;
+  min-width: 140px;
+}
+
+.addUserModal .cancelBtn {
+  background-color: rgb(221, 221, 221);
+  color: #0b0700;
+  
+}
+
+.addUserModal .cancelBtn:hover {
+  background-color: rgb(145, 145, 145);
+  transform: translateY(-2px);
+}
+
+.addUserModal .confirmBtn {
+  background-color: #ffb400;
+  color: #2a1810;
+ 
+}
+
+.addUserModal .confirmBtn:hover {
+  background-color: #ffc933;
+  transform: translateY(-2px);
+  
+}
+
+/* User Profile Section */
+.userProfileSection {
+  text-align: center;
+  padding: 20px 0 30px;
+  border-bottom: 2px solid rgba(212, 175, 120, 0.3);
+  margin-bottom: 25px;
+}
+
+.userProfileSection .profileAvatar {
+  width: 90px;
+  height: 90px;
+  margin: 0 auto 15px;
+  border-radius: 50%;
+  overflow: hidden;
+  background-color: rgba(212, 175, 120, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #d4af78;
+}
+
+.userProfileSection .profileAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(1.1);
+}
+
+.editUserName {
+  color: #d4af78;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.editUserEmployeeId {
+  color: rgba(212, 175, 120, 0.7);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* User Edit Form */
+#userEditForm .formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px 20px;
+  margin-bottom: 15px;
+}
+
+#userEditForm .formGroup textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+/* User Modal Form Message */
+.addUserModal .formMessage {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.addUserModal .formMessage.error {
+  background-color: rgba(255, 107, 53, 0.15);
+  border: 1px solid rgba(255, 107, 53, 0.4);
+  color: #ff6b35;
+}
+
+.addUserModal .formMessage.success {
+  background-color: rgba(92, 184, 92, 0.15);
+  border: 1px solid rgba(92, 184, 92, 0.4);
+  color: #5cb85c;
+}
+
+/* ===== USER LOGS TABLE ===== */
+#user-logs-tab .tableWrapper table th,
+#user-logs-tab .tableWrapper table td {
+  font-size: 11px;
+  padding: 10px 8px;
+}
+
+#user-logs-tab .tableWrapper {
+  overflow-x: auto;
+}
+
+#user-logs-tab .tableWrapper table {
+  min-width: 1400px;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 1024px) {
   .mainContent {
     padding: 20px;
@@ -991,10 +1323,16 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 
-  .logoutModal {
+  .logoutModal,
+  .roomModal {
     width: 90%;
     max-width: 380px;
     padding: 25px;
+  }
+
+  .addUserModal {
+    width: 95%;
+    padding: 30px 25px;
   }
 
   .modalButtons {
@@ -1016,144 +1354,351 @@ tbody tr:hover {
   .addRoomBtn {
     width: 100%;
   }
-}
 
-/* ===== FORM MESSAGE STYLES ===== */
-.formMessage {
-  display: none;
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.5;
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+  #user-logs-tab .tableWrapper table {
+    min-width: 1300px;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  #userEditForm .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tabNavigation {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+
+  .tabBtn {
+    white-space: nowrap;
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+
+  .tableWrapper {
+    overflow-x: auto;
+  }
+
+  table {
+    min-width: 800px;
   }
 }
 
-.formMessage.error {
-  background-color: #fee;
-  border: 1px solid #fcc;
-  color: #c33;
+@media (max-width: 480px) {
+  .header {
+    padding: 12px 20px;
+  }
+
+  .headerLogo {
+    width: 28px;
+    height: 28px;
+  }
+
+  .hotelName {
+    font-size: 14px;
+  }
+
+  .pageTitle {
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .roomModal,
+  .addUserModal {
+    padding: 20px;
+    width: 95%;
+  }
+
+  .roomModal h2,
+  .addUserModal h2 {
+    font-size: 18px;
+    margin-bottom: 20px;
+  }
+
+  .statCard {
+    padding: 20px;
+  }
+
+  .statValue {
+    font-size: 32px;
+  }
+
+  .controlsRow {
+    margin-bottom: 15px;
+  }
+
+  th,
+  td {
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+
+  .statusBadge {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .actionBtn {
+    padding: 6px;
+  }
+
+  .actionBtn img {
+    width: 16px;
+    height: 16px;
+  }
+
+  #rooms-page .actionBtn {
+    width: 30px;
+    height: 30px;
+  }
+
+  #rooms-page .actionBtn img {
+    width: 14px;
+    height: 14px;
+  }
+
+  .pagination {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .paginationInfo {
+    margin-bottom: 5px;
+  }
+
+  .paginationBtn {
+    padding: 5px 8px;
+    font-size: 11px;
+  }
 }
 
-.formMessage.success {
-  background-color: #efe;
-  border: 1px solid #cfc;
-  color: #3c3;
+/* ===== SCROLLBAR STYLING ===== */
+.mainContent::-webkit-scrollbar,
+.sidebarContent::-webkit-scrollbar,
+.tableWrapper::-webkit-scrollbar,
+.roomModal::-webkit-scrollbar,
+.addUserModal::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.formMessage.warning {
-  background-color: #ffc;
-  border: 1px solid #fc9;
-  color: #c93;
+.mainContent::-webkit-scrollbar-track,
+.sidebarContent::-webkit-scrollbar-track,
+.tableWrapper::-webkit-scrollbar-track,
+.roomModal::-webkit-scrollbar-track,
+.addUserModal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
 }
 
-/* Add to admin.css */
+.mainContent::-webkit-scrollbar-thumb,
+.sidebarContent::-webkit-scrollbar-thumb,
+.tableWrapper::-webkit-scrollbar-thumb,
+.roomModal::-webkit-scrollbar-thumb,
+.addUserModal::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
 
-/* User Modal Styles (similar to roomModal) */
-.userModal {
-  background-color: #fff;
-  border-radius: 8px;
-  padding: 35px;
-  max-width: 600px; /* Slightly wider for more fields */
-  width: 90%;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+.mainContent::-webkit-scrollbar-thumb:hover,
+.sidebarContent::-webkit-scrollbar-thumb:hover,
+.tableWrapper::-webkit-scrollbar-thumb:hover,
+.roomModal::-webkit-scrollbar-thumb:hover,
+.addUserModal::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ===== PRINT STYLES ===== */
+@media print {
+  .sidebar,
+  .controlsRow,
+  .pagination,
+  .modalBackdrop {
+    display: none !important;
+  }
+
+  .mainWrapper {
+    display: block;
+  }
+
+  .mainContent {
+    padding: 0;
+  }
+
+  .page {
+    display: block !important;
+    page-break-after: always;
+  }
+
+  .tableWrapper {
+    box-shadow: none;
+  }
+
+  tbody tr {
+    page-break-inside: avoid;
+  }
+}
+
+/* ===== ACCESSIBILITY ===== */
+.navLink:focus,
+.tabBtn:focus,
+.filterDropdown:focus,
+.searchInput:focus,
+.refreshBtn:focus,
+.downloadBtn:focus,
+.addRoomBtn:focus,
+.modalBtn:focus,
+.actionBtn:focus,
+.paginationBtn:focus {
+  outline: 2px solid #d4af78;
+  outline-offset: 2px;
+}
+
+.navLink:focus-visible,
+.tabBtn:focus-visible,
+.filterDropdown:focus-visible,
+.searchInput:focus-visible {
+  outline: 2px solid #d4af78;
+  outline-offset: 2px;
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ===== LOADING STATES ===== */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: wait;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #480c1b;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ===== TOOLTIPS ===== */
+[title] {
   position: relative;
-  animation: slideIn 0.3s ease;
-  max-height: 90vh;
-  overflow-y: auto;
+  cursor: help;
 }
 
-.userModal h2 {
-  color: #480c1b;
-  font-size: 22px;
-  margin-bottom: 25px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+/* ===== DARK MODE SUPPORT (Optional) ===== */
+@media (prefers-color-scheme: dark) {
+  /* Uncomment to enable dark mode */
+  /*
+  body {
+    background-color: #1a1a1a;
+    color: #e0e0e0;
+  }
+
+  .mainContent {
+    background-color: #1a1a1a;
+  }
+
+  .tableWrapper,
+  .statCard {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+  }
+
+  th {
+    background-color: #1a1a1a;
+  }
+
+  td {
+    border-bottom-color: #3d3d3d;
+  }
+
+  tbody tr:nth-child(odd) {
+    background-color: #252525;
+  }
+
+  tbody tr:hover {
+    background-color: #353535;
+  }
+  */
+}
+
+/* ===== CUSTOM ANIMATIONS ===== */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ===== UTILITY CLASSES ===== */
+.text-center {
   text-align: center;
 }
 
-.userModal .formGrid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Responsive grid */
-    gap: 15px 20px;
+.text-right {
+  text-align: right;
 }
 
-.userModal .formGroup label {
-  display: block;
-  margin-bottom: 8px;
-  color: #333;
-  font-size: 13px;
-  font-weight: 600;
+.text-left {
+  text-align: left;
 }
 
-.userModal .formGroup input,
-.userModal .formGroup select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 13px;
-  font-family: 'Arial', sans-serif;
-  transition: border 0.2s;
+.mt-10 {
+  margin-top: 10px;
 }
 
- /* Password toggle specific to user modal */
-.userModal .passwordInputWrapper {
-    position: relative;
-}
-.userModal .passwordInputWrapper input {
-    padding-right: 40px; /* Make space for icon */
-}
- .userModal .togglePassword {
-    position: absolute;
-    right: 1px;
-    top: 1px;
-    bottom: 1px;
-    width: 38px;
-    background: #eee;
-    border: none;
-    border-radius: 0 4px 4px 0;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
- .userModal .togglePassword img {
-    width: 18px;
-    height: 18px;
-    opacity: 0.7;
+.mt-20 {
+  margin-top: 20px;
 }
 
-.userModal .formGroup input:focus,
-.userModal .formGroup select:focus {
-  outline: none;
-  border-color: #d4af78;
+.mb-10 {
+  margin-bottom: 10px;
 }
 
- .userModal .formGroup input[type="date"] {
-    padding: 9px 12px; /* Adjust padding for date picker icon */
- }
-
- /* Full width for Address */
- .userModal .formGroup.full-width {
-    grid-column: 1 / -1; /* Span all columns */
- }
-
-/* Action buttons in user table */
-#manage-users-page .actionButtons {
-  justify-content: center; /* Center buttons */
+.mb-20 {
+  margin-bottom: 20px;
 }
-#manage-users-page .tableWrapper table td:last-child {
-     text-align: center; /* Center align action column content */
+
+.hidden {
+  display: none !important;
 }
+
+.visible {
+  display: block !important;
+}
+
+
+/* ===== END OF CSS ===== */
+ 

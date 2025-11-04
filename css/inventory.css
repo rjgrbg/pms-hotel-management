@@ -216,8 +216,27 @@ body {
   flex-wrap: wrap;
 }
 
+.filterDropdown,
+.searchInput {
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 13px;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: border 0.2s;
+  font-family: 'Arial', sans-serif;
+}
+
 .filterDropdown {
   min-width: 100px;
+}
+
+.filterDropdown:focus,
+.searchInput:focus {
+  outline: none;
+  border-color: #ffb400;
 }
 
 .searchBox {
@@ -738,6 +757,13 @@ tbody tr:hover {
     flex-direction: column;
   }
   .modalBtn {
+    width: 100%;
+  }
+  .filterDropdown,
+  .searchBox,
+  .refreshBtn,
+  .downloadBtn,
+  .addRoomBtn {
     width: 100%;
   }
 }

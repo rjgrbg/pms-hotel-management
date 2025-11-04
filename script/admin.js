@@ -3,10 +3,15 @@ const paginationState = {
   rooms: { currentPage: 1, itemsPerPage: 10 },
   housekeeping: { currentPage: 1, itemsPerPage: 10 },
   housekeepingHistory: { currentPage: 1, itemsPerPage: 10 },
+  housekeepingLinens: { currentPage: 1, itemsPerPage: 10 },
+  housekeepingAmenities: { currentPage: 1, itemsPerPage: 10 },
   maintenance: { currentPage: 1, itemsPerPage: 10 },
+  maintenanceHistory: { currentPage: 1, itemsPerPage: 10 },
+  maintenanceAppliances: { currentPage: 1, itemsPerPage: 10 },
   parking: { currentPage: 1, itemsPerPage: 10 },
   inventory: { currentPage: 1, itemsPerPage: 10 },
-  users: { currentPage: 1, itemsPerPage: 10 }
+  users: { currentPage: 1, itemsPerPage: 10 },
+  userLogs: { currentPage: 1, itemsPerPage: 10 }
 };
 
 // ===== ACCOUNT TYPE MAPPING =====
@@ -14,6 +19,7 @@ const ACCOUNT_TYPE_MAP = {
   'admin': 'Admin',
   'housekeeping_manager': 'Housekeeping Manager',
   'maintenance_manager': 'Maintenance Manager',
+  'inventory_manager': 'Inventory Manager',
   'parking_manager': 'Parking Manager',
   'housekeeping_staff': 'Housekeeping Staff',
   'maintenance_staff': 'Maintenance Staff'
@@ -22,14 +28,19 @@ const ACCOUNT_TYPE_MAP = {
 // ===== USE SHARED DATA =====
 let hkData = [...housekeepingRequests];
 let hkHistData = [...housekeepingHistory];
-let mtData = [...maintenanceHistory];
+let hkLinensData = [...housekeepingLinens];
+let hkAmenitiesData = [...housekeepingAmenities];
+let mtRequestsData = [...maintenanceRequests];
+let mtHistData = [...maintenanceHistory];
+let mtAppliancesData = [...maintenanceAppliances];
 let roomData = [];
 let parkingDataList = typeof parkingData !== 'undefined' ? [...parkingData] : [];
 let inventoryDataList = typeof inventoryData !== 'undefined' ? [...inventoryData] : [];
 let usersData = [];
+let userLogsDataList = typeof userLogsData !== 'undefined' ? [...userLogsData] : [];
 let dashData = dashboardStats;
 
-console.log('Data Loaded:', { roomData, parkingDataList, inventoryDataList, usersData });
+console.log('Data Loaded:', { roomData, parkingDataList, inventoryDataList, usersData, userLogsDataList });
 
 // --- Room Management DOM Elements ---
 const roomsTableBody = document.getElementById('roomsTableBody');
@@ -47,13 +58,16 @@ const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 const usersTableBody = document.getElementById('usersTableBody');
 const userModal = document.getElementById('userModal');
 const closeUserModalBtn = document.getElementById('closeUserModalBtn');
-const cancelUserBtn = document.getElementById('cancelUserBtn');
-const userForm = document.getElementById('userForm');
+const employeeIdForm = document.getElementById('employeeIdForm');
+const userEditForm = document.getElementById('userEditForm');
 const userModalTitle = document.getElementById('userModalTitle');
 const deleteUserModal = document.getElementById('deleteUserModal');
 const closeDeleteUserModalBtn = document.getElementById('closeDeleteUserModalBtn');
 const cancelDeleteUserBtn = document.getElementById('cancelDeleteUserBtn');
 const confirmDeleteUserBtn = document.getElementById('confirmDeleteUserBtn');
+
+// User Logs DOM Elements
+const logsTableBody = document.getElementById('logsTableBody');
 
 // Form Inputs - Room
 const roomFloorInput = document.getElementById('roomFloor');
@@ -63,7 +77,8 @@ const roomGuestsInput = document.getElementById('roomGuests');
 const roomRateInput = document.getElementById('roomRate');
 const roomStatusInput = document.getElementById('roomStatus');
 
-// Form Inputs - User
+// Form Inputs - User (Edit Form)
+const editUserIdInput = document.getElementById('editUserId');
 const userFnameInput = document.getElementById('userFname');
 const userLnameInput = document.getElementById('userLname');
 const userMnameInput = document.getElementById('userMname');
@@ -73,8 +88,10 @@ const userUsernameInput = document.getElementById('userUsername');
 const userEmailInput = document.getElementById('userEmail');
 const userShiftInput = document.getElementById('userShift');
 const userAddressInput = document.getElementById('userAddress');
-const userPasswordInput = document.getElementById('userPassword');
-const userConfirmPasswordInput = document.getElementById('userConfirmPassword');
+const userContactInput = document.getElementById('userContact');
+
+// Employee ID Input
+const employeeIdInput = document.getElementById('employeeId');
 
 // Filter Elements
 const roomsFloorFilter = document.getElementById('roomsFloorFilter');
@@ -97,11 +114,12 @@ if (!formMessage && roomForm) {
 }
 
 let userFormMessage = document.getElementById('userFormMessage');
-if (!userFormMessage && userForm) {
+if (!userFormMessage && employeeIdForm) {
   userFormMessage = document.createElement('div');
   userFormMessage.id = 'userFormMessage';
   userFormMessage.className = 'formMessage';
-  userForm.insertBefore(userFormMessage, userForm.firstChild);
+  userFormMessage.style.display = 'none';
+  userModal.insertBefore(userFormMessage, employeeIdForm);
 }
 
 // ===== UTILITY FUNCTIONS FOR FORM MESSAGES =====
@@ -459,13 +477,13 @@ async function fetchAndRenderUsers() {
          const recordCount = document.getElementById('usersRecordCount');
          if (recordCount) recordCount.textContent = 0;
          updateDashboardFromUsers([]); 
-         renderPaginationControls('manage-users-page', 0, 1, () => {});
+         renderPaginationControls('user-management-tab', 0, 1, () => {});
     } else {
          usersTableBody.innerHTML = `<tr><td colspan="6">Failed to load data: ${result.message}</td></tr>`;
          const recordCount = document.getElementById('usersRecordCount');
          if (recordCount) recordCount.textContent = 0;
          updateDashboardFromUsers([]);
-         renderPaginationControls('manage-users-page', 0, 1, () => {});
+         renderPaginationControls('user-management-tab', 0, 1, () => {});
     }
 }
 
@@ -488,7 +506,7 @@ function renderUsersTable(data) {
         <tr>
           <td>${row.Username}</td>
           <td>${fullName}</td>
-          <td>${roleName}</td>
+          <td><span class="statusBadge ${row.AccountType}">${roleName}</td>
           <td>${row.EmailAddress}</td>
           <td>${row.Shift}</td>
           <td>
@@ -515,9 +533,374 @@ function renderUsersTable(data) {
   
   const recordCount = document.getElementById('usersRecordCount');
   if (recordCount) recordCount.textContent = data.length;
-  renderPaginationControls('manage-users-page', totalPages, state.currentPage, (page) => {
+  renderPaginationControls('user-management-tab', totalPages, state.currentPage, (page) => {
     state.currentPage = page;
     renderUsersTable(data);
+  });
+}
+
+// ===== USER LOGS FUNCTIONS =====
+async function fetchAndRenderUserLogs() {
+    if (!logsTableBody) return;
+    console.log('Fetching user logs...');
+    logsTableBody.innerHTML = '<tr><td colspan="12">Loading user logs...</td></tr>';
+    
+    // For frontend, use mock data
+    setTimeout(() => {
+        userLogsDataList = [...userLogsData];
+        console.log('User logs data loaded:', userLogsDataList);
+        
+        paginationState.userLogs.currentPage = 1;
+        renderUserLogsTable(userLogsDataList);
+        const recordCount = document.getElementById('logsRecordCount');
+        if (recordCount) recordCount.textContent = userLogsDataList.length;
+    }, 300);
+}
+
+function renderUserLogsTable(data) {
+  if (!logsTableBody) return;
+  console.log('Rendering user logs table with data:', data);
+  const tbody = logsTableBody;
+  const state = paginationState.userLogs;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 40px; color: #999;">No logs found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => {
+      const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
+      const actionClass = row.ActionType.toLowerCase().replace(/ /g, '-');
+
+      return `
+        <tr>
+          <td>${row.LogID}</td>
+          <td>${row.UserID}</td>
+          <td>${row.Lname}</td>
+          <td>${row.Fname}</td>
+          <td>${row.Mname}</td>
+          <td>${row.AccountType}</td>
+          <td>${roleName}</td>
+          <td>${row.Shift}</td>
+          <td>${row.Username}</td>
+          <td>${row.EmailAddress}</td>
+          <td><span class="actionBadge ${actionClass}">${row.ActionType}</span></td>
+          <td>${row.Timestamp}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  const recordCount = document.getElementById('logsRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('user-logs-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderUserLogsTable(data);
+  });
+}
+
+// ===== HOUSEKEEPING RENDER FUNCTIONS =====
+function renderHKTable(data = hkData) {
+  const tbody = document.getElementById('hkTableBody');
+  if (!tbody) return;
+  const state = paginationState.housekeeping;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => `
+      <tr>
+        <td>${row.floor}</td>
+        <td>${row.room}</td>
+        <td>${row.guest}</td>
+        <td>${row.date}</td>
+        <td>${row.requestTime}</td>
+        <td>${row.lastCleaned}</td>
+        <td><span class="statusBadge ${row.status}">${row.status === 'dirty' ? 'Dirty / Unoccupied' : 'Request Clean / Occupied'}</span></td>
+        <td>${row.staff}</td>
+      </tr>
+    `).join('');
+  }
+  
+  const recordCount = document.getElementById('hkRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('hk-requests-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderHKTable(data);
+  });
+}
+
+function renderHKHistTable(data = hkHistData) {
+  const tbody = document.getElementById('hkHistTableBody');
+  if (!tbody) return;
+  const state = paginationState.housekeepingHistory;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => `
+      <tr>
+        <td>${row.floor}</td>
+        <td>${row.room}</td>
+        <td>${row.guest}</td>
+        <td>${row.date}</td>
+        <td>${row.requestedTime}</td>
+        <td>${row.completedTime}</td>
+        <td>${row.staff}</td>
+        <td><span class="statusBadge cleaned">${row.status === 'cleaned' ? 'Cleaned' : row.status}</span></td>
+        <td>${row.remarks}</td>
+      </tr>
+    `).join('');
+  }
+  
+  const recordCount = document.getElementById('hkHistRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('hk-history-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderHKHistTable(data);
+  });
+}
+
+function renderHKLinensTable(data = hkLinensData) {
+  const tbody = document.getElementById('hkLinensTableBody');
+  if (!tbody) return;
+  const state = paginationState.housekeepingLinens;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => {
+      const statusClass = row.status === 'cleaned' ? 'cleaned' : row.status === 'pending' ? 'pending' : row.status;
+      return `
+        <tr>
+          <td>${row.floor}</td>
+          <td>${row.room}</td>
+          <td>${row.types}</td>
+          <td>${row.items}</td>
+          <td>${row.timeDate}</td>
+          <td><span class="statusBadge ${statusClass}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
+          <td>${row.remarks}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  const recordCount = document.getElementById('hkLinensRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('hk-linens-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderHKLinensTable(data);
+  });
+}
+
+function renderHKAmenitiesTable(data = hkAmenitiesData) {
+  const tbody = document.getElementById('hkAmenitiesTableBody');
+  if (!tbody) return;
+  const state = paginationState.housekeepingAmenities;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => {
+      const statusClass = row.status === 'stocked' ? 'cleaned' : row.status === 'pending' ? 'pending' : row.status;
+      return `
+        <tr>
+          <td>${row.floor}</td>
+          <td>${row.room}</td>
+          <td>${row.types}</td>
+          <td>${row.items}</td>
+          <td>${row.timeDate}</td>
+          <td><span class="statusBadge ${statusClass}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
+          <td>${row.remarks}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  const recordCount = document.getElementById('hkAmenitiesRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('hk-amenities-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderHKAmenitiesTable(data);
+  });
+}
+
+// ===== MAINTENANCE RENDER FUNCTIONS =====
+function renderMTRequestsTable(data = mtRequestsData) {
+  const tbody = document.getElementById('mtRequestsTableBody');
+  if (!tbody) return;
+  const state = paginationState.maintenance;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => {
+      const statusClass = row.status === 'pending' ? 'pending' : row.status === 'in-progress' ? 'request' : row.status;
+      const statusText = row.status === 'in-progress' ? 'In Progress' : row.status.charAt(0).toUpperCase() + row.status.slice(1);
+      return `
+        <tr>
+          <td>${row.floor}</td>
+          <td>${row.room}</td>
+          <td>${row.issue}</td>
+          <td>${row.date}</td>
+          <td>${row.requestedTime}</td>
+          <td>${row.completedTime}</td>
+          <td><span class="statusBadge ${statusClass}">${statusText}</span></td>
+          <td>${row.staff}</td>
+          <td>${row.remarks}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  const recordCount = document.getElementById('mtRequestsRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('mt-requests-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderMTRequestsTable(data);
+  });
+}
+
+function renderMTHistTable(data = mtHistData) {
+  const tbody = document.getElementById('mtHistTableBody');
+  if (!tbody) return;
+  const state = paginationState.maintenanceHistory;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => `
+      <tr>
+        <td>${row.floor}</td>
+        <td>${row.room}</td>
+        <td>${row.issue}</td>
+        <td>${row.date}</td>
+        <td>${row.requestedTime}</td>
+        <td>${row.completedTime}</td>
+        <td><span class="statusBadge repaired">${row.status === 'repaired' ? 'Repaired' : row.status}</span></td>
+        <td>${row.staff}</td>
+        <td>${row.remarks}</td>
+      </tr>
+    `).join('');
+  }
+  
+  const recordCount = document.getElementById('mtHistRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('mt-history-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderMTHistTable(data);
+  });
+}
+
+function renderMTAppliancesTable(data = mtAppliancesData) {
+  const tbody = document.getElementById('mtAppliancesTableBody');
+  if (!tbody) return;
+  const state = paginationState.maintenanceAppliances;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => `
+      <tr>
+        <td>${row.floor}</td>
+        <td>${row.room}</td>
+        <td>${row.installedDate}</td>
+        <td>${row.types}</td>
+        <td>${row.items}</td>
+        <td>${row.lastMaintained}</td>
+        <td>${row.remarks}</td>
+      </tr>
+    `).join('');
+  }
+  
+  const recordCount = document.getElementById('mtAppliancesRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('mt-appliances-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderMTAppliancesTable(data);
+  });
+}
+
+function renderParkingTable(data = parkingDataList) {
+  const tbody = document.getElementById('parkingTableBody');
+  if (!tbody) return;
+  const state = paginationState.parking;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => `
+      <tr>
+        <td>${row.plateNumber}</td>
+        <td>${row.room}</td>
+        <td>${row.guestName}</td>
+        <td>${row.vehicleType}</td>
+        <td>${row.entryTime}</td>
+        <td>${row.exitTime}</td>
+        <td>${row.slotNumber}</td>
+        <td><span class="statusBadge ${row.status}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
+      </tr>
+    `).join('');
+  }
+  
+  const recordCount = document.getElementById('parkingRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('parking-page', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderParkingTable(data);
+  });
+}
+
+function renderInventoryTable(data = inventoryDataList) {
+  const tbody = document.getElementById('inventoryTableBody');
+  if (!tbody) return;
+  const state = paginationState.inventory;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => {
+      const statusText = row.status === 'in-stock' ? 'In Stock' : 
+                           row.status === 'low-stock' ? 'Low Stock' : 'Out of Stock';
+      return `
+        <tr>
+          <td>${row.id}</td>
+          <td>${row.name}</td>
+          <td>${row.category}</td>
+          <td>${row.quantity !== undefined && row.quantity !== null ? row.quantity : '-'}</td>
+          <td>${row.description}</td>
+          <td><span class="statusBadge ${row.status}">${statusText}</span></td>
+          <td>${row.damage}</td>
+          <td>${row.stockInDate}</td>
+          <td>${row.stockOutDate}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  const recordCount = document.getElementById('inventoryRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('inventory-page', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderInventoryTable(data);
   });
 }
 
@@ -525,12 +908,11 @@ function renderUsersTable(data) {
 document.getElementById('addUserBtn')?.addEventListener('click', () => {
     hideFormMessage(true);
     userModalTitle.textContent = 'Add New User';
-    userForm.reset();
-    document.getElementById('editUserId').value = '';
-    document.getElementById('saveUserBtn').textContent = 'SAVE USER';
     
-    userPasswordInput.required = true;
-    userConfirmPasswordInput.required = true;
+    employeeIdForm.style.display = 'block';
+    userEditForm.style.display = 'none';
+    
+    employeeIdForm.reset();
     
     userModal.style.display = 'flex';
 });
@@ -540,9 +922,44 @@ closeUserModalBtn?.addEventListener('click', () => {
     hideFormMessage(true);
 });
 
-cancelUserBtn?.addEventListener('click', () => {
+document.getElementById('cancelEmployeeIdBtn')?.addEventListener('click', () => {
     userModal.style.display = 'none';
     hideFormMessage(true);
+});
+
+document.getElementById('cancelUserEditBtn')?.addEventListener('click', () => {
+    userModal.style.display = 'none';
+    hideFormMessage(true);
+});
+
+employeeIdForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideFormMessage(true);
+    
+    const employeeId = employeeIdInput.value.trim();
+    
+    if (!employeeId) {
+        showFormMessage('Please enter an Employee ID.', 'error', true);
+        return;
+    }
+
+    console.log('Looking up employee:', employeeId);
+    
+    const result = await apiCall('add_employee_by_id', { employeeId: employeeId }, 'POST', 'user_actions.php');
+    console.log('Add employee result:', result);
+
+    if (result.success) {
+        showFormMessage(result.message || 'Employee added successfully!', 'success', true);
+        employeeIdForm.reset();
+        await fetchAndRenderUsers();
+        
+        setTimeout(() => {
+            userModal.style.display = 'none';
+            hideFormMessage(true);
+        }, 1500);
+    } else {
+        showFormMessage(result.message || 'Failed to add employee.', 'error', true);
+    }
 });
 
 function handleEditUserClick(event) {
@@ -550,9 +967,14 @@ function handleEditUserClick(event) {
     const user = JSON.parse(event.currentTarget.dataset.userData);
     
     userModalTitle.textContent = 'Edit User: ' + user.Username;
-    document.getElementById('saveUserBtn').textContent = 'UPDATE USER';
     
-    document.getElementById('editUserId').value = user.UserID;
+    employeeIdForm.style.display = 'none';
+    userEditForm.style.display = 'block';
+    
+    document.getElementById('editUserFullName').textContent = `${user.Lname}, ${user.Fname}${user.Mname ? ' ' + user.Mname.charAt(0) + '.' : ''}`;
+    document.getElementById('editUserEmployeeId').textContent = `Employee ID: ${user.UserID}`;
+    
+    editUserIdInput.value = user.UserID;
     userFnameInput.value = user.Fname;
     userLnameInput.value = user.Lname;
     userMnameInput.value = user.Mname || '';
@@ -562,35 +984,16 @@ function handleEditUserClick(event) {
     userEmailInput.value = user.EmailAddress;
     userShiftInput.value = user.Shift;
     userAddressInput.value = user.Address;
-    
-    userPasswordInput.value = '';
-    userConfirmPasswordInput.value = '';
-    userPasswordInput.required = false;
-    userConfirmPasswordInput.required = false;
+    userContactInput.value = user.Contact || '';
 
     userModal.style.display = 'flex';
 }
 
-userForm?.addEventListener('submit', async (e) => {
+userEditForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     hideFormMessage(true);
-    
-    const password = userPasswordInput.value;
-    const confirmPassword = userConfirmPasswordInput.value;
-    
-    if (password || confirmPassword) {
-        if (password !== confirmPassword) {
-            showFormMessage('Passwords do not match.', 'error', true);
-            return;
-        }
-        if (password.length < 6) {
-            showFormMessage('Password must be at least 6 characters long.', 'error', true);
-            return;
-        }
-    }
 
-    const userID = document.getElementById('editUserId').value;
-    const action = userID ? 'edit_user' : 'add_user';
+    const userID = editUserIdInput.value;
     
     const data = {
         userID: userID,
@@ -603,17 +1006,15 @@ userForm?.addEventListener('submit', async (e) => {
         email: userEmailInput.value,
         shift: userShiftInput.value,
         address: userAddressInput.value,
-        password: password,
-        confirmPassword: confirmPassword
+        contact: userContactInput.value
     };
 
-    console.log('Submitting user data:', data);
-    const result = await apiCall(action, data, 'POST', 'user_actions.php');
-    console.log('User submit result:', result);
+    console.log('Updating user data:', data);
+    const result = await apiCall('edit_user', data, 'POST', 'user_actions.php');
+    console.log('User update result:', result);
 
     if (result.success) {
-        showFormMessage(result.message, 'success', true);
-        userForm.reset();
+        showFormMessage(result.message || 'User updated successfully!', 'success', true);
         await fetchAndRenderUsers();
         
         setTimeout(() => {
@@ -621,7 +1022,7 @@ userForm?.addEventListener('submit', async (e) => {
             hideFormMessage(true);
         }, 1500);
     } else {
-        showFormMessage(result.message, 'error', true);
+        showFormMessage(result.message || 'Failed to update user.', 'error', true);
     }
 });
 
@@ -650,61 +1051,6 @@ confirmDeleteUserBtn?.addEventListener('click', async () => {
     } else {
         alert(result.message);
     }
-});
-
-// ===== USER FILTERS =====
-document.getElementById('usersSearchInput')?.addEventListener('input', (e) => {
-  const search = e.target.value.toLowerCase();
-  const filtered = usersData.filter(row => 
-    row.Username.toLowerCase().includes(search) ||
-    row.Fname.toLowerCase().includes(search) ||
-    row.Lname.toLowerCase().includes(search) ||
-    row.EmailAddress.toLowerCase().includes(search)
-  );
-  paginationState.users.currentPage = 1;
-  renderUsersTable(filtered);
-});
-
-document.getElementById('usersRoleFilter')?.addEventListener('change', (e) => {
-  const role = e.target.value;
-  const filtered = role ? usersData.filter(row => row.AccountType === role) : usersData;
-  paginationState.users.currentPage = 1;
-  renderUsersTable(filtered);
-});
-
-document.getElementById('usersShiftFilter')?.addEventListener('change', (e) => {
-  const shift = e.target.value;
-  const filtered = shift ? usersData.filter(row => row.Shift === shift) : usersData;
-  paginationState.users.currentPage = 1;
-  renderUsersTable(filtered);
-});
-
-document.getElementById('usersRefreshBtn')?.addEventListener('click', () => {
-  document.getElementById('usersSearchInput').value = '';
-  document.getElementById('usersRoleFilter').value = '';
-  document.getElementById('usersShiftFilter').value = '';
-  
-  fetchAndRenderUsers();
-});
-
-document.getElementById('usersDownloadBtn')?.addEventListener('click', () => {
-  const headers = ['Username', 'Full Name', 'Role', 'Email', 'Shift', 'Birthday', 'Address'];
-  const csvContent = [
-    headers.join(','),
-    ...usersData.map(row => {
-      const fullName = `${row.Lname} ${row.Fname}${row.Mname ? ' ' + row.Mname : ''}`;
-      const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
-      return [row.Username, fullName, roleName, row.EmailAddress, row.Shift, row.Birthday, row.Address].join(',');
-    })
-  ].join('\n');
-  
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `users-${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  window.URL.revokeObjectURL(url);
 });
 
 // ===== ROOM MODAL HANDLERS =====
@@ -812,176 +1158,97 @@ confirmDeleteBtn?.addEventListener('click', async () => {
     }
 });
 
-// ===== RENDER OTHER TABLES =====
-function renderHKTable(data = hkData) {
-  const tbody = document.getElementById('hkTableBody');
-  if (!tbody) return;
-  const state = paginationState.housekeeping;
-  const totalPages = getTotalPages(data.length, state.itemsPerPage);
-  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+// ===== TAB NAVIGATION =====
+const userTabBtns = document.querySelectorAll('[data-user-tab]');
 
-  if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-  } else {
-    tbody.innerHTML = paginatedData.map(row => `
-      <tr>
-        <td>${row.floor}</td>
-        <td>${row.room}</td>
-        <td>${row.guest}</td>
-        <td>${row.date}</td>
-        <td>${row.requestTime}</td>
-        <td>${row.lastCleaned}</td>
-        <td><span class="statusBadge ${row.status}">${row.status === 'dirty' ? 'Dirty / Unoccupied' : 'Request Clean / Occupied'}</span></td>
-        <td>${row.staff}</td>
-      </tr>
-    `).join('');
-  }
-  
-  const recordCount = document.getElementById('hkRecordCount');
-  if (recordCount) recordCount.textContent = data.length;
-  renderPaginationControls('hk-requests-tab', totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderHKTable(data);
+userTabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabName = btn.getAttribute('data-user-tab');
+    
+    userTabBtns.forEach(b => b.classList.remove('active'));
+    
+    const userMgmtTab = document.getElementById('user-management-tab');
+    const userLogsTab = document.getElementById('user-logs-tab');
+    if (userMgmtTab) userMgmtTab.classList.remove('active');
+    if (userLogsTab) userLogsTab.classList.remove('active');
+
+    btn.classList.add('active');
+    const selectedTab = document.getElementById(`${tabName}-tab`);
+    if (selectedTab) {
+      selectedTab.classList.add('active');
+      
+      if (tabName === 'user-logs') {
+        fetchAndRenderUserLogs();
+      }
+    }
   });
-}
+});
 
-function renderHKHistTable(data = hkHistData) {
-  const tbody = document.getElementById('hkHistTableBody');
-  if (!tbody) return;
-  const state = paginationState.housekeepingHistory;
-  const totalPages = getTotalPages(data.length, state.itemsPerPage);
-  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
-  
-  if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-  } else {
-    tbody.innerHTML = paginatedData.map(row => `
-      <tr>
-        <td>${row.floor}</td>
-        <td>${row.room}</td>
-        <td>${row.guest}</td>
-        <td>${row.date}</td>
-        <td>${row.requestedTime}</td>
-        <td>${row.completedTime}</td>
-        <td>${row.staff}</td>
-        <td><span class="statusBadge cleaned">${row.status === 'cleaned' ? 'Cleaned' : row.status}</span></td>
-        <td>${row.remarks}</td>
-      </tr>
-    `).join('');
-  }
-  
-  const recordCount = document.getElementById('hkHistRecordCount');
-  if (recordCount) recordCount.textContent = data.length;
-  renderPaginationControls('hk-history-tab', totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderHKHistTable(data);
+// ===== HOUSEKEEPING TAB NAVIGATION =====
+const hkTabBtns = document.querySelectorAll('[data-hk-tab]');
+
+hkTabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabName = btn.getAttribute('data-hk-tab');
+    
+    hkTabBtns.forEach(b => b.classList.remove('active'));
+    
+    document.querySelectorAll('[id^="hk-"][id$="-tab"]').forEach(tab => {
+      tab.classList.remove('active');
+    });
+
+    btn.classList.add('active');
+    const selectedTab = document.getElementById(`${tabName}-tab`);
+    if (selectedTab) {
+      selectedTab.classList.add('active');
+    }
   });
-}
+});
 
-function renderMTTable(data = mtData) {
-  const tbody = document.getElementById('mtTableBody');
-  if (!tbody) return;
-  const state = paginationState.maintenance;
-  const totalPages = getTotalPages(data.length, state.itemsPerPage);
-  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
-  
-  if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-  } else {
-    tbody.innerHTML = paginatedData.map(row => `
-      <tr>
-        <td>${row.floor}</td>
-        <td>${row.room}</td>
-        <td>${row.issue}</td>
-        <td>${row.date}</td>
-        <td>${row.requestedTime}</td>
-        <td>${row.completedTime}</td>
-        <td><span class="statusBadge repaired">${row.status === 'repaired' ? 'Repaired' : row.status}</span></td>
-        <td>${row.staff}</td>
-        <td>${row.remarks}</td>
-      </tr>
-    `).join('');
-  }
-  
-  const recordCount = document.getElementById('mtRecordCount');
-  if (recordCount) recordCount.textContent = data.length;
-  renderPaginationControls('maintenance-page', totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderMTTable(data);
+// ===== MAINTENANCE TAB NAVIGATION =====
+const mtTabBtns = document.querySelectorAll('[data-mt-tab]');
+
+mtTabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabName = btn.getAttribute('data-mt-tab');
+    
+    mtTabBtns.forEach(b => b.classList.remove('active'));
+    
+    document.querySelectorAll('[id^="mt-"][id$="-tab"]').forEach(tab => {
+      tab.classList.remove('active');
+    });
+
+    btn.classList.add('active');
+    const selectedTab = document.getElementById(`${tabName}-tab`);
+    if (selectedTab) {
+      selectedTab.classList.add('active');
+    }
   });
-}
+});
 
-function renderParkingTable(data = parkingDataList) {
-  const tbody = document.getElementById('parkingTableBody');
-  if (!tbody) return;
-  const state = paginationState.parking;
-  const totalPages = getTotalPages(data.length, state.itemsPerPage);
-  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+// ===== PAGE NAVIGATION =====
+const navLinks = document.querySelectorAll('.navLink');
+const pages = document.querySelectorAll('.page');
 
-  if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-  } else {
-    tbody.innerHTML = paginatedData.map(row => `
-      <tr>
-        <td>${row.plateNumber}</td>
-        <td>${row.room}</td>
-        <td>${row.guestName}</td>
-        <td>${row.vehicleType}</td>
-        <td>${row.entryTime}</td>
-        <td>${row.exitTime}</td>
-        <td>${row.slotNumber}</td>
-        <td><span class="statusBadge ${row.status}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
-      </tr>
-    `).join('');
-  }
-  
-  const recordCount = document.getElementById('parkingRecordCount');
-  if (recordCount) recordCount.textContent = data.length;
-  renderPaginationControls('parking-page', totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderParkingTable(data);
+navLinks.forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    
+    navLinks.forEach(l => l.classList.remove('active'));
+    pages.forEach(p => p.classList.remove('active'));
+    
+    link.classList.add('active');
+    
+    const pageName = link.getAttribute('data-page');
+    const page = document.getElementById(`${pageName}-page`);
+    
+    if (page) {
+      page.classList.add('active');
+    }
   });
-}
+});
 
-function renderInventoryTable(data = inventoryDataList) {
-  const tbody = document.getElementById('inventoryTableBody');
-  if (!tbody) return;
-  const state = paginationState.inventory;
-  const totalPages = getTotalPages(data.length, state.itemsPerPage);
-  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
-
-  if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-  } else {
-    tbody.innerHTML = paginatedData.map(row => {
-      const statusText = row.status === 'in-stock' ? 'In Stock' : 
-                           row.status === 'low-stock' ? 'Low Stock' : 'Out of Stock';
-      return `
-        <tr>
-          <td>${row.id}</td>
-          <td>${row.name}</td>
-          <td>${row.category}</td>
-          <td>${row.quantity !== undefined && row.quantity !== null ? row.quantity : '-'}</td>
-          <td>${row.description}</td>
-          <td><span class="statusBadge ${row.status}">${statusText}</span></td>
-          <td>${row.damage}</td>
-          <td>${row.stockInDate}</td>
-          <td>${row.stockOutDate}</td>
-        </tr>
-      `;
-    }).join('');
-  }
-  
-  const recordCount = document.getElementById('inventoryRecordCount');
-  if (recordCount) recordCount.textContent = data.length;
-  renderPaginationControls('inventory-page', totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderInventoryTable(data);
-  });
-}
-
-// ===== ALL FILTER EVENT LISTENERS =====
-// Housekeeping Filters
+// ===== HOUSEKEEPING FILTERS =====
 document.getElementById('hkSearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
   const filtered = hkData.filter(row => 
@@ -1015,15 +1282,10 @@ document.getElementById('statusFilter')?.addEventListener('change', (e) => {
 });
 
 document.getElementById('hkRefreshBtn')?.addEventListener('click', () => {
-  const searchInput = document.getElementById('hkSearchInput');
-  const floorFilter = document.getElementById('floorFilter');
-  const roomFilter = document.getElementById('roomFilter');
-  const statusFilter = document.getElementById('statusFilter');
-  
-  if (searchInput) searchInput.value = '';
-  if (floorFilter) floorFilter.value = '';
-  if (roomFilter) roomFilter.value = '';
-  if (statusFilter) statusFilter.value = '';
+  document.getElementById('hkSearchInput').value = '';
+  document.getElementById('floorFilter').value = '';
+  document.getElementById('roomFilter').value = '';
+  document.getElementById('statusFilter').value = '';
   
   hkData = [...housekeepingRequests];
   paginationState.housekeeping.currentPage = 1;
@@ -1046,7 +1308,67 @@ document.getElementById('hkDownloadBtn')?.addEventListener('click', () => {
   window.URL.revokeObjectURL(url);
 });
 
-// Rooms Filters
+// ===== MAINTENANCE FILTERS =====
+document.getElementById('mtSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = mtRequestsData.filter(row => 
+    row.issue.toLowerCase().includes(search) ||
+    row.staff.toLowerCase().includes(search) ||
+    row.room.toString().includes(search)
+  );
+  paginationState.maintenance.currentPage = 1;
+  renderMTRequestsTable(filtered);
+});
+
+document.getElementById('mtFloorFilter')?.addEventListener('change', (e) => {
+  const floor = e.target.value;
+  const filtered = floor ? mtRequestsData.filter(row => row.floor.toString() === floor) : mtRequestsData;
+  paginationState.maintenance.currentPage = 1;
+  renderMTRequestsTable(filtered);
+});
+
+document.getElementById('mtRoomFilter')?.addEventListener('change', (e) => {
+  const room = e.target.value;
+  const filtered = room ? mtRequestsData.filter(row => row.room.toString() === room) : mtRequestsData;
+  paginationState.maintenance.currentPage = 1;
+  renderMTRequestsTable(filtered);
+});
+
+document.getElementById('mtStatusFilter')?.addEventListener('change', (e) => {
+  const status = e.target.value;
+  const filtered = status ? mtRequestsData.filter(row => row.status === status) : mtRequestsData;
+  paginationState.maintenance.currentPage = 1;
+  renderMTRequestsTable(filtered);
+});
+
+document.getElementById('mtRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('mtSearchInput').value = '';
+  document.getElementById('mtFloorFilter').value = '';
+  document.getElementById('mtRoomFilter').value = '';
+  document.getElementById('mtStatusFilter').value = '';
+  
+  mtRequestsData = [...maintenanceRequests];
+  paginationState.maintenance.currentPage = 1;
+  renderMTRequestsTable(mtRequestsData);
+});
+
+document.getElementById('mtDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Floor', 'Room', 'Issue Type', 'Date', 'Requested Time', 'Completed Time', 'Status', 'Staff In Charge', 'Remarks'];
+  const csvContent = [
+    headers.join(','),
+    ...mtRequestsData.map(row => [row.floor, row.room, row.issue, row.date, row.requestedTime, row.completedTime, row.status, row.staff, row.remarks].join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `maintenance-requests-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// ===== ROOMS FILTERS =====
 document.getElementById('roomsSearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
   const filtered = roomData.filter(row => 
@@ -1090,17 +1412,11 @@ document.getElementById('roomsStatusFilter')?.addEventListener('change', (e) => 
 });
 
 document.getElementById('roomsRefreshBtn')?.addEventListener('click', () => {
-  const searchInput = document.getElementById('roomsSearchInput');
-  const floorFilter = document.getElementById('roomsFloorFilter');
-  const roomFilter = document.getElementById('roomsRoomFilter');
-  const typeFilter = document.getElementById('roomsTypeFilter');
-  const statusFilter = document.getElementById('roomsStatusFilter');
-  
-  if (searchInput) searchInput.value = '';
-  if (floorFilter) floorFilter.value = '';
-  if (roomFilter) roomFilter.value = '';
-  if (typeFilter) typeFilter.value = '';
-  if (statusFilter) statusFilter.value = '';
+  document.getElementById('roomsSearchInput').value = '';
+  document.getElementById('roomsFloorFilter').value = '';
+  document.getElementById('roomsRoomFilter').value = '';
+  document.getElementById('roomsTypeFilter').value = '';
+  document.getElementById('roomsStatusFilter').value = '';
   
   fetchAndRenderRooms();
 });
@@ -1121,46 +1437,114 @@ document.getElementById('roomsDownloadBtn')?.addEventListener('click', () => {
   window.URL.revokeObjectURL(url);
 });
 
-// ===== PAGE NAVIGATION =====
-const navLinks = document.querySelectorAll('.navLink');
-const pages = document.querySelectorAll('.page');
-
-navLinks.forEach(link => {
-  link.addEventListener('click', (e) => {
-    e.preventDefault();
-    
-    navLinks.forEach(l => l.classList.remove('active'));
-    pages.forEach(p => p.classList.remove('active'));
-    
-    link.classList.add('active');
-    
-    const pageName = link.getAttribute('data-page');
-    const page = document.getElementById(`${pageName}-page`);
-    
-    if (page) {
-      page.classList.add('active');
-    }
-  });
+// ===== USER FILTERS =====
+document.getElementById('usersSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = usersData.filter(row => 
+    row.Username.toLowerCase().includes(search) ||
+    row.Fname.toLowerCase().includes(search) ||
+    row.Lname.toLowerCase().includes(search) ||
+    row.EmailAddress.toLowerCase().includes(search)
+  );
+  paginationState.users.currentPage = 1;
+  renderUsersTable(filtered);
 });
 
-// ===== HOUSEKEEPING TAB NAVIGATION =====
-const hkTabBtns = document.querySelectorAll('[data-admin-tab]');
+document.getElementById('usersRoleFilter')?.addEventListener('change', (e) => {
+  const role = e.target.value;
+  const filtered = role ? usersData.filter(row => row.AccountType === role) : usersData;
+  paginationState.users.currentPage = 1;
+  renderUsersTable(filtered);
+});
 
-hkTabBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tabName = btn.getAttribute('data-admin-tab');
-    
-    hkTabBtns.forEach(b => b.classList.remove('active'));
-    
-    const hkReqTab = document.getElementById('hk-requests-tab');
-    const hkHistTab = document.getElementById('hk-history-tab');
-    if (hkReqTab) hkReqTab.classList.remove('active');
-    if (hkHistTab) hkHistTab.classList.remove('active');
+document.getElementById('usersShiftFilter')?.addEventListener('change', (e) => {
+  const shift = e.target.value;
+  const filtered = shift ? usersData.filter(row => row.Shift === shift) : usersData;
+  paginationState.users.currentPage = 1;
+  renderUsersTable(filtered);
+});
 
-    btn.classList.add('active');
-    const selectedTab = document.getElementById(`${tabName}-tab`);
-    if (selectedTab) selectedTab.classList.add('active');
-  });
+document.getElementById('usersRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('usersSearchInput').value = '';
+  document.getElementById('usersRoleFilter').value = '';
+  document.getElementById('usersShiftFilter').value = '';
+  
+  fetchAndRenderUsers();
+});
+
+document.getElementById('usersDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Username', 'Full Name', 'Role', 'Email', 'Shift', 'Birthday', 'Address'];
+  const csvContent = [
+    headers.join(','),
+    ...usersData.map(row => {
+      const fullName = `${row.Lname} ${row.Fname}${row.Mname ? ' ' + row.Mname : ''}`;
+      const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
+      return [row.Username, fullName, roleName, row.EmailAddress, row.Shift, row.Birthday, row.Address].join(',');
+    })
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `users-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// ===== USER LOGS FILTERS =====
+document.getElementById('logsSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = userLogsDataList.filter(row => 
+    row.Username.toLowerCase().includes(search) ||
+    row.Fname.toLowerCase().includes(search) ||
+    row.Lname.toLowerCase().includes(search) ||
+    row.EmailAddress.toLowerCase().includes(search) ||
+    row.UserID.toString().includes(search)
+  );
+  paginationState.userLogs.currentPage = 1;
+  renderUserLogsTable(filtered);
+});
+
+document.getElementById('logsRoleFilter')?.addEventListener('change', (e) => {
+  const role = e.target.value;
+  const filtered = role ? userLogsDataList.filter(row => row.AccountType === role) : userLogsDataList;
+  paginationState.userLogs.currentPage = 1;
+  renderUserLogsTable(filtered);
+});
+
+document.getElementById('logsShiftFilter')?.addEventListener('change', (e) => {
+  const shift = e.target.value;
+  const filtered = shift ? userLogsDataList.filter(row => row.Shift === shift) : userLogsDataList;
+  paginationState.userLogs.currentPage = 1;
+  renderUserLogsTable(filtered);
+});
+
+document.getElementById('logsRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('logsSearchInput').value = '';
+  document.getElementById('logsRoleFilter').value = '';
+  document.getElementById('logsShiftFilter').value = '';
+  
+  fetchAndRenderUserLogs();
+});
+
+document.getElementById('logsDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Log ID', 'User ID', 'Last Name', 'First Name', 'Middle Name', 'Account Type', 'Role', 'Shift', 'Username', 'Email Address', 'Action Type', 'Timestamp'];
+  const csvContent = [
+    headers.join(','),
+    ...userLogsDataList.map(row => {
+      const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
+      return [row.LogID, row.UserID, row.Lname, row.Fname, row.Mname, row.AccountType, roleName, row.Shift, row.Username, row.EmailAddress, row.ActionType, row.Timestamp].join(',');
+    })
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `user-logs-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
 });
 
 // ===== LOGOUT FUNCTIONALITY =====
@@ -1256,7 +1640,7 @@ function updateDashboardStats(data) {
   updateStatCard(14, users.parking);
 }
 
-// ===== INITIALIZATION =====
+// ===== INITIALIZATION ===== //
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Admin page loaded - initializing');
   
@@ -1275,9 +1659,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   updateDashboardStats(dashData);
   
+  // Render all tables
   renderHKTable(hkData);
   renderHKHistTable(hkHistData);
-  renderMTTable(mtData);
+  renderHKLinensAmenitiesTable(hkLinensAmenitiesData); // COMBINED TABLE
+  renderMTRequestsTable(mtRequestsData);
+  renderMTHistTable(mtHistData);
+  renderMTAppliancesTable(mtAppliancesData);
   renderParkingTable(parkingDataList);
   renderInventoryTable(inventoryDataList);
   
@@ -1290,3 +1678,470 @@ document.addEventListener('DOMContentLoaded', () => {
       fetchAndRenderUsers();
   }
 });
+
+
+// ===== HOUSEKEEPING LINENS FILTERS =====
+document.getElementById('linensSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = hkLinensData.filter(row => 
+    row.items.toLowerCase().includes(search) ||
+    row.types.toLowerCase().includes(search) ||
+    row.room.toString().includes(search)
+  );
+  paginationState.housekeepingLinens.currentPage = 1;
+  renderHKLinensTable(filtered);
+});
+
+document.getElementById('floorFilterLinens')?.addEventListener('change', (e) => {
+  const floor = e.target.value;
+  const filtered = floor ? hkLinensData.filter(row => row.floor.toString() === floor) : hkLinensData;
+  paginationState.housekeepingLinens.currentPage = 1;
+  renderHKLinensTable(filtered);
+});
+
+document.getElementById('roomFilterLinens')?.addEventListener('change', (e) => {
+  const room = e.target.value;
+  const filtered = room ? hkLinensData.filter(row => row.room.toString() === room) : hkLinensData;
+  paginationState.housekeepingLinens.currentPage = 1;
+  renderHKLinensTable(filtered);
+});
+
+document.getElementById('statusFilterLinens')?.addEventListener('change', (e) => {
+  const status = e.target.value;
+  const filtered = status ? hkLinensData.filter(row => row.status === status) : hkLinensData;
+  paginationState.housekeepingLinens.currentPage = 1;
+  renderHKLinensTable(filtered);
+});
+
+document.getElementById('linensRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('linensSearchInput').value = '';
+  document.getElementById('floorFilterLinens').value = '';
+  document.getElementById('roomFilterLinens').value = '';
+  document.getElementById('statusFilterLinens').value = '';
+  
+  hkLinensData = [...housekeepingLinens];
+  paginationState.housekeepingLinens.currentPage = 1;
+  renderHKLinensTable(hkLinensData);
+});
+
+document.getElementById('linensDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Floor', 'Room', 'Types', 'Items', 'Time/Date', 'Status', 'Remarks'];
+  const csvContent = [
+    headers.join(','),
+    ...hkLinensData.map(row => [row.floor, row.room, row.types, row.items, row.timeDate, row.status, row.remarks].join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `housekeeping-linens-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// ===== HOUSEKEEPING AMENITIES FILTERS =====
+document.getElementById('amenitiesSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = hkAmenitiesData.filter(row => 
+    row.items.toLowerCase().includes(search) ||
+    row.types.toLowerCase().includes(search) ||
+    row.room.toString().includes(search)
+  );
+  paginationState.housekeepingAmenities.currentPage = 1;
+  renderHKAmenitiesTable(filtered);
+});
+
+document.getElementById('floorFilterAmenities')?.addEventListener('change', (e) => {
+  const floor = e.target.value;
+  const filtered = floor ? hkAmenitiesData.filter(row => row.floor.toString() === floor) : hkAmenitiesData;
+  paginationState.housekeepingAmenities.currentPage = 1;
+  renderHKAmenitiesTable(filtered);
+});
+
+document.getElementById('roomFilterAmenities')?.addEventListener('change', (e) => {
+  const room = e.target.value;
+  const filtered = room ? hkAmenitiesData.filter(row => row.room.toString() === room) : hkAmenitiesData;
+  paginationState.housekeepingAmenities.currentPage = 1;
+  renderHKAmenitiesTable(filtered);
+});
+
+document.getElementById('statusFilterAmenities')?.addEventListener('change', (e) => {
+  const status = e.target.value;
+  const filtered = status ? hkAmenitiesData.filter(row => row.status === status) : hkAmenitiesData;
+  paginationState.housekeepingAmenities.currentPage = 1;
+  renderHKAmenitiesTable(filtered);
+});
+
+document.getElementById('amenitiesRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('amenitiesSearchInput').value = '';
+  document.getElementById('floorFilterAmenities').value = '';
+  document.getElementById('roomFilterAmenities').value = '';
+  document.getElementById('statusFilterAmenities').value = '';
+  
+  hkAmenitiesData = [...housekeepingAmenities];
+  paginationState.housekeepingAmenities.currentPage = 1;
+  renderHKAmenitiesTable(hkAmenitiesData);
+});
+
+document.getElementById('amenitiesDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Floor', 'Room', 'Types', 'Items', 'Time/Date', 'Status', 'Remarks'];
+  const csvContent = [
+    headers.join(','),
+    ...hkAmenitiesData.map(row => [row.floor, row.room, row.types, row.items, row.timeDate, row.status, row.remarks].join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `housekeeping-amenities-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// ===== MAINTENANCE HISTORY FILTERS =====
+document.getElementById('mtHistSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = mtHistData.filter(row => 
+    row.issue.toLowerCase().includes(search) ||
+    row.staff.toLowerCase().includes(search) ||
+    row.room.toString().includes(search)
+  );
+  paginationState.maintenanceHistory.currentPage = 1;
+  renderMTHistTable(filtered);
+});
+
+document.getElementById('mtFloorFilterHist')?.addEventListener('change', (e) => {
+  const floor = e.target.value;
+  const filtered = floor ? mtHistData.filter(row => row.floor.toString() === floor) : mtHistData;
+  paginationState.maintenanceHistory.currentPage = 1;
+  renderMTHistTable(filtered);
+});
+
+document.getElementById('mtRoomFilterHist')?.addEventListener('change', (e) => {
+  const room = e.target.value;
+  const filtered = room ? mtHistData.filter(row => row.room.toString() === room) : mtHistData;
+  paginationState.maintenanceHistory.currentPage = 1;
+  renderMTHistTable(filtered);
+});
+
+document.getElementById('mtHistRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('mtHistSearchInput').value = '';
+  document.getElementById('mtFloorFilterHist').value = '';
+  document.getElementById('mtRoomFilterHist').value = '';
+  
+  mtHistData = [...maintenanceHistory];
+  paginationState.maintenanceHistory.currentPage = 1;
+  renderMTHistTable(mtHistData);
+});
+
+document.getElementById('mtHistDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Floor', 'Room', 'Issue Type', 'Date', 'Requested Time', 'Completed Time', 'Status', 'Staff In Charge', 'Remarks'];
+  const csvContent = [
+    headers.join(','),
+    ...mtHistData.map(row => [row.floor, row.room, row.issue, row.date, row.requestedTime, row.completedTime, row.status, row.staff, row.remarks].join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `maintenance-history-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// ===== MAINTENANCE APPLIANCES FILTERS =====
+document.getElementById('appliancesSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = mtAppliancesData.filter(row => 
+    row.items.toLowerCase().includes(search) ||
+    row.types.toLowerCase().includes(search) ||
+    row.room.toString().includes(search)
+  );
+  paginationState.maintenanceAppliances.currentPage = 1;
+  renderMTAppliancesTable(filtered);
+});
+
+document.getElementById('appFloorFilter')?.addEventListener('change', (e) => {
+  const floor = e.target.value;
+  const filtered = floor ? mtAppliancesData.filter(row => row.floor.toString() === floor) : mtAppliancesData;
+  paginationState.maintenanceAppliances.currentPage = 1;
+  renderMTAppliancesTable(filtered);
+});
+
+document.getElementById('appRoomFilter')?.addEventListener('change', (e) => {
+  const room = e.target.value;
+  const filtered = room ? mtAppliancesData.filter(row => row.room.toString() === room) : mtAppliancesData;
+  paginationState.maintenanceAppliances.currentPage = 1;
+  renderMTAppliancesTable(filtered);
+});
+
+document.getElementById('appTypeFilter')?.addEventListener('change', (e) => {
+  const type = e.target.value;
+  const filtered = type ? mtAppliancesData.filter(row => row.types === type) : mtAppliancesData;
+  paginationState.maintenanceAppliances.currentPage = 1;
+  renderMTAppliancesTable(filtered);
+});
+
+document.getElementById('appliancesRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('appliancesSearchInput').value = '';
+  document.getElementById('appFloorFilter').value = '';
+  document.getElementById('appRoomFilter').value = '';
+  document.getElementById('appTypeFilter').value = '';
+  
+  mtAppliancesData = [...maintenanceAppliances];
+  paginationState.maintenanceAppliances.currentPage = 1;
+  renderMTAppliancesTable(mtAppliancesData);
+});
+
+document.getElementById('appliancesDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Floor', 'Room', 'Installed Date', 'Types', 'Items', 'Last Maintained', 'Remarks'];
+  const csvContent = [
+    headers.join(','),
+    ...mtAppliancesData.map(row => [row.floor, row.room, row.installedDate, row.types, row.items, row.lastMaintained, row.remarks].join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `maintenance-appliances-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// ===== PARKING FILTERS =====
+document.getElementById('parkingSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = parkingDataList.filter(row => 
+    row.plateNumber.toLowerCase().includes(search) ||
+    row.guestName.toLowerCase().includes(search) ||
+    row.slotNumber.toLowerCase().includes(search)
+  );
+  paginationState.parking.currentPage = 1;
+  renderParkingTable(filtered);
+});
+
+document.getElementById('parkingLevelFilter')?.addEventListener('change', (e) => {
+  const level = e.target.value;
+  const filtered = level ? parkingDataList.filter(row => row.level.toString() === level) : parkingDataList;
+  paginationState.parking.currentPage = 1;
+  renderParkingTable(filtered);
+});
+
+document.getElementById('parkingBlockFilter')?.addEventListener('change', (e) => {
+  const block = e.target.value;
+  const filtered = block ? parkingDataList.filter(row => row.block === block) : parkingDataList;
+  paginationState.parking.currentPage = 1;
+  renderParkingTable(filtered);
+});
+
+document.getElementById('parkingStatusFilter')?.addEventListener('change', (e) => {
+  const status = e.target.value;
+  const filtered = status ? parkingDataList.filter(row => row.status === status) : parkingDataList;
+  paginationState.parking.currentPage = 1;
+  renderParkingTable(filtered);
+});
+
+document.getElementById('parkingRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('parkingSearchInput').value = '';
+  document.getElementById('parkingLevelFilter').value = '';
+  document.getElementById('parkingBlockFilter').value = '';
+  document.getElementById('parkingStatusFilter').value = '';
+  
+  parkingDataList = [...parkingData];
+  paginationState.parking.currentPage = 1;
+  renderParkingTable(parkingDataList);
+});
+
+document.getElementById('parkingDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Plate #', 'Room', 'Name', 'Vehicle Type', 'Entry Time', 'Exit Time', 'Slot Number', 'Status'];
+  const csvContent = [
+    headers.join(','),
+    ...parkingDataList.map(row => [row.plateNumber, row.room, row.guestName, row.vehicleType, row.entryTime, row.exitTime, row.slotNumber, row.status].join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `parking-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// ===== INVENTORY FILTERS =====
+document.getElementById('inventorySearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = inventoryDataList.filter(row => 
+    row.name.toLowerCase().includes(search) ||
+    row.category.toLowerCase().includes(search) ||
+    row.description.toLowerCase().includes(search)
+  );
+  paginationState.inventory.currentPage = 1;
+  renderInventoryTable(filtered);
+});
+
+document.getElementById('inventoryCategoryFilter')?.addEventListener('change', (e) => {
+  const category = e.target.value;
+  const filtered = category ? inventoryDataList.filter(row => row.category === category) : inventoryDataList;
+  paginationState.inventory.currentPage = 1;
+  renderInventoryTable(filtered);
+});
+
+document.getElementById('inventoryStatusFilter')?.addEventListener('change', (e) => {
+  const status = e.target.value;
+  const filtered = status ? inventoryDataList.filter(row => row.status === status) : inventoryDataList;
+  paginationState.inventory.currentPage = 1;
+  renderInventoryTable(filtered);
+});
+
+document.getElementById('inventoryRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('inventorySearchInput').value = '';
+  document.getElementById('inventoryCategoryFilter').value = '';
+  document.getElementById('inventoryStatusFilter').value = '';
+  
+  inventoryDataList = [...inventoryData];
+  paginationState.inventory.currentPage = 1;
+  renderInventoryTable(inventoryDataList);
+});
+
+document.getElementById('inventoryDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['ID', 'Name', 'Category', 'Quantity', 'Description', 'Status', 'Damage', 'Stock In Date', 'Stock Out Date'];
+  const csvContent = [
+    headers.join(','),
+    ...inventoryDataList.map(row => [row.id, row.name, row.category, row.quantity, row.description, row.status, row.damage, row.stockInDate, row.stockOutDate].join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `inventory-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+
+
+// ===== COMBINED LINENS & AMENITIES DATA AND RENDER FUNCTION =====
+// Combine linens and amenities data into one array
+let hkLinensAmenitiesData = [...housekeepingLinens, ...housekeepingAmenities];
+
+// Add pagination state for combined data
+paginationState.housekeepingLinensAmenities = { currentPage: 1, itemsPerPage: 10 };
+
+// Render function for combined Linens & Amenities table
+function renderHKLinensAmenitiesTable(data = hkLinensAmenitiesData) {
+  const tbody = document.getElementById('hkLinensAmenitiesTableBody');
+  if (!tbody) return;
+  const state = paginationState.housekeepingLinensAmenities;
+  const totalPages = getTotalPages(data.length, state.itemsPerPage);
+  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+  } else {
+    tbody.innerHTML = paginatedData.map(row => {
+      const statusClass = row.status === 'cleaned' ? 'cleaned' : 
+                          row.status === 'stocked' ? 'cleaned' : 
+                          row.status === 'pending' ? 'pending' : row.status;
+      const statusText = row.status === 'cleaned' ? 'Cleaned' :
+                         row.status === 'stocked' ? 'Stocked' :
+                         row.status === 'pending' ? 'Pending' : row.status;
+      return `
+        <tr>
+          <td>${row.floor}</td>
+          <td>${row.room}</td>
+          <td>${row.types}</td>
+          <td>${row.items}</td>
+          <td>${row.timeDate}</td>
+          <td><span class="statusBadge ${statusClass}">${statusText}</span></td>
+          <td>${row.remarks}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+  
+  const recordCount = document.getElementById('hkLinensAmenitiesRecordCount');
+  if (recordCount) recordCount.textContent = data.length;
+  renderPaginationControls('hk-linens-amenities-tab', totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderHKLinensAmenitiesTable(data);
+  });
+}
+
+// ===== COMBINED LINENS & AMENITIES FILTERS =====
+document.getElementById('linensAmenitiesSearchInput')?.addEventListener('input', (e) => {
+  const search = e.target.value.toLowerCase();
+  const filtered = hkLinensAmenitiesData.filter(row => 
+    row.items.toLowerCase().includes(search) ||
+    row.types.toLowerCase().includes(search) ||
+    row.room.toString().includes(search) ||
+    row.remarks.toLowerCase().includes(search)
+  );
+  paginationState.housekeepingLinensAmenities.currentPage = 1;
+  renderHKLinensAmenitiesTable(filtered);
+});
+
+document.getElementById('floorFilterLinensAmenities')?.addEventListener('change', (e) => {
+  const floor = e.target.value;
+  const filtered = floor ? hkLinensAmenitiesData.filter(row => row.floor.toString() === floor) : hkLinensAmenitiesData;
+  paginationState.housekeepingLinensAmenities.currentPage = 1;
+  renderHKLinensAmenitiesTable(filtered);
+});
+
+document.getElementById('roomFilterLinensAmenities')?.addEventListener('change', (e) => {
+  const room = e.target.value;
+  const filtered = room ? hkLinensAmenitiesData.filter(row => row.room.toString() === room) : hkLinensAmenitiesData;
+  paginationState.housekeepingLinensAmenities.currentPage = 1;
+  renderHKLinensAmenitiesTable(filtered);
+});
+
+document.getElementById('typeFilterLinensAmenities')?.addEventListener('change', (e) => {
+  const type = e.target.value;
+  const filtered = type ? hkLinensAmenitiesData.filter(row => row.types === type) : hkLinensAmenitiesData;
+  paginationState.housekeepingLinensAmenities.currentPage = 1;
+  renderHKLinensAmenitiesTable(filtered);
+});
+
+document.getElementById('statusFilterLinensAmenities')?.addEventListener('change', (e) => {
+  const status = e.target.value;
+  const filtered = status ? hkLinensAmenitiesData.filter(row => row.status === status) : hkLinensAmenitiesData;
+  paginationState.housekeepingLinensAmenities.currentPage = 1;
+  renderHKLinensAmenitiesTable(filtered);
+});
+
+document.getElementById('linensAmenitiesRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('linensAmenitiesSearchInput').value = '';
+  document.getElementById('floorFilterLinensAmenities').value = '';
+  document.getElementById('roomFilterLinensAmenities').value = '';
+  document.getElementById('typeFilterLinensAmenities').value = '';
+  document.getElementById('statusFilterLinensAmenities').value = '';
+  
+  hkLinensAmenitiesData = [...housekeepingLinens, ...housekeepingAmenities];
+  paginationState.housekeepingLinensAmenities.currentPage = 1;
+  renderHKLinensAmenitiesTable(hkLinensAmenitiesData);
+});
+
+document.getElementById('linensAmenitiesDownloadBtn')?.addEventListener('click', () => {
+  const headers = ['Floor', 'Room', 'Types', 'Items', 'Time/Date', 'Status', 'Remarks'];
+  const csvContent = [
+    headers.join(','),
+    ...hkLinensAmenitiesData.map(row => [row.floor, row.room, row.types, row.items, row.timeDate, row.status, row.remarks].join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `housekeeping-linens-amenities-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+});
+
+// ===== UPDATE INITIALIZATION TO INCLUDE COMBINED TABLE =====
+// In the DOMContentLoaded section, add:
+// renderHKLinensAmenitiesTable(hkLinensAmenitiesData);
