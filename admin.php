@@ -971,7 +971,7 @@ if (isset($_SESSION['UserID'])) {
                 <option value="">Role</option>
                 <option value="admin">Admin</option>
                 <option value="housekeeping_manager">Housekeeping Manager</option>
-                <option value="Inventory_manager">Inventory Manager</option>
+                <option value="inventory_manager">Inventory Manager</option>
                 <option value="maintenance_manager">Maintenance Manager</option>
                 <option value="parking_manager">Parking Manager</option>
                 <option value="housekeeping_staff">Housekeeping Staff</option>
@@ -1032,7 +1032,7 @@ if (isset($_SESSION['UserID'])) {
                 <option value="admin">Admin</option>
                 <option value="housekeeping_manager">Housekeeping Manager</option>
                 <option value="maintenance_manager">Maintenance Manager</option>
-                <option value="Inventory_manager">Inventory Manager</option>
+                <option value="inventory_manager">Inventory Manager</option>
                 <option value="parking_manager">Parking Manager</option>
                 <option value="housekeeping_staff">Housekeeping Staff</option>
                 <option value="maintenance_staff">Maintenance Staff</option>
@@ -1236,7 +1236,7 @@ if (isset($_SESSION['UserID'])) {
             <option value="admin">Administrator</option>
             <option value="housekeeping_manager">Housekeeping Manager</option>
             <option value="maintenance_manager">Maintenance Manager</option>
-            <option value="Inventory_manager">Inventory Manager</option>
+            <option value="inventory_manager">Inventory Manager</option>
             <option value="parking_manager">Parking Manager</option>
             <option value="housekeeping_staff">Housekeeping Staff</option>
             <option value="maintenance_staff">Maintenance Staff</option>

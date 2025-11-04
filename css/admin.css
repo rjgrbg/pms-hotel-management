@@ -486,6 +486,33 @@ tbody tr:hover {
 .statusBadge.stocked {
   background-color: #5cb85c;
 }
+/* ===== USER BADGES ===== */
+.statusBadge.admin{
+  background-color: #480c1b; 
+}
+
+.statusBadge.housekeeping_manager {
+    background-color: #007bff; /* Blue - Standard for Service/Cleaning */
+}
+
+.statusBadge.maintenance_manager {
+    background-color: #ff9500; /* Orange - Standard for Caution/Work-in-progress */
+}
+
+.statusBadge.parking_manager {
+    background-color: #5cb85c; /* Green - Standard for Availability/Logistics */
+}
+.statusBadge.inventory_manager {
+    background-color: #9b59b6; /* Purple - Standard for Inventory/Stock */
+}
+
+.statusBadge.housekeeping_staff {
+    background-color: #17a2b8; /* Teal - Standard for Support/Assistance */
+}
+
+.statusBadge.maintenance_staff {
+    background-color: #ffc107; /* Yellow - Standard for Maintenance/Repairs */
+}
 
 /* ===== ACTION BADGES ===== */
 .actionBadge {
@@ -1671,6 +1698,7 @@ tbody tr:hover {
 .visible {
   display: block !important;
 }
+
 
 /* ===== END OF CSS ===== */
  
