@@ -1,433 +1,1009 @@
-// ===== USE SHARED DATA =====
-const requestsData = [
-  { floor: 1, room: 101, issue: 'Leaky Faucet', date: '2025-10-19', requestTime: '10:30 AM', priority: 'High', status: 'pending', staff: 'Not Assigned' },
-  { floor: 1, room: 102, issue: 'AC Not Working', date: '2025-10-19', requestTime: '11:15 AM', priority: 'Urgent', status: 'urgent', staff: 'Not Assigned' },
-  { floor: 2, room: 201, issue: 'Broken Door Lock', date: '2025-10-19', requestTime: '09:45 AM', priority: 'High', status: 'pending', staff: 'Anna Martinez' },
-  { floor: 2, room: 202, issue: 'Electrical Outlet Damaged', date: '2025-10-19', requestTime: '12:00 PM', priority: 'Urgent', status: 'urgent', staff: 'Not Assigned' },
-];
+// ===== GLOBAL VARIABLES =====
+let currentRequestsData = [];
+let currentStaffData = [];
+let currentHistoryData = [];
+let currentAppliancesData = [];
+let allRooms = [];
+let appliancesTypes = [];
 
-const staffData = [
-  { id: 1, name: 'Anna Martinez', assigned: false },
-  { id: 2, name: 'James Wilson', assigned: true },
-  { id: 3, name: 'Sofia Rodriguez', assigned: false },
-  { id: 4, name: 'Michael Brown', assigned: false },
-  { id: 5, name: 'Emma Davis', assigned: true },
-  { id: 6, name: 'Oliver Taylor', assigned: false },
-];
+let filteredRequests = [];
+let filteredStaff = [];
+let filteredHistory = [];
+let filteredAppliances = [];
 
-const historyData = [
-  { floor: 1, room: 101, issue: 'Leaky Faucet', date: '2025-10-18', requestedTime: '2:00 PM', completedTime: '3:00 PM', staff: 'Anna Martinez', status: 'repaired', remarks: 'Replaced faucet washer' },
-  { floor: 1, room: 102, issue: 'Light Fixture Broken', date: '2025-10-18', requestedTime: '3:15 PM', completedTime: '4:30 PM', staff: 'James Wilson', status: 'repaired', remarks: 'Replaced bulb and fixture' },
-  { floor: 2, room: 201, issue: 'Door Handle Stuck', date: '2025-10-18', requestedTime: '1:00 PM', completedTime: '2:00 PM', staff: 'Sofia Rodriguez', status: 'repaired', remarks: 'Applied lubricant' },
-  { floor: 2, room: 202, issue: 'Shower Head Low Pressure', date: '2025-10-17', requestedTime: '10:00 AM', completedTime: '11:15 AM', staff: 'Michael Brown', status: 'repaired', remarks: 'Cleaned aerator' },
-  { floor: 1, room: 103, issue: 'Wall Paint Chipped', date: '2025-10-17', requestedTime: '4:00 PM', completedTime: '5:00 PM', staff: 'Emma Davis', status: 'repaired', remarks: 'Touch up paint applied' },
-];
-
-// Store filtered data
-let filteredRequests = [...requestsData];
-let filteredStaff = [...staffData];
-let filteredHistory = [...historyData];
 let selectedStaffId = null;
-let currentRequestIndex = null;
+let currentRequestId = null;
+let currentApplianceId = null;
+let pendingAction = null;
 
-// ===== TAB NAVIGATION =====
-const tabBtns = document.querySelectorAll('.tabBtn');
-const tabContents = document.querySelectorAll('.tabContent');
+// Pagination State
+const paginationState = {
+  requests: { currentPage: 1, itemsPerPage: 10 },
+  history: { currentPage: 1, itemsPerPage: 10 },
+  appliances: { currentPage: 1, itemsPerPage: 10 }
+};
 
-tabBtns.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const tabName = btn.getAttribute('data-tab');
-    
-    tabBtns.forEach(b => b.classList.remove('active'));
-    tabContents.forEach(content => content.classList.remove('active'));
+// ===== INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', () => {
+  currentRequestsData = typeof initialRequestsData !== 'undefined' ? initialRequestsData : [];
+  currentStaffData = typeof availableStaffData !== 'undefined' ? availableStaffData : [];
+  currentAppliancesData = typeof initialAppliancesData !== 'undefined' ? initialAppliancesData : [];
+  currentHistoryData = typeof initialHistoryData !== 'undefined' ? initialHistoryData : [];
+  allRooms = typeof allRoomsData !== 'undefined' ? allRoomsData : [];
+  appliancesTypes = typeof appliancesTypesData !== 'undefined' ? appliancesTypesData : [];
 
-    btn.classList.add('active');
-    document.getElementById(`${tabName}-tab`).classList.add('active');
-  });
+  applyRequestFiltersAndRender();
+  applyHistoryFiltersAndRender();
+  applyAppliancesFiltersAndRender();
+
+  setupEventListeners();
+  populateStaticFilters();
+  populateAppliancesFilters();
+  populateHistoryFilters();
 });
 
-// ===== RENDER FUNCTIONS =====
-function renderRequestsTable(data = filteredRequests) {
-  const tbody = document.getElementById('requestsTableBody');
-  
-  if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No requests found</td></tr>';
-    return;
-  }
-  
-  tbody.innerHTML = data.map((req, index) => `
-    <tr>
-      <td>${req.floor}</td>
-      <td>${req.room}</td>
-      <td>${req.issue}</td>
-      <td>${req.date}</td>
-      <td>${req.requestTime}</td>
-      <td>${req.priority}</td>
-      <td><span class="statusBadge ${req.status}">${req.status === 'pending' ? 'Pending' : 'Urgent'}</span></td>
-      <td>${req.staff === 'Not Assigned' ? '<button class="assignBtn" data-index="' + index + '">Assign Staff</button>' : req.staff}</td>
-    </tr>
-  `).join('');
-  
-  document.querySelectorAll('.assignBtn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      currentRequestIndex = parseInt(e.target.getAttribute('data-index'));
-      showStaffModal();
-    });
-  });
-}
-
-function renderStaffList(data = filteredStaff) {
-  const staffList = document.getElementById('staffList');
-  
-  if (data.length === 0) {
-    staffList.innerHTML = '<div style="text-align: center; padding: 20px; color: #dcc8b0;">No staff members found</div>';
-    return;
-  }
-  
-  staffList.innerHTML = data.map(staff => `
-    <div class="staffListItem ${staff.assigned ? 'assigned' : ''}" data-staff-id="${staff.id}">
-      <div class="staffListName">${staff.name}</div>
-      <span class="staffListStatus ${staff.assigned ? 'assigned' : 'available'}">${staff.assigned ? 'Assigned' : 'Available'}</span>
-    </div>
-  `).join('');
-  
-  document.querySelectorAll('.staffListItem').forEach(item => {
-    if (!item.classList.contains('assigned')) {
-      item.addEventListener('click', (e) => {
-        document.querySelectorAll('.staffListItem').forEach(i => i.classList.remove('selected'));
-        
-        item.classList.add('selected');
-        selectedStaffId = parseInt(item.getAttribute('data-staff-id'));
-        
-        document.getElementById('confirmStaffBtn').disabled = false;
+// ===== SETUP EVENT LISTENERS =====
+function setupEventListeners() {
+    const tabBtns = document.querySelectorAll('.tabBtn');
+    tabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabName = btn.getAttribute('data-tab');
+        document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tabContent').forEach(content => content.classList.remove('active'));
+        btn.classList.add('active');
+        const activeTab = document.getElementById(`${tabName}-tab`);
+        if (activeTab) activeTab.classList.add('active');
       });
+    });
+
+    // Request Filters
+    document.getElementById('floorFilter')?.addEventListener('change', applyRequestFiltersAndRender);
+    document.getElementById('roomFilter')?.addEventListener('change', applyRequestFiltersAndRender);
+    document.getElementById('searchInput')?.addEventListener('input', applyRequestFiltersAndRender);
+    document.getElementById('refreshBtn')?.addEventListener('click', resetRequestFilters);
+    document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsCSV);
+
+    // History Filters
+    document.getElementById('floorFilterHistory')?.addEventListener('change', () => {
+        updateHistoryRoomFilterOptions();
+        applyHistoryFiltersAndRender();
+    });
+    document.getElementById('roomFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender);
+    document.getElementById('dateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender);
+    document.getElementById('historySearchInput')?.addEventListener('input', applyHistoryFiltersAndRender);
+    document.getElementById('historyRefreshBtn')?.addEventListener('click', resetHistoryFilters);
+    document.getElementById('historyDownloadBtn')?.addEventListener('click', downloadHistoryCSV);
+
+    // Appliances Filters
+    document.getElementById('floorFilterAppliances')?.addEventListener('change', () => {
+        updateAppliancesRoomFilterOptions();
+        applyAppliancesFiltersAndRender();
+    });
+    document.getElementById('roomFilterAppliances')?.addEventListener('change', applyAppliancesFiltersAndRender);
+    document.getElementById('typeFilterAppliances')?.addEventListener('change', applyAppliancesFiltersAndRender);
+    document.getElementById('appliancesSearchInput')?.addEventListener('input', applyAppliancesFiltersAndRender);
+    document.getElementById('appliancesRefreshBtn')?.addEventListener('click', resetAppliancesFilters);
+    document.getElementById('appliancesDownloadBtn')?.addEventListener('click', downloadAppliancesCSV);
+
+    // Add Appliance Button
+    document.getElementById('addApplianceBtn')?.addEventListener('click', showAddApplianceModal);
+
+    // Add/Edit Appliance Modal
+    document.getElementById('closeAddApplianceBtn')?.addEventListener('click', hideAddApplianceModal);
+    document.getElementById('cancelAddApplianceBtn')?.addEventListener('click', hideAddApplianceModal);
+    document.getElementById('addApplianceForm')?.addEventListener('submit', handleAddApplianceSubmit);
+    document.getElementById('applianceFloor')?.addEventListener('change', updateApplianceRoomDropdown);
+
+    // Confirmation Modal
+    document.getElementById('cancelConfirmBtn')?.addEventListener('click', hideConfirmModal);
+    document.getElementById('confirmActionBtn')?.addEventListener('click', handleConfirmAction);
+
+    // Success Modal
+    document.getElementById('closeSuccessBtn')?.addEventListener('click', hideSuccessModal);
+    document.getElementById('okaySuccessBtn')?.addEventListener('click', hideSuccessModal);
+
+    // Delete Modal
+    document.getElementById('closeDeleteBtn')?.addEventListener('click', hideDeleteModal);
+    document.getElementById('cancelDeleteBtn')?.addEventListener('click', hideDeleteModal);
+    document.getElementById('confirmDeleteBtn')?.addEventListener('click', handleConfirmDelete);
+
+    // Staff Modal
+    document.getElementById('closeStaffModalBtn')?.addEventListener('click', hideStaffModal);
+    document.getElementById('cancelStaffBtn')?.addEventListener('click', hideStaffModal);
+    document.getElementById('staffModalSearchInput')?.addEventListener('input', filterStaffInModal);
+    document.getElementById('staffModal')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) hideStaffModal();
+    });
+
+    // Profile Sidebar & Logout
+    const profileBtn = document.getElementById('profileBtn');
+    const sidebar = document.getElementById('profile-sidebar');
+    const closeSidebarBtn = document.getElementById('sidebar-close-btn');
+    profileBtn?.addEventListener('click', () => sidebar?.classList.add('active'));
+    closeSidebarBtn?.addEventListener('click', () => sidebar?.classList.remove('active'));
+
+    const logoutBtn = document.getElementById('logoutBtn');
+    const logoutModal = document.getElementById('logoutModal');
+    const closeLogoutBtn = document.getElementById('closeLogoutBtn');
+    const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+    const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+
+    logoutBtn?.addEventListener('click', (e) => { e.preventDefault(); if(logoutModal) logoutModal.style.display = 'flex'; });
+    closeLogoutBtn?.addEventListener('click', () => { if(logoutModal) logoutModal.style.display = 'none'; });
+    cancelLogoutBtn?.addEventListener('click', () => { if(logoutModal) logoutModal.style.display = 'none'; });
+    confirmLogoutBtn?.addEventListener('click', () => { window.location.href = 'logout.php'; });
+    logoutModal?.addEventListener('click', (e) => { if (e.target === e.currentTarget) logoutModal.style.display = 'none'; });
+}
+
+// ===== PAGINATION UTILITIES =====
+function paginateData(data, page, itemsPerPage) {
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  return data.slice(startIndex, endIndex);
+}
+
+function getTotalPages(dataLength, itemsPerPage) {
+  return Math.ceil(dataLength / itemsPerPage);
+}
+
+function renderPaginationControls(controlsContainerId, totalPages, currentPage, onPageChange) {
+    const container = document.getElementById(controlsContainerId);
+    if (!container) return;
+
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const prevBtn = document.createElement('button');
+    prevBtn.className = 'paginationBtn';
+    prevBtn.textContent = '←';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.onclick = () => onPageChange(currentPage - 1);
+    container.appendChild(prevBtn);
+
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
     }
+
+    if (startPage > 1) {
+        const firstPageBtn = document.createElement('button');
+        firstPageBtn.className = 'paginationBtn';
+        firstPageBtn.textContent = '1';
+        firstPageBtn.onclick = () => onPageChange(1);
+        container.appendChild(firstPageBtn);
+        if (startPage > 2) {
+            const dots = document.createElement('span');
+            dots.textContent = '...';
+            dots.className = 'paginationDots';
+            container.appendChild(dots);
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('button');
+        pageBtn.className = `paginationBtn ${i === currentPage ? 'active' : ''}`;
+        pageBtn.textContent = i;
+        pageBtn.onclick = () => onPageChange(i);
+        container.appendChild(pageBtn);
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            const dots = document.createElement('span');
+            dots.textContent = '...';
+            dots.className = 'paginationDots';
+            container.appendChild(dots);
+        }
+        const lastPageBtn = document.createElement('button');
+        lastPageBtn.className = 'paginationBtn';
+        lastPageBtn.textContent = totalPages;
+        lastPageBtn.onclick = () => onPageChange(totalPages);
+        container.appendChild(lastPageBtn);
+    }
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'paginationBtn';
+    nextBtn.textContent = '→';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.onclick = () => onPageChange(currentPage + 1);
+    container.appendChild(nextBtn);
+}
+
+// ===== RENDER REQUESTS TABLE =====
+function renderRequestsTable() {
+  const tbody = document.getElementById('requestsTableBody');
+  const recordCountEl = document.getElementById('requestsRecordCount');
+  const paginationControlsContainerId = 'requestsPaginationControls';
+  const state = paginationState.requests;
+
+  if (!tbody || !recordCountEl) return;
+
+  const totalPages = getTotalPages(filteredRequests.length, state.itemsPerPage);
+  if (state.currentPage > totalPages) {
+    state.currentPage = Math.max(1, totalPages);
+  }
+  const paginatedData = paginateData(filteredRequests, state.currentPage, state.itemsPerPage);
+
+  if (paginatedData.length === 0 && state.currentPage === 1) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No rooms require maintenance or match filters.</td></tr>';
+  } else if (paginatedData.length === 0 && state.currentPage > 1) {
+      state.currentPage--;
+      renderRequestsTable();
+      return;
+  } else {
+    tbody.innerHTML = paginatedData.map(req => `
+      <tr>
+        <td>${req.floor ?? 'N/A'}</td>
+        <td>${req.room ?? 'N/A'}</td>
+        <td>${req.date ?? 'N/A'}</td>
+        <td>${req.requestTime ?? 'N/A'}</td>
+        <td>${req.lastMaintenance ?? 'N/A'}</td>
+        <td><span class="statusBadge pending">Maintenance</span></td>
+        <td>
+          <button class="assignBtn" data-room-id="${req.id}">Assign Staff</button>
+        </td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('.assignBtn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        currentRequestId = parseInt(e.target.getAttribute('data-room-id'));
+        showStaffModal();
+      });
+    });
+  }
+
+  recordCountEl.textContent = filteredRequests.length;
+  renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderRequestsTable();
   });
 }
 
-function renderHistoryTable(data = filteredHistory) {
+// ===== RENDER HISTORY TABLE =====
+function renderHistoryTable() {
   const tbody = document.getElementById('historyTableBody');
-  
-  if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history found</td></tr>';
+  const recordCountEl = document.getElementById('historyRecordCount');
+  const paginationControlsContainerId = 'historyPaginationControls';
+  const state = paginationState.history;
+
+  if (!tbody || !recordCountEl) return;
+
+  const totalPages = getTotalPages(filteredHistory.length, state.itemsPerPage);
+  if (state.currentPage > totalPages) {
+      state.currentPage = Math.max(1, totalPages);
+  }
+  const paginatedData = paginateData(filteredHistory, state.currentPage, state.itemsPerPage);
+
+  if (paginatedData.length === 0 && state.currentPage === 1) {
+     tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history records found matching criteria.</td></tr>';
+  } else if (paginatedData.length === 0 && state.currentPage > 1) {
+      state.currentPage--;
+      renderHistoryTable();
+      return;
+  } else {
+    tbody.innerHTML = paginatedData.map(hist => `
+      <tr>
+        <td>${hist.floor ?? 'N/A'}</td>
+        <td>${hist.room ?? 'N/A'}</td>
+        <td>${hist.issueType ?? 'N/A'}</td>
+        <td>${hist.date ?? 'N/A'}</td>
+        <td>${hist.requestedTime ?? 'N/A'}</td>
+        <td>${hist.completedTime ?? 'N/A'}</td>
+        <td>${hist.staff ?? 'N/A'}</td>
+        <td><span class="statusBadge repaired">${hist.status ?? 'N/A'}</span></td>
+        <td>${hist.remarks ?? ''}</td>
+      </tr>
+    `).join('');
+  }
+
+  recordCountEl.textContent = filteredHistory.length;
+  renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderHistoryTable();
+  });
+}
+
+// ===== RENDER APPLIANCES TABLE =====
+function renderAppliancesTable() {
+  const tbody = document.getElementById('appliancesTableBody');
+  const recordCountEl = document.getElementById('appliancesRecordCount');
+  const paginationControlsContainerId = 'appliancesPaginationControls';
+  const state = paginationState.appliances;
+
+  if (!tbody || !recordCountEl) return;
+
+  const totalPages = getTotalPages(filteredAppliances.length, state.itemsPerPage);
+  if (state.currentPage > totalPages) {
+    state.currentPage = Math.max(1, totalPages);
+  }
+  const paginatedData = paginateData(filteredAppliances, state.currentPage, state.itemsPerPage);
+
+  if (paginatedData.length === 0 && state.currentPage === 1) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No appliances found matching filters.</td></tr>';
+  } else if (paginatedData.length === 0 && state.currentPage > 1) {
+      state.currentPage--;
+      renderAppliancesTable();
+      return;
+  } else {
+    tbody.innerHTML = paginatedData.map(app => `
+      <tr>
+        <td>${app.floor ?? 'N/A'}</td>
+        <td>${app.room ?? 'N/A'}</td>
+        <td>${app.installedDate ?? 'N/A'}</td>
+        <td>${app.type ?? 'N/A'}</td>
+        <td>${app.item ?? 'N/A'}</td>
+        <td>${app.lastMaintained ?? 'Never'}</td>
+        <td><span class="statusBadge ${app.status === 'Working' ? 'repaired' : app.status === 'Needs Repair' ? 'urgent' : 'maintenance'}">${app.status ?? 'Unknown'}</span></td>
+        <td>${app.remarks ?? ''}</td>
+        <td>
+          <button class="actionIconBtn editBtn" data-appliance-id="${app.id}" title="Edit">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="actionIconBtn deleteBtn" data-appliance-id="${app.id}" title="Delete">
+            <i class="fas fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('.editBtn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const applianceId = parseInt(this.getAttribute('data-appliance-id'));
+        handleEditAppliance(applianceId);
+      });
+    });
+
+    tbody.querySelectorAll('.deleteBtn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const applianceId = parseInt(this.getAttribute('data-appliance-id'));
+        handleDeleteAppliance(applianceId);
+      });
+    });
+  }
+
+  recordCountEl.textContent = filteredAppliances.length;
+  renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
+    state.currentPage = page;
+    renderAppliancesTable();
+  });
+}
+
+// ===== RENDER STAFF LIST =====
+function renderStaffList(staffToRender = filteredStaff) {
+  const staffList = document.getElementById('staffList');
+  if (!staffList) return;
+
+  if (staffToRender.length === 0) {
+    staffList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No available maintenance staff found.</div>';
     return;
   }
-  
-  tbody.innerHTML = data.map(hist => `
-    <tr>
-      <td>${hist.floor}</td>
-      <td>${hist.room}</td>
-      <td>${hist.issue}</td>
-      <td>${hist.date}</td>
-      <td>${hist.requestedTime}</td>
-      <td>${hist.completedTime}</td>
-      <td>${hist.staff}</td>
-      <td><span class="statusBadge ${hist.status}">${hist.status === 'repaired' ? 'Repaired' : hist.status}</span></td>
-      <td>${hist.remarks}</td>
-    </tr>
-  `).join('');
-  
-  document.getElementById('recordCount').textContent = data.length;
+
+  staffList.innerHTML = staffToRender.map(staff => `
+      <div class="staffListItem ${staff.assigned ? 'assigned' : ''}" data-staff-id="${staff.id}">
+        <div class="staffListName">${staff.name}</div>
+        <span class="staffListStatus ${staff.assigned ? 'assigned' : 'available'}">${staff.assigned ? 'Assigned' : 'Available'}</span>
+      </div>
+    `).join('');
 }
 
-// ===== FILTER FUNCTIONS =====
-function filterRequests() {
-  const floor = document.getElementById('floorFilter').value;
-  const room = document.getElementById('roomFilter').value;
-  const status = document.getElementById('statusFilter').value;
-  const search = document.getElementById('searchInput').value.toLowerCase();
-  
-  filteredRequests = requestsData.filter(req => {
-    const matchFloor = !floor || req.floor.toString() === floor;
-    const matchRoom = !room || req.room.toString() === room;
-    const matchStatus = !status || req.status === status;
-    const matchSearch = !search || 
-      req.issue.toLowerCase().includes(search) ||
-      req.room.toString().includes(search) ||
-      req.staff.toLowerCase().includes(search);
-    
-    return matchFloor && matchRoom && matchStatus && matchSearch;
+// ===== FILTERING LOGIC =====
+function applyRequestFiltersAndRender() {
+  const floor = document.getElementById('floorFilter')?.value || '';
+  const room = document.getElementById('roomFilter')?.value || '';
+  const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+
+  filteredRequests = currentRequestsData.filter(req => {
+    const matchFloor = !floor || (req.floor && req.floor.toString() === floor);
+    const matchRoom = !room || (req.room && req.room.toString() === room);
+    const matchSearch = !search || (req.room && req.room.toString().includes(search));
+
+    return matchFloor && matchRoom && matchSearch;
   });
-  
-  renderRequestsTable(filteredRequests);
+
+  paginationState.requests.currentPage = 1;
+  renderRequestsTable();
+  updateRoomFilterOptions();
+}
+
+function applyHistoryFiltersAndRender() {
+  const floor = document.getElementById('floorFilterHistory')?.value || '';
+  const room = document.getElementById('roomFilterHistory')?.value || '';
+  const date = document.getElementById('dateFilterHistory')?.value || '';
+  const search = document.getElementById('historySearchInput')?.value.toLowerCase() || '';
+
+  filteredHistory = currentHistoryData.filter(hist => {
+    const matchFloor = !floor || (hist.floor && hist.floor.toString() === floor);
+    const matchRoom = !room || (hist.room && hist.room.toString() === room);
+    const matchDate = !date || (hist.date && hist.date.includes(date));
+    const matchSearch = !search || 
+      (hist.room && hist.room.toString().includes(search)) ||
+      (hist.staff && hist.staff.toLowerCase().includes(search)) ||
+      (hist.issueType && hist.issueType.toLowerCase().includes(search));
+
+    return matchFloor && matchRoom && matchDate && matchSearch;
+  });
+
+  paginationState.history.currentPage = 1;
+  renderHistoryTable();
+}
+
+function applyAppliancesFiltersAndRender() {
+  const floor = document.getElementById('floorFilterAppliances')?.value || '';
+  const room = document.getElementById('roomFilterAppliances')?.value || '';
+  const type = document.getElementById('typeFilterAppliances')?.value || '';
+  const search = document.getElementById('appliancesSearchInput')?.value.toLowerCase() || '';
+
+  filteredAppliances = currentAppliancesData.filter(app => {
+    const matchFloor = !floor || app.floor.toString() === floor;
+    const matchRoom = !room || app.room.toString() === room;
+    const matchType = !type || app.type === type;
+    const matchSearch = !search || app.item.toLowerCase().includes(search) || app.type.toLowerCase().includes(search);
+
+    return matchFloor && matchRoom && matchType && matchSearch;
+  });
+
+  paginationState.appliances.currentPage = 1;
+  renderAppliancesTable();
 }
 
 function filterStaffInModal() {
-  const search = document.getElementById('staffModalSearchInput').value.toLowerCase();
-  
-  filteredStaff = staffData.filter(staff => 
+  const search = document.getElementById('staffModalSearchInput')?.value.toLowerCase() || '';
+  filteredStaff = currentStaffData.filter(staff =>
     staff.name.toLowerCase().includes(search)
   );
-  
-  renderStaffList(filteredStaff);
+  renderStaffList();
 }
 
-function filterHistory() {
-  const floor = document.getElementById('floorFilterHistory').value;
-  const room = document.getElementById('roomFilterHistory').value;
-  const search = document.getElementById('historySearchInput').value.toLowerCase();
-  
-  filteredHistory = historyData.filter(hist => {
-    const matchFloor = !floor || hist.floor.toString() === floor;
-    const matchRoom = !room || hist.room.toString() === room;
-    const matchSearch = !search || 
-      hist.issue.toLowerCase().includes(search) ||
-      hist.room.toString().includes(search) ||
-      hist.staff.toLowerCase().includes(search);
-    
-    return matchFloor && matchRoom && matchSearch;
-  });
-  
-  renderHistoryTable(filteredHistory);
+// ===== FILTER UTILITIES =====
+function populateStaticFilters() {
+    const floorFilter = document.getElementById('floorFilter');
+    const floors = [...new Set(currentRequestsData.map(r => r.floor).filter(f => f))].sort((a, b) => a - b);
+    if (floorFilter) {
+        while (floorFilter.options.length > 1) {
+            floorFilter.remove(1);
+        }
+        floors.forEach(f => {
+             const option = document.createElement('option');
+             option.value = f;
+             option.textContent = f;
+             floorFilter.appendChild(option);
+        });
+    }
+    updateRoomFilterOptions();
 }
 
-// ===== MODAL FUNCTIONS =====
-const staffModal = document.getElementById('staffModal');
-const assignModal = document.getElementById('assignModal');
-const successModal = document.getElementById('successModal');
+function populateHistoryFilters() {
+    const floorFilterHistory = document.getElementById('floorFilterHistory');
+    const floors = [...new Set(currentHistoryData.map(h => h.floor).filter(f => f))].sort((a, b) => a - b);
+    if (floorFilterHistory) {
+        while (floorFilterHistory.options.length > 1) {
+            floorFilterHistory.remove(1);
+        }
+        floors.forEach(f => {
+             const option = document.createElement('option');
+             option.value = f;
+             option.textContent = f;
+             floorFilterHistory.appendChild(option);
+        });
+    }
+    updateHistoryRoomFilterOptions();
+}
 
+function populateAppliancesFilters() {
+    const floorFilter = document.getElementById('floorFilterAppliances');
+    const floors = [...new Set(currentAppliancesData.map(a => a.floor))].sort((a, b) => a - b);
+    if (floorFilter) {
+        while (floorFilter.options.length > 1) {
+            floorFilter.remove(1);
+        }
+        floors.forEach(f => {
+            const option = document.createElement('option');
+            option.value = f;
+            option.textContent = f;
+            floorFilter.appendChild(option);
+        });
+    }
+
+    const typeFilter = document.getElementById('typeFilterAppliances');
+    const types = [...new Set(currentAppliancesData.map(a => a.type))].sort();
+    if (typeFilter) {
+        while (typeFilter.options.length > 1) {
+            typeFilter.remove(1);
+        }
+        types.forEach(t => {
+            const option = document.createElement('option');
+            option.value = t;
+            option.textContent = t;
+            typeFilter.appendChild(option);
+        });
+    }
+
+    updateAppliancesRoomFilterOptions();
+}
+
+function updateRoomFilterOptions() {
+     const floorFilter = document.getElementById('floorFilter');
+     const roomFilter = document.getElementById('roomFilter');
+     if (!roomFilter || !floorFilter) return;
+
+     const selectedFloor = floorFilter.value;
+     const currentRoomValue = roomFilter.value;
+
+     roomFilter.innerHTML = '<option value="">Room</option>';
+
+     const roomsToShow = selectedFloor
+        ? currentRequestsData.filter(r => r.floor && r.floor.toString() === selectedFloor)
+        : currentRequestsData;
+
+     const roomNumbers = [...new Set(roomsToShow.map(r => r.room).filter(r => r))].sort((a, b) => a - b);
+
+     roomNumbers.forEach(roomNum => {
+         const option = document.createElement('option');
+         option.value = roomNum;
+         option.textContent = roomNum;
+         roomFilter.appendChild(option);
+     });
+
+     if (roomNumbers.map(String).includes(String(currentRoomValue))) {
+         roomFilter.value = currentRoomValue;
+     } else if (roomFilter.options.length > 0) {
+         roomFilter.value = "";
+     }
+}
+
+function updateHistoryRoomFilterOptions() {
+     const floorFilterHistory = document.getElementById('floorFilterHistory');
+     const roomFilterHistory = document.getElementById('roomFilterHistory');
+     if (!roomFilterHistory || !floorFilterHistory) return;
+
+     const selectedFloor = floorFilterHistory.value;
+     const currentRoomValue = roomFilterHistory.value;
+
+     roomFilterHistory.innerHTML = '<option value="">Room</option>';
+
+     const roomsToShow = selectedFloor
+        ? currentHistoryData.filter(h => h.floor && h.floor.toString() === selectedFloor)
+        : currentHistoryData;
+
+     const roomNumbers = [...new Set(roomsToShow.map(h => h.room).filter(r => r))].sort((a, b) => a - b);
+
+     roomNumbers.forEach(roomNum => {
+         const option = document.createElement('option');
+         option.value = roomNum;
+         option.textContent = roomNum;
+         roomFilterHistory.appendChild(option);
+     });
+
+      if (roomNumbers.map(String).includes(String(currentRoomValue))) {
+         roomFilterHistory.value = currentRoomValue;
+     } else if (roomFilterHistory.options.length > 0) {
+         roomFilterHistory.value = "";
+     }
+}
+
+function updateAppliancesRoomFilterOptions() {
+    const floorFilter = document.getElementById('floorFilterAppliances');
+    const roomFilter = document.getElementById('roomFilterAppliances');
+    if (!roomFilter || !floorFilter) return;
+
+    const selectedFloor = floorFilter.value;
+    const currentRoomValue = roomFilter.value;
+
+    roomFilter.innerHTML = '<option value="">Room</option>';
+
+    const roomsToShow = selectedFloor
+        ? currentAppliancesData.filter(a => a.floor.toString() === selectedFloor)
+        : currentAppliancesData;
+
+    const roomNumbers = [...new Set(roomsToShow.map(a => a.room))].sort((a, b) => a - b);
+
+    roomNumbers.forEach(roomNum => {
+        const option = document.createElement('option');
+        option.value = roomNum;
+        option.textContent = roomNum;
+        roomFilter.appendChild(option);
+    });
+
+    if (roomNumbers.includes(parseInt(currentRoomValue))) {
+        roomFilter.value = currentRoomValue;
+    }
+}
+
+function resetRequestFilters() {
+    document.getElementById('floorFilter').value = '';
+    document.getElementById('roomFilter').value = '';
+    document.getElementById('searchInput').value = '';
+    applyRequestFiltersAndRender();
+}
+
+function resetHistoryFilters() {
+     document.getElementById('floorFilterHistory').value = '';
+     document.getElementById('roomFilterHistory').value = '';
+     document.getElementById('dateFilterHistory').value = '';
+     document.getElementById('historySearchInput').value = '';
+     applyHistoryFiltersAndRender();
+}
+
+function resetAppliancesFilters() {
+    document.getElementById('floorFilterAppliances').value = '';
+    document.getElementById('roomFilterAppliances').value = '';
+    document.getElementById('typeFilterAppliances').value = '';
+    document.getElementById('appliancesSearchInput').value = '';
+    applyAppliancesFiltersAndRender();
+}
+
+// ===== MODAL VISIBILITY =====
 function showStaffModal() {
-  selectedStaffId = null;
-  document.getElementById('confirmStaffBtn').disabled = true;
-  document.getElementById('staffModalSearchInput').value = '';
-  filteredStaff = [...staffData];
-  renderStaffList(filteredStaff);
-  staffModal.style.display = 'flex';
+    selectedStaffId = null;
+    document.getElementById('staffModalSearchInput').value = '';
+    filteredStaff = [...currentStaffData];
+    renderStaffList();
+    document.getElementById('staffModal').style.display = 'flex';
 }
 
 function hideStaffModal() {
-  staffModal.style.display = 'none';
+    document.getElementById('staffModal').style.display = 'none';
 }
 
-function showAssignModal() {
-  hideStaffModal();
-  assignModal.style.display = 'flex';
+function showAddApplianceModal(isEdit = false, applianceData = null) {
+  const modal = document.getElementById('addApplianceModal');
+  const modalTitle = document.getElementById('addApplianceModalTitle');
+  const submitBtn = document.getElementById('submitApplianceBtn');
+  
+  if (isEdit && applianceData) {
+    modalTitle.textContent = 'Edit Appliance';
+    submitBtn.textContent = 'UPDATE APPLIANCE';
+    
+    document.getElementById('applianceId').value = applianceData.id;
+    populateApplianceFloorDropdown();
+    document.getElementById('applianceFloor').value = applianceData.floor;
+    
+    updateApplianceRoomDropdown();
+    setTimeout(() => {
+      const roomSelect = document.getElementById('applianceRoom');
+      const roomOption = Array.from(roomSelect.options).find(opt => opt.textContent == applianceData.room);
+      if (roomOption) {
+        roomSelect.value = roomOption.value;
+      }
+    }, 50);
+    
+    document.getElementById('applianceName').value = applianceData.item;
+    document.getElementById('applianceType').value = applianceData.type;
+    document.getElementById('applianceStatus').value = applianceData.status || '';
+    document.getElementById('applianceRemarks').value = applianceData.remarks || '';
+    
+    if (applianceData.installedDate && applianceData.installedDate !== 'N/A') {
+      const dateParts = applianceData.installedDate.split('.');
+      if (dateParts.length === 3) {
+        const dateStr = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+        document.getElementById('applianceInstalledDate').value = dateStr;
+      }
+    }
+    
+    if (applianceData.lastMaintained && applianceData.lastMaintained !== 'Never') {
+      const parts = applianceData.lastMaintained.split('/');
+      if (parts.length === 2) {
+        const dateParts = parts[1].split('.');
+        if (dateParts.length === 3) {
+          const dateStr = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
+          document.getElementById('applianceLastMaintained').value = dateStr;
+        }
+      }
+    }
+  } else {
+    modalTitle.textContent = 'Add Appliance';
+    submitBtn.textContent = 'ADD APPLIANCE';
+    document.getElementById('applianceId').value = '';
+    document.getElementById('addApplianceForm').reset();
+    populateApplianceFloorDropdown();
+  }
+  
+  modal.style.display = 'flex';
 }
 
-function hideAssignModal() {
-  assignModal.style.display = 'none';
+function hideAddApplianceModal() {
+  document.getElementById('addApplianceModal').style.display = 'none';
+  document.getElementById('addApplianceForm').reset();
 }
 
-function showSuccessModal() {
-  hideAssignModal();
-  successModal.style.display = 'flex';
+function showConfirmModal(title, text, actionText) {
+  document.getElementById('confirmModalTitle').textContent = title;
+  document.getElementById('confirmModalText').textContent = text;
+  document.getElementById('confirmActionBtn').textContent = actionText;
+  document.getElementById('confirmModal').style.display = 'flex';
+}
+
+function hideConfirmModal() {
+  document.getElementById('confirmModal').style.display = 'none';
+  pendingAction = null;
+}
+
+function showSuccessModal(message) {
+  document.getElementById('successModalMessage').textContent = message;
+  document.getElementById('successModal').style.display = 'flex';
 }
 
 function hideSuccessModal() {
-  successModal.style.display = 'none';
+  document.getElementById('successModal').style.display = 'none';
 }
 
-// ===== MODAL EVENT LISTENERS =====
-document.getElementById('closeStaffModalBtn').addEventListener('click', hideStaffModal);
-document.getElementById('cancelStaffBtn').addEventListener('click', hideStaffModal);
-document.getElementById('confirmStaffBtn').addEventListener('click', () => {
-  if (selectedStaffId !== null) {
-    showAssignModal();
-  }
-});
+function showDeleteModal() {
+  document.getElementById('deleteModal').style.display = 'flex';
+}
 
-document.getElementById('staffModalSearchInput').addEventListener('input', filterStaffInModal);
+function hideDeleteModal() {
+  document.getElementById('deleteModal').style.display = 'none';
+  currentApplianceId = null;
+}
 
-document.getElementById('closeAssignBtn').addEventListener('click', hideAssignModal);
-document.getElementById('cancelAssignBtn').addEventListener('click', hideAssignModal);
-document.getElementById('confirmAssignBtn').addEventListener('click', () => {
-  const selectedStaff = staffData.find(s => s.id === selectedStaffId);
-  if (selectedStaff && currentRequestIndex !== null) {
-    requestsData[currentRequestIndex].staff = selectedStaff.name;
-    selectedStaff.assigned = true;
-    filterRequests();
-  }
+// ===== FORM HANDLING =====
+function populateApplianceFloorDropdown() {
+  const floorSelect = document.getElementById('applianceFloor');
+  floorSelect.innerHTML = '<option value="">Select Floor</option>';
   
-  showSuccessModal();
-});
-
-document.getElementById('closeSuccessBtn').addEventListener('click', hideSuccessModal);
-document.getElementById('okayBtn').addEventListener('click', hideSuccessModal);
-
-staffModal.addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) {
-    hideStaffModal();
-  }
-});
-
-assignModal.addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) {
-    hideAssignModal();
-  }
-});
-
-successModal.addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) {
-    hideSuccessModal();
-  }
-});
-
-
-// ===== PROFILE BUTTON =====
-const profileBtn = document.getElementById('profileBtn');
-        const sidebar = document.getElementById('profile-sidebar');
-        const closeBtn = document.getElementById('sidebar-close-btn');
-
-        // 2. Add an event listener to the profile icon
-        // When clicked, add the 'active' class to the sidebar to show it
-        profileBtn.addEventListener('click', () => {
-            sidebar.classList.add('active');
-        });
-
-        // 3. Add an event listener to the close button
-        // When clicked, remove the 'active' class from the sidebar to hide it
-        closeBtn.addEventListener('click', () => {
-            sidebar.classList.remove('active');
-        });
-
-
-                  // ===== LOGOUT FUNCTIONALITY =====
-            const logoutBtn = document.getElementById('logoutBtn');
-            const logoutModal = document.getElementById('logoutModal');
-            const closeLogoutBtn = document.getElementById('closeLogoutBtn');
-            const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
-            const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
-
-            // Helper function to handle hiding the modal
-            const hideModal = () => {
-                if (logoutModal) {
-                    logoutModal.style.display = 'none';
-                }
-            };
-
-            // Helper function to handle showing the modal
-            const showModal = () => {
-                if (logoutModal) {
-                    // Use 'flex' (or 'block' if your CSS requires it) to make the modal visible
-                    logoutModal.style.display = 'flex'; 
-                }
-            };
-
-            // --- 1. OPEN MODAL ---
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', (e) => {
-                    e.preventDefault(); // Good practice for a link
-                    showModal();
-                });
-            }
-
-            // --- 2. CLOSE MODAL (X and CANCEL buttons) ---
-            if (closeLogoutBtn) {
-                closeLogoutBtn.addEventListener('click', hideModal);
-            }
-            if (cancelLogoutBtn) {
-                cancelLogoutBtn.addEventListener('click', hideModal);
-            }
-
-            // --- 3. CLOSE MODAL (Clicking Backdrop) ---
-            if (logoutModal) {
-                logoutModal.addEventListener('click', (e) => {
-                    // e.target is the specific element clicked
-                    // e.currentTarget is the element the listener is attached to (logoutModal)
-                    // If they are the same, it means the backdrop was clicked
-                    if (e.target === e.currentTarget) {
-                        hideModal();
-                    }
-                });
-            }
-
-            // --- 4. CONFIRM LOGOUT ---
-            if (confirmLogoutBtn) {
-                confirmLogoutBtn.addEventListener('click', () => {
-                    console.log('Logout confirmed - redirecting to login page');
-                    // Perform the actual redirect or API call here
-                    window.location.href = '/logout.php'; 
-                });
-            }
-// ===== SEARCH INPUTS =====
-document.getElementById('searchInput').addEventListener('input', filterRequests);
-document.getElementById('historySearchInput').addEventListener('input', filterHistory);
-
-// ===== FILTER DROPDOWNS =====
-document.getElementById('floorFilter').addEventListener('change', filterRequests);
-document.getElementById('roomFilter').addEventListener('change', filterRequests);
-document.getElementById('statusFilter').addEventListener('change', filterRequests);
-document.getElementById('floorFilterHistory').addEventListener('change', filterHistory);
-document.getElementById('roomFilterHistory').addEventListener('change', filterHistory);
-document.getElementById('dateFilterHistory').addEventListener('change', (e) => {
-  console.log('Date filter:', e.target.value);
-});
-
-// ===== REFRESH BUTTON =====
-document.getElementById('refreshBtn').addEventListener('click', () => {
-  document.getElementById('floorFilter').value = '';
-  document.getElementById('roomFilter').value = '';
-  document.getElementById('statusFilter').value = '';
-  document.getElementById('searchInput').value = '';
-  
-  filteredRequests = [...requestsData];
-  renderRequestsTable(filteredRequests);
-  
-  alert('Data refreshed!');
-});
-
-// ===== DOWNLOAD BUTTON - REQUESTS PAGE =====
-const downloadBtnRequests = document.getElementById('downloadBtnRequests');
-if (downloadBtnRequests) {
-  downloadBtnRequests.addEventListener('click', () => {
-    const headers = ['Floor', 'Room', 'Issue Type', 'Date', 'Request Time', 'Priority', 'Status', 'Staff In Charge'];
-    const csvContent = [
-      headers.join(','),
-      ...filteredRequests.map(req => 
-        [req.floor, req.room, req.issue, req.date, req.requestTime, req.priority, req.status === 'pending' ? 'Pending' : 'Urgent', req.staff].join(',')
-      )
-    ].join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `maintenance-requests-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    window.URL.revokeObjectURL(url);
+  const floors = [...new Set(allRooms.map(r => r.floor))].sort((a, b) => a - b);
+  floors.forEach(floor => {
+    const option = document.createElement('option');
+    option.value = floor;
+    option.textContent = floor;
+    floorSelect.appendChild(option);
   });
 }
 
-// ===== DOWNLOAD BUTTON - HISTORY PAGE =====
-document.getElementById('downloadBtn').addEventListener('click', () => {
-  const headers = ['Floor', 'Room', 'Issue Type', 'Date', 'Requested Time', 'Completed Time', 'Staff In Charge', 'Status', 'Remarks'];
-  const csvContent = [
-    headers.join(','),
-    ...filteredHistory.map(hist => 
-      [hist.floor, hist.room, hist.issue, hist.date, hist.requestedTime, hist.completedTime, hist.staff, hist.status, hist.remarks].join(',')
-    )
-  ].join('\n');
+function updateApplianceRoomDropdown() {
+  const floorSelect = document.getElementById('applianceFloor');
+  const roomSelect = document.getElementById('applianceRoom');
+  const selectedFloor = floorSelect.value;
   
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `maintenance-history-${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  window.URL.revokeObjectURL(url);
-});
+  roomSelect.innerHTML = '<option value="">Select Room</option>';
+  
+  if (!selectedFloor) return;
+  
+  const rooms = allRooms.filter(r => r.floor.toString() === selectedFloor);
+  rooms.forEach(room => {
+    const option = document.createElement('option');
+    option.value = room.id;
+    option.textContent = room.room;
+    roomSelect.appendChild(option);
+  });
+}
 
-// ===== PAGINATION BUTTONS =====
-document.querySelectorAll('.paginationBtn').forEach(btn => {
-  btn.addEventListener('click', (e) => {
-    if (e.target.textContent === '←' || e.target.textContent === '→') {
-      console.log('Navigation:', e.target.textContent);
-      return;
+function handleAddApplianceSubmit(e) {
+  e.preventDefault();
+  
+  const applianceId = document.getElementById('applianceId').value;
+  const isEdit = applianceId !== '';
+  
+  const formData = {
+    id: applianceId,
+    roomId: document.getElementById('applianceRoom').value,
+    item: document.getElementById('applianceName').value,
+    type: document.getElementById('applianceType').value,
+    status: document.getElementById('applianceStatus').value,
+    remarks: document.getElementById('applianceRemarks').value,
+    installedDate: document.getElementById('applianceInstalledDate').value,
+    lastMaintained: document.getElementById('applianceLastMaintained').value
+  };
+  
+  const room = allRooms.find(r => r.id.toString() === formData.roomId);
+  if (!room) {
+    alert('Please select a valid room');
+    return;
+  }
+  
+  formData.floor = room.floor;
+  formData.room = room.room;
+  
+  pendingAction = {
+    type: isEdit ? 'edit' : 'add',
+    data: formData
+  };
+  
+  hideAddApplianceModal();
+  
+  if (isEdit) {
+    showConfirmModal(
+      'Are you sure you want to update this appliance?',
+      'Please review the details before confirming. Once updated, the changes will be reflected in the maintenance records.',
+      'YES, UPDATE APPLIANCE'
+    );
+  } else {
+    showConfirmModal(
+      'Are you sure you want to add this appliance?',
+      'Please review the details before confirming. Once added, the appliance will be recorded and visible in the maintenance records.',
+      'YES, ADD APPLIANCE'
+    );
+  }
+}
+
+function handleConfirmAction() {
+  if (!pendingAction) return;
+  
+  if (pendingAction.type === 'add') {
+    const newAppliance = {
+      id: Date.now(),
+      roomId: parseInt(pendingAction.data.roomId),
+      floor: pendingAction.data.floor,
+      room: pendingAction.data.room,
+      type: pendingAction.data.type,
+      item: pendingAction.data.item,
+      status: pendingAction.data.status,
+      installedDate: pendingAction.data.installedDate ? formatDateToDisplay(pendingAction.data.installedDate) : 'N/A',
+      lastMaintained: pendingAction.data.lastMaintained ? formatDateTimeToDisplay(pendingAction.data.lastMaintained) : 'Never',
+      remarks: pendingAction.data.remarks || ''
+    };
+    
+    currentAppliancesData.push(newAppliance);
+    
+    hideConfirmModal();
+    showSuccessModal('Appliance Added Successfully');
+    applyAppliancesFiltersAndRender();
+    
+  } else if (pendingAction.type === 'edit') {
+    const applianceIndex = currentAppliancesData.findIndex(app => app.id.toString() === pendingAction.data.id);
+    if (applianceIndex !== -1) {
+      currentAppliancesData[applianceIndex] = {
+        ...currentAppliancesData[applianceIndex],
+        roomId: parseInt(pendingAction.data.roomId),
+        floor: pendingAction.data.floor,
+        room: pendingAction.data.room,
+        type: pendingAction.data.type,
+        item: pendingAction.data.item,
+        status: pendingAction.data.status,
+        remarks: pendingAction.data.remarks || '',
+        installedDate: pendingAction.data.installedDate ? formatDateToDisplay(pendingAction.data.installedDate) : currentAppliancesData[applianceIndex].installedDate,
+        lastMaintained: pendingAction.data.lastMaintained ? formatDateTimeToDisplay(pendingAction.data.lastMaintained) : currentAppliancesData[applianceIndex].lastMaintained
+      };
+      
+      hideConfirmModal();
+      showSuccessModal('Appliance Updated Successfully');
+      applyAppliancesFiltersAndRender();
     }
-    
-    document.querySelectorAll('.paginationBtn').forEach(b => {
-      if (b.textContent !== '←' && b.textContent !== '→' && b.textContent !== '...') {
-        b.classList.remove('active');
-      }
-    });
-    
-    e.target.classList.add('active');
-    console.log('Page:', e.target.textContent);
-  });
-});
+  }
+  
+  pendingAction = null;
+}
 
-// ===== INITIAL RENDER =====
-filteredRequests = [...requestsData];
-filteredHistory = [...historyData];
-renderRequestsTable(filteredRequests);
-renderHistoryTable(filteredHistory);
+function handleEditAppliance(applianceId) {
+  const appliance = currentAppliancesData.find(a => a.id === applianceId);
+  if (!appliance) return;
+  
+  currentApplianceId = applianceId;
+  showAddApplianceModal(true, appliance);
+}
+
+function handleDeleteAppliance(applianceId) {
+  currentApplianceId = applianceId;
+  showDeleteModal();
+}
+
+function handleConfirmDelete() {
+  if (!currentApplianceId) return;
+  
+  const applianceIndex = currentAppliancesData.findIndex(app => app.id === currentApplianceId);
+  if (applianceIndex !== -1) {
+    currentAppliancesData.splice(applianceIndex, 1);
+    hideDeleteModal();
+    showSuccessModal('Appliance Deleted Successfully');
+    applyAppliancesFiltersAndRender();
+  }
+}
+
+// ===== DATE FORMATTING UTILITIES =====
+function formatDateToDisplay(dateString) {
+  // Convert YYYY-MM-DD to MM.DD.YYYY
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${month}.${day}.${year}`;
+}
+
+function formatDateTimeToDisplay(dateString) {
+  // Convert YYYY-MM-DD to h:mmAM/MM.DD.YYYY
+  if (!dateString) return 'Never';
+  const date = new Date(dateString);
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${hours}:${minutes}${ampm}/${month}.${day}.${year}`;
+}
+
+// ===== CSV DOWNLOAD =====
+function downloadRequestsCSV() {
+    if (filteredRequests.length === 0) {
+        alert("No request data to export based on current filters.");
+        return;
+    }
+    const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff In Charge'];
+    const csvContent = [
+        headers.join(','),
+        ...filteredRequests.map(req =>
+            [
+                req.floor ?? 'N/A',
+                req.room ?? 'N/A',
+                req.date ?? 'N/A',
+                req.requestTime ?? 'N/A',
+                req.lastMaintenance ?? 'N/A',
+                'Maintenance',
+                req.staff
+             ].join(',')
+        )
+    ].join('\n');
+    downloadCSV(csvContent, 'maintenance-requests');
+}
+
+function downloadHistoryCSV() {
+     if (filteredHistory.length === 0) {
+        alert("No history data to export based on current filters.");
+        return;
+    }
+    const headers = ['Floor', 'Room', 'Issue Type', 'Date', 'Requested Time', 'Completed Time', 'Staff In Charge', 'Status', 'Remarks'];
+    const csvContent = [
+        headers.join(','),
+        ...filteredHistory.map(hist =>
+            [
+                hist.floor ?? 'N/A',
+                hist.room ?? 'N/A',
+                hist.issueType ?? 'N/A',
+                hist.date ?? 'N/A',
+                hist.requestedTime ?? 'N/A',
+                hist.completedTime ?? 'N/A',
+                hist.staff ?? 'N/A',
+                hist.status ?? 'N/A',
+                `"${(hist.remarks || '').replace(/"/g, '""')}"`
+            ].join(',')
+        )
+    ].join('\n');
+    downloadCSV(csvContent, 'maintenance-history');
+}
+
+function downloadAppliancesCSV() {
+    if (filteredAppliances.length === 0) {
+        alert("No appliances data to export based on current filters.");
+        return;
+    }
+    const headers = ['Floor', 'Room', 'Installed Date', 'Types', 'Items', 'Last Maintained', 'Status', 'Remarks'];
+    const csvContent = [
+        headers.join(','),
+        ...filteredAppliances.map(app =>
+            [
+                app.floor,
+                app.room,
+                app.installedDate,
+                app.type,
+                `"${app.item.replace(/"/g, '""')}"`,
+                app.lastMaintained,
+                app.status,
+                `"${(app.remarks || '').replace(/"/g, '""')}"`
+            ].join(',')
+        )
+    ].join('\n');
+    downloadCSV(csvContent, 'maintenance-appliances');
+}
+
+function downloadCSV(csvContent, filenamePrefix) {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filenamePrefix}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}

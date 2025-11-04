@@ -59,8 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${item.damage}</td>
         <td>${item.stockInDate}</td>
         <td>${item.stockOutDate || 'N/A'}</td>
-        <td><button class="edit-btn" data-id="${item.id}">Edit</button></td>
-      </tr>
+        
+        <td class="action-cell">
+            <button class="action-btn edit-btn" data-id="${item.id}">Edit</button>
+            <button class="action-btn delete-btn" data-id="${item.id}">Delete</button>
+        </td>
+        </tr>
     `).join('');
     
     // Add event listeners for the new Edit buttons
@@ -70,6 +74,19 @@ document.addEventListener('DOMContentLoaded', () => {
             openEditModal(itemId);
         });
     });
+
+    // === NEW SECTION START ===
+    // Add event listeners for the new Delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const itemId = parseInt(e.target.dataset.id);
+            // Set the global item ID so the confirmation modal knows what to delete
+            currentEditItemId = itemId;
+            // Open the delete confirmation modal
+            deleteConfirmModal.classList.add('show-modal');
+        });
+    });
+    // === NEW SECTION END ===
   }
 
   function renderHistoryTable(data = filteredHistory) {
@@ -81,20 +98,20 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    tbody.innerHTML = data.map(hist => `
+    tbody.innerHTML = data.map(item => `
       <tr>
-        <td>${hist.id}</td>
-        <td>${hist.name}</td>
-        <td>${hist.category}</td>
-        <td>${hist.quantity}</td>
-        <td><span class="${hist.quantityChange > 0 ? 'positive' : 'negative'}">${hist.quantityChange}</span></td>
-        <td><span class="status-badge status-${hist.status.replace(/\s+/g, '-')}">${hist.status}</span></td>
-        <td>${hist.damage}</td>
-        <td>${hist.stockInDate}</td>
-        <td>${hist.stockOutDate || 'N/A'}</td>
-        <td>${hist.actionType}</td>
-        <td>${hist.performedBy}</td>
-      </tr>
+        <td>${item.id}</td>
+        <td>${item.name}</td>
+        <td>${item.category}</td>
+        <td>${item.quantity}</td>
+        <td>${item.description}</td>
+        <td><span class="status-badge status-${item.status.replace(/\s+/g, '-')}">${item.status}</span></td>
+        <td>${item.damage}</td>
+        <td>${item.stockInDate}</td>
+        <td>${item.stockOutDate || 'N/A'}</td>
+        <td>${item.actionType}</td>
+        <td>${item.performedBy}</td>
+        </tr>
     `).join('');
     
     document.getElementById('recordCount').textContent = data.length;
@@ -138,24 +155,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const editItemModal = document.getElementById('edit-item-modal');
   const deleteConfirmModal = document.getElementById('delete-confirm-modal');
   
-  // Placeholder for a button to open the "Add Item" modal
-  // You should add a button with id="addItemBtn" to your HTML
+  // This button now exists in the PHP file
   const addItemBtn = document.getElementById('addItemBtn');
   if(addItemBtn) {
-      addItemBtn.addEventListener('click', () => addItemModal.style.display = 'flex');
+       addItemBtn.addEventListener('click', () => addItemModal.classList.add('show-modal'));
   }
 
   // Close Modals
-  document.getElementById('modal-close-btn').addEventListener('click', () => addItemModal.style.display = 'none');
-  document.getElementById('confirm-cancel-btn').addEventListener('click', () => confirmationModal.style.display = 'none');
-  document.getElementById('success-okay-btn').addEventListener('click', () => successModal.style.display = 'none');
-  document.getElementById('edit-modal-close-btn').addEventListener('click', () => editItemModal.style.display = 'none');
-  document.getElementById('delete-cancel-btn').addEventListener('click', () => deleteConfirmModal.style.display = 'none');
+  document.getElementById('modal-close-btn').addEventListener('click', () => addItemModal.classList.remove('show-modal'));
+  document.getElementById('confirm-cancel-btn').addEventListener('click', () => confirmationModal.classList.remove('show-modal'));
+  document.getElementById('success-okay-btn').addEventListener('click', () => successModal.classList.remove('show-modal'));
+  document.getElementById('edit-modal-close-btn').addEventListener('click', () => editItemModal.classList.remove('show-modal'));
+  document.getElementById('delete-cancel-btn').addEventListener('click', () => deleteConfirmModal.classList.remove('show-modal'));
   
   // Add Item Logic
   document.getElementById('add-item-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    confirmationModal.style.display = 'flex';
+    confirmationModal.classList.add('show-modal');
   });
 
   document.getElementById('confirm-add-btn').addEventListener('click', () => {
@@ -174,8 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
     inventoryData.unshift(newItem); // Add to the beginning of the array
     filterInventory(); // Re-render the table
     
-    confirmationModal.style.display = 'none';
-    successModal.style.display = 'flex';
+    confirmationModal.classList.remove('show-modal');
+    successModal.classList.add('show-modal');
     document.getElementById('add-item-form').reset();
   });
 
@@ -192,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('edit-item-add-stock').value = 0; // Reset stock adjustment
     document.getElementById('edit-item-status').value = item.status;
     
-    editItemModal.style.display = 'flex';
+    editItemModal.classList.add('show-modal');
   }
   
   // Stock adjustment buttons in Edit Modal
@@ -229,13 +245,13 @@ document.addEventListener('DOMContentLoaded', () => {
           }
       }
       filterInventory();
-      editItemModal.style.display = 'none';
+      editItemModal.classList.remove('show-modal');
       alert('Item updated successfully!');
   });
 
   // Delete Item Logic
   document.getElementById('edit-modal-delete-btn').addEventListener('click', () => {
-      deleteConfirmModal.style.display = 'flex';
+      deleteConfirmModal.classList.add('show-modal');
   });
 
   document.getElementById('delete-confirm-btn').addEventListener('click', () => {
@@ -244,8 +260,8 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryData.splice(itemIndex, 1);
     }
     filterInventory();
-    deleteConfirmModal.style.display = 'none';
-    editItemModal.style.display = 'none';
+    deleteConfirmModal.classList.remove('show-modal');
+    editItemModal.classList.remove('show-modal'); // Also close edit modal if it was open
     alert('Item deleted successfully!');
   });
 

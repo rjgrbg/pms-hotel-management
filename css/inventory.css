@@ -1,5 +1,10 @@
 /* ============================================= */
-/* === GLOBAL & FONT STYLES                  === */
+/* === FONT IMPORTS (RECOMMENDED)            === */
+/* ============================================= */
+@import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Forum&display=swap');
+
+/* ============================================= */
+/* === GLOBAL & FONT STYLES              === */
 /* ============================================= */
 * {
   margin: 0;
@@ -14,7 +19,7 @@ body {
 }
 
 /* ============================================= */
-/* === HEADER                              === */
+/* === HEADER                          === */
 /* ============================================= */
 .header {
   background-color: #480c1b;
@@ -53,7 +58,7 @@ body {
 }
 
 /* ============================================= */
-/* === PROFILE SIDEBAR                       === */
+/* === PROFILE SIDEBAR                     === */
 /* ============================================= */
 .profile-sidebar {
   position: fixed;
@@ -133,7 +138,7 @@ body {
 }
 
 /* ============================================= */
-/* === MAIN LAYOUT & TABS                    === */
+/* === MAIN LAYOUT & TABS                  === */
 /* ============================================= */
 .mainContainer {
   max-width: 1400px;
@@ -198,7 +203,7 @@ body {
 }
 
 /* ============================================= */
-/* === FILTERS & CONTROLS                    === */
+/* === FILTERS & CONTROLS                  === */
 /* ============================================= */
 .controlsRow {
   margin-bottom: 25px;
@@ -211,8 +216,27 @@ body {
   flex-wrap: wrap;
 }
 
+.filterDropdown,
+.searchInput {
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 13px;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: border 0.2s;
+  font-family: 'Arial', sans-serif;
+}
+
 .filterDropdown {
   min-width: 100px;
+}
+
+.filterDropdown:focus,
+.searchInput:focus {
+  outline: none;
+  border-color: #ffb400;
 }
 
 .searchBox {
@@ -280,7 +304,7 @@ body {
 }
 
 /* ============================================= */
-/* === TABLES & PAGINATION                   === */
+/* === TABLES & PAGINATION                 === */
 /* ============================================= */
 .tableWrapper {
   background-color: #fff;
@@ -403,7 +427,7 @@ tbody tr:hover {
 }
 
 /* ============================================= */
-/* === MODALS (GENERAL STYLES)               === */
+/* === MODALS (GENERAL STYLES)             === */
 /* ============================================= */
 .modalBackdrop {
   position: fixed;
@@ -496,7 +520,7 @@ tbody tr:hover {
 }
 
 /* ============================================= */
-/* === SPECIFIC MODAL STYLES                 === */
+/* === SPECIFIC MODAL STYLES               === */
 /* ============================================= */
 
 /* --- Assign & Logout Modals (Dark Theme) --- */
@@ -669,7 +693,7 @@ tbody tr:hover {
 }
 
 /* ============================================= */
-/* === KEYFRAMES & UTILITIES                 === */
+/* === KEYFRAMES & UTILITIES               === */
 /* ============================================= */
 @keyframes fadeIn {
   from { opacity: 0; }
@@ -687,7 +711,7 @@ tbody tr:hover {
 .staffList::-webkit-scrollbar-thumb:hover { background: #999; }
 
 /* ============================================= */
-/* === RESPONSIVE STYLES                     === */
+/* === RESPONSIVE STYLES                   === */
 /* ============================================= */
 @media (max-width: 1024px) {
   .mainContainer {
@@ -733,6 +757,13 @@ tbody tr:hover {
     flex-direction: column;
   }
   .modalBtn {
+    width: 100%;
+  }
+  .filterDropdown,
+  .searchBox,
+  .refreshBtn,
+  .downloadBtn,
+  .addRoomBtn {
     width: 100%;
   }
 }
@@ -1194,3 +1225,36 @@ tbody tr:hover {
     width: 50%; 
 }
 
+/* ============================================= */
+/* === (NEW) ACTION BUTTONS (IN TABLE)       === */
+/* ============================================= */
+.action-cell {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.action-btn {
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.2s;
+    margin: 0 3px;
+    color: #fff;
+}
+
+.edit-btn {
+    background-color: #480c1b; /* Maroon */
+}
+.edit-btn:hover {
+    background-color: #6a1129; /* Lighter maroon */
+}
+
+.delete-btn {
+    background-color: #c9302c; /* Red */
+}
+.delete-btn:hover {
+    background-color: #e74c3c; /* Lighter red */
+}

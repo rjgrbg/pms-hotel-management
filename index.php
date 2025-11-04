@@ -15,10 +15,11 @@ if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
     $redirect_map = [
         'admin'           => 'admin.php', // Use .php
         'housekeeping_manager' => 'housekeeping.php', // Use .php
-        'housekeeping_staff'   => 'housekeeping_staff.php', // Use .php
+        'housekeeping_staff'   => 'inventory_log.php', // Use .php
         'maintenance_manager'  => 'maintenance.php', // Use .php
-        'maintenance_staff'    => 'maintenance_staff.php', // Use .php
-        'parking_manager'      => 'parking.php', // Use .php
+        'maintenance_staff'    => 'inventory_log.php', // Use .php
+        'parking_manager'      => 'parking.php',
+        'inventory_manager'    => 'inventory.php', // Use .php
         'default'              => 'index.php' // Fallback (shouldn't happen)
     ];
 

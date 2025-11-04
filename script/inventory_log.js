@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Logout Modal: "Confirm"
     confirmLogoutBtn.addEventListener('click', () => {
         hideModal(logoutModalBackdrop);
-        window.location.href = 'inventory_log_logout.php';
+        window.location.href = 'logout.php';
     });
     
     // --- Initial Load ---
