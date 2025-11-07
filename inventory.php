@@ -16,7 +16,7 @@ header('Expires: 0'); // Proxies.
 // If no UserID is in the session, they aren't logged in.
 if (!isset($_SESSION['UserID'])) {
   // Redirect them to the login page
-  header("Location: inventory_log_signin.php");
+  header("Location: signin.php");
   exit();
 }
 

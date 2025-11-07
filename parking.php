@@ -1,49 +1,128 @@
+<?php
+// 1. Start the session with the same secure settings
+session_start([
+  'cookie_httponly' => true,
+  'cookie_secure' => isset($_SERVER['HTTPS']),
+  'use_strict_mode' => true
+]);
+
+// 2. !! THE FIX !! 
+// Tell the browser to not cache this page
+header('Cache-Control: no-cache, no-store, must-revalidate'); // HTTP 1.1.
+header('Pragma: no-cache'); // HTTP 1.0.
+header('Expires: 0'); // Proxies.
+
+// 3. Check if the user is actually logged in.
+// If no UserID is in the session, they aren't logged in.
+if (!isset($_SESSION['UserID'])) {
+  // Redirect them to the login page
+  header("Location: signin.php");
+  exit();
+}
+// If they ARE logged in, the rest of the page will load.
+?>
+
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+     <?php
+  // ======================================================
+  // === PHP Logic Orchestration (REQUIRED FILES) ===
+  // ======================================================
+
+  // 1. Load the database configuration and connection ($conn is now available)
+  require_once('db_connection.php');
+
+  // 2. Load the user data function
+  require_once('User.php');
+
+  // 3. Execute the function to get dynamic data
+  $userData = getUserData($conn);
+
+  // Set the variables used in the HTML, applying security (htmlspecialchars)
+  $Fname = htmlspecialchars($userData['Name']);
+  $Accounttype = htmlspecialchars($userData['Accounttype']); // Using Accounttype to match your error
+  // Close the DB connection (optional, but good practice)
+  $conn->close();
+
+  ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Celestia Hotel - Parking Management</title>
-    
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&display.swap" rel="stylesheet">
+
     <link rel="stylesheet" href="css/parking.css">
 </head>
+
 <body>
-    <div class="header">
-        <div class="header-left">
-            <div class="logo">
-                <img src="assets/images/celestia-logo.png" alt="The Celestia Hotel Logo">
-            </div>
-            <h1 class="hotel-name">THE CELESTIA HOTEL</h1>
-        </div>
-        <div class="user-icon"> 👤
-            <div class="user-menu" id="userMenu">
-                <div class="user-menu-header">
-                    <div class="user-avatar">👤</div>
-                    <div class="user-info">
-                        <h3>Juan Bagayan</h3>
-                        <div class="user-role">Parking Management Head</div>
-                    </div>
-                </div>
-                <button id="btnAccountDetails">⚙️ Account Details</button> <button id="btnLogout">🚪 Logout</button> </div>
-        </div>
+    <header class="header">
+    <div class="headerLeft">
+      <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" />
+      <span class="hotelName">THE CELESTIA HOTEL</span>
     </div>
+
+    <img src="assets/icons/profile-icon.png" alt="Profile" class="profileIcon" id="profileBtn" />
+
+<aside class="profile-sidebar" id="profile-sidebar">
+    <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
+    
+    <div class="profile-header">
+        <div class="profile-pic-container">
+            <i class="fas fa-user-tie"></i>
+        </div>
+        <h3><?php echo $Fname; ?></h3>
+        <p><?php echo $Accounttype; ?></p>
+    </div>
+
+    <nav class="profile-nav">
+        <a href="#" id="account-details-link">
+            <i class="fas fa-user-edit" style="margin-right: 10px;"></i> Account Details
+        </a>
+    </nav>
+    
+    <div class="profile-footer">
+        <a id="logoutBtn">
+            <i class="fas fa-sign-out-alt" style="margin-right: 10px;"></i> Logout
+        </a>
+    </div>
+</aside>
+
+</header> 
+
+  <div class="modalBackdrop" id="logoutModal" style="display: none;">
+    <div class="logoutModal">
+      <button class="closeBtn" id="closeLogoutBtn">×</button>
+      <div class="modalIcon">
+        <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
+      </div>
+      <h2>Are you sure you want to logout?</h2>
+      <p>You will be logged out from your account and redirected to the login page.</p>
+      <div class="modalButtons">
+        <button class="modalBtn cancelBtn" id="cancelLogoutBtn">CANCEL</button>
+        <button class="modalBtn confirmBtn" id="confirmLogoutBtn">YES, LOGOUT</button>
+      </div>
+    </div>
+  </div>
 
     <div class="container">
         <div class="title-bar">
             <h2 class="title">PARKING</h2>
             <div class="controls">
                 <select id="areaSelect">
-                    <option value="all">Area</option> 
+                    <option value="all">Area</option>
                 </select>
                 <div class="search-box">
-                    <input type="text" placeholder="Search">
-                    <button class="search-btn">🔍</button>
+                    <input type="text" placeholder="Search" class="searchInput">
+                    <button class="search-btn"><img src="assets/icons/search-icon.png" alt="Search" /></button>
                 </div>
-                <button class="download-icon" id="downloadIcon">⬇️</button> </div>
+                <button class="download-icon" id="downloadIcon">
+                    <img src="assets/icons/download-icon.png" alt="Download" />
+            </button>
+            </div>
         </div>
 
         <div class="tabs">
@@ -55,17 +134,20 @@
 
         <div class="content" id="dashboardContent">
             <div class="section-header">Current Parking Details</div>
-            
+
             <div class="summary-cards">
                 <div class="card">
                     <div class="card-label">Occupied</div>
-                    <div class="card-value">0</div> </div>
+                    <div class="card-value">0</div>
+                </div>
                 <div class="card">
                     <div class="card-label">Available</div>
-                    <div class="card-value">0</div> </div>
+                    <div class="card-value">0</div>
+                </div>
                 <div class="card">
                     <div class="card-label">Total</div>
-                    <div class="card-value">0</div> </div>
+                    <div class="card-value">0</div>
+                </div>
             </div>
 
             <table>
@@ -79,7 +161,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    </tbody>
+                </tbody>
             </table>
         </div>
 
@@ -92,7 +174,8 @@
                 <div>Park Vehicle</div>
             </div>
             <div id="slotsTable"></div>
-            <div class="pagination" id="pagination-slots"></div> </div>
+            <div class="pagination" id="pagination-slots"></div>
+        </div>
 
         <div class="content hidden" id="vehicleInContent">
             <div class="table-header grid-8">
@@ -107,7 +190,8 @@
                 <div>Exit Vehicle</div>
             </div>
             <div id="vehicleInTable"></div>
-            <div class="pagination" id="pagination-vehicleIn"></div> </div>
+            <div class="pagination" id="pagination-vehicleIn"></div>
+        </div>
 
         <div class="content hidden" id="historyContent">
             <div class="table-header grid-9">
@@ -122,21 +206,24 @@
                 <div>Enter Date</div>
             </div>
             <div id="historyTable"></div>
-            <div class="pagination" id="pagination-history"></div> </div>
+            <div class="pagination" id="pagination-history"></div>
+        </div>
     </div>
 
     <div class="modal-overlay" id="enterVehicleModal">
         <div class="modal">
             <button class="modal-close" data-modal-id="enterVehicleModal">×</button>
             <div class="modal-header">
-                <div class="modal-icon">🚗</div>
+                <div class="modal-icon">
+                    <img src="assets/icons/parkinglot_2.png" alt="Parking Icon" class="modal-img-icon">
+                </div>
                 <div>
-                    <div class="modal-title" id="slotNumberTitle">1A56</div>
+                    <div class="modal-title" id="slotNumberTitle">1A01</div>
                     <div class="modal-text">You can update the details of guest information below. Make sure all information is accurate before saving the changes to keep the parking records up to date.</div>
                 </div>
             </div>
-            
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr; padding-bottom: 0;">
+
+            <div class="form-grid">
                 <div class="form-field">
                     <label>Name</label>
                     <input type="text" id="guestName">
@@ -149,39 +236,40 @@
                     <label>Room</label>
                     <input type="text" id="roomNumber">
                 </div>
-            </div>
-            
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr; padding-top: 1rem;">
                 <div class="form-field">
-                    <label>Vehicle 🚗</label>
+                    <label>Vehicle
+                        <img src="assets/icons/parking-edit.png" alt="Edit Vehicle Type" class="label-icon" id="btnEditVehicleType">
+                    </label>
                     <select id="vehicleType">
                         <option value="">Select</option>
                         <option>2 Wheeled</option>
                         <option>4 Wheeled</option>
                     </select>
                 </div>
+            </div>
+
+            <div class="form-grid">
                 <div class="form-field">
-                    <label>Category 🚗</label>
-                    <div class="flex-field">
-                        <select id="categorySelect">
-                            <option>Sedan</option>
-                            <option>SUV</option>
-                            <option>Pickup</option>
-                            <option>Van</option>
-                            <option>Motorcycle</option>
-                            <option>Truck</option>
-                        </select>
-                        <button class="edit-btn" id="btnEditCategory">✏️</button>
-                    </div>
+                    <label>Category
+                        <img src="assets/icons/parking-edit.png" alt="Edit Category" class="label-icon" id="btnEditCategoryIcon">
+                    </label>
+                    <select id="categorySelect">
+                        <option>Sedan</option>
+                        <option>SUV</option>
+                        <option>Pickup</option>
+                        <option>Van</option>
+                        <option>Motorcycle</option>
+                        <option>Truck</option>
+                    </select>
                 </div>
-                <div class="form-field full-width">
+                <div class="form-field">
                     <label>Slot Number</label>
                     <select id="slotSelect" disabled>
-                        <option>1A56</option>
+                        <option>1A01</option>
                     </select>
                 </div>
             </div>
-            <div class="text-center">
+            <div class="text-center" style="margin-top:30px">
                 <button class="btn-yellow" id="btnSaveVehicle">SAVE</button>
             </div>
         </div>
@@ -190,91 +278,92 @@
     <div class="modal-overlay" id="editCategoryModal">
         <div class="modal">
             <button class="modal-close" data-modal-id="editCategoryModal">×</button>
-            <div class="modal-title" style="text-align: center; margin-bottom: 1.5rem;">Edit Category</div>
-            
-            <div class="form-field" style="margin-bottom: 1.5rem;">
-                <label>Vehicle</label>
-                <input type="text" placeholder="Enter category name">
+
+            <div class="modal-header">
+                <div class="modal-title" id="editCategoryTitle">Edit Category</div>
             </div>
-            <div class="category-list">
-              <div class="category-item">
-                    <span>2 Wheeled</span>
-                    <div class="category-wheels">
-                        <span class="wheel-icon">🚲</span>
-                        <span class="wheel-icon">🚗</span>
-                    </div>
-                </div>
-                <div class="category-item">
-                    <span>4 Wheeled</span>
-                    <div class="category-wheels">
-                        <span class="wheel-icon">🚲</span>
-                        <span class="wheel-icon">🚗</span>
-                    </div>
-                </div>
+
+            <div class="modal-body">
+                <div class="form-field">
+                    <label>Add New</label>
+                    <input type="text" id="newCategoryName" placeholder="Enter new item name">
+                </div>
+
+                <div class="category-list-container">
+                    <div class="category-list" id="editCategoryList">
+                        <div class="category-list-item">
+                            <span>Sedan</span>
+                            <div class="category-item-actions">
+                                <img src="edit.png" alt="Edit" class="list-icon">
+                                <img src="bin.png" alt="Delete" class="list-icon">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
+
             <div class="modal-buttons">
-                <button class="btn-yellow">ADD CATEGORY</button>
+                <button class="btn-yellow" id="btnAddCategoryItem">ADD CATEGORY</button>
                 <button class="btn-yellow" data-modal-id="editCategoryModal">SAVE CHANGES</button>
             </div>
         </div>
     </div>
-
     <div class="modal-overlay" id="damageModal">
         <div class="modal modal-damage">
             <button class="modal-close" data-modal-id="damageModal">×</button>
             <div class="modal-title-center">⚠️ DAMAGE ITEMS</div>
-             <table class="damage-summary-table">
-                <thead>
-                    <tr>
-                        <th>ID, 101</th>
-                        <th>Total</th>
-                        <th>Damage</th>
-                        <th>Non Damage</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td id="damageId">101</td>
-                        <td id="damageTotal">5</td>
-                        <td id="damageDamaged">2</td>
-                        <td id="damageNonDamaged">3</td>
-                    </tr>
-                </tbody>
-            </table>
+            <table class="damage-summary-table">
+                <thead>
+                    <tr>
+                        <th>ID, 101</th>
+                        <th>Total</th>
+                        <th>Damage</th>
+                        <th>Non Damage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td id="damageId">101</td>
+                        <td id="damageTotal">5</td>
+                        <td id="damageDamaged">2</td>
+                        <td id="damageNonDamaged">3</td>
+                    </tr>
+                </tbody>
+            </table>
 
-            <div class="damage-form">
-                <div class="form-row-damage">
-                    <div class="form-field-damage">
-                        <label>Types Of Damages</label>
-                        <input type="text" id="damageType" placeholder="e.g., Burnt">
-                    </div>
-                    <div class="form-field-damage-small">
-                        <label>No. Of Damages</label>
-                        <input type="number" id="damageCount" min="1" value="1">
-                    </div>
-                    <button class="btn-add-damage" id="btnAddDamage">Add Damage Item</button>
-                </div>
-            </div>
+            <div class="damage-form">
+                <div class="form-row-damage">
+                    <div class="form-field-damage">
+                        <label>Types Of Damages</label>
+                        <input type="text" id="damageType" placeholder="e.g., Burnt">
+                    </div>
+                    <div class="form-field-damage-small">
+                        <label>No. Of Damages</label>
+                        <input type="number" id="damageCount" min="1" value="1">
+                    </div>
+                    <button class="btn-add-damage" id="btnAddDamage">Add Damage Item</button>
+                </div>
+            </div>
 
-            <div class="damages-section">
-                <h3>Damages</h3>
-                <table class="damages-list-table">
-                    <thead>
-                        <tr>
-                            <th>Types of Damages</th>
-                            <th>Date Damages</th>
-                            <th>No. Of Damages</th>
-                        </tr>
-                    </thead>
-                    <tbody id="damagesListBody">
-tr>
-                            <td>Burnt</td>
-                            <td>10/25/25</td>
-                            <td>2</td>
-                    </a> </tr>
-                    </tbody>
-                </table>
-Â          </div>
+            <div class="damages-section">
+                <h3>Damages</h3>
+                <table class="damages-list-table">
+                    <thead>
+                        <tr>
+                            <th>Types of Damages</th>
+                            <th>Date Damages</th>
+                            <th>No. Of Damages</th>
+                        </tr>
+                    </thead>
+                    <tbody id="damagesListBody">
+                        <tr>
+                            <td>Burnt</td>
+                            <td>10/25/25</td>
+                            <td>2</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -325,79 +414,6 @@ tr>
         </div>
     </div>
 
-    <div class="modal-overlay" id="logoutModal">
-        <div class="modal modal-gradient">
-            <div class="modal-icon-large">🚪</div>
-            <h2 class="modal-subtitle">Are you sure you want to log out on your account?</h2>
-            <div class="modal-buttons">
-                <button class="btn-yellow" data-modal-id="logoutModal">CANCEL</button>
-                <button class="btn-yellow" id="btnConfirmLogout">YES, LOGOUT</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="accountModal">
-        <div class="modal modal-large">
-            <button class="modal-close" data-modal-id="accountModal">×</button>
-            <div class="account-header">
-                <div class="user-avatar">👤</div>
-                <div class="account-info">
-                    <h2>Juan Bagayan</h2>
-                    <p>ID: 019284738475</p>
-                    <p>Parking Management Head</p>
-                </div>
-            </div>
-            <div class="form-grid">
-                <div class="form-field">
-                    <label>First Name</label>
-                    <input type="text" id="firstName" value="Juan">
-                </div>
-                <div class="form-field">
-                    <label>Email Address</label>
-                    <input type="email" id="emailAddress" value="Juan@housekeeper.com">
-                </div>
-                <div class="form-field">
-                    <label>Middle Name (Optional)</label>
-                    <input type="text" id="middleName" value="Constant">
-                </div>
-                <div class="form-field">
-                    <label>Username</label>
-                    <input type="text" id="username" value="Juana">
-                </div>
-                <div class="form-field">
-                    <label>Last Name</label>
-                    <input type="text" id="lastName" value="Bagayan">
-                </div>
-                <div class="form-field">
-                    <label>Password <span class="change-password">Change Password?</span></label>
-                    <input type="password" id="password" value="************">
-                </div>
-                <div class="form-field">
-                    <label>Birthday</label>
-                    <input type="date" id="birthday" value="2004-10-25">
-                </div>
-                <div class="form-field">
-                    <label>Contact</label>
-                    <input type="text" id="contact" value="09222222222">
-                </div>
-                <div class="form-field">
-                    <label>Shift</label>
-                    <select id="shift">
-                        <option selected>Day</option>
-                        <option>Night</option>
-                    </select>
-                </div>
-                <div class="form-field full-width">
-                    <label>Address</label>
-                    <input type="text" id="address" value="Block 1 Lot 2, Quezon City">
-                </div>
-            </div>
-            <div class="text-center">
-                <button class="btn-yellow" id="btnSaveChanges">SAVE CHANGES</button>
-            </div>
-        </div>
-    </div>
-
     <div class="modal-overlay" id="saveConfirmModal">
         <div class="modal modal-gradient">
             <h2 class="modal-title-yellow">Are you sure you want to save information?</h2>
@@ -432,4 +448,5 @@ tr>
 
     <script src="script/parking.js"></script>
 </body>
+
 </html>
