@@ -7,8 +7,12 @@
     --bg-content: #ffffff;
     --bg-header: #480C1B;
     --bg-section-header: #352C24;
-    --bg-table-header: #d9d9d9;
-    --bg-table-row-alt: #f5f5f5;
+    
+    /* Table styles */
+    --bg-table-header: #352C24; /* Dark Brown */
+    --bg-table-row: #FFF2E0; /* Off-white */
+    --bg-table-row-alt: #FFF2E0; /* Off-white din, para walang alternating */
+
     --bg-card: #f0f0f0;
     
     --text-light: #f5f5f5;
@@ -39,120 +43,9 @@ body {
 /* ========================================================= */
 /* TYPOGRAPHY OVERRIDES */
 /* ========================================================= */
-.hotel-name, .title {
+.hotelName, .title { /* Corrected from .hotel-name */
     font-family: var(--font-primary);
 }
-
-/* ========================================================= */
-/* HEADER STYLES */
-/* ========================================================= */
-
-.header {
-    background: var(--bg-header); 
-    background-image: url('background.png'); 
-    background-size: cover; 
-    background-position: center;
-    background-blend-mode: overlay; 
-    color: var(--text-header);
-    padding: 0.5rem 1.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: none; 
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.logo {
-    width: 45px;
-    height: 45px;
-    background-color: transparent;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.logo img {
-    width: 45px;
-    height: 45px;
-    object-fit: contain;
-}
-
-.hotel-name {
-    font-family: var(--font-primary);
-    font-size: 1rem;
-    letter-spacing: 2px;
-    font-weight: normal;
-    color: var(--text-header);
-}
-
-.user-icon {
-    width: 40px;
-    height: 40px;
-    background-color: var(--text-header);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 1.25rem;
-    position: relative;
-    color: var(--text-dark);
-}
-
-/* User Menu (Dropdown) */
-.user-menu {
-    position: absolute;
-    right: 0;
-    top: 50px;
-    width: 280px;
-    background-color: var(--bg-content);
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    z-index: 1000;
-    color: var(--text-dark);
-    display: none;
-}
-.user-menu.active { display: block; }
-.user-menu-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--bg-table-row-alt);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-.user-avatar {
-    width: 60px;
-    height: 60px;
-    background-color: var(--accent-gold);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    color: var(--text-dark);
-}
-.user-info h3 { font-size: 1rem; margin-bottom: 0.25rem; }
-.user-role { font-size: 0.75rem; color: #666; }
-.user-menu button {
-    width: 100%;
-    padding: 1rem 1.5rem;
-    background: none;
-    border: none;
-    color: var(--text-dark);
-    text-align: left;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    font-size: 0.9rem;
-}
-.user-menu button:hover { background-color: var(--bg-table-row-alt); }
 
 /* ========================================================= */
 /* CONTAINER AND TITLE BAR */
@@ -187,15 +80,29 @@ body {
     align-items: center;
 }
 
+
+.refreshBtn,
 .download-icon {
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 1.5rem;
-    color: var(--text-dark);
-    display: none;
+  background: #fff;
+  border: 1px solid #ccc;
+  padding: 10px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.download-icon.active { display: block; }
+
+.refreshBtn img,
+.download-icon img {
+  width: 18px;
+  height: 18px;
+}
+
+.refreshBtn:hover,
+.download-icon:hover {
+  background-color: #f9f9f9;
+  border-color: #ffb400;
+}
+
 
 /* Form Controls (Select/Input) */
 select, input[type="text"], input[type="email"], input[type="password"], input[type="date"], input[type="number"] {
@@ -224,10 +131,20 @@ select, input[type="text"], input[type="email"], input[type="password"], input[t
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 1rem;
-    color: var(--accent-gold);
+    padding: 0; 
+    width: 28px; 
+    height: 28px; 
+    display: flex; 
+    align-items: center;
+    justify-content: center;
 }
 
+.search-btn img {
+   width: 18px;
+    height: 18px;
+    display: block;
+    object-fit: contain;
+}
 /* ========================================================= */
 /* TABS */
 /* ========================================================= */
@@ -265,7 +182,6 @@ select, input[type="text"], input[type="email"], input[type="password"], input[t
 .content {
     background-color: var(--bg-content);
     padding: 1.5rem;
-    /* Nagdagdag ng min-height para sa "empty state" */
     min-height: 400px;
 }
 
@@ -302,7 +218,6 @@ select, input[type="text"], input[type="email"], input[type="password"], input[t
     font-weight: normal;
 }
 
-/* Inayos 'to para ipakita 'yung value */
 .card-value {
     display: block; 
     font-family: var(--font-primary);
@@ -322,7 +237,7 @@ table {
 }
 
 thead {
-    background-color: var(--bg-table-header);
+    background-color: var(--bg-table-header); /* Dark Brown */
 }
 
 th {
@@ -330,7 +245,7 @@ th {
     text-align: left;
     font-weight: 600;
     font-size: 0.875rem;
-    color: var(--text-dark);
+    color: var(--accent-gold); /* Gold text */
 }
 
 td {
@@ -338,22 +253,22 @@ td {
     text-align: left;
     font-size: 0.875rem;
     color: var(--text-dark);
-    border-bottom: 1px solid var(--bg-table-row-alt);
+    border-bottom: 1px solid rgba(53, 44, 36, 0.1); /* Fainter border */
 }
 
 tbody tr {
-    background-color: var(--bg-content);
+    background-color: var(--bg-table-row); /* Off-white */
 }
 
 tbody tr:nth-child(even) {
-    background-color: var(--bg-table-row-alt);
+    background-color: var(--bg-table-row); /* Off-white, para solid lahat */
 }
 
 tbody tr.full-row {
-    background-color: var(--bg-content);
+    background-color: var(--bg-table-row); 
 }
 tbody tr.full-row td {
-    border-bottom: 1px solid var(--bg-table-row-alt);
+    border-bottom: 1px solid rgba(53, 44, 36, 0.1); 
 }
 
 .text-red {
@@ -364,14 +279,14 @@ tbody tr.full-row td {
 .text-right {
     text-align: left; 
 }
-/* Inalis 'yung comment, gagawin nating right align 'yung huling column */
 td.text-right {
     text-align: right;
 }
 
+/* Dynamic Table Header (Slots, Vehicle In, History) */
 .table-header {
     background-color: var(--bg-section-header);
-    color: var(--text-light);
+    color: var(--accent-gold); /* Gold text */
     padding: 0.75rem 1rem;
     font-weight: 600;
     font-size: 0.875rem;
@@ -380,21 +295,24 @@ td.text-right {
     text-align: left;
 }
 
-.grid-5 { grid-template-columns: 80px 150px 200px 150px 1fr; }
-.grid-8 { grid-template-columns: 100px 100px 100px 150px 120px 120px 120px 120px 100px; }
-.grid-9 { grid-template-columns: 100px 100px 100px 150px 120px 120px 120px 120px 120px; }
+.grid-5 { grid-template-columns: 0.5fr 1fr 1.5fr 1fr 1fr; }
+.grid-8 { grid-template-columns: 1fr 1fr 0.8fr 1.5fr 1.2fr 1.2fr 1fr 1fr 0.8fr; }
+.grid-9 { grid-template-columns: 1fr 1fr 0.8fr 1.5fr 1.2fr 1.2fr 1fr 1.5fr 1.5fr }
 
+/* Dynamic Table Rows */
 .table-row {
     padding: 1rem;
-    border-bottom: 1px solid var(--bg-table-row-alt);
+    border-bottom: 1px solid rgba(53, 44, 36, 0.1); 
     display: grid;
     gap: 1rem;
     align-items: center;
     font-size: 0.875rem;
-    background-color: white;
+    background-color: var(--bg-table-row); /* Off-white */
     text-align: left;
 }
-.table-row:nth-child(even) { background-color: var(--bg-table-row-alt); }
+.table-row:nth-child(even) { 
+    background-color: var(--bg-table-row); /* Off-white, para solid */
+}
 
 .status-badge {
     padding: 0.35rem 1.5rem;
@@ -412,7 +330,7 @@ td.text-right {
 /* ========================================================= */
 
 .btn-enter {
-    background-color: #c62828;
+    background-color: var(--bg-header); /* Maroon */
     color: white;
     padding: 0.4rem 1.2rem;
     border: none;
@@ -421,7 +339,9 @@ td.text-right {
     font-size: 0.75rem;
     font-weight: 600;
 }
-.btn-enter:hover { background-color: #b71c1c; }
+.btn-enter:hover { 
+    background-color: #6a2436; /* Lighter Maroon */
+}
 
 .btn-enter-gray {
     background-color: #999;
@@ -450,18 +370,16 @@ td.text-right {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 0; /* Para sakto lang 'yung image */
-    line-height: 1; /* Para 'di magulo 'yung alignment */
+    padding: 0; 
+    line-height: 1; 
 }
 
-/* Magdagdag ng bagong style para sa <img> sa loob ng button */
 .exit-btn img {
-    width: 28px;  /* Pwede mong i-adjust 'yung laki */
-    height: 28px; /* Pwede mong i-adjust 'yung laki */
-    display: block; /* Para iwasan 'yung extra space sa ilalim */
+    width: 28px; 
+    height: 28px; 
+    display: block; 
 }
 
-/* Opsyonal: Lagyan ng effect 'pag tinapat 'yung mouse */
 .exit-btn:hover img {
     opacity: 0.7;
 }
@@ -477,7 +395,7 @@ td.text-right {
 }
 
 /* ========================================================= */
-/* PAGINATION (BAGO 'TO) */
+/* PAGINATION */
 /* ========================================================= */
 
 .pagination {
@@ -485,7 +403,7 @@ td.text-right {
     background-color: var(--bg-content);
     display: flex;
     align-items: center;
-    justify-content: space-between; /* Inayos 'to */
+    justify-content: space-between; 
     font-size: 0.875rem;
 }
 
@@ -514,7 +432,7 @@ td.text-right {
 }
 
 /* ========================================================= */
-/* MODAL STYLES (NEW THEME) */
+/* MODAL STYLES (GENERIC) */
 /* ========================================================= */
 
 .modal-overlay {
@@ -535,7 +453,7 @@ td.text-right {
     background: var(--bg-content);
     border-radius: 12px;
     padding: 0;
-    max-width: 500px;
+    max-width: 600px;
     width: 90%;
     color: var(--text-dark);
     position: relative;
@@ -557,6 +475,7 @@ td.text-right {
     z-index: 10;
 }
 
+/* Generic Modal Header (Used by some modals) */
 .modal-header {
     display: flex;
     gap: 1rem;
@@ -567,7 +486,13 @@ td.text-right {
     color: var(--text-light);
 }
 
-.modal-icon { font-size: 5rem; color: var(--accent-gold); }
+.modal-icon { 
+    color: var(--accent-gold); 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .modal-title {
     font-family: var(--font-primary);
     font-size: 1.75rem;
@@ -581,6 +506,7 @@ td.text-right {
     line-height: 1.5;
 }
 
+/* Gradient / Confirmation Modals */
 .modal-gradient {
     background: var(--bg-section-header);
     color: var(--text-light);
@@ -631,12 +557,10 @@ td.text-right {
     color: var(--text-light);
 }
 
-/* ... (Existing Modal Styles for Damage, Form, Info, Category, Account) ... */
-/* Walang binago sa mga 'to */
+/* ========================================================= */
+/* TOAST & EMPTY STATE */
+/* ========================================================= */
 
-/* ========================================================= */
-/* TOAST NOTIFICATION (BAGO 'TO) */
-/* ========================================================= */
 #toast-container {
     position: fixed;
     top: 20px;
@@ -672,9 +596,6 @@ td.text-right {
     background-color: var(--color-error);
 }
 
-/* ========================================================= */
-/* EMPTY STATE (BAGO 'TO) */
-/* ========================================================= */
 .empty-state {
     display: flex;
     flex-direction: column;
@@ -698,24 +619,309 @@ td.text-right {
 }
 
 /* ========================================================= */
-/* MOBILE RESPONSIVENESS (BAGO 'TO) */
+/* FINAL STYLES (CATEGORY ICONS, FONT FIX) */
+/* ========================================================= */
+
+/* --- CSS Para sa Category Modal Icons --- */
+.category-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0; 
+}
+.category-actions {
+    display: flex;
+    gap: 0.5rem; 
+}
+.btn-icon {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    border-radius: 4px; 
+}
+.btn-icon img {
+    width: 24px; 
+    height: 24px;
+    display: block;
+}
+.btn-icon:hover {
+    opacity: 0.8; 
+}
+
+/* --- FONT FIX --- */
+th, td, .table-row > div {
+    font-family: var(--font-secondary);
+}
+
+/* ========================================================= */
+/* "ENTER VEHICLE" MODAL (NEW STYLES) */
+/* ========================================================= */
+
+#enterVehicleModal .modal {
+    background: var(--bg-section-header); /* Dark Brown BG */
+    color: var(--text-light); /* Off-white text */
+    border-radius: 20px; 
+    padding: 0; 
+    overflow: hidden; 
+}
+
+/* * This is the 2-column grid layout with padding.
+ * It applies to the .form-grid class, NOT the .modal class.
+*/
+#enterVehicleModal .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2 columns per row */
+    gap: 1.25rem; /* Space between fields */
+    padding-left: 2rem;  /* Space from left edge */
+    padding-right: 2rem; /* Space from right edge */
+}
+
+/* Spacing for the first grid */
+#enterVehicleModal .form-grid:first-of-type {
+    padding-top: 0.5rem;
+    padding-bottom: 1.25rem;
+}
+
+/* Spacing for the second grid */
+#enterVehicleModal .form-grid:nth-of-type(2) {
+    padding-bottom: 1.5rem;
+}
+
+/* Makes the 'Slot Number' field span both columns */
+#enterVehicleModal .form-field.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Padding for the SAVE button container */
+#enterVehicleModal .text-center {
+    padding: 0 2rem 2rem 2rem; 
+}
+
+#enterVehicleModal .modal-header {
+    background-color: transparent;
+    color: inherit; 
+    padding: 2rem; 
+    align-items: center; 
+    gap: 1.5rem; 
+}
+
+#enterVehicleModal .modal-icon {
+    flex-shrink: 0; 
+}
+
+/* Style para sa "gold-parking-icon.png" */
+#enterVehicleModal .modal-icon .modal-img-icon {
+    width: 70px; 
+    height: 70px;
+    object-fit: contain;
+}
+
+#enterVehicleModal .form-field label {
+    color: var(--text-light); 
+    font-weight: 600; 
+    font-size: 0.875rem; 
+    margin-bottom: 0.5rem; 
+    display: flex; 
+    align-items: center; 
+    gap: 0.5rem; 
+}
+
+#enterVehicleModal .modal-text {
+    color: var(--text-light);
+    opacity: 0.8;
+    font-size: 0.875rem; 
+}
+
+#enterVehicleModal .modal-title {
+    color: var(--accent-gold); 
+    margin-bottom: 0.25rem; 
+}
+
+#enterVehicleModal .form-field input,
+#enterVehicleModal .form-field select {
+    background-color: #ECE0D1; 
+    border: 1px solid var(--bg-section-header); 
+    color: var(--text-dark); 
+    border-radius: 8px; 
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600; 
+}
+
+#enterVehicleModal .edit-btn {
+    display: none;
+}
+
+#enterVehicleModal .modal-close {
+    color: var(--text-light); 
+    top: 1.5rem; 
+    right: 1.5rem;
+    line-height: 1;
+    font-weight: lighter;
+    font-size: 2.5rem; 
+    opacity: 0.7;
+    z-index: 10; 
+}
+
+#enterVehicleModal .modal-close:hover {
+    opacity: 1;
+}
+
+#enterVehicleModal .btn-yellow {
+    background-color: var(--accent-gold); 
+    color: var(--text-dark); 
+    border-radius: 8px; 
+    padding: 0.75rem 2.5rem;
+    font-size: 1rem; 
+    font-weight: bold; 
+    width: 100%; 
+}
+
+/* Style para sa "gold-edit-icon.png" */
+.label-icon {
+    width: 16px; 
+    height: 16px;
+    object-fit: contain;
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.label-icon:hover {
+    opacity: 1;
+}
+
+/* ========================================================= */
+/* "EDIT CATEGORY" MODAL (NEW STYLES) */
+/* ========================================================= */
+
+#editCategoryModal .modal {
+    background: var(--bg-section-header);
+    color: var(--text-light);
+    border-radius: 20px;
+    padding: 0;
+    overflow: hidden;
+    max-width: 400px; /* Mas maliit na modal */
+}
+
+#editCategoryModal .modal-header {
+    background: transparent;
+    padding: 1.5rem 2rem 1rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#editCategoryModal .modal-title {
+    font-family: var(--font-primary);
+    font-size: 1.5rem; /* Mas maliit na title */
+    color: var(--accent-gold);
+    margin: 0;
+}
+
+#editCategoryModal .modal-close {
+    color: var(--text-light);
+    top: 1.5rem;
+    right: 1.5rem;
+}
+
+#editCategoryModal .modal-body {
+    padding: 1.5rem 2rem;
+}
+
+#editCategoryModal .form-field label {
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+#editCategoryModal .form-field input {
+    background-color: #ECE0D1;
+    border: 1px solid var(--bg-section-header);
+    color: var(--text-dark);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.category-list-container {
+    margin-top: 1.5rem;
+    max-height: 250px;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+}
+
+.category-list {
+    padding: 0.5rem;
+}
+
+.category-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-light);
+    font-size: 0.9rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.category-list-item:last-child {
+    border-bottom: none;
+}
+
+.category-item-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.category-item-actions .list-icon {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    opacity: 0.7;
+}
+.category-item-actions .list-icon:hover {
+    opacity: 1;
+}
+
+#editCategoryModal .modal-buttons {
+    padding: 1.5rem 2rem;
+    background: rgba(0,0,0,0.2);
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+#editCategoryModal .btn-yellow {
+    background-color: var(--accent-gold);
+    color: var(--text-dark);
+    border-radius: 8px;
+    padding: 0.6rem 1.5rem; /* Mas maliit na buttons */
+    font-size: 0.875rem;
+    font-weight: bold;
+}
+
+/* ========================================================= */
+/* RESPONSIVE STYLES (MERGED) */
 /* ========================================================= */
 
 @media (max-width: 992px) {
-    /* Para sa "Vehicle In" at "History" tables */
-    .grid-8, .grid-9 {
-        grid-template-columns: 100px 100px 1fr 1fr 100px; /* Pinaliit 'yung columns */
+    .grid-8 { 
+    grid-template-columns: 1fr 1fr 0.8fr 1.5fr 1.2fr 1.2fr 1fr 1fr 0.8fr; 
     }
-    .grid-8 > div:nth-child(5), /* Vehicle Type */
-    .grid-8 > div:nth-child(6), /* Category */
-    .grid-8 > div:nth-child(7)  /* Enter Time */
+    .grid-9 { 
+    grid-template-columns: 1fr 1fr 0.8fr 1.5fr 1.2fr 1.2fr 1fr 1.5fr 1.5fr; 
+    }
+    .grid-8 > div:nth-child(5), 
+    .grid-8 > div:nth-child(6), 
+    .grid-8 > div:nth-child(7) 
     {
         display: none;
     }
-    .grid-9 > div:nth-child(5), /* Vehicle Type */
-    .grid-9 > div:nth-child(6), /* Category */
-    .grid-9 > div:nth-child(7), /* Parking Time */
-    .grid-9 > div:nth-child(8)  /* Enter Time */
+    .grid-9 > div:nth-child(5), 
+    .grid-9 > div:nth-child(6), 
+    .grid-9 > div:nth-child(7), 
+    .grid-9 > div:nth-child(8) 
     {
         display: none;
     }
@@ -740,16 +946,16 @@ td.text-right {
     }
     
     .summary-cards {
-        grid-template-columns: 1fr; /* Isa-isa na lang 'yung cards */
+        grid-template-columns: 1fr; 
     }
 
-    /* Ito 'yung magic para sa responsive tables */
     .table-header {
-        display: none; /* Itago 'yung header */
+       display: grid;
+       gap: 1rem;
     }
     
     .table-row {
-        display: block; /* Gawing block para mag-stack */
+        display: block; 
         padding: 1rem;
         margin-bottom: 1rem;
         border: 1px solid var(--bg-table-row-alt);
@@ -766,21 +972,18 @@ td.text-right {
         border-bottom: none;
     }
 
-    /* Maglagay ng label bago 'yung data */
     .table-row > div::before {
         font-weight: 600;
         color: var(--text-dark);
     }
     
-    /* Slots Tab */
     .grid-5 > div:nth-child(1)::before { content: 'Area:'; }
     .grid-5 > div:nth-child(2)::before { content: 'Slot Number:'; }
     .grid-5 > div:nth-child(3)::before { content: 'Allowed Vehicle:'; }
     .grid-5 > div:nth-child(4)::before { content: 'Status:'; }
     .grid-5 > div:nth-child(5)::before { content: 'Action:'; }
 
-    /* Vehicle In Tab */
-    .grid-8 > div { display: flex; } /* I-override 'yung "display: none" kanina */
+    .grid-8 > div { display: flex; } 
     .grid-8 > div:nth-child(1)::before { content: 'Slot Number:'; }
     .grid-8 > div:nth-child(2)::before { content: 'Plate #:'; }
     .grid-8 > div:nth-child(3)::before { content: 'Room:'; }
@@ -791,8 +994,7 @@ td.text-right {
     .grid-8 > div:nth-child(8)::before { content: 'Enter Date:'; }
     .grid-8 > div:nth-child(9)::before { content: 'Action:'; }
     
-    /* History Tab */
-    .grid-9 > div { display: flex; } /* I-override 'yung "display: none" kanina */
+    .grid-9 > div { display: flex; } 
     .grid-9 > div:nth-child(1)::before { content: 'Slot Number:'; }
     .grid-9 > div:nth-child(2)::before { content: 'Plate #:'; }
     .grid-9 > div:nth-child(3)::before { content: 'Room:'; }
@@ -809,317 +1011,387 @@ td.text-right {
     }
 }
 
-/* ========================================================= */
-/* ACCOUNT DETAILS MODAL STYLES (NEW) */
-/* ========================================================= */
+/* ============================================= */
+/* === HEADER (Correct, merged block)        === */
+/* ============================================= */
+.header {
+    background-color: #480c1b;
+    padding: 15px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
 
-.account-header {
+.headerLeft {
     display: flex;
     align-items: center;
-    gap: 1.5rem;
-    padding: 2rem;
-    background: linear-gradient(135deg, var(--bg-section-header) 0%, #2a231c 100%);
-    color: var(--text-light);
-    border-radius: 12px 12px 0 0;
+    gap: 15px;
 }
 
-.account-header .user-avatar {
-    width: 80px;
-    height: 80px;
-    background-color: var(--accent-gold);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2.5rem;
-    color: var(--text-dark);
-    border: 4px solid var(--accent-gold);
+.headerLogo {
+    width: 35px;
+    height: 35px;
+    object-fit: contain;
 }
 
-.account-info h2 {
-    font-family: var(--font-primary);
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-    color: var(--text-light);
-}
-
-.account-info p {
-    font-size: 0.875rem;
-    margin-bottom: 0.25rem;
-    color: var(--text-light);
-    opacity: 0.9;
-}
-
-.account-info p:first-of-type {
+.hotelName {
+    color: #d4af78;
+    font-size: 16px;
     font-weight: 600;
-    color: var(--accent-gold);
+    letter-spacing: 1px;
+    font-family: Forum, serif; /* Added serif as a fallback */
 }
 
-/* Form Grid for Account Details */
-.form-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    padding: 2rem;
+.profileIcon {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    cursor: pointer;
 }
 
-.form-field {
+/* ============================================= */
+/* === PROFILE SIDEBAR (Correct, merged block) === */
+/* ============================================= */
+.profile-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 280px;
+    height: 100%;
+    background-color: #480c1b;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
+    transform: translateX(100%); /* Hidden by default */
+    transition: transform 0.3s ease-in-out;
+    z-index: 1100; /* Ensure it's above the modal backdrop */
 }
 
-.form-field.full-width {
-    grid-column: 1 / -1;
+.profile-sidebar.active {
+    transform: translateX(0); /* Shown when active */
 }
 
-.form-field label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-dark);
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.change-password {
-    color: var(--accent-gold);
-    font-weight: normal;
-    font-size: 0.75rem;
-    cursor: pointer;
-    text-decoration: underline;
-}
-
-.change-password:hover {
-    color: #e69100;
-}
-
-.form-field input,
-.form-field select {
-    padding: 0.75rem 1rem;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    background-color: white;
-    transition: all 0.3s ease;
-    font-family: var(--font-secondary);
-}
-
-.form-field input:focus,
-.form-field select:focus {
-    outline: none;
-    border-color: var(--accent-gold);
-    box-shadow: 0 0 0 3px rgba(255, 162, 55, 0.1);
-}
-
-.form-field input[type="date"] {
-    padding: 0.6rem 1rem;
-}
-
-/* Text Center for Save Button */
-.text-center {
-    text-align: center;
-    padding: 0 2rem 2rem 2rem;
-}
-
-/* Modal Large Specific Styles */
-.modal-large .modal-close {
-    color: var(--text-light);
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.3s ease;
-}
-
-.modal-large .modal-close:hover {
-    background: rgba(0, 0, 0, 0.5);
-}
-
-/* Responsive Design for Account Modal */
-@media (max-width: 768px) {
-    .form-grid {
-        grid-template-columns: 1fr;
-        gap: 1rem;
-        padding: 1.5rem;
-    }
-    
-    .account-header {
-        flex-direction: column;
-        text-align: center;
-        padding: 1.5rem;
-    }
-    
-    .account-header .user-avatar {
-        width: 60px;
-        height: 60px;
-        font-size: 2rem;
-    }
-    
-    .modal-large {
-        margin: 1rem;
-        width: calc(100% - 2rem);
-    }
-}
-
-@media (max-width: 480px) {
-    .form-grid {
-        padding: 1rem;
-    }
-    
-    .account-header {
-        padding: 1rem;
-    }
-    
-    .account-info h2 {
-        font-size: 1.25rem;
-    }
-    
-    .text-center {
-        padding: 0 1rem 1rem 1rem;
-    }
-}
-
-/* --- BAGONG CSS PARA SA MGA LOGO SA MODAL --- */
-
-/* 1. Para sa parkinglot_2.png icon sa "Enter Vehicle" modal */
-.modal-icon .modal-img-icon {
-    width: 50px;  /* Pwede mong baguhin 'yung laki */
-    height: 50px;
-    object-fit: contain;
-}
-
-/* 2. Para sa "Edit Category" modal icons (edit.png at minus.png) */
-.category-item {
-    /* Tinitiyak lang na magkatabi 'yung text at 'yung mga button */
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0; /* Nagdagdag lang ako ng kaunting space */
-}
-
-.category-actions {
-    display: flex;
-    gap: 0.5rem; /* Space sa pagitan ng dalawang buttons */
-}
-
-.btn-icon {
+.sidebar-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
     background: none;
     border: none;
-    padding: 0;
+    font-size: 24px;
     cursor: pointer;
-    border-radius: 4px; /* Para 'di sharp 'yung kanto */
+    color: #fff;
 }
 
-.btn-icon img {
-    width: 24px;   /* Pwede mong baguhin 'yung laki */
-    height: 24px;
+.profile-header {
+    text-align: center;
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.profile-pic-container {
+    font-size: 50px;
+    color: #fff;
+    margin-bottom: 10px;
+}
+
+.profile-header h3 {
+    margin: 5px 0;
+    color: #fff;
+}
+
+.profile-header p {
+    margin: 0;
+    color: #fff;
+    font-size: 14px;
+}
+
+.profile-nav {
+    flex-grow: 1; /* Pushes the footer down */
+    padding: 20px 0;
+}
+
+.profile-nav a,
+.profile-footer a {
     display: block;
+    padding: 15px 20px;
+    text-decoration: none;
+    color: #fff;
+    transition: color 0.3s;
 }
 
-/* Opsyonal: Lagyan ng effect 'pag tinapat 'yung mouse */
-.btn-icon:hover {
-    opacity: 0.8; 
+.profile-nav a:hover,
+.profile-footer a:hover {
+    color: #ffa237;
 }
 
-/* ========================================================= */
-/* FONT FIX (Para sigurado) */
-/* ========================================================= */
-
-/* Tinitiyak na 'yung table headers, table data, at 
-  'yung mga dynamic na table rows ay gumagamit 
-  ng tamang --font-secondary (Arial).
-*/
-th, td, .table-row > div {
-    font-family: var(--font-secondary);
+.profile-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+    padding: 10px 0;
 }
 
-/* ========================================================= */
-/* I-AYUSIN ANG "ENTER VEHICLE" MODAL (Target Image Fix) */
-/* ========================================================= */
-
-/* 1. Gawing dark brown ang BUONG modal, hindi lang header */
-#enterVehicleModal .modal {
-    background: #352C24; /* --bg-section-header */
-    color: #FFF2E0; /* --text-header */
-    border-radius: 20px; /* Mas rounded 'yung kanto */
-    padding: 0; 
-    overflow: hidden; /* Para sure na rounded lahat */
+/* ============================================= */
+/* === MODALS (GENERAL STYLES)             === */
+/* ============================================= */
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
 }
 
-/* 2. Tanggalin 'yung separate background ng header */
-#enterVehicleModal .modal-header {
-    background-color: transparent;
-    color: inherit; 
-    padding: 1.5rem 2rem 1rem 2rem;
+.assignModal,
+.successModal,
+.logoutModal,
+.staffSelectionModal {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideIn 0.3s ease;
 }
 
-/* 3. Ayusin 'yung kulay ng text (labels) sa loob ng modal */
-#enterVehicleModal .form-field label {
-    color: #FFF2E0; /* --text-header */
-    font-weight: normal;
-    font-size: 0.8rem;
-    margin-bottom: 0.25rem;
-    display: flex; /* Para sa icon */
-    align-items: center; /* Para sa icon */
-    gap: 0.5rem; /* Para sa icon */
+.closeBtn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  z-index: 10;
 }
 
-/* 4. Ayusin 'yung kulay ng text sa modal header */
-#enterVehicleModal .modal-text {
-    color: #FFF2E0;
-    opacity: 0.8;
+.closeBtn:hover {
+  opacity: 1;
 }
 
-#enterVehicleModal .modal-title {
-    color: #FFA237; /* --accent-gold */
+.staffSelectionModal .closeBtn {
+  color: #333; /* Dark close button for light modal */
 }
 
-/* 5. Ayusin ang itsura ng mga input field at select */
-#enterVehicleModal .form-field input,
-#enterVehicleModal .form-field select {
-    background-color: #ECE0D1; /* Light beige color */
-    border: 1px solid #352C24; 
-    color: #352C24; /* Dark text */
-    border-radius: 8px; 
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
+.modalButtons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 25px;
 }
 
-/* 6. Itago 'yung 'edit' button (pencil) katabi ng Category */
-#enterVehicleModal .edit-btn {
-    display: none; 
+.modalBtn {
+  padding: 11px 28px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
 }
 
-/* 7. Ayusin 'yung pwesto ng close button (X) */
-#enterVehicleModal .modal-close {
-    color: #FFF2E0; 
-    top: 1.5rem; 
-    right: 1.5rem;
-    line-height: 1;
+.modalBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-/* 8. Ayusin 'yung "SAVE" button */
-#enterVehicleModal .btn-yellow {
-    background-color: #FFA237; 
-    color: #352C24; 
-    border-radius: 8px; 
-    padding: 0.75rem 2.5rem;
-    font-size: 0.875rem;
-    font-weight: 600;
+.cancelBtn {
+  background-color: #e0e0e0;
+  color: #333;
+  min-width: 120px;
 }
 
-/* 9. Ayusin 'yung spacing ng button area */
-#enterVehicleModal .text-center {
-    padding: 0.5rem 2rem 2rem 2rem;
+.cancelBtn:hover {
+  background-color: #d5d5d5;
 }
 
-/* 10. Bagong style para sa mga icon mo sa label */
-.label-icon {
-    width: 16px; /* Pwede mong i-adjust 'yung laki */
-    height: 16px;
-    object-fit: contain;
+.confirmBtn {
+  background-color: #ffb400;
+  color: #480c1b;
+  min-width: 160px;
+}
+
+.confirmBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+/* ============================================= */
+/* === SPECIFIC MODAL STYLES               === */
+/* ============================================= */
+
+/* --- Assign & Logout Modals (Dark Theme) --- */
+.assignModal, .logoutModal {
+  background-color: #480c1b;
+  border-radius: 8px;
+  padding: 35px;
+  max-width: 420px;
+  text-align: center;
+  color: #fff;
+}
+
+.logoutModal h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.assignModal p, .logoutModal p {
+  color: #dcc8b0;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.modalIcon {
+  margin: 10px auto 20px;
+}
+
+.logoutIcon {
+  height: 50px;
+  width: 50px;
+}
+
+/* --- Staff Selection Modal (Light Theme) --- */
+.staffSelectionModal {
+  background: #fff;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.staffSelectionModal h2 {
+  color: #480c1b;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+  padding: 30px 40px 10px;
+  text-transform: uppercase;
+}
+
+.modalSubtext {
+  color: #666;
+  font-size: 14px;
+  text-align: center;
+  margin-bottom: 25px;
+  padding: 0 40px;
+}
+
+.modalSearchBox {
+  margin: 0 40px 25px;
+  border: 1px solid #ddd;
+}
+
+.staffList {
+  margin: 0 40px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 10px; /* Space for scrollbar */
+  flex-grow: 1;
+}
+
+.staffListItem {
+  background: #f5f5f5;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.staffListItem:hover:not(.assigned) {
+  background: #e8e8e8;
+}
+
+.staffListItem.selected {
+  background: #fff3cd;
+  border-color: #ffb300;
+}
+
+.staffListItem.assigned {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.staffListName {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.staffListStatus {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.staffListStatus.available { background: #d4edda; color: #28a745; }
+.staffListStatus.assigned { background: #f8d7da; color: #dc3545; }
+
+.staffSelectionModal .modalButtons {
+  padding: 25px 40px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* --- Success Modal --- */
+.successModal {
+  background-color: #480c1b;
+  border-radius: 20px;
+  padding: 50px;
+  max-width: 450px;
+  text-align: center;
+}
+
+.successIcon {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 30px;
+  background: #00c853;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.successIcon::before {
+  content: '✓';
+  color: white;
+  font-size: 60px;
+  font-weight: bold;
+}
+
+.successModal h2 {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 30px;
+}
+
+.okayBtn {
+  background-color: #FFA237;
+  color: #fff;
+  min-width: 250px;
+  padding: 16px 20px;
+  border-radius: 5px;
+  font-size: 14px;
+  letter-spacing: 1.5px;
+}
+
+.okayBtn:hover {
+  background-color: #d18224;
 }
