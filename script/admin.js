@@ -8,7 +8,7 @@ const paginationState = {
   maintenance: { currentPage: 1, itemsPerPage: 10 },
   maintenanceHistory: { currentPage: 1, itemsPerPage: 10 },
   maintenanceAppliances: { currentPage: 1, itemsPerPage: 10 },
-  parking: { currentPage: 1, itemsPerPage: 10 },
+  parkingHistory: { currentPage: 1, itemsPerPage: 10 }, // MODIFIED
   inventory: { currentPage: 1, itemsPerPage: 10 },
   users: { currentPage: 1, itemsPerPage: 10 },
   userLogs: { currentPage: 1, itemsPerPage: 10 }
@@ -34,13 +34,13 @@ let mtRequestsData = [...maintenanceRequests];
 let mtHistData = [...maintenanceHistory];
 let mtAppliancesData = [...maintenanceAppliances];
 let roomData = [];
-let parkingDataList = typeof parkingData !== 'undefined' ? [...parkingData] : [];
+let parkingHistoryDataList = []; // MODIFIED
 let inventoryDataList = typeof inventoryData !== 'undefined' ? [...inventoryData] : [];
 let usersData = [];
 let userLogsDataList = typeof userLogsData !== 'undefined' ? [...userLogsData] : [];
 let dashData = dashboardStats;
 
-console.log('Data Loaded:', { roomData, parkingDataList, inventoryDataList, usersData, userLogsDataList });
+console.log('Data Loaded:', { roomData, inventoryDataList, usersData, userLogsDataList }); // MODIFIED
 
 // --- Room Management DOM Elements ---
 const roomsTableBody = document.getElementById('roomsTableBody');
@@ -243,10 +243,10 @@ async function apiCall(action, data = {}, method = 'GET', endpoint = 'room_actio
         }
         options.body = formData;
     } else {
-        // For GET requests, append action to URL
-        const params = new URLSearchParams({ action: action });
+        // For GET requests, append action and data as query params
+        const params = new URLSearchParams({ action: action, ...data });
         options.method = 'GET';
-        return fetch(`${url}?${params.toString()}`, options)
+        return fetch(`${url}?${params.toString()}`, options) // Pass data in URL
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -280,9 +280,8 @@ function updateDashboardFromRooms(rooms) {
   const maintenance = rooms.filter(r => r.Status.toLowerCase() === 'maintenance').length;
 
   updateStatCard(0, totalRooms);
-  updateStatCard(1, occupied);
-  updateStatCard(2, needsCleaning);
-  updateStatCard(3, maintenance);
+  updateStatCard(1, needsCleaning);
+  updateStatCard(2, maintenance);
 }
 
 function updateDashboardFromUsers(users) {
@@ -864,37 +863,90 @@ function renderMTAppliancesTable(data = mtAppliancesData) {
   });
 }
 
-function renderParkingTable(data = parkingDataList) {
-  const tbody = document.getElementById('parkingTableBody');
+// ===== NEW: PARKING HISTORY FUNCTIONS =====
+async function loadParkingAreaFilters() {
+    const areaFilter = document.getElementById('parkingAreaFilter');
+    if (!areaFilter) return;
+
+    // Set default state
+    areaFilter.innerHTML = '<option value="all">All Areas</option>';
+    
+    // Fetch from the correct API endpoint
+    const result = await apiCall('getParkingAreas', {}, 'GET', 'parking_api.php');
+    
+    if (result.success && result.areas) {
+        result.areas.forEach(area => {
+            const option = document.createElement('option');
+            option.value = area.AreaName;
+            option.textContent = area.AreaName;
+            areaFilter.appendChild(option);
+        });
+    } else {
+        console.warn("Could not load parking area filters.");
+    }
+}
+
+async function fetchAndRenderParkingHistory() {
+    const tbody = document.getElementById('parkingHistoryTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">Loading parking history...</td></tr>';
+    
+    // Fetch from the correct API endpoint
+    const result = await apiCall('getHistory', {}, 'GET', 'parking_api.php');
+    
+    if (result.success && result.history && result.history.length > 0) {
+        parkingHistoryDataList = result.history;
+        paginationState.parkingHistory.currentPage = 1;
+        renderParkingHistoryTable(parkingHistoryDataList);
+    } else if (result.success) {
+        parkingHistoryDataList = [];
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history records found.</td></tr>';
+        const recordCount = document.getElementById('parkingHistoryRecordCount');
+        if (recordCount) recordCount.textContent = 0;
+        renderPaginationControls('parking-page', 0, 1, () => {});
+    } else {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #c33;">Failed to load data: ${result.error || 'Unknown error'}</td></tr>`;
+        const recordCount = document.getElementById('parkingHistoryRecordCount');
+        if (recordCount) recordCount.textContent = 0;
+        renderPaginationControls('parking-page', 0, 1, () => {});
+    }
+}
+
+function renderParkingHistoryTable(data) {
+  const tbody = document.getElementById('parkingHistoryTableBody');
   if (!tbody) return;
-  const state = paginationState.parking;
+  const state = paginationState.parkingHistory;
   const totalPages = getTotalPages(data.length, state.itemsPerPage);
   const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
 
   if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
   } else {
     tbody.innerHTML = paginatedData.map(row => `
       <tr>
-        <td>${row.plateNumber}</td>
-        <td>${row.room}</td>
-        <td>${row.guestName}</td>
-        <td>${row.vehicleType}</td>
-        <td>${row.entryTime}</td>
-        <td>${row.exitTime}</td>
-        <td>${row.slotNumber}</td>
-        <td><span class="statusBadge ${row.status}">${row.status.charAt(0).toUpperCase() + row.status.slice(1)}</span></td>
+        <td>${row.SlotName}</td>
+        <td>${row.PlateNumber}</td>
+        <td>${row.RoomNumber || 'N/A'}</td>
+        <td>${row.GuestName || 'N/A'}</td>
+        <td>${row.VehicleType}</td>
+        <td>${row.VehicleCategory}</td>
+        <td>${row.ParkingTime}</td>
+        <td>${row.EntryDateTime}</td>
+        <td>${row.ExitDateTime}</td>
       </tr>
     `).join('');
   }
   
-  const recordCount = document.getElementById('parkingRecordCount');
+  const recordCount = document.getElementById('parkingHistoryRecordCount');
   if (recordCount) recordCount.textContent = data.length;
   renderPaginationControls('parking-page', totalPages, state.currentPage, (page) => {
     state.currentPage = page;
-    renderParkingTable(data);
+    renderParkingHistoryTable(data);
   });
 }
+// ===== END NEW PARKING HISTORY FUNCTIONS =====
+
 
 function renderInventoryTable(data = inventoryDataList) {
   const tbody = document.getElementById('inventoryTableBody');
@@ -1887,7 +1939,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderMTRequestsTable(mtRequestsData);
   renderMTHistTable(mtHistData);
   renderMTAppliancesTable(mtAppliancesData);
-  renderParkingTable(parkingDataList);
+  // renderParkingTable(parkingDataList); // OLD FUNCTION REMOVED
   renderInventoryTable(inventoryDataList);
   
   if(document.getElementById('rooms-page')) {
@@ -1898,6 +1950,14 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('User management page detected, fetching users...');
       fetchAndRenderUsers();
   }
+
+  // ===== NEW: INITIALIZE PARKING HISTORY TAB =====
+  if(document.getElementById('parking-page')) {
+      console.log('Parking page detected, fetching area filters and history...');
+      loadParkingAreaFilters();
+      fetchAndRenderParkingHistory();
+  }
+  // ===== END NEW INITIALIZATION =====
 });
 
 
@@ -2133,65 +2193,131 @@ document.getElementById('appliancesDownloadBtn')?.addEventListener('click', () =
   window.URL.revokeObjectURL(url);
 });
 
-// ===== PARKING FILTERS =====
-document.getElementById('parkingSearchInput')?.addEventListener('input', (e) => {
+// ===== PARKING HISTORY FILTERS (NEW) =====
+document.getElementById('parkingHistorySearchInput')?.addEventListener('input', (e) => {
   const search = e.target.value.toLowerCase();
-  const filtered = parkingDataList.filter(row => 
-    row.plateNumber.toLowerCase().includes(search) ||
-    row.guestName.toLowerCase().includes(search) ||
-    row.slotNumber.toLowerCase().includes(search)
+  const filtered = parkingHistoryDataList.filter(row => 
+    (row.PlateNumber && row.PlateNumber.toLowerCase().includes(search)) ||
+    (row.GuestName && row.GuestName.toLowerCase().includes(search)) ||
+    (row.RoomNumber && row.RoomNumber.toLowerCase().includes(search)) ||
+    (row.SlotName && row.SlotName.toLowerCase().includes(search))
   );
-  paginationState.parking.currentPage = 1;
-  renderParkingTable(filtered);
+  paginationState.parkingHistory.currentPage = 1;
+  renderParkingHistoryTable(filtered);
 });
 
-document.getElementById('parkingLevelFilter')?.addEventListener('change', (e) => {
-  const level = e.target.value;
-  const filtered = level ? parkingDataList.filter(row => row.level.toString() === level) : parkingDataList;
-  paginationState.parking.currentPage = 1;
-  renderParkingTable(filtered);
+document.getElementById('parkingAreaFilter')?.addEventListener('change', (e) => {
+  const area = e.target.value;
+  // Handle "all" case
+  const filtered = (area === 'all') 
+    ? parkingHistoryDataList 
+    : parkingHistoryDataList.filter(row => row.AreaName === area);
+  paginationState.parkingHistory.currentPage = 1;
+  renderParkingHistoryTable(filtered);
 });
 
-document.getElementById('parkingBlockFilter')?.addEventListener('change', (e) => {
-  const block = e.target.value;
-  const filtered = block ? parkingDataList.filter(row => row.block === block) : parkingDataList;
-  paginationState.parking.currentPage = 1;
-  renderParkingTable(filtered);
-});
-
-document.getElementById('parkingStatusFilter')?.addEventListener('change', (e) => {
-  const status = e.target.value;
-  const filtered = status ? parkingDataList.filter(row => row.status === status) : parkingDataList;
-  paginationState.parking.currentPage = 1;
-  renderParkingTable(filtered);
-});
-
-document.getElementById('parkingRefreshBtn')?.addEventListener('click', () => {
-  document.getElementById('parkingSearchInput').value = '';
-  document.getElementById('parkingLevelFilter').value = '';
-  document.getElementById('parkingBlockFilter').value = '';
-  document.getElementById('parkingStatusFilter').value = '';
+document.getElementById('parkingHistoryRefreshBtn')?.addEventListener('click', () => {
+  document.getElementById('parkingHistorySearchInput').value = '';
+  document.getElementById('parkingAreaFilter').value = 'all';
   
-  parkingDataList = [...parkingData];
-  paginationState.parking.currentPage = 1;
-  renderParkingTable(parkingDataList);
+  fetchAndRenderParkingHistory(); // Re-fetch data
 });
 
-document.getElementById('parkingDownloadBtn')?.addEventListener('click', () => {
-  const headers = ['Plate #', 'Room', 'Name', 'Vehicle Type', 'Entry Time', 'Exit Time', 'Slot Number', 'Status'];
-  const csvContent = [
-    headers.join(','),
-    ...parkingDataList.map(row => [row.plateNumber, row.room, row.guestName, row.vehicleType, row.entryTime, row.exitTime, row.slotNumber, row.status].join(','))
-  ].join('\n');
+// ===== MODIFIED: PDF DOWNLOAD LOGIC =====
+document.getElementById('parkingHistoryDownloadBtn')?.addEventListener('click', () => {
+  // Get filtered data
+  const search = document.getElementById('parkingHistorySearchInput').value.toLowerCase();
+  const area = document.getElementById('parkingAreaFilter').value;
   
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `parking-${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  window.URL.revokeObjectURL(url);
+  const filteredData = parkingHistoryDataList
+    .filter(row => (area === 'all') ? true : row.AreaName === area)
+    .filter(row => 
+      (!search) ? true : ( // If no search term, return true
+        (row.PlateNumber && row.PlateNumber.toLowerCase().includes(search)) ||
+        (row.GuestName && row.GuestName.toLowerCase().includes(search)) ||
+        (row.RoomNumber && row.RoomNumber.toLowerCase().includes(search)) ||
+        (row.SlotName && row.SlotName.toLowerCase().includes(search))
+      )
+    );
+
+  // Check if data exists
+  if (filteredData.length === 0) {
+      alert('No data to download.');
+      return;
+  }
+  
+  // Check if jspdf libraries are loaded
+  if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined' || typeof window.jspdf.jsPDF.autoTable === 'undefined') {
+      alert('PDF generation library (jspdf) is not loaded. Please ensure you added the script tags to admin.php');
+      console.error('jsPDF or jsPDF-autoTable is not loaded.');
+      return;
+  }
+
+  // --- PDF Generation Logic (copied from parking.js) ---
+  try {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF(); 
+
+      doc.setFontSize(18);
+      doc.text("Parking History Report", 14, 22);
+      doc.setFontSize(11);
+      doc.setTextColor(100);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+      
+      const head = [[
+          'Slot', 
+          'Plate #', 
+          'Room', 
+          'Name', 
+          'Vehicle Type', 
+          'Category',
+          'Parking Time',
+          'Entry',
+          'Exit'
+      ]];
+
+      // Map the filteredData
+      const body = filteredData.map(v => [
+          v.SlotName,
+          v.PlateNumber,
+          v.RoomNumber || 'N/A',
+          v.GuestName || 'N/A',
+          v.VehicleType,
+          v.VehicleCategory,
+          v.ParkingTime,
+          v.EntryDateTime,
+          v.ExitDateTime
+      ]);
+
+      doc.autoTable({
+          head: head,
+          body: body,
+          startY: 35,
+          headStyles: { fillColor: [72, 12, 27] }, // #480c1b
+          styles: { fontSize: 8, cellPadding: 2 },
+          alternateRowStyles: { fillColor: [245, 245, 245] },
+          columnStyles: {
+              0: { cellWidth: 15 }, // Slot
+              1: { cellWidth: 20 }, // Plate
+              2: { cellWidth: 12 }, // Room
+              3: { cellWidth: 'auto' }, // Name
+              4: { cellWidth: 'auto' }, // Type
+              5: { cellWidth: 'auto' }, // Category
+              6: { cellWidth: 20 }, // Parking Time
+              7: { cellWidth: 30 }, // Entry
+              8: { cellWidth: 30 }  // Exit
+          }
+      });
+
+      doc.save('Parking-History-Report.pdf');
+
+  } catch (e) {
+      console.error("Error generating PDF:", e);
+      alert('An error occurred while generating the PDF. See console for details.');
+  }
 });
+// ===== END OF MODIFIED SECTION =====
+
 
 // ===== INVENTORY FILTERS =====
 document.getElementById('inventorySearchInput')?.addEventListener('input', (e) => {

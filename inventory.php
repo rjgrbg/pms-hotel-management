@@ -1,26 +1,68 @@
 <?php
-// 1. Start the session with the same secure settings
-session_start([
-  'cookie_httponly' => true,
-  'cookie_secure' => isset($_SERVER['HTTPS']),
-  'use_strict_mode' => true
-]);
+// Include the session check and login requirement logic
+include('check_session.php');
 
-// 2. !! THE FIX !! 
-// Tell the browser to not cache this page
-header('Cache-Control: no-cache, no-store, must-revalidate'); // HTTP 1.1.
-header('Pragma: no-cache'); // HTTP 1.0.
-header('Expires: 0'); // Proxies.
+// Only allow users with the 'admin' AccountType
+require_login(['inventory_manager']);
 
-// 3. Check if the user is actually logged in.
-// If no UserID is in the session, they aren't logged in.
-if (!isset($_SESSION['UserID'])) {
-  // Redirect them to the login page
-  header("Location: inventory_log_signin.php");
-  exit();
+// --- Fetch User Data from Database ---
+include('db_connection.php'); // Ensure DB connection is included
+header('Cache-Control: no-cache, no-store, must-revalidate'); 
+header('Pragma: no-cache');
+header('Expires: 0');
+$formattedName = 'InventoryManager'; // Default name
+$Accounttype = 'inventory_manager'; // Default type
+$Fname = ''; // Initialize Fname
+$Mname = ''; // Initialize Mname
+$Lname = ''; // Initialize Lname
+
+if (isset($_SESSION['UserID'])) {
+    $userId = $_SESSION['UserID'];
+    $sql = "SELECT Fname, Mname, Lname, AccountType FROM users WHERE UserID = ?"; 
+    
+    if ($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param("i", $userId);
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            if ($user = $result->fetch_assoc()) {
+                // Fetch names and sanitize for display
+                $Lname = htmlspecialchars($user['Lname'] ?? 'InventoryManager');
+                $Fname = htmlspecialchars($user['Fname'] ?? '');
+                $Mname = htmlspecialchars($user['Mname'] ?? '');
+                $Accounttype = htmlspecialchars($user['AccountType'] ?? 'inventory_manager'); // Fetch AccountType as well
+
+                // Format the name: Fname M. Lname
+                $formattedName = $Fname; // Start with Fname
+                if (!empty($Mname)) {
+                    $formattedName .= ' ' . strtoupper(substr($Mname, 0, 1)) . '.'; // Add M.
+                }
+                if (!empty($Lname)) {
+                     if(!empty(trim($formattedName))) { // Add space only if Fname or Mname was present
+                        $formattedName .= ' ' . $Lname; // Add Lname
+                     } else {
+                        $formattedName = $Lname; // Only Lname is available
+                     }
+                }
+                
+                if (empty(trim($formattedName))) {
+                    $formattedName = 'InventoryManager'; // Fallback to default
+                }
+            } else {
+                 error_log("No user found with UserID: " . $userId);
+            }
+        } else {
+            error_log("Error executing user query: " . $stmt->error);
+        }
+        $stmt->close();
+    } else {
+         error_log("Error preparing user query: " . $conn->error);
+    }
+    $conn->close(); // Close connection after fetching
+} else {
+     error_log("UserID not found in session for admin.php");
 }
+// --- End Fetch User Data ---
 
-// If they ARE logged in, the rest of the page will load.
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -29,33 +71,14 @@ if (!isset($_SESSION['UserID'])) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Celestia Hotel - Inventory Management</title>
-  <link rel="stylesheet" href="css/inventory.css">
+  
+  <link rel="stylesheet" href="css/inventory.css?v=1.3">
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-  
-  <?php
-  // ======================================================
-  // === PHP Logic Orchestration (REQUIRED FILES) ===
-  // ======================================================
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
-  // 1. Load the database configuration and connection ($conn is now available)
-  require_once('db_connection.php');
-
-  // 2. Load the user data function
-  require_once('User.php');
-
-  // 3. Execute the function to get dynamic data
-  $userData = getUserData($conn);
-
-  // Set the variables used in the HTML, applying security (htmlspecialchars)
-  $Fname = htmlspecialchars($userData['Name']);
-  $Accounttype = htmlspecialchars($userData['Accounttype']); 
-  // Close the DB connection (optional, but good practice)
-  $conn->close();
-
-  ?>
-  <!DOCTYPE html>
-  <html lang="en">
+</head>
 
 <body>
   <header class="header">
@@ -73,7 +96,7 @@ if (!isset($_SESSION['UserID'])) {
         <div class="profile-pic-container">
             <i class="fas fa-user-tie"></i>
         </div>
-        <h3><?php echo $Fname; ?></h3>
+        <h3><?php echo $formattedName; ?></h3>
         <p><?php echo $Accounttype; ?></p>
     </div>
 
@@ -158,15 +181,15 @@ if (!isset($_SESSION['UserID'])) {
         <table class="requestsTable">
           <thead>
                       <tr>
-                          <th>ID</th>
-                          <th>Name</th>
-                          <th>Category</th>
-                          <th>Quantity</th>
-                          <th>Description</th>
-                          <th>Status</th>
-                          <th>Damage</th>
-                          <th>Stock In Date</th>
-                          <th>Stock Out Date</th>
+                          <th class="sortable" data-sort="ItemID">ID</th>
+                          <th class="sortable" data-sort="ItemName">Name</th>
+                          <th class="sortable" data-sort="Category">Category</th>
+                          <th class="sortable" data-sort="ItemQuantity">Quantity</th>
+                          <th class="sortable" data-sort="ItemDescription">Description</th>
+                          <th class="sortable" data-sort="ItemStatus">Status</th>
+                          <th class="sortable" data-sort="DamageItem">Damage</th>
+                          <th class="sortable" data-sort="DateofStockIn">Stock In Date</th>
+                          <th class="sortable" data-sort="DateofStockOut">Stock Out Date</th>
                           <th>Action</th> 
                       </tr>
           </thead>
@@ -175,6 +198,7 @@ if (!isset($_SESSION['UserID'])) {
           </tbody>
         </table>
       </div>
+      <div class="pagination" id="pagination-stocks"></div>
     </div>
 
 
@@ -213,37 +237,22 @@ if (!isset($_SESSION['UserID'])) {
         <table class="historyTable">
           <thead>
                       <tr>
-                          <th>ID</th>
-                          <th>Name</th>
-                          <th>Category</th>
-                          <th>Quantity</th>
-                          <th>Quantity Change</th>
-                          <th>Status</th>
-                          <th>Damage</th>
-                          <th>Stock In Date</th>
-                          <th>Stock Out Date</th>
-                          <th>Action Type</th>
-                          <th>Performed By</th>
+                          <th class="sortable" data-sort="InvLogID">ID</th>
+                          <th class="sortable" data-sort="ItemName">Name</th>
+                          <th class="sortable" data-sort="Category">Category</th>
+                          <th class="sortable" data-sort="ItemQuantity">Quantity</th>
+                          <th class="sortable" data-sort="QuantityChange">Change</th>
+                          <th class="sortable" data-sort="ItemStatus">Status</th>
+                          <th class="sortable" data-sort="DateofStockIn">Stock In</th>
+                          <th class="sortable" data-sort="DateofStockOut">Stock Out</th>
+                          <th class="sortable" data-sort="PerformedBy">Performed By</th>
                       </tr>
                     </thead>
           <tbody id="historyTableBody">
-            <tr><td colspan="11" style="text-align: center;">Loading...</td></tr>
+            <tr><td colspan="9" style="text-align: center;">Loading...</td></tr>
           </tbody>
         </table>
-        <div class="pagination">
-          <span class="paginationInfo">Display Records <span id="recordCount">0</span></span>
-          <div class="paginationControls">
-            <button class="paginationBtn">←</button>
-            <button class="paginationBtn active">1</button>
-            <button class="paginationBtn">2</button>
-            <button class="paginationBtn">3</button>
-            <button class="paginationBtn">4</button>
-            <button class="paginationBtn">5</button>
-            <span class="paginationDots">...</span>
-            <button class="paginationBtn">10</button>
-            <button class="paginationBtn">→</button>
-          </div>
-        </div>
+        <div class="pagination" id="pagination-history"></div>
       </div>
     </div>
   </div>
@@ -362,15 +371,7 @@ if (!isset($_SESSION['UserID'])) {
                         </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="edit-item-status">Status</label>
-                        <select id="edit-item-status" required>
-                            <option value="In Stock">In Stock</option>
-                            <option value="Low Stock">Low Stock</option>
-                            <option value="Out of Stock">Out of Stock</option>
-                        </select>
                     </div>
-                </div>
 
                 <div class="edit-modal-buttons">
                     <button type="button" class="submit-btn btn-cancel-white" id="edit-modal-cancel-btn">CANCEL</button>
@@ -398,7 +399,7 @@ if (!isset($_SESSION['UserID'])) {
 </div>
 
   <script src="script/shared-data.js"></script>
-  <script src="script/inventory.js"></script>
+  <script src="script/inventory.js?v=1.3"></script>
 </body>
 
 </html>

@@ -360,9 +360,20 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
-.statusBadge.dirty { background-color: #ff6b35; }
-.statusBadge.request { background-color: #c9302c; }
-.statusBadge.cleaned { background-color: #5cb85c; }
+.statusBadge.in-stock {
+    background-color: #5cb85c; /* Green */
+    color: #fff;
+}
+
+.statusBadge.low-stock {
+    background-color: #ffc107; /* Yellow/Gold */
+    color: #333; /* Dark text for readability on yellow */
+}
+
+.statusBadge.out-of-stock {
+    background-color: #c9302c; /* Red */
+    color: #fff;
+}
 
 .assignBtn {
   background-color: #480c1b;

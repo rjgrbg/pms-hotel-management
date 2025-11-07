@@ -1,50 +1,68 @@
 <?php
-// 1. Start the session with the same secure settings
-session_start([
-  'cookie_httponly' => true,
-  'cookie_secure' => isset($_SERVER['HTTPS']),
-  'use_strict_mode' => true
-]);
+// Include the session check and login requirement logic
+include('check_session.php');
 
-// 2. !! THE FIX !! 
-// Tell the browser to not cache this page
-header('Cache-Control: no-cache, no-store, must-revalidate'); // HTTP 1.1.
-header('Pragma: no-cache'); // HTTP 1.0.
-header('Expires: 0'); // Proxies.
+// Only allow users with the 'admin' AccountType
+require_login(['parking_manager']);
 
-// 3. Check if the user is actually logged in.
-// If no UserID is in the session, they aren't logged in.
-if (!isset($_SESSION['UserID'])) {
-  // Redirect them to the login page (adjust to your login page name)
-  header("Location: signin.php"); 
-  exit();
+// --- Fetch User Data from Database ---
+include('db_connection.php'); // Ensure DB connection is included
+header('Cache-Control: no-cache, no-store, must-revalidate'); 
+header('Pragma: no-cache');
+header('Expires: 0');
+$formattedName = 'ParkingManager'; // Default name
+$Accounttype = 'parking_manager'; // Default type
+$Fname = ''; // Initialize Fname
+$Mname = ''; // Initialize Mname
+$Lname = ''; // Initialize Lname
+
+if (isset($_SESSION['UserID'])) {
+    $userId = $_SESSION['UserID'];
+    $sql = "SELECT Fname, Mname, Lname, AccountType FROM users WHERE UserID = ?"; 
+    
+    if ($stmt = $conn->prepare($sql)) {
+        $stmt->bind_param("i", $userId);
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            if ($user = $result->fetch_assoc()) {
+                // Fetch names and sanitize for display
+                $Lname = htmlspecialchars($user['Lname'] ?? 'ParkingManager');
+                $Fname = htmlspecialchars($user['Fname'] ?? '');
+                $Mname = htmlspecialchars($user['Mname'] ?? '');
+                $Accounttype = htmlspecialchars($user['AccountType'] ?? 'parking_manager'); // Fetch AccountType as well
+
+                // Format the name: Fname M. Lname
+                $formattedName = $Fname; // Start with Fname
+                if (!empty($Mname)) {
+                    $formattedName .= ' ' . strtoupper(substr($Mname, 0, 1)) . '.'; // Add M.
+                }
+                if (!empty($Lname)) {
+                     if(!empty(trim($formattedName))) { // Add space only if Fname or Mname was present
+                        $formattedName .= ' ' . $Lname; // Add Lname
+                     } else {
+                        $formattedName = $Lname; // Only Lname is available
+                     }
+                }
+                
+                if (empty(trim($formattedName))) {
+                    $formattedName = 'ParkingManager'; // Fallback to default
+                }
+            } else {
+                 error_log("No user found with UserID: " . $userId);
+            }
+        } else {
+            error_log("Error executing user query: " . $stmt->error);
+        }
+        $stmt->close();
+    } else {
+         error_log("Error preparing user query: " . $conn->error);
+    }
+    $conn->close(); // Close connection after fetching
+} else {
+     error_log("UserID not found in session for admin.php");
 }
+// --- End Fetch User Data ---
 
-// 4. Load database and user data
-require_once('db_connection.php');
-require_once('User.php');
-
-// Get database connection
-$conn = get_db_connection('pms');
-if (!$conn) {
-    // Handle database connection error gracefully
-    die("Database connection failed. Please try again later.");
-}
-
-// Pass the connection to the function
-$userData = getUserData($conn); 
-if (!$userData) {
-    // User data not found, maybe session is valid but user deleted?
-    // Log out and redirect to login
-    session_destroy();
-    header("Location: signin.php?error=userNotFound");
-    exit();
-}
-
-// *** MODIFIED: Using the correct keys 'Name' and 'Accounttype' from inventory.php ***
-$Fname = htmlspecialchars($userData['Name'] ?? 'Guest');
-$Accounttype = htmlspecialchars($userData['Accounttype'] ?? 'Unknown');
-$conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -76,8 +94,8 @@ $conn->close();
             <div class="profile-pic-container">
                 <i class="fas fa-user-tie"></i>
             </div>
-            <h3><?php echo $Fname; ?></h3>
-            <p><?php echo $Accounttype; ?></p>
+            <h3><?php echo $formattedName; ?></h3>
+        <p><?php echo $Accounttype; ?></p>
         </div>
 
         <nav class="profile-nav">

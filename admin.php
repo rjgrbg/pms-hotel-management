@@ -15,7 +15,7 @@ $Accounttype = 'Administrator'; // Default type
 
 if (isset($_SESSION['UserID'])) {
     $userId = $_SESSION['UserID'];
-    $sql = "SELECT Fname, Mname, Lname, AccountType FROM users WHERE UserID = ?";
+    $sql = "SELECT Fname, Mname, Lname, AccountType FROM users WHERE UserID = ?"; 
     
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("i", $userId);
@@ -28,14 +28,21 @@ if (isset($_SESSION['UserID'])) {
                 $Mname = htmlspecialchars($user['Mname'] ?? '');
                 $Accounttype = htmlspecialchars($user['AccountType'] ?? 'Administrator'); // Fetch AccountType as well
 
-                // Format the name: Lname, Fname M.
-                $formattedName = $Lname;
-                if (!empty($Fname)) {
-                    $formattedName .= ', ' . $Fname;
-                    if (!empty($Mname)) {
-                        // Add middle initial with a period if Mname exists
-                        $formattedName .= ' ' . strtoupper(substr($Mname, 0, 1)) . '.';
-                    }
+                // Format the name: Fname M. Lname
+                $formattedName = $Fname; // Start with Fname
+                if (!empty($Mname)) {
+                    $formattedName .= ' ' . strtoupper(substr($Mname, 0, 1)) . '.'; // Add M.
+                }
+                if (!empty($Lname)) {
+                     if(!empty(trim($formattedName))) { // Add space only if Fname or Mname was present
+                        $formattedName .= ' ' . $Lname; // Add Lname
+                     } else {
+                        $formattedName = $Lname; // Only Lname is available
+                     }
+                }
+                
+                if (empty(trim($formattedName))) {
+                    $formattedName = 'Admin'; // Fallback to default
                 }
             } else {
                  error_log("No user found with UserID: " . $userId);
@@ -61,7 +68,10 @@ if (isset($_SESSION['UserID'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Celestia Hotel - Admin Dashboard</title>
   <link rel="stylesheet" href="css/admin.css">
-</head>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script> 
+  </head>
 <body>
   <header class="header">
     <div class="headerLeft">
@@ -668,39 +678,23 @@ if (isset($_SESSION['UserID'])) {
       </div>
 
       <div class="page" id="parking-page">
-        <h1 class="pageTitle">PARKING</h1>
+        <h1 class="pageTitle">PARKING HISTORY</h1>
 
         <div class="controlsRow">
           <div class="filterControls">
-            <select class="filterDropdown" id="parkingLevelFilter">
-              <option value="">Level</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-            </select>
-            <select class="filterDropdown" id="parkingBlockFilter">
-              <option value="">Block</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-              <option value="D">D</option>
-            </select>
-            <select class="filterDropdown" id="parkingStatusFilter">
-              <option value="">Status</option>
-              <option value="occupied">Occupied</option>
-              <option value="vacant">Vacant</option>
-              <option value="reserved">Reserved</option>
-            </select>
+            <select class="filterDropdown" id="parkingAreaFilter">
+              <option value="all">All Areas</option>
+              </select>
             <div class="searchBox">
-              <input type="text" placeholder="Search" class="searchInput" id="parkingSearchInput" />
+              <input type="text" placeholder="Search Plate, Name, Room..." class="searchInput" id="parkingHistorySearchInput" />
               <button class="searchBtn">
                 <img src="assets/icons/search-icon.png" alt="Search" />
               </button>
             </div>
-            <button class="refreshBtn" id="parkingRefreshBtn">
+            <button class="refreshBtn" id="parkingHistoryRefreshBtn">
               <img src="assets/icons/refresh-icon.png" alt="Refresh" />
             </button>
-            <button class="downloadBtn" id="parkingDownloadBtn">
+            <button class="downloadBtn" id="parkingHistoryDownloadBtn">
               <img src="assets/icons/download-icon.png" alt="Download" />
             </button>
           </div>
@@ -710,23 +704,24 @@ if (isset($_SESSION['UserID'])) {
           <table>
             <thead>
               <tr>
+                <th>Slot Number</th>
                 <th>Plate #</th>
                 <th>Room</th>
                 <th>Name</th>
                 <th>Vehicle Type</th>
-                <th>Entry Time</th>
-                <th>Exit Time</th>
-                <th>Slot Number</th>
-                <th>Status</th>
+                <th>Category</th>
+                <th>Parking Time</th>
+                <th>Enter Time/Date</th>
+                <th>Exit Time/Date</th>
               </tr>
             </thead>
-            <tbody id="parkingTableBody">
+            <tbody id="parkingHistoryTableBody">
               </tbody>
           </table>
         </div>
 
         <div class="pagination">
-          <span class="paginationInfo">Display Records <span id="parkingRecordCount">0</span></span>
+          <span class="paginationInfo">Display Records <span id="parkingHistoryRecordCount">0</span></span>
           <div class="paginationControls">
              </div>
         </div>

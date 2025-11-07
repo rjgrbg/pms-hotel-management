@@ -4,39 +4,44 @@ document.addEventListener('DOMContentLoaded', () => {
   let allHistoryData = [];
   let currentEditItemId = null;
 
+  // Pagination State
+  let currentPages = {
+      requests: 1,
+      history: 1
+  };
+  const rowsPerPage = 10;
+
+  // Sorting State
+  let sortState = {
+      requests: { column: 'ItemName', direction: 'asc' },
+      history: { column: 'DateofRelease', direction: 'desc' }
+  };
+
   // ===== ELEMENT SELECTORS =====
-  // Tables
   const requestsTableBody = document.getElementById('requestsTableBody');
   const historyTableBody = document.getElementById('historyTableBody');
-  const recordCountSpan = document.getElementById('recordCount'); // This ID seems to be from an old version in your HTML
 
-  // Tabs
   const tabBtns = document.querySelectorAll('.tabBtn');
   const tabContents = document.querySelectorAll('.tabContent');
 
-  // Filters (Stocks Tab)
   const categoryFilter = document.getElementById('floorFilter');
   const statusFilter = document.getElementById('roomFilter');
   const searchInput = document.getElementById('searchInput');
 
-  // Filters (History Tab)
   const categoryFilterHistory = document.getElementById('floorFilterHistory');
   const statusFilterHistory = document.getElementById('roomFilterHistory');
   const searchInputHistory = document.getElementById('historySearchInput');
 
-  // Buttons
   const refreshBtn = document.getElementById('refreshBtn');
   const downloadBtnRequests = document.getElementById('downloadBtnRequests');
   const downloadBtnHistory = document.getElementById('downloadBtn');
 
-  // --- Modals ---
   const addItemModal = document.getElementById('add-item-modal');
   const confirmationModal = document.getElementById('confirmation-modal');
   const successModal = document.getElementById('success-modal');
   const editItemModal = document.getElementById('edit-item-modal');
   const deleteConfirmModal = document.getElementById('delete-confirm-modal');
 
-  // --- Modal Buttons & Forms ---
   const addItemBtn = document.getElementById('addItemBtn');
   const addItemForm = document.getElementById('add-item-form');
   const addCategorySelect = document.getElementById('item-category');
@@ -53,15 +58,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const editItemIdInput = document.getElementById('edit-item-id-input'); 
   const editStockInput = document.getElementById('edit-item-add-stock');
   
-  // === CHANGE 1: This is now the CANCEL button in the edit modal ===
   const editModalCancelBtn = document.getElementById('edit-modal-cancel-btn');
 
   const deleteCancelBtn = document.getElementById('delete-cancel-btn');
   const deleteConfirmBtn = document.getElementById('delete-confirm-btn');
-  // === CHANGE 2: Added new 'X' button for delete modal ===
   const deleteModalCloseBtn = document.getElementById('delete-modal-close-btn');
 
-  // --- Profile & Logout ---
   const profileBtn = document.getElementById('profileBtn');
   const sidebar = document.getElementById('profile-sidebar');
   const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
@@ -76,20 +78,191 @@ document.addEventListener('DOMContentLoaded', () => {
   // ======================================================
 
   const showModal = (modal) => {
-    if (modal) modal.classList.add('show-modal');
+    if (modal) {
+        if (modal.classList.contains('modalBackdrop')) {
+            modal.style.display = 'flex';
+        } 
+        else if (modal.classList.contains('modal-overlay') || 
+                 modal.classList.contains('modal-overlay-confirm') || 
+                 modal.classList.contains('modal-overlay-success')) {
+            modal.classList.add('show-modal');
+        }
+    }
   };
 
   const hideModal = (modal) => {
-    if (modal) modal.classList.remove('show-modal');
+    if (modal) {
+        if (modal.classList.contains('modalBackdrop')) {
+            modal.style.display = 'none';
+        } 
+        else if (modal.classList.contains('modal-overlay') || 
+                 modal.classList.contains('modal-overlay-confirm') || 
+                 modal.classList.contains('modal-overlay-success')) {
+            modal.classList.remove('show-modal');
+        }
+    }
   };
 
   const handleError = (message) => {
     console.error(message);
     alert(message);
   };
+  
+  // ======================================================
+  // === PAGINATION & SORTING FUNCTIONS
+  // ======================================================
+
+  function setupPagination(totalItems, containerId, currentPage) {
+      const paginationContainer = document.getElementById(containerId);
+      if (!paginationContainer) return;
+
+      paginationContainer.innerHTML = '';
+      const totalPages = Math.ceil(totalItems / rowsPerPage);
+
+      const recordsInfo = document.createElement('span');
+      recordsInfo.className = 'paginationInfo';
+      
+      let start, end;
+      if (totalItems === 0) {
+          start = 0;
+          end = 0;
+      } else {
+          start = (currentPage - 1) * rowsPerPage + 1;
+          end = Math.min(start + rowsPerPage - 1, totalItems);
+      }
+      
+      recordsInfo.textContent = `Displaying ${start}-${end} of ${totalItems} Records`;
+      paginationContainer.appendChild(recordsInfo);
+      
+      if (totalPages <= 1) {
+          return;
+      }
+
+      const controlsDiv = document.createElement('div');
+      controlsDiv.className = 'paginationControls';
+
+      const prevButton = document.createElement('button');
+      prevButton.className = 'paginationBtn';
+      prevButton.innerHTML = '&lt;';
+      prevButton.disabled = currentPage === 1;
+      prevButton.addEventListener('click', () => {
+          if (containerId.includes('stocks')) currentPages.requests--;
+          if (containerId.includes('history')) currentPages.history--;
+          renderInventoryTable();
+          renderHistoryTable(); 
+      });
+      controlsDiv.appendChild(prevButton);
+
+      const pageNumbers = [];
+      if (totalPages <= 7) {
+          for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+      } else {
+          pageNumbers.push(1);
+          if (currentPage > 3) pageNumbers.push('...');
+          let start = Math.max(2, currentPage - 1);
+          let end = Math.min(totalPages - 1, currentPage + 1);
+          if (currentPage <= 2) end = 3;
+          if (currentPage >= totalPages - 1) start = totalPages - 2;
+          for (let i = start; i <= end; i++) pageNumbers.push(i);
+          if (currentPage < totalPages - 2) pageNumbers.push('...');
+          pageNumbers.push(totalPages);
+      }
+
+      pageNumbers.forEach(num => {
+          if (num === '...') {
+              const span = document.createElement('span');
+              span.className = 'paginationDots';
+              span.textContent = '...';
+              controlsDiv.appendChild(span);
+          } else {
+              const button = document.createElement('button');
+              button.className = 'paginationBtn';
+              button.textContent = num;
+              if (num === currentPage) button.classList.add('active');
+              button.addEventListener('click', () => {
+                  if (containerId.includes('stocks')) currentPages.requests = num;
+                  if (containerId.includes('history')) currentPages.history = num;
+                  renderInventoryTable();
+                  renderHistoryTable();
+              });
+              controlsDiv.appendChild(button);
+          }
+      });
+
+      const nextButton = document.createElement('button');
+      nextButton.className = 'paginationBtn';
+      nextButton.innerHTML = '&gt;';
+      nextButton.disabled = currentPage === totalPages;
+      nextButton.addEventListener('click', () => {
+          if (containerId.includes('stocks')) currentPages.requests++;
+          if (containerId.includes('history')) currentPages.history++;
+          renderInventoryTable();
+          renderHistoryTable();
+      });
+      controlsDiv.appendChild(nextButton);
+
+      paginationContainer.appendChild(controlsDiv);
+  }
+
+  function parseDateWhen(dateStr, defaultVal) {
+      if (!dateStr) return defaultVal;
+      try {
+          return new Date(dateStr).getTime();
+      } catch (e) {
+          return defaultVal;
+      }
+  }
+
+  function sortData(data, column, direction) {
+      data.sort((a, b) => {
+          let valA = a[column];
+          let valB = b[column];
+
+          if (column === 'ItemID' || column === 'ItemQuantity' || column === 'DamageItem' || column === 'InvLogID' || column === 'QuantityChange') {
+              valA = parseFloat(valA) || 0;
+              valB = parseFloat(valB) || 0;
+          }
+
+          if (column === 'DateofStockIn' || column === 'DateofStockOut' || column === 'DateofRelease') {
+              valA = parseDateWhen(valA, null);
+              valB = parseDateWhen(valB, null);
+          }
+          
+          if (typeof valA === 'string') {
+              valA = (valA || "").toLowerCase();
+              valB = (valB || "").toLowerCase();
+          }
+
+          if (valA === null || valA === undefined) valA = direction === 'asc' ? Infinity : -Infinity;
+          if (valB === null || valB === undefined) valB = direction === 'asc' ? Infinity : -Infinity;
+
+          let comparison = 0;
+          if (valA > valB) {
+              comparison = 1;
+          } else if (valA < valB) {
+              comparison = -1;
+          }
+
+          return direction === 'asc' ? comparison : -comparison;
+      });
+  }
+
+  function updateSortHeaders(tabId, { column, direction }) {
+      const tab = document.getElementById(tabId);
+      if (!tab) return;
+
+      tab.querySelectorAll('th.sortable').forEach(th => {
+          th.classList.remove('sort-asc', 'sort-desc');
+      });
+
+      const activeHeader = tab.querySelector(`th[data-sort="${column}"]`);
+      if (activeHeader) {
+          activeHeader.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+      }
+  }
 
   // ======================================================
-  // === DATA FETCHING (Connecting to inventory_actions.php)
+  // === DATA FETCHING
   // ======================================================
 
   async function fetchInventory() {
@@ -128,7 +301,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       handleError('Error fetching history: ' + error.message);
       historyTableBody.innerHTML =
-        '<tr><td colspan="11" class="no-data-cell">Error loading data.</td></tr>';
+        '<tr><td colspan="9" class="no-data-cell">Error loading data.</td></tr>';
     }
   }
 
@@ -164,9 +337,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // === RENDER & FILTER FUNCTIONS
   // ======================================================
 
-  /**
-   * Filters and re-renders the INVENTORY table based on global data.
-   */
   function renderInventoryTable() {
     const category = categoryFilter.value.toLowerCase();
     const status = statusFilter.value.toLowerCase();
@@ -184,13 +354,24 @@ document.addEventListener('DOMContentLoaded', () => {
       return matchCategory && matchStatus && matchSearch;
     });
 
-    if (filteredData.length === 0) {
+    const { column, direction } = sortState.requests;
+    sortData(filteredData, column, direction);
+
+    const page = currentPages.requests;
+    const totalItems = filteredData.length;
+    setupPagination(totalItems, 'pagination-stocks', page);
+
+    if (totalItems === 0) {
       requestsTableBody.innerHTML =
         '<tr><td colspan="10" class="no-data-cell">No inventory items found</td></tr>';
       return;
     }
 
-    requestsTableBody.innerHTML = filteredData
+    const startIndex = (page - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+
+    requestsTableBody.innerHTML = paginatedData
       .map((item) => {
         const badgeClass = item.ItemStatus.toLowerCase().replace(/\s+/g, '-');
 
@@ -202,31 +383,22 @@ document.addEventListener('DOMContentLoaded', () => {
           <td>${item.ItemQuantity}</td>
           <td>${item.ItemDescription || 'N/A'}</td>
           
-          <td><span class="statusBadge ${
-            badgeClass === 'in-stock'
-              ? 'cleaned'
-              : badgeClass === 'low-stock'
-              ? 'dirty'
-              : 'request'
-          }">${item.ItemStatus}</span></td>
+          <td><span class="statusBadge ${badgeClass}">${item.ItemStatus}</span></td>
           
           <td>${item.DamageItem}</td>
           <td>${item.DateofStockIn}</td>
           <td>${item.DateofStockOut || 'N/A'}</td>
           <td class="action-cell">
-              <button class="action-btn edit-btn" data-id="${
-                item.ItemID
-              }">Edit</button>
-              <button class="action-btn delete-btn" data-id="${
-                item.ItemID
-              }">Delete</button>
+              <button class="action-btn edit-btn" data-id="${item.ItemID}">Edit</button>
+              <button class="action-btn delete-btn" data-id="${item.ItemID}">Delete</button>
           </td>
         </tr>
       `;
       })
       .join('');
 
-    // Add event listeners for the new buttons
+    updateSortHeaders('requests-tab', sortState.requests);
+
     document
       .querySelectorAll('#requestsTableBody .edit-btn')
       .forEach((btn) => {
@@ -250,9 +422,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
-  /**
-   * Filters and re-renders the HISTORY table based on global data.
-   */
   function renderHistoryTable() {
     const category = categoryFilterHistory.value.toLowerCase();
     const status = statusFilterHistory.value.toLowerCase();
@@ -260,24 +429,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const filteredData = allHistoryData.filter((log) => {
       const matchCategory =
-        !category || log.Category.toLowerCase() === category;
-      const matchStatus = !status || log.ItemStatus.toLowerCase() === status;
+        !category || (log.Category && log.Category.toLowerCase() === category);
+      const matchStatus = !status || (log.ItemStatus && log.ItemStatus.toLowerCase() === status);
       const matchSearch =
         !search ||
-        log.ItemName.toLowerCase().includes(search) ||
-        log.InvLogID.toString().includes(search) ||
-        log.PerformedBy.toLowerCase().includes(search);
+        (log.ItemName && log.ItemName.toLowerCase().includes(search)) ||
+        (log.InvLogID && log.InvLogID.toString().includes(search)) ||
+        (log.PerformedBy && log.PerformedBy.toLowerCase().includes(search));
       return matchCategory && matchStatus && matchSearch;
     });
 
-    if (filteredData.length === 0) {
+    const { column, direction } = sortState.history;
+    sortData(filteredData, column, direction);
+
+    const page = currentPages.history;
+    const totalItems = filteredData.length;
+    setupPagination(totalItems, 'pagination-history', page);
+
+    if (totalItems === 0) {
       historyTableBody.innerHTML =
-        '<tr><td colspan="11" class="no-data-cell">No history found</td></tr>';
-      // recordCountSpan.textContent = 0; // This ID doesn't seem to exist for history
+        '<tr><td colspan="9" class="no-data-cell">No history found</td></tr>';
       return;
     }
+    
+    const startIndex = (page - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
 
-    historyTableBody.innerHTML = filteredData
+    historyTableBody.innerHTML = paginatedData
       .map(
         (log) => `
       <tr>
@@ -287,24 +466,21 @@ document.addEventListener('DOMContentLoaded', () => {
         <td>${log.ItemQuantity}</td>
         <td>${log.QuantityChange}</td>
         <td>${log.ItemStatus}</td>
-        <td>${log.DamageItem}</td>
         <td>${log.DateofStockIn || 'N/A'}</td>
         <td>${log.DateofStockOut || 'N/A'}</td>
-        <td>${log.ActionType}</td>
         <td>${log.PerformedBy}</td>
       </tr>
     `
       )
       .join('');
-
-    // recordCountSpan.textContent = filteredData.length; // This ID doesn't seem to exist for history
+      
+    updateSortHeaders('history-tab', sortState.history);
   }
 
   // ======================================================
   // === MODAL & FORM LOGIC
   // ======================================================
 
-  // --- Add Item Flow ---
   addItemForm.addEventListener('submit', (e) => {
     e.preventDefault();
     if (addItemForm.checkValidity()) {
@@ -354,7 +530,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- Edit Item Flow ---
   function openEditModal(item) {
     currentEditItemId = item.ItemID;
     editItemIdSpan.textContent = item.ItemID;
@@ -362,8 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('edit-item-name').value = item.ItemName;
     editCategorySelect.value = item.ItemCategoryID;
     document.getElementById('edit-item-description').value = item.ItemDescription;
-    // === CHANGE 3: RESTORED status logic ===
-    document.getElementById('edit-item-status').value = item.ItemStatus;
+    // document.getElementById('edit-item-status').value = item.ItemStatus; // This line is no longer needed
     editStockInput.value = 0;
 
     showModal(editItemModal);
@@ -382,8 +556,9 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('edit-item-description').value
     );
     formData.append('stock_adjustment', editStockInput.value);
-    // === CHANGE 3: RESTORED status logic ===
-    formData.append('status', document.getElementById('edit-item-status').value);
+    
+    // === MODIFICATION: Removed this line ===
+    // formData.append('status', document.getElementById('edit-item-status').value);
 
     try {
       const response = await fetch('inventory_actions.php?action=update_item', {
@@ -404,7 +579,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- Delete Item Flow (from main table) ---
   deleteConfirmBtn.addEventListener('click', async () => {
     if (!currentEditItemId) return;
 
@@ -436,7 +610,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // === EVENT LISTENERS
   // ======================================================
 
-  // --- Tab Navigation ---
   tabBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const tabName = btn.getAttribute('data-tab');
@@ -444,10 +617,12 @@ document.addEventListener('DOMContentLoaded', () => {
       tabContents.forEach((content) => content.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById(`${tabName}-tab`).classList.add('active');
+      
+      currentPages.requests = 1;
+      currentPages.history = 1;
     });
   });
 
-  // --- Modal Close Buttons ---
   if (addItemBtn)
     addItemBtn.addEventListener('click', () => showModal(addItemModal));
   if (addModalCloseBtn)
@@ -463,18 +638,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (deleteCancelBtn)
     deleteCancelBtn.addEventListener('click', () => hideModal(deleteConfirmModal));
   
-  // === CHANGE 2: Added listener for new 'X' button ===
   if (deleteModalCloseBtn)
     deleteModalCloseBtn.addEventListener('click', () => hideModal(deleteConfirmModal));
 
-  // === CHANGE 1: This listener is for the white 'CANCEL' button in the edit modal ===
   if (editModalCancelBtn) {
     editModalCancelBtn.addEventListener('click', () => {
       hideModal(editItemModal);
     });
   }
 
-  // --- Profile & Logout ---
   if (profileBtn && sidebar && sidebarCloseBtn) {
     profileBtn.addEventListener('click', () => sidebar.classList.add('active'));
     sidebarCloseBtn.addEventListener('click', () =>
@@ -483,98 +655,98 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (logoutBtn)
-    logoutBtn.addEventListener('click', () => (logoutModal.style.display = 'flex'));
+    logoutBtn.addEventListener('click', () => showModal(logoutModal));
   if (closeLogoutBtn)
-    closeLogoutBtn.addEventListener('click', () => (logoutModal.style.display = 'none'));
+    closeLogoutBtn.addEventListener('click', () => hideModal(logoutModal));
   if (cancelLogoutBtn)
-    cancelLogoutBtn.addEventListener('click', () => (logoutModal.style.display = 'none'));
+    cancelLogoutBtn.addEventListener('click', () => hideModal(logoutModal));
   
-  // === CHANGE 4: Pointed to logout.php ===
   if (confirmLogoutBtn) {
     confirmLogoutBtn.addEventListener('click', () => {
-      window.location.href = 'logout.php'; // Updated to logout.php
+      window.location.href = 'logout.php';
     });
   }
   if (logoutModal) {
     logoutModal.addEventListener('click', (e) => {
       if (e.target === e.currentTarget) {
-        logoutModal.style.display = 'none';
+        hideModal(logoutModal);
       }
     });
   }
 
-  // --- Filters ---
-  if (searchInput) searchInput.addEventListener('input', renderInventoryTable);
-  if (categoryFilter)
-    categoryFilter.addEventListener('change', renderInventoryTable);
-  if (statusFilter) statusFilter.addEventListener('change', renderInventoryTable);
+  if (searchInput) searchInput.addEventListener('input', () => {
+    currentPages.requests = 1;
+    renderInventoryTable();
+  });
+  if (categoryFilter) categoryFilter.addEventListener('change', () => {
+    currentPages.requests = 1;
+    renderInventoryTable();
+  });
+  if (statusFilter) statusFilter.addEventListener('change', () => {
+    currentPages.requests = 1;
+    renderInventoryTable();
+  });
 
-  if (searchInputHistory)
-    searchInputHistory.addEventListener('input', renderHistoryTable);
-  if (categoryFilterHistory)
-    categoryFilterHistory.addEventListener('change', renderHistoryTable);
-  if (statusFilterHistory)
-    statusFilterHistory.addEventListener('change', renderHistoryTable);
+  if (searchInputHistory) searchInputHistory.addEventListener('input', () => {
+    currentPages.history = 1;
+    renderHistoryTable();
+  });
+  if (categoryFilterHistory) categoryFilterHistory.addEventListener('change', () => {
+    currentPages.history = 1;
+    renderHistoryTable();
+  });
+  if (statusFilterHistory) statusFilterHistory.addEventListener('change', () => {
+    currentPages.history = 1;
+    renderHistoryTable();
+  });
 
-  // --- Refresh Button ---
   if (refreshBtn) {
     refreshBtn.addEventListener('click', () => {
       categoryFilter.value = '';
       statusFilter.value = '';
       searchInput.value = '';
+      currentPages.requests = 1;
       fetchInventory(); 
       alert('Data refreshed!');
     });
   }
 
-  // --- Download CSV Buttons ---
-  function downloadCSV(data, headersMap, filename) {
-    const headers = Object.keys(headersMap);
-    const keys = Object.values(headersMap);
+  function downloadPDF(data, headers, bodyKeys, title, filename) {
+      if (data.length === 0) {
+          alert('No data to download.');
+          return;
+      }
+      
+      try {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ orientation: 'landscape' });
 
-    const csvContent = [
-      headers.join(','),
-      ...data.map((row) =>
-        keys
-          .map((key) => {
-            let val = row[key];
-            if (val === null || val === undefined) {
-              val = "N/A";
-            }
-            if (typeof val === 'string') {
-              val = val.replace(/"/g, '""');
-              if (val.includes(',')) {
-                val = `"${val}"`;
-              }
-            }
-            return val;
-          })
-          .join(',')
-      ),
-    ].join('\n');
+          doc.setFontSize(18);
+          doc.text(title, 14, 22);
+          doc.setFontSize(11);
+          doc.setTextColor(100);
+          doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+          const body = data.map(row => bodyKeys.map(key => row[key] || 'N/A'));
+
+          doc.autoTable({
+              head: [headers],
+              body: body,
+              startY: 35,
+              headStyles: { fillColor: [72, 12, 27] },
+              styles: { fontSize: 8, cellPadding: 2 },
+              alternateRowStyles: { fillColor: [245, 245, 245] }
+          });
+
+          doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
+      } catch (e) {
+          console.error("Error generating PDF:", e);
+          alert("Error generating PDF. Please ensure you are online to load the PDF library.");
+      }
   }
 
   if (downloadBtnRequests) {
     downloadBtnRequests.addEventListener('click', () => {
-      const headersMap = {
-        'ID': 'ItemID',
-        'Name': 'ItemName',
-        'Category': 'Category',
-        'Quantity': 'ItemQuantity',
-        'Description': 'ItemDescription',
-        'Status': 'ItemStatus',
-        'Damage': 'DamageItem',
-        'Stock In Date': 'DateofStockIn',
-        'Stock Out Date': 'DateofStockOut',
-      };
       const category = categoryFilter.value.toLowerCase();
       const status = statusFilter.value.toLowerCase();
       const search = searchInput.value.toLowerCase();
@@ -584,44 +756,82 @@ document.addEventListener('DOMContentLoaded', () => {
           const matchSearch = !search || item.ItemName.toLowerCase().includes(search) || item.ItemID.toString().includes(search);
           return matchCategory && matchStatus && matchSearch;
       });
-      downloadCSV(filteredData, headersMap, 'inventory-stocks');
+      
+      const { column, direction } = sortState.requests;
+      sortData(filteredData, column, direction);
+
+      const headers = ['ID', 'Name', 'Category', 'Qty', 'Description', 'Status', 'Dmg', 'Stock In', 'Stock Out'];
+      const bodyKeys = ['ItemID', 'ItemName', 'Category', 'ItemQuantity', 'ItemDescription', 'ItemStatus', 'DamageItem', 'DateofStockIn', 'DateofStockOut'];
+      
+      downloadPDF(filteredData, headers, bodyKeys, 'Inventory Stocks Report', 'inventory-stocks');
     });
   }
 
   if (downloadBtnHistory) {
     downloadBtnHistory.addEventListener('click', () => {
-      const headersMap = {
-        'Log ID': 'InvLogID',
-        'Name': 'ItemName',
-        'Category': 'Category',
-        'Current Quantity': 'ItemQuantity',
-        'Quantity Change': 'QuantityChange',
-        'Status': 'ItemStatus',
-        'Damage': 'DamageItem',
-        'Stock In Date': 'DateofStockIn',
-        'Stock Out Date': 'DateofStockOut',
-        'Action': 'ActionType',
-        'Performed By': 'PerformedBy',
-      };
       const category = categoryFilterHistory.value.toLowerCase();
       const status = statusFilterHistory.value.toLowerCase();
       const search = searchInputHistory.value.toLowerCase();
       const filteredData = allHistoryData.filter((log) => {
-          const matchCategory = !category || log.Category.toLowerCase() === category;
-          const matchStatus = !status || log.ItemStatus.toLowerCase() === status;
-          const matchSearch = !search || log.ItemName.toLowerCase().includes(search) || log.InvLogID.toString().includes(search) || log.PerformedBy.toLowerCase().includes(search);
+          const matchCategory = !category || (log.Category && log.Category.toLowerCase() === category);
+          const matchStatus = !status || (log.ItemStatus && log.ItemStatus.toLowerCase() === status);
+          const matchSearch = !search ||
+            (log.ItemName && log.ItemName.toLowerCase().includes(search)) ||
+            (log.InvLogID && log.InvLogID.toString().includes(search)) ||
+            (log.PerformedBy && log.PerformedBy.toLowerCase().includes(search));
           return matchCategory && matchStatus && matchSearch;
       });
-      downloadCSV(filteredData, headersMap, 'inventory-history');
+      
+      const { column, direction } = sortState.history;
+      sortData(filteredData, column, direction);
+      
+      const headers = ['Log ID', 'Name', 'Category', 'Current Qty', 'Change', 'Status', 'Stock In', 'Stock Out', 'Performed By'];
+      const bodyKeys = ['InvLogID', 'ItemName', 'Category', 'ItemQuantity', 'QuantityChange', 'ItemStatus', 'DateofStockIn', 'DateofStockOut', 'PerformedBy'];
+      
+      downloadPDF(filteredData, headers, bodyKeys, 'Inventory History Report', 'inventory-history');
     });
   }
-
-  // ======================================================
-  // === INITIAL PAGE LOAD
-  // ======================================================
   
+  const accountDetailsLink = document.getElementById('account-details-link');
+  if (accountDetailsLink) {
+    accountDetailsLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        alert('Account Details modal not implemented in this module.');
+    });
+  }
+  
+  function setupSortListeners() {
+      document.querySelectorAll('th.sortable').forEach(th => {
+          th.addEventListener('click', () => {
+              const column = th.dataset.sort;
+              const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
+              const stateKey = activeTab === 'requests' ? 'requests' : 'history';
+              
+              if (!sortState[stateKey]) return;
+
+              const currentSort = sortState[stateKey];
+              let direction = 'asc';
+
+              if (currentSort.column === column) {
+                  direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+              }
+              
+              sortState[stateKey] = { column, direction };
+
+              currentPages[stateKey] = 1;
+
+              if (activeTab === 'requests') {
+                  renderInventoryTable();
+              } else {
+                  renderHistoryTable();
+              }
+          });
+      });
+  }
+
   async function initializePage() {
     try {
+      setupSortListeners();
       await fetchCategories();
       await fetchInventory();
       fetchHistory();

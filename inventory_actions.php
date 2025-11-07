@@ -218,26 +218,54 @@ function updateItem($conn, $data, $userID) {
   $categoryID = (int)$data['category_id'];
   $description = $data['description'];
   $stockAdjustment = (int)$data['stock_adjustment'];
-  // === User is in control of status, so we take it from the form ===
-  $status = $data['status'];
+  // === MODIFICATION START: Status is no longer taken from form ===
+  // $status = $data['status']; // This line is removed.
 
   // Use a transaction
   $conn->begin_transaction();
 
-  // 1. Update the 'inventory' table
+  // 1. Get the current quantity first
+  $currentQuantity = 0;
+  $qtyStmt = $conn->prepare("SELECT ItemQuantity FROM inventory WHERE ItemID = ?");
+  $qtyStmt->bind_param("i", $itemID);
+  if ($qtyStmt->execute()) {
+    $result = $qtyStmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+      $currentQuantity = (int)$row['ItemQuantity'];
+    }
+  } else {
+    $conn->rollback();
+    throw new Exception("Error fetching current quantity: " . $qtyStmt->error);
+  }
+  $qtyStmt->close();
+
+  // 2. Calculate new quantity and determine status
+  $newQuantity = $currentQuantity + $stockAdjustment;
+  
+  $status = 'In Stock';
+  if ($newQuantity <= 0) {
+    $status = 'Out of Stock';
+    $newQuantity = 0; // Don't allow negative stock
+  } elseif ($newQuantity <= 10) {
+    $status = 'Low Stock';
+  }
+  // === MODIFICATION END ===
+
+  // 3. Update the 'inventory' table with new quantity and calculated status
   $stmt = $conn->prepare(
     "UPDATE inventory 
-     SET ItemName = ?, ItemCategoryID = ?, ItemDescription = ?, ItemQuantity = ItemQuantity + ?, ItemStatus = ?
+     SET ItemName = ?, ItemCategoryID = ?, ItemDescription = ?, ItemQuantity = ?, ItemStatus = ?
      WHERE ItemID = ?"
   );
-  $stmt->bind_param("sisisi", $name, $categoryID, $description, $stockAdjustment, $status, $itemID);
+  // Bind $newQuantity instead of $stockAdjustment
+  $stmt->bind_param("sisisi", $name, $categoryID, $description, $newQuantity, $status, $itemID);
   
   if (!$stmt->execute()) {
     $conn->rollback();
     throw new Exception("Error updating item: " . $stmt->error);
   }
 
-  // 2. If stock was changed, log it
+  // 4. If stock was changed, log it
   if ($stockAdjustment != 0) {
     $logReason = $stockAdjustment > 0 ? "Stock Added" : "Stock Removed";
     

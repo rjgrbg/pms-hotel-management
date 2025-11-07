@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 07, 2025 at 10:14 AM
+-- Generation Time: Nov 07, 2025 at 10:31 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -121,11 +121,13 @@ CREATE TABLE `inventory` (
 --
 
 INSERT INTO `inventory` (`ItemID`, `ItemName`, `ItemCategoryID`, `ItemQuantity`, `ItemDescription`, `ItemStatus`, `DamageItem`, `DateofStockIn`, `DateofStockOut`) VALUES
-(3, 'asd', 1, 2.00, '0', 'Low Stock', '0', '2025-10-31 16:00:00', NULL),
+(3, 'asd', 1, 0.00, '0', 'Out of Stock', '0', '2025-11-07 20:28:57', '0000-00-00 00:00:00'),
 (4, 'wew', 2, 12.00, '0wqe', 'Low Stock', '0', '2025-11-07 05:53:07', NULL),
-(5, 'asd', 1, 2.00, '0', 'In Stock', '0', '2025-11-07 06:36:11', NULL),
-(6, 'aass', 2, 1.00, '0', 'Low Stock', '0', '2025-11-07 06:36:07', NULL),
-(7, 'w', 2, 5.00, '0', 'Low Stock', '0', '2025-10-31 16:00:00', NULL);
+(5, 'asd', 1, 3.00, '0', 'Low Stock', '0', '2025-11-07 20:43:54', NULL),
+(6, 'aass', 2, 14.00, 'wqeqwe', 'In Stock', '0', '2025-11-07 20:44:38', NULL),
+(7, 'w', 2, 0.00, '0', 'Out of Stock', '0', '2025-10-31 16:00:00', '0000-00-00 00:00:00'),
+(8, 'qwe', 2, 4.00, '0', 'Low Stock', '0', '2025-11-07 20:44:00', '0000-00-00 00:00:00'),
+(9, 'wqe', 3, 6.00, 'qwe', 'Low Stock', '0', '2025-10-31 16:00:00', NULL);
 
 -- --------------------------------------------------------
 
@@ -152,7 +154,37 @@ INSERT INTO `inventorylog` (`InvLogID`, `UserID`, `ItemID`, `Quantity`, `Invento
 (5, 38, 5, 2, 'Initial Stock In', '2025-11-07 05:52:51'),
 (6, 38, 4, 10, 'Stock Added', '2025-11-07 05:53:07'),
 (7, 38, 6, 1, 'Initial Stock In', '2025-11-07 06:10:42'),
-(8, 38, 7, 5, 'Initial Stock In', '2025-11-07 06:47:59');
+(8, 38, 7, 5, 'Initial Stock In', '2025-11-07 06:47:59'),
+(9, 38, 8, 2, 'Initial Stock In', '2025-11-07 18:27:19'),
+(10, 39, 6, -1, 'Stock Removed', '2025-11-07 19:42:11'),
+(11, 39, 5, -1, 'Stock Removed', '2025-11-07 19:42:20'),
+(12, 39, 3, -1, 'Stock Removed', '2025-11-07 19:42:27'),
+(13, 39, 8, -1, 'Stock Removed', '2025-11-07 19:52:30'),
+(14, 39, 5, -1, 'Stock Removed', '2025-11-07 19:55:34'),
+(15, 38, 6, 20, 'Stock Added', '2025-11-07 19:58:33'),
+(16, 39, 6, -1, 'Stock Removed', '2025-11-07 19:59:01'),
+(17, 38, 6, 8, 'Stock Added', '2025-11-07 19:59:29'),
+(18, 38, 6, -10, 'Stock Removed', '2025-11-07 19:59:39'),
+(19, 38, 6, 2, 'Stock Added', '2025-11-07 20:23:08'),
+(20, 38, 5, 1, 'Stock Added', '2025-11-07 20:25:14'),
+(21, 38, 5, -1, 'Stock Removed', '2025-11-07 20:25:19'),
+(22, 39, 6, -1, 'Stock Removed', '2025-11-07 20:25:43'),
+(23, 38, 3, -1, 'Stock Removed', '2025-11-07 20:28:57'),
+(24, 38, 8, -1, 'Stock Removed', '2025-11-07 20:30:38'),
+(25, 38, 8, 1, 'Stock Added', '2025-11-07 20:33:50'),
+(26, 38, 8, -1, 'Stock Removed', '2025-11-07 20:34:05'),
+(27, 38, 9, 6, 'Initial Stock In', '2025-11-07 20:34:41'),
+(28, 38, 8, 1, 'Stock Added', '2025-11-07 20:35:26'),
+(29, 38, 8, -1, 'Stock Removed', '2025-11-07 20:35:28'),
+(30, 38, 7, -5, 'Stock Removed', '2025-11-07 20:35:46'),
+(31, 38, 7, 1, 'Stock Added', '2025-11-07 20:38:03'),
+(32, 38, 7, -1, 'Stock Removed', '2025-11-07 20:38:05'),
+(33, 38, 8, 1, 'Stock Added', '2025-11-07 20:42:19'),
+(34, 38, 5, -1, 'Stock Removed', '2025-11-07 20:43:50'),
+(35, 38, 5, 3, 'Stock Added', '2025-11-07 20:43:54'),
+(36, 38, 8, 3, 'Stock Added', '2025-11-07 20:44:00'),
+(37, 38, 7, -2, 'Stock Removed', '2025-11-07 20:44:02'),
+(38, 39, 6, -4, 'Stock Removed', '2025-11-07 20:44:38');
 
 -- --------------------------------------------------------
 
@@ -313,7 +345,8 @@ INSERT INTO `parking_sessions` (`SessionID`, `SlotID`, `PlateNumber`, `GuestName
 (4, 61, 'WE', 'wea', 'e', 2, 9, '2025-11-07 16:12:45', NULL, NULL, 40),
 (5, 71, 'SDA', 'ad', 'asdasd', 1, 11, '2025-11-07 16:12:55', NULL, NULL, 40),
 (6, 82, 'AS', 'asd', 'd', 1, 11, '2025-11-07 16:13:02', NULL, NULL, 40),
-(7, 91, 'S', 'd', 'asd', 1, 11, '2025-11-07 16:13:14', '2025-11-07 17:00:50', NULL, 40);
+(7, 91, 'S', 'd', 'asd', 1, 11, '2025-11-07 16:13:14', '2025-11-07 17:00:50', NULL, 40),
+(8, 52, 'QW4E12E', 'w', 'q1', 1, 11, '2025-11-08 02:48:34', '2025-11-08 02:48:37', NULL, 40);
 
 -- --------------------------------------------------------
 
@@ -380,7 +413,8 @@ CREATE TABLE `room_status` (
 --
 
 INSERT INTO `room_status` (`StatusID`, `RoomNumber`, `RoomStatus`, `UserID`, `LastUpdated`) VALUES
-(1, '101', 'Needs Cleaning', 1, '2025-11-07 04:03:52');
+(1, '101', 'Maintenance', 1, '2025-11-07 18:41:12'),
+(3, '102', 'Needs Cleaning', 1, '2025-11-07 18:40:21');
 
 -- --------------------------------------------------------
 
@@ -417,7 +451,28 @@ INSERT INTO `users` (`UserID`, `EmployeeID`, `Fname`, `Lname`, `Mname`, `Birthda
 (37, '1010', 'Testting', 'Admin', 'X', '1990-01-01', 'admin', 'test.admin', '$2y$10$.yNgmWda3eza4nJtB9wz0.rGydS62.9ta4rvnAZskPauf2C3yN2la', 'dayvoice993@gmail.com', 'Morning', '123 Admin Street, Manila', '09000001010', '414a629dd94a755c3c936c40c46455766c205352ca0f09cf10769b83ea8fc51a', '2025-11-08 03:01:01'),
 (38, '1009', 'Michael', 'Brown', 'F', '1992-09-18', 'inventory_manager', 'mmanager', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'michael.brown@example.com', 'Morning', '606 Parking Way, Taguig', '09220001009', '6543fd95970924b4af1da17b312e6fd145c34424ee1f999d858778fdbd2a65ee', '2025-11-08 03:25:04'),
 (39, '1008', 'Emily', 'Chen', 'E', '2001-06-20', 'maintenance_staff', 'mstaff', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'emily.chen@example.com', 'Morning', '505 Repair Ln, Makati', '09210001008', '8a9a372ed04b1ab93f4e1d7b4eb9ed67f56b3e8941812b5dfe4f26741226afb6', '2025-11-08 03:28:56'),
-(40, '1023', 'qw', 'qw', 'qw', '2015-11-03', 'parking_manager', 'pmanager', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'as', 'sd', 'asd', 'asd', NULL, NULL);
+(40, '1023', 'sadas', 'ssss', 'nase', '2015-11-03', 'parking_manager', 'pmanager', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'as', 'sd', 'asd', 'asd', NULL, NULL);
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `user_logs`
+--
+
+CREATE TABLE `user_logs` (
+  `LogID` int(11) NOT NULL,
+  `UserID` int(11) DEFAULT NULL,
+  `Lname` varchar(255) DEFAULT NULL,
+  `Fname` varchar(255) DEFAULT NULL,
+  `Mname` varchar(255) DEFAULT NULL,
+  `AccountType` varchar(255) DEFAULT NULL,
+  `Role` varchar(255) DEFAULT NULL,
+  `Shift` varchar(255) DEFAULT NULL,
+  `Username` varchar(255) DEFAULT NULL,
+  `EmailAddress` varchar(255) DEFAULT NULL,
+  `ActionType` varchar(255) NOT NULL,
+  `Timestamp` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
@@ -608,6 +663,17 @@ ALTER TABLE `users`
   ADD KEY `idx_employee_id` (`EmployeeID`);
 
 --
+-- Indexes for table `user_logs`
+--
+ALTER TABLE `user_logs`
+  ADD PRIMARY KEY (`LogID`),
+  ADD KEY `idx_userid` (`UserID`),
+  ADD KEY `idx_accounttype` (`AccountType`),
+  ADD KEY `idx_shift` (`Shift`),
+  ADD KEY `idx_actiontype` (`ActionType`),
+  ADD KEY `idx_timestamp` (`Timestamp`);
+
+--
 -- Indexes for table `vehiclecategory`
 --
 ALTER TABLE `vehiclecategory`
@@ -660,13 +726,13 @@ ALTER TABLE `hvacmaintenance`
 -- AUTO_INCREMENT for table `inventory`
 --
 ALTER TABLE `inventory`
-  MODIFY `ItemID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `ItemID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `inventorylog`
 --
 ALTER TABLE `inventorylog`
-  MODIFY `InvLogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `InvLogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
 
 --
 -- AUTO_INCREMENT for table `itemcategory`
@@ -696,7 +762,7 @@ ALTER TABLE `parkingslot`
 -- AUTO_INCREMENT for table `parking_sessions`
 --
 ALTER TABLE `parking_sessions`
-  MODIFY `SessionID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `SessionID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `rate`
@@ -714,13 +780,19 @@ ALTER TABLE `room`
 -- AUTO_INCREMENT for table `room_status`
 --
 ALTER TABLE `room_status`
-  MODIFY `StatusID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `StatusID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
   MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+
+--
+-- AUTO_INCREMENT for table `user_logs`
+--
+ALTER TABLE `user_logs`
+  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `vehiclecategory`
