@@ -58,8 +58,15 @@ function get_db_connection($db_name = 'pms') {
             'user' => 'root',
             'password' => '',
             'database' => 'hris' // The new HRIS database
+        ],
+        // --- NEWLY ADDED ---
+        'crm' => [
+            'host' => 'localhost', // Assuming same server, update if different
+            'user' => 'root',
+            'password' => '',
+            'database' => 'crm' // The new CRM database
         ]
-        // Add other database credentials here if needed
+        // --- END NEW ---
     ];
 
     // 3. Check if the requested database exists in our config

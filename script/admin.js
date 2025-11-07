@@ -488,14 +488,14 @@ async function fetchAndRenderUsers() {
         console.log('User fetch result:', result);
                 
         if (result.success && result.data && result.data.length > 0) {
-            window.usersData = result.data; 
-            console.log('Users data loaded:', window.usersData);
-            updateDashboardFromUsers(window.usersData);
+            usersData = result.data; // MODIFIED
+            console.log('Users data loaded:', usersData); // MODIFIED
+            updateDashboardFromUsers(usersData); // MODIFIED
                         
             paginationState.users.currentPage = 1;
-            renderUsersTable(window.usersData);
+            renderUsersTable(usersData); // MODIFIED
             const recordCount = document.getElementById('usersRecordCount');
-            if (recordCount) recordCount.textContent = window.usersData.length;
+            if (recordCount) recordCount.textContent = usersData.length; // MODIFIED
         } else if (result.success && (!result.data || result.data.length === 0)) {
             usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No users found.</td></tr>';
             const recordCount = document.getElementById('usersRecordCount');
@@ -1007,114 +1007,94 @@ document.getElementById('employeeIdForm')?.addEventListener('submit', async (e) 
 });
 
 
+// Replace your existing function with this one
 function handleEditUserClick(event) {
-    hideFormMessage(true);
-    const user = JSON.parse(event.currentTarget.dataset.userData);
-    
-    userModalTitle.textContent = 'Edit User: ' + user.Username;
-    
-    employeeIdForm.style.display = 'none';
-    userEditForm.style.display = 'block';
-    
-    document.getElementById('editUserFullName').textContent = `${user.Lname}, ${user.Fname}${user.Mname ? ' ' + user.Mname.charAt(0) + '.' : ''}`;
-    // Use UserID for the static display
-    document.getElementById('editUserEmployeeId').textContent = `User ID: ${user.UserID}`; 
-    
-    editUserIdInput.value = user.UserID;
-    userFnameInput.value = user.Fname;
-    userLnameInput.value = user.Lname;
-    userMnameInput.value = user.Mname || '';
-    userBirthdayInput.value = user.Birthday;
-    userAccountTypeInput.value = user.AccountType;
-    userUsernameInput.value = user.Username;
-    userEmailInput.value = user.EmailAddress;
-    userShiftInput.value = user.Shift;
-    userAddressInput.value = user.Address;
-    
-    // EmployeeID (from HRIS) is now an editable field, needs to be in the form
-    const userEmployeeIdInput = document.getElementById('userEmployeeId'); // This ID is assumed from your HTML
-    if(userEmployeeIdInput) {
-        userEmployeeIdInput.value = user.EmployeeID || '';
-    } else {
-        console.warn('Missing input field with id="userEmployeeId" in the edit form.');
-    }
-    
-    // Clear the (optional) contact field as it's not in the DB
-    if(userContactInput) {
-        userContactInput.value = ''; 
-    }
-    
-    // Clear password fields
-    const userPasswordInput = document.getElementById('userPassword');
-    const userConfirmPasswordInput = document.getElementById('userConfirmPassword');
-    if (userPasswordInput) userPasswordInput.value = '';
-    if (userConfirmPasswordInput) userConfirmPasswordInput.value = '';
+    hideFormMessage(true); // Assuming this is your function to hide errors
+    const user = JSON.parse(event.currentTarget.dataset.userData);
+    
+    // Set modal title
+    userModalTitle.textContent = 'Edit User: ' + user.Username;
+    
+    // Show the correct form
+    employeeIdForm.style.display = 'none';
+    userEditForm.style.display = 'block';
+    
+    // --- MODIFIED SECTION ---
+    // Populate the profile display (Name and Employee ID)
+    document.getElementById('editUserFullName').textContent = `${user.Lname}, ${user.Fname}${user.Mname ? ' ' + user.Mname.charAt(0) + '.' : ''}`;
+    // Display EmployeeID as requested, not UserID
+    document.getElementById('editUserEmployeeId').textContent = `Employee ID: ${user.EmployeeID || 'N/A'}`; 
+    
+    // Populate the 4 form fields
+    editUserIdInput.value = user.UserID; // This is the hidden ID
+    userUsernameInput.value = user.Username;
+    userAccountTypeInput.value = user.AccountType;
+    userShiftInput.value = user.Shift;
+    
+    // Clear the optional password field
+    const userPasswordInput = document.getElementById('userPassword');
+    if (userPasswordInput) userPasswordInput.value = '';
+    // --- END MODIFIED SECTION ---
 
-    userModal.style.display = 'flex';
+    userModal.style.display = 'flex';
 }
 
 // Fix 3: Update the user edit form submission
 document.getElementById('userEditForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    hideFormMessage(true);
-    
-    const userID = document.getElementById('editUserId').value;
-    
-    // Get EmployeeID from the form (assuming an input with id 'userEmployeeId' exists)
-    const employeeIdValue = document.getElementById('userEmployeeId') ? document.getElementById('userEmployeeId').value.trim() : null;
-
-    const data = {
-        userID: userID,
-        fname: document.getElementById('userFname').value.trim(),
-        lname: document.getElementById('userLname').value.trim(),
-        mname: document.getElementById('userMname').value.trim(),
-        birthday: document.getElementById('userBirthday').value,
-        accountType: document.getElementById('userAccountType').value,
-        username: document.getElementById('userUsername').value.trim(),
-        email: document.getElementById('userEmail').value.trim(),
-        shift: document.getElementById('userShift').value,
-        address: document.getElementById('userAddress').value.trim(),
-        employeeID: employeeIdValue, // Send EmployeeID to PHP
-        password: document.getElementById('userPassword') ? document.getElementById('userPassword').value : '', // Assumed password fields
-        confirmPassword: document.getElementById('userConfirmPassword') ? document.getElementById('userConfirmPassword').value : ''
-    };
-    
-    // Validation
-    if (!data.fname || !data.lname || !data.username || !data.email || !data.accountType || !data.shift) {
-        showFormMessage('Please fill in all required fields.', 'error', true);
-        return;
-    }
-    
-    console.log('Updating user data:', data);
-        
-    // Show loading state
-    const saveBtn = document.getElementById('saveUserBtn');
-    const originalText = saveBtn.textContent;
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'UPDATING...';
-        
-    try {
-        const result = await apiCall('edit_user', data, 'POST', 'user_actions.php');
-        console.log('User update result:', result);
-        
-        if (result.success) {
-            showFormMessage(result.message || 'User updated successfully!', 'success', true);
-            await fetchAndRenderUsers();
-                        
-            setTimeout(() => {
-                document.getElementById('userModal').style.display = 'none';
-                hideFormMessage(true);
-            }, 2000);
-        } else {
-            showFormMessage(result.message || 'Failed to update user.', 'error', true);
-        }
-    } catch (error) {
-        console.error('Error updating user:', error);
-        showFormMessage('An unexpected error occurred. Please try again.', 'error', true);
-    } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = originalText;
-    }
+    e.preventDefault();
+    hideFormMessage(true); // Assuming this is your function
+    
+    const userID = document.getElementById('editUserId').value;
+    
+    // --- MODIFIED SECTION ---
+    // Collect data ONLY from the 4 fields
+    const data = {
+        userID: userID,
+        username: userUsernameInput.value.trim(),
+        password: document.getElementById('userPassword') ? document.getElementById('userPassword').value : '', // Get optional password
+        accountType: userAccountTypeInput.value,
+        shift: userShiftInput.value
+    };
+    
+    // Simplified Validation
+    if (!data.username || !data.accountType || !data.shift) {
+        // Assuming showFormMessage is your function
+        showFormMessage('Please fill in all required fields (Username, Account Type, Shift).', 'error', true); 
+        return;
+    }
+    // --- END MODIFIED SECTION ---
+    
+    console.log('Updating user data:', data);
+        
+    // Show loading state
+    const saveBtn = document.getElementById('saveUserBtn');
+   const originalText = saveBtn.textContent;
+   saveBtn.disabled = true;
+    saveBtn.textContent = 'UPDATING...';
+        
+    try {
+        // This API call is correct based on our previous 'user_actions.php' update
+        const result = await apiCall('edit_user', data, 'POST', 'user_actions.php');
+        console.log('User update result:', result);
+        
+        if (result.success) {
+           showFormMessage(result.message || 'User updated successfully!', 'success', true);
+            await fetchAndRenderUsers(); // Assuming this is your function to refresh the table
+                        
+            setTimeout(() => {
+                document.getElementById('userModal').style.display = 'none';
+                hideFormMessage(true);
+            }, 2000);
+        } else {
+            showFormMessage(result.message || 'Failed to update user.', 'error', true);
+        }
+    } catch (error) {
+        console.error('Error updating user:', error);
+        showFormMessage('An unexpected error occurred. Please try again.', 'error', true);
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+    }
 });
 
 
@@ -1165,14 +1145,7 @@ document.getElementById('confirmDeleteUserBtn')?.addEventListener('click', async
 
 
 // ===== ROOM MODAL HANDLERS =====
-document.getElementById('addRoomBtn')?.addEventListener('click', () => {
-    hideFormMessage();
-    roomModalTitle.textContent = 'Add New Room';
-    roomForm.reset();
-    hiddenRoomIdInput.value = '';
-    document.getElementById('saveRoomBtn').textContent = 'SAVE ROOM';
-    roomModal.style.display = 'flex';
-});
+// "Add Room" button event listener REMOVED
 
 closeRoomModalBtn?.addEventListener('click', () => {
     roomModal.style.display = 'none';
@@ -1189,16 +1162,57 @@ function handleEditClick(event) {
     const room = JSON.parse(event.currentTarget.dataset.roomData);
     
     roomModalTitle.textContent = 'Edit Room ' + room.Room;
-    document.getElementById('saveRoomBtn').textContent = 'UPDATE ROOM';
+    document.getElementById('saveRoomBtn').textContent = 'SAVE STATUS';
     
-    hiddenRoomIdInput.value = room.RoomID;
+   roomFloorInput.innerHTML = `<option value="${room.Floor}">${room.Floor}</option>`;
     roomFloorInput.value = room.Floor;
+    
+    // Room Number (Readonly Input)
     roomNumberInput.value = room.Room;
-    roomTypeInput.value = room.Type;
-    roomGuestsInput.value = room.NoGuests;
-    roomRateInput.value = room.Rate;
-    roomStatusInput.value = room.Status;
 
+    // Room Type (Disabled Select)
+    roomTypeInput.innerHTML = `<option value="${room.Type}">${room.Type}</option>`;
+    roomTypeInput.value = room.Type;
+    
+    // Guest Capacity (Readonly Disabled Input)
+    roomGuestsInput.value = room.NoGuests;
+    
+    // Rate (Disabled Input)
+    roomRateInput.value = parseFloat(room.Rate).toFixed(2);
+    
+    // --- Handle Editable Status Field ---
+    const currentStatus = room.Status;
+    const settableStatuses = ["Needs Cleaning", "Maintenance"];
+
+    // Clear any dynamic 'disabled' options from a previous modal open
+    const dynamicOptions = roomStatusInput.querySelectorAll('option[data-dynamic="true"]');
+    dynamicOptions.forEach(opt => opt.remove());
+
+    // Reset value to default
+    roomStatusInput.value = ""; 
+
+    // Check if the room's current status is one of the settable ones
+    if (settableStatuses.includes(currentStatus)) {
+        // If yes, just select it
+        roomStatusInput.value = currentStatus;
+    } else {
+        // If no (e.g., "Available", "Occupied"), create a new option,
+        // select it, disable it, and add it to the list.
+        const currentStatusOption = document.createElement('option');
+        currentStatusOption.value = currentStatus;
+        currentStatusOption.textContent = currentStatus;
+        currentStatusOption.selected = true;
+        currentStatusOption.disabled = true;
+        currentStatusOption.setAttribute('data-dynamic', 'true'); // Mark for removal
+        
+        // Add it after the "Select Status" placeholder
+        roomStatusInput.insertBefore(currentStatusOption, roomStatusInput.children[1]);
+    }
+    
+    // --- Set Hidden ID for form submission ---
+    // This ID is used by room_actions.php for 'edit_room' (via roomNumber) and 'delete_room' (via roomID)
+    hiddenRoomIdInput.value = room.RoomID; 
+    
     roomModal.style.display = 'flex';
 }
 
@@ -1214,7 +1228,7 @@ roomForm?.addEventListener('submit', async (e) => {
     }
 
     const roomID = hiddenRoomIdInput.value;
-    const action = roomID ? 'edit_room' : 'add_room';
+    const action = 'edit_room'; // MODIFIED: Hardcoded to 'edit_room'
     
     const data = {
         roomID: roomID,
@@ -1575,13 +1589,109 @@ document.getElementById('usersShiftFilter')?.addEventListener('change', (e) => {
   renderUsersTable(filtered);
 });
 
-document.getElementById('usersRefreshBtn')?.addEventListener('click', () => {
+document.getElementById('usersRefreshBtn')?.addEventListener('click', async () => {
   document.getElementById('usersSearchInput').value = '';
   document.getElementById('usersRoleFilter').value = '';
   document.getElementById('usersShiftFilter').value = '';
   
-  fetchAndRenderUsers();
+  // Show loading state
+  const refreshBtn = document.getElementById('usersRefreshBtn');
+  const originalHTML = refreshBtn.innerHTML;
+  refreshBtn.disabled = true;
+  refreshBtn.innerHTML = '<img src="assets/icons/refresh-icon.png" alt="Syncing" style="animation: spin 1s linear infinite;" />';
+  
+  try {
+    // First, sync with HRIS
+    const syncResult = await apiCall('sync_users_from_hris', {}, 'POST', 'user_actions.php');
+    
+    if (syncResult.success) {
+      console.log('HRIS Sync:', syncResult.message);
+      // Show a brief success message
+      showSyncNotification(syncResult.message, 'success');
+    } else {
+      console.warn('HRIS Sync Warning:', syncResult.message);
+      showSyncNotification(syncResult.message, 'warning');
+    }
+    
+    // Then fetch and render users
+    await fetchAndRenderUsers();
+    
+  } catch (error) {
+    console.error('Sync error:', error);
+    showSyncNotification('Failed to sync with HRIS', 'error');
+  } finally {
+    refreshBtn.disabled = false;
+    refreshBtn.innerHTML = originalHTML;
+  }
 });
+
+// Add CSS animation for spinning icon
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(style);
+
+// Sync notification function
+function showSyncNotification(message, type = 'success') {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `syncNotification ${type}`;
+  notification.textContent = message;
+  
+  // Add styles
+  notification.style.cssText = `
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background-color: ${type === 'success' ? '#5cb85c' : type === 'warning' ? '#ff9500' : '#c9302c'};
+    color: white;
+    padding: 15px 20px;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 10000;
+    font-size: 13px;
+    font-weight: 600;
+    animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s;
+    max-width: 350px;
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    notification.style.animation = 'fadeOut 0.3s ease';
+    setTimeout(() => notification.remove(), 300);
+  }, 3000);
+}
+
+// Add notification animations
+const notificationStyle = document.createElement('style');
+notificationStyle.textContent = `
+  @keyframes slideInRight {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+`;
+document.head.appendChild(notificationStyle);
 
 document.getElementById('usersDownloadBtn')?.addEventListener('click', () => {
   const headers = ['Username', 'Full Name', 'Role', 'Email', 'Shift', 'Birthday', 'Address'];

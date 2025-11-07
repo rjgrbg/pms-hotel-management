@@ -30,6 +30,9 @@ if (!isset($_SESSION['UserID'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Celestia Hotel - Inventory Management</title>
   <link rel="stylesheet" href="css/inventory.css">
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  
   <?php
   // ======================================================
   // === PHP Logic Orchestration (REQUIRED FILES) ===
@@ -46,7 +49,7 @@ if (!isset($_SESSION['UserID'])) {
 
   // Set the variables used in the HTML, applying security (htmlspecialchars)
   $Fname = htmlspecialchars($userData['Name']);
-  $Accounttype = htmlspecialchars($userData['Accounttype']); // Using Accounttype to match your error
+  $Accounttype = htmlspecialchars($userData['Accounttype']); 
   // Close the DB connection (optional, but good practice)
   $conn->close();
 
@@ -122,17 +125,17 @@ if (!isset($_SESSION['UserID'])) {
         <div class="filterControls">
           <select class="filterDropdown" id="floorFilter">
             <option value="">Category</option>
-            <option value="electrical">Electrical</option>
-            <option value="cleaning solution">Cleaning solution</option>
-            <option value="furniture & fixtures">Furniture & Fixtures</option>
-            <option value="room amenities">Room Amenities</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Cleaning Solution">Cleaning Solution</option>
+            <option value="Furniture & Fixtures">Furniture & Fixtures</option>
+            <option value="Room Amenities">Room Amenities</option>
           </select>
 
           <select class="filterDropdown" id="roomFilter">
             <option value="">Status</option>
-            <option value="out of stock">Out of Stock</option>
-            <option value="low stock">Low Stock</option>
-            <option value="in stock">In Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+            <option value="Low Stock">Low Stock</option>
+            <option value="In Stock">In Stock</option>
           </select>
 
           <div class="searchBox">
@@ -168,7 +171,8 @@ if (!isset($_SESSION['UserID'])) {
                       </tr>
           </thead>
           <tbody id="requestsTableBody">
-            </tbody>
+            <tr><td colspan="10" style="text-align: center;">Loading...</td></tr>
+          </tbody>
         </table>
       </div>
     </div>
@@ -179,17 +183,17 @@ if (!isset($_SESSION['UserID'])) {
         <div class="filterControls">
           <select class="filterDropdown" id="floorFilterHistory">
             <option value="">Category</option>
-            <option value="electrical">Electrical</option>
-            <option value="cleaning solution">Cleaning solution</option>
-            <option value="furniture & fixtures">Furniture & Fixtures</option>
-            <option value="room amenities">Room Amenities</option>
+            <option value="Electrical">Electrical</option>
+            <option value="Cleaning Solution">Cleaning Solution</option>
+            <option value="Furniture & Fixtures">Furniture & Fixtures</option>
+            <option value="Room Amenities">Room Amenities</option>
           </select>
 
           <select class="filterDropdown" id="roomFilterHistory">
             <option value="">Status</option>
-            <option value="out of stock">Out of Stock</option>
-            <option value="low stock">Low Stock</option>
-            <option value="in stock">In Stock</option>
+            <option value="Out of Stock">Out of Stock</option>
+            <option value="Low Stock">Low Stock</option>
+            <option value="In Stock">In Stock</option>
           </select>
 
           <div class="searchBox">
@@ -223,7 +227,8 @@ if (!isset($_SESSION['UserID'])) {
                       </tr>
                     </thead>
           <tbody id="historyTableBody">
-            </tbody>
+            <tr><td colspan="11" style="text-align: center;">Loading...</td></tr>
+          </tbody>
         </table>
         <div class="pagination">
           <span class="paginationInfo">Display Records <span id="recordCount">0</span></span>
@@ -269,16 +274,10 @@ if (!isset($_SESSION['UserID'])) {
                         <input type="text" id="item-name" required>
                     </div>
                      <div class="form-group category-group">
-                        <label for="item-category">Category 
-                            <i class="fas fa-pencil-alt category-edit-icon" id="add-category-edit-icon" title="Edit Categories"></i>
-                        </label>
+                        <label for="item-category">Category</label>
                         <select id="item-category" required>
                             <option value="" disabled selected>Select a category</option>
-                            <option value="Cleaning solution">Cleaning Solution</option>
-                            <option value="Electrical">Electrical</option>
-                            <option value="Furniture & Fixtures">Furniture & Fixtures</option>
-                            <option value="Room Amenities">Room Amenities</option>
-                        </select>
+                            </select>
                     </div>
                 </div>
                 <div class="form-group"> <label for="item-description">Description</label>
@@ -286,7 +285,7 @@ if (!isset($_SESSION['UserID'])) {
                 </div>
                  <div class="form-row"> <div class="form-group">
                     <label for="item-quantity">Quantity</label>
-                    <input type="number" id="item-quantity" required>
+                    <input type="number" id="item-quantity" min="0" required>
                 </div>
                 <div class="form-group">
                     <label for="stock-in-date">Stock In Date</label>
@@ -332,6 +331,8 @@ if (!isset($_SESSION['UserID'])) {
         <div class="modal-body">
             <form id="edit-item-form">
                 
+                <input type="hidden" id="edit-item-id-input">
+                
                 <div class="form-group-static">
                     <label>ID</label>
                     <span id="edit-item-id">101</span>
@@ -343,15 +344,9 @@ if (!isset($_SESSION['UserID'])) {
                 </div>
                 
                 <div class="form-group category-group">
-                    <label for="edit-item-category">Category
-                        <i class="fas fa-pencil-alt category-edit-icon" id="edit-category-edit-icon" title="Edit Categories"></i>
-                    </label>
+                    <label for="edit-item-category">Category</label>
                     <select id="edit-item-category" required>
-                        <option value="Cleaning solution">Cleaning Solution</option>
-                        <option value="Electrical">Electrical</option>
-                        <option value="Furniture & Fixtures">Furniture & Fixtures</option>
-                        <option value="Room Amenities">Room Amenities</option>
-                    </select>
+                        </select>
                 </div>
 
                 <div class="form-group">
@@ -361,17 +356,12 @@ if (!isset($_SESSION['UserID'])) {
 
                 <div class="form-row">
                     <div class="form-group stock-adder-group">
-                        
                         <label for="edit-item-add-stock">Adjust Stock</label>
-                        
                         <div class="stock-input-wrapper">
-                            <button type="button" class="stock-btn" id="stock-subtract-btn">-</button>
-                            
                             <input type="number" id="edit-item-add-stock" value="0">
-                            
-                            <button type="button" class="stock-btn" id="stock-add-btn">+</button>
                         </div>
                     </div>
+                    
                     <div class="form-group">
                         <label for="edit-item-status">Status</label>
                         <select id="edit-item-status" required>
@@ -383,7 +373,7 @@ if (!isset($_SESSION['UserID'])) {
                 </div>
 
                 <div class="edit-modal-buttons">
-                    <button type="button" class="submit-btn btn-delete-inline" id="edit-modal-delete-btn">DELETE</button>
+                    <button type="button" class="submit-btn btn-cancel-white" id="edit-modal-cancel-btn">CANCEL</button>
                     <button type="submit" class="submit-btn">SAVE CHANGES</button>
                 </div>
             </form>
@@ -391,7 +381,10 @@ if (!isset($_SESSION['UserID'])) {
     </div>
 </div>
 <div class="modal-overlay" id="delete-confirm-modal">
-    <div class="modal-content-confirm" style="max-width: 480px;">
+    <div class="modal-content-confirm" style="max-width: 480px;" id="delete-confirm-modal-content">
+        <button class="modal-close-btn" id="delete-modal-close-btn">&times;</button>
+        <img src="assets/icons/warning-icon.png" alt="Warning" class="modal-icon" style="height: 50px; width: 50px; margin: 0 auto 20px;">
+        
         <h3>Are you sure you want to delete this item from the inventory?</h3>
         <p>
             This action cannot be undone, and all related

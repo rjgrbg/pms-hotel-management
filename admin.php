@@ -7,7 +7,9 @@ require_login(['admin']);
 
 // --- Fetch User Data from Database ---
 include('db_connection.php'); // Ensure DB connection is included
-
+header('Cache-Control: no-cache, no-store, must-revalidate'); 
+header('Pragma: no-cache');
+header('Expires: 0');
 $formattedName = 'Admin'; // Default name
 $Accounttype = 'Administrator'; // Default type
 
@@ -142,10 +144,6 @@ if (isset($_SESSION['UserID'])) {
               <p class="statValue">0</p>
             </div>
             <div class="statCard">
-              <h3 class="statLabel">Occupied</h3>
-              <p class="statValue">0</p>
-            </div>
-            <div class="statCard">
               <h3 class="statLabel">Needs Cleaning</h3>
               <p class="statValue">0</p>
             </div>
@@ -220,7 +218,6 @@ if (isset($_SESSION['UserID'])) {
         </section>
       </div>
 
-      <!-- HOUSEKEEPING PAGE -->
       <div class="page" id="housekeeping-page">
         <h1 class="pageTitle">HOUSEKEEPING</h1>
 
@@ -236,7 +233,6 @@ if (isset($_SESSION['UserID'])) {
           </button>
         </div>
 
-        <!-- REQUESTS TAB -->
         <div class="tabContent active" id="hk-requests-tab">
           <div class="controlsRow">
             <div class="filterControls">
@@ -296,7 +292,6 @@ if (isset($_SESSION['UserID'])) {
           </div>
         </div>
 
-        <!-- HISTORY TAB -->
         <div class="tabContent" id="hk-history-tab">
           <div class="controlsRow">
             <div class="filterControls">
@@ -352,10 +347,8 @@ if (isset($_SESSION['UserID'])) {
           </div>
         </div>
 
-        <!-- LINENS & AMENITIES TAB (COMBINED) -->
         <div class="tabContent" id="hk-linens-amenities-tab">
           
-          <!-- Sub-tab navigation for Linens and Amenities -->
           <div class="subTabNavigation">
             <button class="subTabBtn active" data-hk-subtab="linens">
               Linens
@@ -365,7 +358,6 @@ if (isset($_SESSION['UserID'])) {
             </button>
           </div>
 
-          <!-- LINENS SUB-TAB -->
           <div class="subTabContent active" id="linens-subtab">
             <div class="controlsRow">
               <div class="filterControls">
@@ -424,7 +416,6 @@ if (isset($_SESSION['UserID'])) {
             </div>
           </div>
 
-          <!-- AMENITIES SUB-TAB -->
           <div class="subTabContent" id="amenities-subtab">
             <div class="controlsRow">
               <div class="filterControls">
@@ -485,7 +476,6 @@ if (isset($_SESSION['UserID'])) {
         </div>
       </div>
 
-      <!-- MAINTENANCE PAGE -->
       <div class="page" id="maintenance-page">
         <h1 class="pageTitle">MAINTENANCE</h1>
 
@@ -501,7 +491,6 @@ if (isset($_SESSION['UserID'])) {
           </button>
         </div>
 
-        <!-- REQUESTS TAB -->
         <div class="tabContent active" id="mt-requests-tab">
           <div class="controlsRow">
             <div class="filterControls">
@@ -563,7 +552,6 @@ if (isset($_SESSION['UserID'])) {
           </div>
         </div>
 
-        <!-- HISTORY TAB -->
         <div class="tabContent" id="mt-history-tab">
           <div class="controlsRow">
             <div class="filterControls">
@@ -619,7 +607,6 @@ if (isset($_SESSION['UserID'])) {
           </div>
         </div>
 
-        <!-- APPLIANCES TAB -->
         <div class="tabContent" id="mt-appliances-tab">
           <div class="controlsRow">
             <div class="filterControls">
@@ -680,7 +667,6 @@ if (isset($_SESSION['UserID'])) {
         </div>
       </div>
 
-      <!-- PARKING PAGE -->
       <div class="page" id="parking-page">
         <h1 class="pageTitle">PARKING</h1>
 
@@ -746,11 +732,9 @@ if (isset($_SESSION['UserID'])) {
         </div>
       </div>
 
-      <!-- INVENTORY PAGE WITH HISTORY TAB -->
-<div class="page" id="inventory-page">
+      <div class="page" id="inventory-page">
   <h1 class="pageTitle">INVENTORY</h1>
 
-  <!-- Tab Navigation -->
   <div class="tabNavigation">
     <button class="tabBtn active" data-inv-tab="inv-items">
       Items
@@ -760,7 +744,6 @@ if (isset($_SESSION['UserID'])) {
     </button>
   </div>
 
-  <!-- ITEMS TAB -->
   <div class="tabContent active" id="inv-items-tab">
     <div class="controlsRow">
       <div class="filterControls">
@@ -818,7 +801,6 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
 
-  <!-- HISTORY TAB -->
   <div class="tabContent" id="inv-history-tab">
     <div class="controlsRow">
       <div class="filterControls">
@@ -875,7 +857,6 @@ if (isset($_SESSION['UserID'])) {
   </div>
 </div>
       
-      <!-- ROOMS PAGE -->
       <div class="page" id="rooms-page">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
           <h1 class="pageTitle" style="margin-bottom: 0;">ROOMS</h1>
@@ -899,8 +880,6 @@ if (isset($_SESSION['UserID'])) {
             <select class="filterDropdown" id="roomsStatusFilter">
               <option value="">Status</option>
               <option value="Available">Available</option>
-              <option value="Occupied">Occupied</option>
-              <option value="Reserved">Reserved</option>
               <option value="Needs Cleaning">Needs Cleaning</option>
               <option value="Maintenance">Maintenance</option>
             </select>
@@ -916,10 +895,7 @@ if (isset($_SESSION['UserID'])) {
             <button class="downloadBtn" id="roomsDownloadBtn">
               <img src="assets/icons/download-icon.png" alt="Download" />
             </button>
-            <button class="addRoomBtn" id="addRoomBtn">
-              <img src="assets/icons/add-rooms.png" alt="Add-rooms" />
-          </button>
-          </div>
+            </div>
         </div>
 
         <div class="tableWrapper">
@@ -947,13 +923,11 @@ if (isset($_SESSION['UserID'])) {
         </div>
       </div>
 
-      <!-- MANAGE USERS PAGE -->
       <div class="page" id="manage-users-page">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
           <h1 class="pageTitle" style="margin-bottom: 0;">MANAGE USERS</h1>
         </div>
 
-        <!-- Tab Navigation for User Management and User Logs -->
         <div class="tabNavigation">
           <button class="tabBtn active" data-user-tab="user-management">
             User Management
@@ -963,7 +937,6 @@ if (isset($_SESSION['UserID'])) {
           </button>
         </div>
 
-        <!-- User Management Tab -->
         <div class="tabContent active" id="user-management-tab">
           <div class="controlsRow">
             <div class="filterControls">
@@ -1023,7 +996,6 @@ if (isset($_SESSION['UserID'])) {
           </div>
         </div>
 
-        <!-- User Logs Tab -->
         <div class="tabContent" id="user-logs-tab">
           <div class="controlsRow">
             <div class="filterControls">
@@ -1089,60 +1061,51 @@ if (isset($_SESSION['UserID'])) {
     </main>
   </div>
 
-  <!-- ROOM MODAL -->
-  <div class="modalBackdrop" id="roomModal" style="display: none;">
+ <div class="modalBackdrop" id="roomModal" style="display: none;">
     <div class="roomModal">
       <button class="closeBtn" id="closeRoomModalBtn">&times;</button>
-      <h2 id="roomModalTitle">Add New Room</h2>
+      <h2 id="roomModalTitle">Edit Room Status</h2>
       <div id="roomFormMessage" class="formMessage" style="display:none;"></div>
       
       <form id="roomForm">
         <div class="formGrid">
           <div class="formGroup">
-            <label for="roomFloor">Floor *</label>
-            <select id="roomFloor" name="roomFloor" required>
+            <label for="roomFloor">Floor</label>
+            <select id="roomFloor" name="roomFloor" required disabled>
               <option value="">Select Floor</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
+
               <option value="5">5</option>
             </select>
           </div>
           <div class="formGroup">
-            <label for="roomNumber">Room Number *</label>
-            <input type="text" id="roomNumber" name="roomNumber" required placeholder="e.g., 101" />
+            <label for="roomNumber">Room Number</label>
+            <input type="text" id="roomNumber" name="roomNumber" required placeholder="e.g., 101" readonly />
           </div>
         </div>
         
         <div class="formGroup">
-          <label for="roomType">Room Type *</label>
-          <select id="roomType" name="roomType" required>
+          <label for="roomType">Room Type</label>
+          <select id="roomType" name="roomType" required disabled>
             <option value="">Select Type</option>
-            <option value="Standard Room">Standard Room</option>
-            <option value="Deluxe Room">Deluxe Room</option>
-            <option value="Suite">Suite</option>
+
             <option value="Penthouse Suite">Penthouse Suite</option>
           </select>
         </div>
         
         <div class="formGroup">
           <label for="roomGuests">Guest Capacity</label>
-          <input type="text" id="roomGuests" name="roomGuests" readonly />
+          <input type="text" id="roomGuests" name="roomGuests" readonly disabled />
         </div>
         
         <div class="formGroup">
-          <label for="roomRate">Rate (per night) *</label>
-          <input type="number" id="roomRate" name="roomRate" required step="0.01" placeholder="e.g., 120.00" />
+          <label for="roomRate">Rate (per night)</label>
+          <input type="number" id="roomRate" name="roomRate" required step="0.01" placeholder="e.g., 120.00" disabled />
         </div>
         
-        <div class="formGroup">
+     <div class="formGroup">
           <label for="roomStatus">Status *</label>
           <select id="roomStatus" name="roomStatus" required>
             <option value="">Select Status</option>
-            <option value="Available">Available</option>
-            <option value="Occupied">Occupied</option>
-            <option value="Reserved">Reserved</option>
             <option value="Needs Cleaning">Needs Cleaning</option>
             <option value="Maintenance">Maintenance</option>
           </select>
@@ -1150,13 +1113,12 @@ if (isset($_SESSION['UserID'])) {
         
         <div class="modalButtons">
           <button type="button" class="modalBtn cancelBtn" id="cancelRoomBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="saveRoomBtn">SAVE ROOM</button>
+          <button type="submit" class="modalBtn confirmBtn" id="saveRoomBtn">SAVE STATUS</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- DELETE ROOM MODAL -->
   <div class="modalBackdrop" id="deleteRoomModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeDeleteModalBtn">&times;</button>
@@ -1172,17 +1134,15 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
 
-  <!-- USER MODAL -->
   <div class="modalBackdrop" id="userModal" style="display: none;">
     <div class="addUserModal">
       <button class="closeBtn" id="closeUserModalBtn">&times;</button>
       <h2 id="userModalTitle">Add New User</h2>
       <div id="userFormMessage" class="formMessage" style="display:none;"></div>
       
-      <!-- Employee ID Lookup Form (for adding) -->
       <form id="employeeIdForm" style="display: block;">
         <div class="formGroup">
-          <label for="employeeId">Employee ID *</label>
+          <label for="employeeId">Employee ID</label>
           <input type="text" id="employeeId" name="employeeId" required placeholder="Enter Employee ID" />
         </div>
         <div class="modalButtons">
@@ -1191,7 +1151,6 @@ if (isset($_SESSION['UserID'])) {
         </div>
       </form>
 
-      <!-- Full User Edit Form (for editing) -->
       <form id="userEditForm" style="display: none;">
         <input type="hidden" id="editUserId" name="userID">
         
@@ -1199,34 +1158,18 @@ if (isset($_SESSION['UserID'])) {
           <div class="profileAvatar">
             <img src="assets/icons/profile-icon.png" alt="Profile" />
           </div>
-          <h3 id="editUserFullName" class="editUserName"></h3>
-          <p id="editUserEmployeeId" class="editUserEmployeeId"></p>
-        </div>
-
-        <div class="formGrid">
-          <div class="formGroup">
-            <label for="userFname">First Name *</label>
-            <input type="text" id="userFname" name="fname" required />
-          </div>
-          <div class="formGroup">
-            <label for="userLname">Last Name *</label>
-            <input type="text" id="userLname" name="lname" required />
-          </div>
-        </div>
-        
-        <div class="formGroup">
-          <label for="userMname">Middle Name (Optional)</label>
-          <input type="text" id="userMname" name="mname" />
-        </div>
-        
-        <div class="formGroup">
-          <label for="userEmail">Email Address *</label>
-          <input type="email" id="userEmail" name="email" required />
+          <h3 id="editUserFullName" class="editUserName">User Full Name</h3>
+          <p id="editUserEmployeeId" class="editUserEmployeeId">Employee ID: ------</p>
         </div>
         
         <div class="formGroup">
           <label for="userUsername">Username *</label>
           <input type="text" id="userUsername" name="username" required />
+        </div>
+        
+        <div class="formGroup">
+          <label for="userPassword">New Password (Optional)</label>
+          <input type="password" id="userPassword" name="password" placeholder="Leave blank to keep unchanged" />
         </div>
         
         <div class="formGroup">
@@ -1247,29 +1190,11 @@ if (isset($_SESSION['UserID'])) {
           <label for="userShift">Shift *</label>
           <select id="userShift" name="shift" required>
             <option value="">Select Shift</option>
-            <option value="Day">Day</option>
             <option value="Morning">Morning</option>
             <option value="Afternoon">Afternoon</option>
             <option value="Night">Night</option>
           </select>
         </div>
-
-        <div class="formGrid">
-          <div class="formGroup">
-            <label for="userBirthday">Birthday *</label>
-            <input type="date" id="userBirthday" name="birthday" required />
-          </div>
-          <div class="formGroup">
-            <label for="userContact">Contact *</label>
-            <input type="text" id="userContact" name="contact" required />
-          </div>
-        </div>
-        
-        <div class="formGroup">
-          <label for="userAddress">Address *</label>
-          <textarea id="userAddress" name="address" rows="3" required></textarea>
-        </div>
-        
         <div class="modalButtons">
           <button type="button" class="modalBtn cancelBtn" id="cancelUserEditBtn">CANCEL</button>
           <button type="submit" class="modalBtn confirmBtn" id="saveUserBtn">UPDATE USER</button>
@@ -1278,7 +1203,6 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
 
-  <!-- DELETE USER MODAL -->
   <div class="modalBackdrop" id="deleteUserModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
@@ -1294,7 +1218,6 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
 
-  <!-- LOGOUT MODAL -->
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeLogoutBtn">&times;</button>

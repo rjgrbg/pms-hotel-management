@@ -1698,7 +1698,14 @@ tbody tr:hover {
 .visible {
   display: block !important;
 }
-
+input[readonly],
+input[readonly]:focus {
+  background-color: #f3f4f6; /* A light gray */
+  border-color: #d1d5db; /* A matching border */
+  color: #6b7281; /* A muted text color */
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 /* ===== END OF CSS ===== */
  

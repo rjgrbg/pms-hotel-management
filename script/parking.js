@@ -1,1016 +1,1210 @@
-// ========================================================
-// DATA MANAGEMENT (SOURCE OF TRUTH)
-// ========================================================
-const PARKING_DATA_KEY = 'celestiaParkingData';
+document.addEventListener('DOMContentLoaded', () => {
 
-// Default data kung walang laman ang localStorage
-const defaultData = {
-    slots: [
-        // Area 1 (Mixed)
-        { slotNumber: '1A01', area: 1, allowedVehicle: '2-Wheel, 4-Wheel', status: 'occupied', parkedVehicle: { plate: 'AB123C', room: '101', name: 'Juan Dela Cruz', vehicleType: '4 wheeled', category: 'Sedan', enterTime: '6:30 PM', enterDate: '2025.10.25' } },
-        ...Array.from({ length: 22 }, (v, i) => ({
-            slotNumber: `1B${(i + 1).toString().padStart(2, '0')}`, area: 1, allowedVehicle: '4-Wheel', status: 'occupied', parkedVehicle: { plate: `RND${i}PLT`, room: '102', name: 'Random Guest', vehicleType: '4 wheeled', category: 'SUV', enterTime: '7:00 PM', enterDate: '2025.10.25' }
-        })),
-        // Area 1 (Available)
-        ...Array.from({ length: 17 }, (v, i) => ({
-            slotNumber: `1C${(i + 1).toString().padStart(2, '0')}`, area: 1, allowedVehicle: '2-Wheel', status: 'available', parkedVehicle: null
-        })),
+    // ========================================================
+    // API & DATA MANAGEMENT
+    // ========================================================
+    const API_URL = 'parking_api.php';
 
-        // Area 2
-        { slotNumber: '2A01', area: 2, allowedVehicle: '2-Wheel, 4-Wheel', status: 'occupied', parkedVehicle: { plate: 'CD456E', room: '102', name: 'Maria Clara', vehicleType: '2 wheeled', category: 'Motorcycle', enterTime: '7:00 PM', enterDate: '2025.10.25' } },
-        ...Array.from({ length: 22 }, (v, i) => ({
-            slotNumber: `2B${(i + 1).toString().padStart(2, '0')}`, area: 2, allowedVehicle: '4-Wheel', status: 'occupied', parkedVehicle: { plate: `RND${i + 22}PLT`, room: '103', name: 'Another Guest', vehicleType: '4 wheeled', category: 'Sedan', enterTime: '8:00 PM', enterDate: '2025.10.25' }
-        })),
-        ...Array.from({ length: 17 }, (v, i) => ({
-            slotNumber: `2C${(i + 1).toString().padStart(2, '0')}`, area: 2, allowedVehicle: '2-Wheel', status: 'available', parkedVehicle: null
-        })),
+    // Main App State
+    let slotsData = [];       // For 'Slots' tab
+    let vehiclesInData = [];  // For 'Vehicle In' tab
+    let historyData = [];     // For 'History' tab
+    let dashboardTableData = []; // Cache for dashboard table
+    
+    let userData = window.INJECTED_USER_DATA || { Fname: "Guest" };
 
-        // Area 3 (Full)
-        ...Array.from({ length: 40 }, (v, i) => ({
-            slotNumber: `3A${(i + 1).toString().padStart(2, '0')}`, area: 3, allowedVehicle: '4-Wheel', status: 'occupied', parkedVehicle: { plate: `FULL${i}PLT`, room: '201', name: 'Full Guest', vehicleType: '4 wheeled', category: 'Van', enterTime: '9:00 PM', enterDate: '2025.10.25' }
-        })),
-
-        // Area 4
-        ...Array.from({ length: 23 }, (v, i) => ({
-            slotNumber: `4A${(i + 1).toString().padStart(2, '0')}`, area: 4, allowedVehicle: '4-Wheel', status: 'occupied', parkedVehicle: { plate: `RND${i + 44}PLT`, room: '202', name: 'Guest Four', vehicleType: '4 wheeled', category: 'Pickup', enterTime: '10:00 PM', enterDate: '2025.10.25' }
-        })),
-        ...Array.from({ length: 17 }, (v, i) => ({
-            slotNumber: `4B${(i + 1).toString().padStart(2, '0')}`, area: 4, allowedVehicle: '4-Wheel', status: 'available', parkedVehicle: null
-        })),
-
-        // Area 5
-        ...Array.from({ length: 23 }, (v, i) => ({
-            slotNumber: `5A${(i + 1).toString().padStart(2, '0')}`, area: 5, allowedVehicle: '4-Wheel', status: 'occupied', parkedVehicle: { plate: `RND${i + 66}PLT`, room: '203', name: 'Guest Five', vehicleType: '4 wheeled', category: 'Sedan', enterTime: '11:00 PM', enterDate: '2025.10.25' }
-        })),
-        ...Array.from({ length: 17 }, (v, i) => ({
-            slotNumber: `5B${(i + 1).toString().padStart(2, '0')}`, area: 5, allowedVehicle: '4-Wheel', status: 'available', parkedVehicle: null
-        }))
-    ],
-    history: [],
-    user: {
-        id: "019284738475",
-        firstName: "Juan",
-        middleName: "Constant",
-        lastName: "Bagayan",
-        emailAddress: "Juan@housekeeper.com",
-        username: "Juana",
-        password: "************",
-        birthday: "2004-10-25",
-        contact: "09222222222",
-        shift: "Day",
-        address: "Block 1 Lot 2, Quezon City",
-        role: "Parking Management Head"
-    },
-    damage: [
-        { type: 'Burnt', date: '10/25/25', count: 2 }
-    ]
-};
-
-// Main App State
-let slotsData = [];
-let historyData = [];
-let userData = {};
-let damageItems = [];
-
-// Pagination State
-let currentPages = {
-    slots: 1,
-    vehicleIn: 1,
-    history: 1
-};
-const rowsPerPage = 10;
-
-// Global variable to track which vehicle/slot is being exited
-let slotToExit = null;
-
-// ========================================================
-// DATA PERSISTENCE (localStorage)
-// ========================================================
-
-function saveDataToLocal() {
-    const data = {
-        slots: slotsData,
-        history: historyData,
-        user: userData,
-        damage: damageItems
+    // Pagination State
+    let currentPages = {
+        slots: 1,
+        vehicleIn: 1,
+        history: 1
     };
-    localStorage.setItem(PARKING_DATA_KEY, JSON.stringify(data));
-}
+    const rowsPerPage = 10; 
 
-function loadDataFromLocal() {
-    const dataString = localStorage.getItem(PARKING_DATA_KEY);
-    if (dataString) {
-        const data = JSON.parse(dataString);
-        slotsData = data.slots || [];
-        historyData = data.history || [];
-        userData = data.user || defaultData.user;
-        damageItems = data.damage || [];
-    } else {
-        // Kung walang data, gamitin 'yung default
-        slotsData = defaultData.slots;
-        historyData = defaultData.history;
-        userData = defaultData.user;
-        damageItems = defaultData.damage;
-    }
-}
+    // Sorting State
+    let sortState = {
+        dashboard: { column: 'AreaName', direction: 'asc' }, 
+        slots: { column: 'SlotName', direction: 'asc' },
+        vehicleIn: { column: 'EntryTime', direction: 'desc' },
+        history: { column: 'ExitTime', direction: 'desc' }
+    };
 
-// ========================================================
-// TOAST NOTIFICATION
-// ========================================================
-function showToast(message, type = 'success') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    
-    container.appendChild(toast);
-    
-    // Force reflow to trigger animation
-    setTimeout(() => {
-        toast.classList.add('show');
-    }, 10);
-    
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-        toast.classList.remove('show');
-        // Remove from DOM after animation finishes
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.remove();
+    // Global variable to track which vehicle/slot is being actioned
+    let currentSlotID = null;
+    let currentSlotName = null;
+    let currentSessionID = null;
+
+    // ========================================================
+    // API HELPER
+    // ========================================================
+    async function fetchAPI(action, options = {}, queryParams = "") {
+        const url = `${API_URL}?action=${action}${queryParams ? '&' + queryParams : ''}`;
+        
+        try {
+            const response = await fetch(url, options);
+
+            if (!response.ok) {
+                let errorMsg = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error || errorMsg;
+                } catch (e) { /* Ignore if response is not JSON */ }
+                throw new Error(errorMsg);
             }
-        }, 400);
-    }, 3000);
-}
 
-// ========================================================
-// UI (TABS, MODALS)
-// ========================================================
+            const data = await response.json();
+            
+            if (data.success === false) {
+                throw new Error(data.error || 'API returned an error');
+            }
+            
+            return data;
 
-function toggleUserMenu() {
-    const menu = document.getElementById('userMenu');
-    if (menu) {
-        menu.classList.toggle('active');
-    }
-}
-
-function switchTab(tabId) {
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(t => t.classList.remove('active'));
-    
-    const contentToHide = document.querySelectorAll('.content');
-    contentToHide.forEach(c => c.classList.add('hidden'));
-    
-    // Activate new tab and content
-    const newActiveTab = document.querySelector(`.tab[data-tab="${tabId}"]`);
-    if (newActiveTab) newActiveTab.classList.add('active');
-    
-    const newActiveContent = document.getElementById(tabId + 'Content');
-    if (newActiveContent) newActiveContent.classList.remove('hidden');
-
-    const areaSelect = document.getElementById('areaSelect');
-    const searchInput = document.querySelector('.search-box input');
-    const downloadIcon = document.getElementById('downloadIcon');
-    
-    if (searchInput) searchInput.value = ''; // Clear search on tab switch
-
-    // Update area select options based on current tab
-    if (areaSelect) {
-        if (tabId === 'vehicleIn' || tabId === 'history' || tabId === 'slots') {
-            const uniqueSlotNumbers = [...new Set(slotsData.map(s => s.slotNumber))].sort();
-            let slotOptions = uniqueSlotNumbers.map(s => `<option value="${s}">${s}</option>`).join('');
-            areaSelect.innerHTML = `<option value="all">Slot Number</option>${slotOptions}`;
-            if (searchInput) searchInput.placeholder = "Search Slot, Plate#, Name...";
-        } else {
-            const uniqueAreas = [...new Set(slotsData.map(s => s.area))].sort((a,b) => a - b);
-            let areaOptions = uniqueAreas.map(a => `<option value="${a}">${a}</option>`).join('');
-            areaSelect.innerHTML = `<option value="all">Area</option>${areaOptions}`;
-            if (searchInput) searchInput.placeholder = "Search...";
+        } catch (error) {
+            console.error('Fetch Error:', error);
+            showToast(error.message, 'error');
+            return null; // Return null on failure
         }
     }
 
-    if (downloadIcon) {
-        downloadIcon.style.display = tabId === 'history' ? 'block' : 'none';
-    }
 
-    // Reset pagination
-    currentPages.slots = 1;
-    currentPages.vehicleIn = 1;
-    currentPages.history = 1;
-    
-    performFilterAndSearch();
-}
-
-function openModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) modal.classList.add('active');
-}
-
-function closeModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) modal.classList.remove('active');
-}
-
-function showAccountDetails() {
-    toggleUserMenu();
-    
-    // Populate form fields
-    document.getElementById('firstName').value = userData.firstName || '';
-    document.getElementById('middleName').value = userData.middleName || '';
-    document.getElementById('lastName').value = userData.lastName || '';
-    document.getElementById('emailAddress').value = userData.emailAddress || '';
-    document.getElementById('username').value = userData.username || '';
-    document.getElementById('password').value = userData.password || '';
-    document.getElementById('birthday').value = userData.birthday || '';
-    document.getElementById('contact').value = userData.contact || '';
-    document.getElementById('shift').value = userData.shift || 'Day';
-    document.getElementById('address').value = userData.address || '';
-    
-    // Update header info
-    const accountHeader = document.querySelector('#accountModal .account-info h2');
-    if (accountHeader) accountHeader.textContent = `${userData.firstName} ${userData.lastName}`;
-    
-    const idElement = document.querySelector('#accountModal .account-info p:nth-child(2)');
-    if (idElement) idElement.textContent = `ID: ${userData.id}`;
-    
-    const roleElement = document.querySelector('#accountModal .account-info p:nth-child(3)');
-    if (roleElement) roleElement.textContent = userData.role;
-
-    openModal('accountModal');
-}
-
-function showSaveConfirm() {
-    const firstName = document.getElementById('firstName').value;
-    const lastName = document.getElementById('lastName').value;
-    const username = document.getElementById('username').value;
-    const email = document.getElementById('emailAddress').value;
-
-    if (!firstName || !lastName || !username || !email) {
-        showToast('Please fill out all required fields.', 'error');
-        return;
-    }
-
-    closeModal('accountModal');
-    openModal('saveConfirmModal');
-}
-
-function confirmSaveChanges() {
-    // Update user data from form
-    userData.firstName = document.getElementById('firstName').value;
-    userData.middleName = document.getElementById('middleName').value;
-    userData.lastName = document.getElementById('lastName').value;
-    userData.emailAddress = document.getElementById('emailAddress').value;
-    userData.username = document.getElementById('username').value;
-    userData.password = document.getElementById('password').value;
-    userData.birthday = document.getElementById('birthday').value;
-    userData.contact = document.getElementById('contact').value;
-    userData.shift = document.getElementById('shift').value;
-    userData.address = document.getElementById('address').value;
-
-    // Update user menu display
-    const userInfoH3 = document.querySelector('.user-menu-header .user-info h3');
-    if (userInfoH3) userInfoH3.textContent = `${userData.firstName} ${userData.lastName}`;
-    
-    saveDataToLocal();
-    
-    closeModal('saveConfirmModal');
-    openModal('saveSuccessModal');
-    showToast('Account details updated successfully!');
-}
-
-function showLogoutModal() {
-    toggleUserMenu();
-    openModal('logoutModal');
-}
-
-function logout() {
-    closeModal('logoutModal');
-    showToast('Logged out successfully!');
-    // Redirect logic can be added here
-    // window.location.href = '/login.html';
-}
-
-// ========================================================
-// ENTER VEHICLE LOGIC
-// ========================================================
-
-function openEnterVehicleModal(slotNumber) {
-    const slot = slotsData.find(s => s.slotNumber === slotNumber);
-    if (!slot) return;
-
-    // Reset form
-    document.getElementById('guestName').value = '';
-    document.getElementById('plateNumber').value = '';
-    document.getElementById('roomNumber').value = '';
-    document.getElementById('vehicleType').value = '';
-    document.getElementById('categorySelect').value = 'Sedan';
-
-    // Set slot info
-    document.getElementById('slotNumberTitle').textContent = slot.slotNumber;
-    document.getElementById('slotSelect').innerHTML = `<option>${slot.slotNumber}</option>`;
-    
-    openModal('enterVehicleModal');
-}
-
-function showConfirmModal() {
-    const name = document.getElementById('guestName').value;
-    const plate = document.getElementById('plateNumber').value;
-    const vehicleType = document.getElementById('vehicleType').value;
-
-    if (!name || !plate || !vehicleType) {
-        showToast('Please fill out Name, Plate #, and Vehicle.', 'error');
-        return;
-    }
-
-    closeModal('enterVehicleModal');
-    openModal('confirmModal');
-}
-
-function confirmEnterVehicle() {
-    const slotNumber = document.getElementById('slotNumberTitle').textContent;
-    const newVehicle = {
-        name: document.getElementById('guestName').value,
-        plate: document.getElementById('plateNumber').value.toUpperCase(),
-        room: document.getElementById('roomNumber').value,
-        vehicleType: document.getElementById('vehicleType').value,
-        category: document.getElementById('categorySelect').value,
-        enterTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        enterDate: new Date().toLocaleDateString('en-CA') // YYYY-MM-DD
-    };
-
-    const slot = slotsData.find(s => s.slotNumber === slotNumber);
-    if (slot) {
-        slot.status = 'occupied';
-        slot.parkedVehicle = newVehicle;
-    }
-
-    saveDataToLocal();
-    
-    closeModal('confirmModal');
-    openModal('successModal');
-    showToast('Vehicle parked successfully!');
-
-    performFilterAndSearch();
-}
-
-// ========================================================
-// EXIT VEHICLE LOGIC
-// ========================================================
-
-function openExitModal(slotNumber) {
-    const slot = slotsData.find(s => s.slotNumber === slotNumber);
-    if (!slot || !slot.parkedVehicle) return;
-
-    const vehicle = slot.parkedVehicle;
-    
-    document.getElementById('exitSlotNumber').textContent = slot.slotNumber;
-    document.getElementById('exitPlate').textContent = vehicle.plate;
-    document.getElementById('exitVehicle').textContent = vehicle.category;
-    document.getElementById('exitDateTime').textContent = vehicle.enterDate + ' / ' + vehicle.enterTime;
-    
-    slotToExit = slot.slotNumber;
-    
-    openModal('exitModal');
-}
-
-function confirmExit() {
-    if (!slotToExit) return;
-
-    const slot = slotsData.find(s => s.slotNumber === slotToExit);
-    if (!slot || !slot.parkedVehicle) return;
-
-    const vehicleToLog = slot.parkedVehicle;
-    
-    // Calculate parking duration
-    let enterDateTime;
-    try {
-        enterDateTime = new Date(`${vehicleToLog.enterDate} ${vehicleToLog.enterTime}`);
-        if (isNaN(enterDateTime.getTime())) {
-            enterDateTime = new Date(vehicleToLog.enterDate);
-        }
-    } catch (e) {
-        enterDateTime = new Date(vehicleToLog.enterDate);
-    }
-
-    const exitDateTime = new Date();
-    const durationMs = exitDateTime - enterDateTime;
-    const durationHours = (durationMs / (1000 * 60 * 60)).toFixed(1);
-
-    const historyLog = {
-        ...vehicleToLog,
-        slotNumber: slot.slotNumber,
-        exitTime: exitDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        exitDate: exitDateTime.toLocaleDateString('en-CA'),
-        parkingTime: `${durationHours} hrs`
-    };
-
-    historyData.unshift(historyLog); 
-
-    // Free up the slot
-    slot.status = 'available';
-    slot.parkedVehicle = null;
-    slotToExit = null;
-
-    saveDataToLocal();
-
-    closeModal('exitModal');
-    showToast('Vehicle exited successfully!');
-
-    performFilterAndSearch();
-}
-
-// ========================================================
-// EDIT CATEGORY FUNCTIONALITY
-// ========================================================
-
-function openEditCategory() {
-    // Populate category list
-    const categoryList = document.querySelector('.category-list');
-    if (categoryList) {
-        const categories = ['Sedan', 'SUV', 'Pickup', 'Van', 'Motorcycle', 'Truck'];
-        categoryList.innerHTML = categories.map(cat => `
-            <div class="category-item">
-                <span>${cat}</span>
-                <div class="category-actions">
-                    <button class="edit-cat-btn" data-category="${cat}">✏️</button>
-                    <button class="delete-cat-btn" data-category="${cat}">🗑️</button>
-                </div>
-            </div>
-        `).join('');
-    }
-    openModal('editCategoryModal');
-}
-
-function addNewCategory() {
-    const input = document.querySelector('#editCategoryModal input[type="text"]');
-    const newCategory = input.value.trim();
-    
-    if (!newCategory) {
-        showToast('Please enter a category name.', 'error');
-        return;
-    }
-    
-    showToast(`Category "${newCategory}" added!`, 'success');
-    input.value = '';
-    
-    // Refresh category list
-    openEditCategory();
-}
-
-// ========================================================
-// DAMAGE MANAGEMENT
-// ========================================================
-
-function addDamageItem() {
-    const damageType = document.getElementById('damageType').value;
-    const damageCount = document.getElementById('damageCount').value;
-    
-    if (!damageType) {
-        showToast('Please enter damage type.', 'error');
-        return;
-    }
-    
-    const newDamage = {
-        type: damageType,
-        date: new Date().toLocaleDateString(),
-        count: parseInt(damageCount) || 1
-    };
-    
-    damageItems.push(newDamage);
-    saveDataToLocal();
-    
-    // Update damage list
-    updateDamageList();
-    
-    // Clear form
-    document.getElementById('damageType').value = '';
-    document.getElementById('damageCount').value = '1';
-    
-    showToast('Damage item added!', 'success');
-}
-
-function updateDamageList() {
-    const damagesListBody = document.getElementById('damagesListBody');
-    if (!damagesListBody) return;
-    
-    damagesListBody.innerHTML = damageItems.map(damage => `
-        <tr>
-            <td>${damage.type}</td>
-            <td>${damage.date}</td>
-            <td>${damage.count}</td>
-        </tr>
-    `).join('');
-}
-
-// ========================================================
-// DOWNLOAD FUNCTIONALITY
-// ========================================================
-
-function downloadFile() {
-    // Create CSV content from history data
-    let csvContent = "Slot Number,Plate #,Room,Name,Vehicle Type,Category,Parking Time,Enter Time,Enter Date,Exit Time,Exit Date\n";
-    
-    historyData.forEach(vehicle => {
-        csvContent += `"${vehicle.slotNumber}","${vehicle.plate}","${vehicle.room}","${vehicle.name}","${vehicle.vehicleType}","${vehicle.category}","${vehicle.parkingTime}","${vehicle.enterTime}","${vehicle.enterDate}","${vehicle.exitTime}","${vehicle.exitDate}"\n`;
-    });
-    
-    // Create and trigger download
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `parking_history_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-    
-    closeModal('downloadModal');
-    showToast('History downloaded successfully!');
-}
-
-// ========================================================
-// RENDER FUNCTIONS
-// ========================================================
-
-function renderEmptyState(container, icon, title, message) {
-    container.innerHTML = `
-        <div class="empty-state">
-            <div class="empty-state-icon">${icon}</div>
-            <h3>${title}</h3>
-            <p>${message}</p>
-        </div>
-    `;
-}
-
-function renderDashboardSummary(filteredData) {
-    const occupiedCount = filteredData.filter(s => s.status === 'occupied').length;
-    const availableCount = filteredData.filter(s => s.status === 'available').length;
-    const totalCount = filteredData.length;
-
-    const cards = document.querySelectorAll('.summary-cards .card .card-value');
-    if (cards[0]) cards[0].textContent = occupiedCount;
-    if (cards[1]) cards[1].textContent = availableCount;
-    if (cards[2]) cards[2].textContent = totalCount;
-}
-
-function renderDashboardTable(filteredData) {
-    const tbody = document.querySelector('#dashboardContent table tbody');
-    if (!tbody) return;
-    
-    tbody.innerHTML = ''; 
-    
-    const areaStats = {};
-    // Count data from filteredData
-    filteredData.forEach(slot => {
-        if (!areaStats[slot.area]) {
-            areaStats[slot.area] = { area: slot.area, available: 0, occupied: 0, total: 0 };
-        }
+    // ========================================================
+    // TOAST NOTIFICATION
+    // ========================================================
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
         
-        areaStats[slot.area].total++;
-        if (slot.status === 'available') {
-            areaStats[slot.area].available++;
-        } else {
-            areaStats[slot.area].occupied++;
-        }
-    });
-
-    Object.keys(areaStats).sort((a, b) => a - b).forEach(areaKey => {
-        const area = areaStats[areaKey];
-        const isFull = area.available === 0;
-        const row = document.createElement('tr');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
         
-        if (isFull) row.classList.add('full-row'); 
+        container.appendChild(toast);
         
-        row.innerHTML = `
-            <td class="${isFull ? 'text-red' : ''}">${area.area}</td>
-            <td class="${isFull ? 'text-red' : ''}">${isFull ? '-' : area.available}</td>
-            <td class="${isFull ? 'text-red' : ''}">${area.occupied}</td>
-            <td class="${isFull ? 'text-red' : ''}">${area.total}</td>
-            <td class="${isFull ? 'text-red' : ''} text-right">${isFull ? 'Full' : ''}</td>
-        `;
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
         
-        tbody.appendChild(row);
-    });
-}
-
-function renderSlots(filteredData) {
-    const container = document.getElementById('slotsTable');
-    if (!container) return; 
-    container.innerHTML = '';
-    
-    if (filteredData.length === 0) {
-        renderEmptyState(container, '🅿️', 'No Slots Found', 'Try adjusting your search or filter.');
-        setupPagination(0, 'pagination-slots', 1);
-        return;
-    }
-    
-    // Pagination Logic
-    const page = currentPages.slots;
-    const startIndex = (page - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedData = filteredData.slice(startIndex, endIndex);
-    
-    paginatedData.forEach((slot) => {
-        const row = document.createElement('div');
-        row.className = 'table-row grid-5';
-        
-        row.innerHTML = `
-            <div>${slot.area}</div>
-            <div>${slot.slotNumber}</div>
-            <div>${slot.allowedVehicle}</div>
-            <div>
-                <span class="status-badge status-${slot.status}">
-                    ${slot.status === 'available' ? 'Available' : 'Occupied'}
-                </span>
-            </div>
-            <div>
-                ${slot.status === 'available' 
-                    ? `<button class="btn-enter" data-slot-id="${slot.slotNumber}">Enter Vehicle 🚗</button>`
-                    : `<button class="btn-enter-gray" disabled>Enter Vehicle 🚗</button>`
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.remove();
                 }
-            </div>
-        `;
-        container.appendChild(row);
-    });
-
-    setupPagination(filteredData.length, 'pagination-slots', page);
-}
-
-function renderVehicleIn(filteredData) {
-    const container = document.getElementById('vehicleInTable');
-    if (!container) return;
-    container.innerHTML = '';
-
-    if (filteredData.length === 0) {
-        renderEmptyState(container, '🚗', 'No Vehicles Parked', 'Available slots can be seen in the "Slots" tab.');
-        setupPagination(0, 'pagination-vehicleIn', 1);
-        return;
+            }, 400);
+        }, 3000);
     }
 
-    // Pagination Logic
-    const page = currentPages.vehicleIn;
-    const startIndex = (page - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedData = filteredData.slice(startIndex, endIndex);
-
-    paginatedData.forEach((slot) => {
-        const vehicle = slot.parkedVehicle;
-        const row = document.createElement('div');
-        row.className = 'table-row grid-8';
-        row.innerHTML = `
-            <div>${slot.slotNumber}</div>
-            <div>${vehicle.plate}</div>
-            <div>${vehicle.room}</div>
-            <div>${vehicle.name}</div>
-            <div>${vehicle.vehicleType}</div>
-            <div>${vehicle.category}</div>
-            <div>${vehicle.enterTime}</div>
-            <div>${vehicle.enterDate}</div>
-            <div>
-                <button class="exit-btn" data-slot-id="${slot.slotNumber}">
-         <img src="exit.png" alt="Exit Vehicle">
-            </button>
-            </div>
-        `;
-        container.appendChild(row);
-    });
-
-    setupPagination(filteredData.length, 'pagination-vehicleIn', page);
-}
-
-function renderHistory(filteredData) {
-    const container = document.getElementById('historyTable');
-    if (!container) return;
-    container.innerHTML = '';
-    
-    if (filteredData.length === 0) {
-        renderEmptyState(container, '📜', 'No History Found', 'Vehicles that exit will appear here.');
-        setupPagination(0, 'pagination-history', 1);
-        return;
-    }
-
-    // Pagination Logic
-    const page = currentPages.history;
-    const startIndex = (page - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedData = filteredData.slice(startIndex, endIndex);
-
-    paginatedData.forEach((vehicle) => {
-        const row = document.createElement('div');
-        row.className = 'table-row grid-9';
-        row.innerHTML = `
-            <div>${vehicle.slotNumber}</div>
-            <div>${vehicle.plate}</div>
-            <div>${vehicle.room}</div>
-            <div>${vehicle.name}</div>
-            <div>${vehicle.vehicleType}</div>
-            <div>${vehicle.category}</div>
-            <div>${vehicle.parkingTime}</div>
-            <div>${vehicle.enterTime} / ${vehicle.exitTime}</div>
-            <div>${vehicle.enterDate} / ${vehicle.exitDate}</div>
-        `;
-        container.appendChild(row);
-    });
-    
-    setupPagination(filteredData.length, 'pagination-history', page);
-}
-
-// ========================================================
-// PAGINATION LOGIC
-// ========================================================
-function setupPagination(totalItems, containerId, currentPage) {
-    const paginationContainer = document.getElementById(containerId);
-    if (!paginationContainer) return;
-
-    paginationContainer.innerHTML = '';
-    const totalPages = Math.ceil(totalItems / rowsPerPage);
-    
-    if (totalPages <= 1) return;
-
-    // Records info
-    const recordsInfo = document.createElement('span');
-    const start = (currentPage - 1) * rowsPerPage + 1;
-    const end = Math.min(start + rowsPerPage - 1, totalItems);
-    recordsInfo.textContent = `Displaying ${start}-${end} of ${totalItems} Records`;
-    paginationContainer.appendChild(recordsInfo);
-
-    // Button controls
-    const controlsDiv = document.createElement('div');
-    controlsDiv.className = 'pagination-controls';
-
-    // Previous Button
-    const prevButton = document.createElement('button');
-    prevButton.innerHTML = '&lt;';
-    prevButton.disabled = currentPage === 1;
-    prevButton.addEventListener('click', () => {
-        if (containerId === 'pagination-slots') currentPages.slots--;
-        if (containerId === 'pagination-vehicleIn') currentPages.vehicleIn--;
-        if (containerId === 'pagination-history') currentPages.history--;
-        performFilterAndSearch();
-    });
-    controlsDiv.appendChild(prevButton);
-
-    // Page Numbers
-    const pageNumbers = [];
-    if (totalPages <= 7) {
-        for (let i = 1; i <= totalPages; i++) {
-            pageNumbers.push(i);
+    // ========================================================
+    // UI (TABS, MODALS, SIDEBAR) (*** MODIFIED ***)
+    // ========================================================
+    const showModal = (modal) => {
+        if (modal) {
+            // Special handling for the main modal types
+            if (modal.classList.contains('modal-overlay') || 
+                modal.classList.contains('modal-overlay-confirm') || 
+                modal.classList.contains('modal-overlay-success')) {
+                modal.classList.add('show-modal');
+            } else if (modal.classList.contains('modalBackdrop')) {
+                // Handle the logout modal
+                modal.style.display = 'flex';
+            }
         }
-    } else {
-        pageNumbers.push(1);
-        if (currentPage > 3) pageNumbers.push('...');
-        
-        let start = Math.max(2, currentPage - 1);
-        let end = Math.min(totalPages - 1, currentPage + 1);
-
-        if (currentPage <= 2) end = 3;
-        if (currentPage >= totalPages - 1) start = totalPages - 2;
-
-        for (let i = start; i <= end; i++) {
-            pageNumbers.push(i);
+    };
+    
+    const hideModal = (modal) => {
+        if (modal) {
+            // Special handling for the main modal types
+            if (modal.classList.contains('modal-overlay') || 
+                modal.classList.contains('modal-overlay-confirm') || 
+                modal.classList.contains('modal-overlay-success')) {
+                modal.classList.remove('show-modal');
+            } else if (modal.classList.contains('modalBackdrop')) {
+                // Handle the logout modal
+                modal.style.display = 'none';
+            }
         }
-        
-        if (currentPage < totalPages - 2) pageNumbers.push('...');
-        pageNumbers.push(totalPages);
-    }
+    };
+    
 
-    pageNumbers.forEach(num => {
-        if (num === '...') {
-            const span = document.createElement('span');
-            span.textContent = '...';
-            controlsDiv.appendChild(span);
-        } else {
-            const button = document.createElement('button');
-            button.textContent = num;
-            button.className = (num === currentPage) ? 'active' : '';
-            button.addEventListener('click', () => {
-                if (containerId === 'pagination-slots') currentPages.slots = num;
-                if (containerId === 'pagination-vehicleIn') currentPages.vehicleIn = num;
-                if (containerId === 'pagination-history') currentPages.history = num;
+    function setupUIListeners() {
+        // --- Tab Navigation ---
+        const tabBtns = document.querySelectorAll('.tabBtn');
+        const tabContents = document.querySelectorAll('.tabContent');
+        tabBtns.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.getAttribute('data-tab');
+                tabBtns.forEach((b) => b.classList.remove('active'));
+                tabContents.forEach((content) => content.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+                
+                // Reset page number on tab switch
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                
+                // Re-fetch data for the new tab
                 performFilterAndSearch();
             });
-            controlsDiv.appendChild(button);
+        });
+
+        // --- Profile & Logout (Merged from inventory.js) ---
+        const profileBtn = document.getElementById('profileBtn');
+        const sidebar = document.getElementById('profile-sidebar');
+        const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const logoutModal = document.getElementById('logoutModal');
+        const closeLogoutBtn = document.getElementById('closeLogoutBtn');
+        const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+        const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+        const accountDetailsLink = document.getElementById('account-details-link');
+
+        if (profileBtn && sidebar && sidebarCloseBtn) {
+            profileBtn.addEventListener('click', () => sidebar.classList.add('active'));
+            sidebarCloseBtn.addEventListener('click', () =>
+            sidebar.classList.remove('active')
+            );
+        }
+
+        if (logoutBtn)
+            logoutBtn.addEventListener('click', () => showModal(logoutModal));
+        if (closeLogoutBtn)
+            closeLogoutBtn.addEventListener('click', () => hideModal(logoutModal));
+        if (cancelLogoutBtn)
+            cancelLogoutBtn.addEventListener('click', () => hideModal(logoutModal));
+        
+        if (confirmLogoutBtn) {
+            confirmLogoutBtn.addEventListener('click', () => {
+                window.location.href = 'logout.php'; // Standardized logout file
+            });
+        }
+        if (logoutModal) {
+            logoutModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                hideModal(logoutModal);
+            }
+            });
+        }
+
+        // --- Account Details (Logic from parking.js, placed correctly) ---
+        if (accountDetailsLink) {
+            accountDetailsLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Populate form fields from userData
+                // *** MODIFIED: Use the correct keys from the userData object ***
+                document.getElementById('firstName').value = userData.Fname || userData.Name || ''; // Use Fname first (from form), fallback to Name
+                document.getElementById('middleName').value = userData.Mname || '';
+                document.getElementById('lastName').value = userData.Lname || '';
+                document.getElementById('emailAddress').value = userData.EmailAddress || '';
+                document.getElementById('username').value = userData.Username || '';
+                document.getElementById('password').value = ''; // Always clear password
+                document.getElementById('birthday').value = userData.Birthday || '';
+                document.getElementById('contact').value = userData.ContactNumber || '';
+                document.getElementById('address').value = userData.Address || '';
+                
+                if(sidebar) sidebar.classList.remove('active');
+                
+                showModal(document.getElementById('accountModal'));
+            });
+        }
+
+        // --- Generic Modal Close Buttons ---
+        document.querySelectorAll('.modal-close-btn, .btn-okay, button[data-modal-id]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const modal = e.target.closest('.modal-overlay, .modal-overlay-confirm, .modal-overlay-success, .modalBackdrop');
+                if (modal) hideModal(modal);
+            });
+        });
+        
+        document.querySelectorAll('.modal-overlay, .modal-overlay-confirm, .modal-overlay-success').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    hideModal(overlay);
+                }
+            });
+        });
+    }
+
+    // ========================================================
+    // RENDER FUNCTIONS (FOR <table>)
+    // ========================================================
+    function renderEmptyState(tbody, colSpan, icon, title, message) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="${colSpan}" style="text-align: center; padding: 4rem 2rem;">
+                    <div class="empty-state">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">${icon}</div>
+                        <h3 style="font-family: 'Abril Fatface', serif; font-size: 1.5rem; color: #333; margin-bottom: 0.5rem;">${title}</h3>
+                        <p style="color: #999;">${message}</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    function renderDashboard(data) {
+        // 1. Update Cards (data.cards is now RECALCULATED)
+        const cards = document.querySelectorAll('.summary-cards .card .card-value');
+        if (data.cards) {
+            if (cards[0]) cards[0].textContent = data.cards.occupied || 0;
+            if (cards[1]) cards[1].textContent = data.cards.available || 0;
+            if (cards[2]) cards[2].textContent = data.cards.total || 0;
+        }
+
+        // 2. Update Table (data.table is the FILTERED/SORTED array)
+        const tbody = document.getElementById('dashboardTableBody');
+        if (!tbody) return;
+        
+        if (!data.table || data.table.length === 0) {
+            renderEmptyState(tbody, 5, '📊', 'No Areas Found', 'Try adjusting your filter.');
+            return; // No pagination for dashboard
+        }
+
+        tbody.innerHTML = data.table.map(area => {
+            const isFull = area.status === 'Full';
+            return `
+                <tr class="${isFull ? 'full-row' : ''}">
+                    <td class="${isFull ? 'text-red' : ''}">${area.AreaName}</td>
+                    <td class="${isFull ? 'text-red' : ''}">${isFull ? '-' : area.available}</td>
+                    <td class="${isFull ? 'text-red' : ''}">${area.occupied}</td>
+                    <td class="${isFull ? 'text-red' : ''}">${area.total}</td>
+                    <td class="${isFull ? 'text-red' : ''} text-right">${isFull ? 'Full' : ''}</td>
+                </tr>
+            `;
+        }).join('');
+
+        // 3. Update Headers
+        updateSortHeaders('dashboard-tab', sortState.dashboard);
+    }
+
+    function renderSlots(filteredData) {
+        const tbody = document.getElementById('slotsTableBody');
+        if (!tbody) return;
+        
+        const page = currentPages.slots;
+        const totalItems = filteredData.length;
+
+        setupPagination(totalItems, 'pagination-slots', page);
+
+        if (totalItems === 0) {
+            renderEmptyState(tbody, 5, '🅿️', 'No Slots Found', 'Try adjusting your search or filter.');
+            return;
+        }
+        
+        const startIndex = (page - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+        
+        tbody.innerHTML = paginatedData.map((slot) => {
+            return `
+                <tr>
+                    <td>${slot.AreaName}</td>
+                    <td>${slot.SlotName}</td>
+                    <td>${slot.AllowedVehicle}</td>
+                    <td>
+                        <span class="status-badge status-${slot.Status}">
+                            ${slot.Status === 'available' ? 'Available' : 'Occupied'}
+                        </span>
+                    </td>
+                    <td>
+                        ${slot.Status === 'available' 
+                            ? `<button class="btn-enter" data-slot-id="${slot.SlotID}" data-slot-name="${slot.SlotName}">Enter Vehicle</button>`
+                            : `<button class="btn-enter-gray" disabled>Enter Vehicle</button>`
+                        }
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        updateSortHeaders('slots-tab', sortState.slots);
+    }
+
+    function renderVehicleIn(filteredData) {
+        const tbody = document.getElementById('vehicleInTableBody');
+        if (!tbody) return;
+
+        const page = currentPages.vehicleIn;
+        const totalItems = filteredData.length;
+
+        setupPagination(totalItems, 'pagination-vehicleIn', page);
+
+        if (totalItems === 0) {
+            renderEmptyState(tbody, 9, '🚗', 'No Vehicles Parked', 'Available slots can be seen in the "Slots" tab.');
+            return;
+        }
+
+        const startIndex = (page - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
+        tbody.innerHTML = paginatedData.map((vehicle) => {
+            return `
+                <tr>
+                    <td>${vehicle.SlotName}</td>
+                    <td>${vehicle.PlateNumber}</td>
+                    <td>${vehicle.RoomNumber}</td>
+                    <td>${vehicle.GuestName}</td>
+                    <td>${vehicle.VehicleType}</td>
+                    <td>${vehicle.VehicleCategory}</td>
+                    <td>${vehicle.EnterTime}</td>
+                    <td>${vehicle.EnterDate}</td>
+                    <td>
+                        <button class="exit-btn" data-slot-id="${vehicle.SlotID}" data-session-id="${vehicle.SessionID}">
+                            <img src="assets/images/parking.png" alt="Exit Vehicle" style="width: 24px; height: 24px;">
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        updateSortHeaders('vehicleIn-tab', sortState.vehicleIn);
+    }
+
+    function renderHistory(filteredData) {
+        const tbody = document.getElementById('historyTableBody');
+        if (!tbody) return;
+        
+        const page = currentPages.history;
+        const totalItems = filteredData.length;
+
+        setupPagination(totalItems, 'pagination-history', page);
+
+        if (totalItems === 0) {
+            renderEmptyState(tbody, 9, '📜', 'No History Found', 'Vehicles that exit will appear here.');
+            return;
+        }
+
+        const startIndex = (page - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
+        tbody.innerHTML = paginatedData.map((vehicle) => {
+            return `
+                <tr>
+                    <td>${vehicle.SlotName}</td>
+                    <td>${vehicle.PlateNumber}</td>
+                    <td>${vehicle.RoomNumber}</td>
+                    <td>${vehicle.GuestName}</td>
+                    <td>${vehicle.VehicleType}</td>
+                    <td>${vehicle.VehicleCategory}</td>
+                    <td>${vehicle.ParkingTime}</td>
+                    <td>${vehicle.EntryDateTime}</td>
+                    <td>${vehicle.ExitDateTime}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        updateSortHeaders('history-tab', sortState.history);
+    }
+
+    // ========================================================
+    // PAGINATION LOGIC (This is the correct, working version)
+    // ========================================================
+    function setupPagination(totalItems, containerId, currentPage) {
+        const paginationContainer = document.getElementById(containerId);
+        if (!paginationContainer) return;
+
+        paginationContainer.innerHTML = ''; // Clear it
+        const totalPages = Math.ceil(totalItems / rowsPerPage);
+
+        // --- Part 1: Record Info (Always Show) ---
+        const recordsInfo = document.createElement('span');
+        recordsInfo.className = 'paginationInfo';
+        
+        let start, end;
+        if (totalItems === 0) {
+            start = 0;
+            end = 0;
+        } else {
+            start = (currentPage - 1) * rowsPerPage + 1;
+            end = Math.min(start + rowsPerPage - 1, totalItems);
+        }
+        
+        // This text will now *always* appear, even for 0 items.
+        recordsInfo.textContent = `Displaying ${start}-${end} of ${totalItems} Records`;
+        paginationContainer.appendChild(recordsInfo);
+        
+        // --- Part 2: Page Buttons (Show if > 1 page) ---
+        if (totalPages <= 1) {
+            return; // We've shown the info, no buttons needed.
+        }
+
+        // --- Part 3: Render Buttons ---
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'paginationControls';
+
+        // Prev Button
+        const prevButton = document.createElement('button');
+        prevButton.className = 'paginationBtn';
+        prevButton.innerHTML = '&lt;';
+        prevButton.disabled = currentPage === 1;
+        prevButton.addEventListener('click', () => {
+            if (containerId.includes('slots')) currentPages.slots--;
+            if (containerId.includes('vehicleIn')) currentPages.vehicleIn--;
+            if (containerId.includes('history')) currentPages.history--;
+            performFilterAndSearch(); // Re-run to render new page
+        });
+        controlsDiv.appendChild(prevButton);
+
+        // Page Numbers...
+        const pageNumbers = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+        } else {
+            pageNumbers.push(1);
+            if (currentPage > 3) pageNumbers.push('...');
+            let start = Math.max(2, currentPage - 1);
+            let end = Math.min(totalPages - 1, currentPage + 1);
+            if (currentPage <= 2) end = 3;
+            if (currentPage >= totalPages - 1) start = totalPages - 2;
+            for (let i = start; i <= end; i++) pageNumbers.push(i);
+            if (currentPage < totalPages - 2) pageNumbers.push('...');
+            pageNumbers.push(totalPages);
+        }
+
+        pageNumbers.forEach(num => {
+            if (num === '...') {
+                const span = document.createElement('span');
+                span.className = 'paginationDots';
+                span.textContent = '...';
+                controlsDiv.appendChild(span);
+            } else {
+                const button = document.createElement('button');
+                button.className = 'paginationBtn';
+                button.textContent = num;
+                if (num === currentPage) button.classList.add('active');
+                button.addEventListener('click', () => {
+                    if (containerId.includes('slots')) currentPages.slots = num;
+                    if (containerId.includes('vehicleIn')) currentPages.vehicleIn = num;
+                    if (containerId.includes('history')) currentPages.history = num;
+                    performFilterAndSearch(); // Re-run to render new page
+                });
+                controlsDiv.appendChild(button);
+            }
+        });
+
+        // Next Button
+        const nextButton = document.createElement('button');
+        nextButton.className = 'paginationBtn';
+        nextButton.innerHTML = '&gt;';
+        nextButton.disabled = currentPage === totalPages;
+        nextButton.addEventListener('click', () => {
+            if (containerId.includes('slots')) currentPages.slots++;
+            if (containerId.includes('vehicleIn')) currentPages.vehicleIn++;
+            if (containerId.includes('history')) currentPages.history++;
+            performFilterAndSearch(); // Re-run to render new page
+        });
+        controlsDiv.appendChild(nextButton);
+
+        paginationContainer.appendChild(controlsDiv);
+    }
+
+    // ========================================================
+    // SORTING & PARSING LOGIC (This is the correct, working version)
+    // ========================================================
+    
+    // Helper for date parsing to avoid errors on null
+    function parseDateWhen(dateStr, defaultVal) {
+        if (!dateStr) return defaultVal;
+        try {
+            // Converts "YYYY-MM-DD / H:MM AM/PM" to a valid date object
+            return new Date(dateStr.replace(' / ', ' ')).getTime();
+        } catch (e) {
+            return defaultVal;
+        }
+    }
+
+    // Sorting Function
+    function sortData(data, column, direction) {
+        data.sort((a, b) => {
+            let valA = a[column];
+            let valB = b[column];
+
+            // Handle numbers that might be strings (for Dashboard)
+            if (column === 'available' || column === 'occupied' || column === 'total') {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+            }
+
+            // Handle different data types
+            if (typeof valA === 'string') {
+                // Check for full timestamps (YYYY-MM-DD HH:MM:SS)
+                // This is used for 'EntryTime' in "Vehicle In" and 'ExitTime' in "History"
+                if (valA && valA.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) { 
+                    valA = new Date(valA).getTime();
+                    valB = valB ? new Date(valB).getTime() : null; // Handle nulls
+                } 
+                // Check for API date-time with slashes (YYYY-MM-DD / H:MM AM/PM)
+                else if (valA && valA.match(/^\d{4}-\d{2}-\d{2} \/ \d{1,2}:\d{2} [AP]M$/)) {
+                    valA = parseDateWhen(valA, null); 
+                    valB = parseDateWhen(valB, null);
+                }
+                // Normal string sort
+                else {
+                    valA = (valA || "").toLowerCase();
+                    valB = (valB || "").toLowerCase();
+                }
+            }
+            
+            if (typeof valA === 'number') {
+                valA = valA || 0;
+                valB = valB || 0;
+            }
+
+            // Handle nulls for sorting
+            if (valA === null || valA === undefined) valA = direction === 'asc' ? Infinity : -Infinity;
+            if (valB === null || valB === undefined) valB = direction === 'asc' ? Infinity : -Infinity;
+
+            let comparison = 0;
+            if (valA > valB) {
+                comparison = 1;
+            } else if (valA < valB) {
+                comparison = -1;
+            }
+
+            return direction === 'asc' ? comparison : -comparison;
+        });
+    }
+
+    // Update Header Visuals
+    function updateSortHeaders(tabId, { column, direction }) {
+        const tab = document.getElementById(tabId);
+        if (!tab) return;
+
+        // Remove old classes
+        tab.querySelectorAll('th.sortable').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+        });
+
+        // Add new class
+        // Handle special case for EntryTime/EntryDate
+        let selector = `th[data-sort="${column}"]`;
+        if (column === 'EntryTime') {
+             selector = `th[data-sort="EntryTime"]`; // Target both headers
+        }
+        // Handle special case for ExitTime/ExitDateTime
+        else if (column === 'ExitTime' || column === 'ExitDateTime') {
+             selector = `th[data-sort="ExitTime"], th[data-sort="ExitDateTime"]`;
+        }
+        // Handle special case for EntryTime/EntryDateTime in history
+        else if (column === 'EntryTime' || column === 'EntryDateTime') {
+            selector = `th[data-sort="EntryTime"], th[data-sort="EntryDateTime"]`;
+        }
+
+
+        tab.querySelectorAll(selector).forEach(th => {
+             th.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+        });
+    }
+
+
+    // ========================================================
+    // SEARCH, FILTER & DATA LOADING (This version is correct)
+    // ========================================================
+    async function performFilterAndSearch() {
+        
+        const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
+
+        if (activeTab === 'dashboard') {
+            // 1. Fetch data if cache is empty
+            if (dashboardTableData.length === 0) {
+                const data = await fetchAPI('getDashboardData');
+                if (!data || !data.table) {
+                     renderDashboard({ cards: {}, table: [] });
+                     return;
+                }
+                dashboardTableData = data.table; 
+            }
+
+            // 2. Filter (Area Dropdown)
+            const filterArea = document.getElementById('areaFilterDashboard').value;
+            let filteredData = dashboardTableData
+                .filter(area => filterArea === "all" || area.AreaName === filterArea);
+            
+            // 3. Recalculate Card Totals based on filtered data
+            const newCardTotals = filteredData.reduce((acc, area) => {
+                acc.occupied += parseFloat(area.occupied) || 0;
+                acc.available += parseFloat(area.available) || 0;
+                acc.total += parseFloat(area.total) || 0;
+                return acc;
+            }, { occupied: 0, available: 0, total: 0 });
+
+            // 4. Sort
+            const { column, direction } = sortState.dashboard;
+            sortData(filteredData, column, direction);
+
+            // 5. Render
+            renderDashboard({ cards: newCardTotals, table: filteredData });
+        
+        } else if (activeTab === 'slots') {
+            // 1. Fetch
+            if (slotsData.length === 0) { 
+                 const data = await fetchAPI('getAllSlots');
+                 if (!data) {
+                    renderSlots([]); // Render empty state
+                    return;
+                 }
+                 slotsData = data.slots;
+            }
+            
+            // 2. Filter
+            const filterArea = document.getElementById('areaFilterSlots').value;
+            const filterStatus = document.getElementById('statusFilterSlots').value;
+            const searchTerm = document.getElementById('searchSlots').value.toLowerCase();
+            
+            let filteredData = slotsData
+                .filter(s => filterArea === "all" || s.AreaName.includes(filterArea))
+                .filter(s => filterStatus === "all" || s.Status === filterStatus)
+                .filter(s => !searchTerm || s.SlotName.toLowerCase().includes(searchTerm));
+            
+            // 3. Sort
+            const { column, direction } = sortState.slots;
+            sortData(filteredData, column, direction);
+            
+            // 4. Render (which includes pagination)
+            renderSlots(filteredData);
+
+        } else if (activeTab === 'vehicleIn') {
+            // 1. Fetch
+            const data = await fetchAPI('getVehiclesIn');
+            if (!data) {
+                renderVehicleIn([]); // Render empty state
+                return;
+            }
+            vehiclesInData = data.vehicles;
+
+            // 2. Filter
+            const filterArea = document.getElementById('areaFilterVehicleIn').value;
+            const searchTerm = document.getElementById('searchVehicleIn').value.toLowerCase();
+            
+            let filteredData = vehiclesInData
+                .filter(s => filterArea === "all" || s.AreaName === filterArea) 
+                .filter(s => !searchTerm || 
+                    (s.GuestName && s.GuestName.toLowerCase().includes(searchTerm)) ||
+                    (s.PlateNumber && s.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                    (s.RoomNumber && s.RoomNumber.toLowerCase().includes(searchTerm))
+                );
+
+            // 3. Sort
+            const { column, direction } = sortState.vehicleIn;
+            sortData(filteredData, column, direction);
+
+            // 4. Render
+            renderVehicleIn(filteredData);
+
+        } else if (activeTab === 'history') {
+            // 1. Fetch
+            const data = await fetchAPI('getHistory');
+            if (!data) {
+                renderHistory([]); // Render empty state
+                return;
+            }
+            historyData = data.history;
+
+            // 2. Filter
+            const filterArea = document.getElementById('areaFilterHistory').value;
+            const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
+
+            let filteredData = historyData
+                .filter(v => filterArea === "all" || v.AreaName === filterArea) 
+                .filter(v => !searchTerm || 
+                    (v.GuestName && v.GuestName.toLowerCase().includes(searchTerm)) ||
+                    (v.PlateNumber && v.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                    (v.RoomNumber && v.RoomNumber.toLowerCase().includes(searchTerm))
+                );
+            
+            // 3. Sort
+            const { column, direction } = sortState.history;
+            sortData(filteredData, column, direction);
+
+            // 4. Render
+            renderHistory(filteredData);
+        }
+    }
+
+    // ========================================================
+    // EVENT LISTENERS (SPECIFIC TO PARKING)
+    // ========================================================
+
+    async function loadEnterVehicleDropdowns() {
+        const typeSelect = document.getElementById('vehicleType');
+        const categorySelect = document.getElementById('categorySelect');
+        typeSelect.innerHTML = '<option value="">Loading...</option>';
+        categorySelect.innerHTML = '<option value="">Select vehicle type first...</option>';
+        const data = await fetchAPI('getVehicleTypes');
+        if (data && data.types) {
+            typeSelect.innerHTML = '<option value="">Select</option>';
+            data.types.forEach(type => {
+                typeSelect.innerHTML += `<option value="${type.VehicleTypeID}">${type.TypeName}</option>`;
+            });
+        }
+    }
+    document.getElementById('vehicleType').addEventListener('change', async (e) => {
+        const vehicleTypeID = e.target.value;
+        const categorySelect = document.getElementById('categorySelect');
+        if (!vehicleTypeID) {
+            categorySelect.innerHTML = '<option value="">Select vehicle type first...</option>';
+            return;
+        }
+        categorySelect.innerHTML = '<option value="">Loading...</option>';
+        const data = await fetchAPI('getVehicleCategories', {}, `vehicleTypeID=${vehicleTypeID}`);
+        if (data && data.categories) {
+            categorySelect.innerHTML = '<option value="">Select</option>';
+            data.categories.forEach(cat => {
+                categorySelect.innerHTML += `<option value="${cat.VehicleCategoryID}">${cat.CategoryName}</option>`;
+            });
         }
     });
 
-    // Next Button
-    const nextButton = document.createElement('button');
-    nextButton.innerHTML = '&gt;';
-    nextButton.disabled = currentPage === totalPages;
-    nextButton.addEventListener('click', () => {
-        if (containerId === 'pagination-slots') currentPages.slots++;
-        if (containerId === 'pagination-vehicleIn') currentPages.vehicleIn++;
-        if (containerId === 'pagination-history') currentPages.history++;
+
+    function setupParkingListeners() {
+        // Filter/Search Listeners
+        document.querySelectorAll('.filterDropdown').forEach(el => {
+            el.addEventListener('change', () => {
+                // Reset to page 1 and re-fetch/re-filter
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                
+                slotsData = []; // Clear slot cache on filter change
+                
+                performFilterAndSearch();
+            });
+        });
+
+        document.querySelectorAll('.searchInput').forEach(el => {
+            el.addEventListener('input', () => {
+                // This performs a client-side filter *without* re-fetching
+                const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
+                
+                // Reset page to 1 when typing
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                
+                if (activeTab === 'dashboard') {
+                   // Search removed
+                }
+                if (activeTab === 'slots') {
+                    const filterArea = document.getElementById('areaFilterSlots').value;
+                    const filterStatus = document.getElementById('statusFilterSlots').value;
+                    const searchTerm = document.getElementById('searchSlots').value.toLowerCase();
+                    let filtered = slotsData
+                        .filter(s => filterArea === "all" || s.AreaName.includes(filterArea))
+                        .filter(s => filterStatus === "all" || s.Status === filterStatus)
+                        .filter(s => !searchTerm || s.SlotName.toLowerCase().includes(searchTerm));
+                    sortData(filtered, sortState.slots.column, sortState.slots.direction);
+                    renderSlots(filtered);
+                }
+                if (activeTab === 'vehicleIn') {
+                    const filterArea = document.getElementById('areaFilterVehicleIn').value;
+                    const searchTerm = document.getElementById('searchVehicleIn').value.toLowerCase();
+                    let filtered = vehiclesInData
+                        .filter(s => filterArea === "all" || s.AreaName === filterArea)
+                        .filter(s => !searchTerm || 
+                            (s.GuestName && s.GuestName.toLowerCase().includes(searchTerm)) ||
+                            (s.PlateNumber && s.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                            (s.RoomNumber && s.RoomNumber.toLowerCase().includes(searchTerm))
+                        );
+                    sortData(filtered, sortState.vehicleIn.column, sortState.vehicleIn.direction);
+                    renderVehicleIn(filtered);
+                }
+                 if (activeTab === 'history') {
+                    const filterArea = document.getElementById('areaFilterHistory').value;
+                    const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
+                    let filtered = historyData
+                        .filter(v => filterArea === "all" || v.AreaName === filterArea) 
+                        .filter(v => !searchTerm || 
+                            (v.GuestName && v.GuestName.toLowerCase().includes(searchTerm)) ||
+                            (v.PlateNumber && v.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                            (v.RoomNumber && v.RoomNumber.toLowerCase().includes(searchTerm))
+                        );
+                    sortData(filtered, sortState.history.column, sortState.history.direction);
+                    renderHistory(filtered);
+                 }
+            });
+        });
+        
+        // Refresh Buttons
+        document.querySelectorAll('.refreshBtn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const controlsRow = btn.closest('.controlsRow');
+                controlsRow.querySelectorAll('.filterDropdown').forEach(sel => sel.value = 'all');
+                controlsRow.querySelectorAll('.searchInput').forEach(inp => inp.value = '');
+                
+                // Clear all caches
+                slotsData = []; 
+                dashboardTableData = []; 
+
+                performFilterAndSearch(); // Re-fetch all
+                showToast('Data refreshed!');
+            });
+        });
+
+        // Download History Button
+        const downloadBtn = document.getElementById('downloadBtnHistory');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => {
+                // 1. Get the current filter and search values
+                const filterArea = document.getElementById('areaFilterHistory').value;
+                const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
+
+                // 2. Apply the same filters as the render function
+                let filteredData = historyData
+                    .filter(v => filterArea === "all" || v.AreaName === filterArea) 
+                    .filter(v => !searchTerm || 
+                        (v.GuestName && v.GuestName.toLowerCase().includes(searchTerm)) ||
+                        (v.PlateNumber && v.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                        (v.RoomNumber && v.RoomNumber.toLowerCase().includes(searchTerm))
+                    );
+                
+                // 3. Apply the current sort
+                const { column, direction } = sortState.history;
+                sortData(filteredData, column, direction);
+
+                // 4. Check if there's data
+                if (filteredData.length === 0) {
+                    showToast('No data to download.', 'error');
+                    return;
+                }
+
+                // 5. Generate the PDF
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF(); // Default is portrait, A4
+
+                    doc.setFontSize(18);
+                    doc.text("Parking History Report", 14, 22);
+                    doc.setFontSize(11);
+                    doc.setTextColor(100);
+                    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+                    
+                    // Define columns for the table
+                    const head = [[
+                        'Slot', 
+                        'Plate #', 
+                        'Room', 
+                        'Name', 
+                        'Vehicle Type', 
+                        'Category',
+                        'Parking Time',
+                        'Entry',
+                        'Exit'
+                    ]];
+
+                    // Map the filtered data to the row format
+                    const body = filteredData.map(v => [
+                        v.SlotName,
+                        v.PlateNumber,
+                        v.RoomNumber,
+                        v.GuestName,
+                        v.VehicleType,
+                        v.VehicleCategory,
+                        v.ParkingTime,
+                        v.EntryDateTime,
+                        v.ExitDateTime
+                    ]);
+
+                    // Use autoTable to create the table
+                    doc.autoTable({
+                        head: head,
+                        body: body,
+                        startY: 35,
+                        headStyles: { fillColor: [72, 12, 27] }, // #480c1b
+                        styles: { fontSize: 8, cellPadding: 2 },
+                        alternateRowStyles: { fillColor: [245, 245, 245] },
+                        columnStyles: {
+                            0: { cellWidth: 15 }, // Slot
+                            1: { cellWidth: 20 }, // Plate
+                            2: { cellWidth: 12 }, // Room
+                            3: { cellWidth: 'auto' }, // Name
+                            4: { cellWidth: 'auto' }, // Type
+                            5: { cellWidth: 'auto' }, // Category
+                            6: { cellWidth: 20 }, // Parking Time
+                            7: { cellWidth: 30 }, // Entry
+                            8: { cellWidth: 30 }  // Exit
+                        }
+                    });
+
+                    // 6. Save the file
+                    doc.save('Parking-History-Report.pdf');
+
+                } catch (e) {
+                    console.error("Error generating PDF:", e);
+                    showToast('Error generating PDF. See console.', 'error');
+                }
+            });
+        }
+
+        // === Enter/Exit/Account Listeners... (no changes) ===
+        
+        document.body.addEventListener('click', (e) => {
+            const enterButton = e.target.closest('.btn-enter');
+            if (enterButton) {
+                currentSlotID = enterButton.dataset.slotId;
+                currentSlotName = enterButton.dataset.slotName;
+                document.getElementById('slotNumberTitle').textContent = currentSlotName;
+                document.getElementById('enter-vehicle-form').reset();
+                loadEnterVehicleDropdowns();
+                showModal(document.getElementById('enterVehicleModal'));
+            }
+        });
+        
+        const enterVehicleForm = document.getElementById('enter-vehicle-form');
+        if (enterVehicleForm) {
+            enterVehicleForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!document.getElementById('guestName').value || !document.getElementById('plateNumber').value || !document.getElementById('vehicleType').value || !document.getElementById('categorySelect').value) {
+                    showToast('Please fill out all required fields.', 'error');
+                    return;
+                }
+                hideModal(document.getElementById('enterVehicleModal'));
+                showModal(document.getElementById('confirmModal'));
+            });
+        }
+        
+        const btnConfirmEnter = document.getElementById('btnConfirmEnter');
+        if (btnConfirmEnter) {
+            btnConfirmEnter.addEventListener('click', async () => {
+                
+                const formData = new FormData();
+                formData.append('action', 'enterVehicle');
+                formData.append('slotID', currentSlotID);
+                formData.append('plateNumber', document.getElementById('plateNumber').value.toUpperCase());
+                formData.append('guestName', document.getElementById('guestName').value);
+                formData.append('roomNumber', document.getElementById('roomNumber').value);
+                formData.append('vehicleTypeID', document.getElementById('vehicleType').value);
+                formData.append('vehicleCategoryID', document.getElementById('categorySelect').value);
+
+                const result = await fetchAPI('enterVehicle', {
+                    method: 'POST',
+                    body: formData
+                });
+                hideModal(document.getElementById('confirmModal'));
+                if (result && result.success) {
+                    showModal(document.getElementById('successModal'));
+                    showToast(result.message || 'Vehicle parked successfully!');
+                    slotsData = []; // Clear cache
+                    dashboardTableData = []; // Clear cache
+                    performFilterAndSearch();
+                }
+                currentSlotID = null;
+                currentSlotName = null;
+            });
+        }
+
+        document.body.addEventListener('click', (e) => {
+            const exitButton = e.target.closest('.exit-btn');
+            if (exitButton) {
+                currentSlotID = exitButton.dataset.slotId;
+                currentSessionID = exitButton.dataset.sessionId;
+                const vehicle = vehiclesInData.find(v => v.SessionID === currentSessionID);
+                if (!vehicle) return; 
+                document.getElementById('exitSlotNumber').textContent = vehicle.SlotName;
+                document.getElementById('exitPlate').textContent = vehicle.PlateNumber;
+                document.getElementById('exitVehicle').textContent = vehicle.VehicleCategory;
+                document.getElementById('exitDateTime').textContent = vehicle.EnterDate + ' / ' + vehicle.EnterTime;
+                showModal(document.getElementById('exitModal'));
+            }
+        });
+
+        const btnConfirmExit = document.getElementById('btnConfirmExit');
+        if (btnConfirmExit) {
+            btnConfirmExit.addEventListener('click', async () => {
+                if (!currentSlotID || !currentSessionID) return;
+                const formData = new FormData();
+                formData.append('action', 'exitVehicle');
+                formData.append('sessionID', currentSessionID);
+                formData.append('slotID', currentSlotID);
+                const result = await fetchAPI('exitVehicle', {
+                    method: 'POST',
+                    body: formData
+                });
+                hideModal(document.getElementById('exitModal'));
+                if (result && result.success) {
+                    showToast(result.message || 'Vehicle exited successfully!');
+                    slotsData = []; // Clear cache
+                    dashboardTableData = []; // Clear cache
+                    performFilterAndSearch();
+                }
+                currentSlotID = null;
+                currentSessionID = null;
+            });
+        }
+        
+        // --- This section is now part of setupUIListeners ---
+        
+        const accountForm = document.getElementById('account-details-form');
+        if (accountForm) {
+            accountForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                hideModal(document.getElementById('accountModal'));
+                showModal(document.getElementById('saveConfirmModal'));
+            });
+        }
+
+        const btnConfirmSave = document.getElementById('btnConfirmSave');
+        if (btnConfirmSave) {
+            btnConfirmSave.addEventListener('click', async () => {
+                const form = document.getElementById('account-details-form');
+                const formData = new FormData(form);
+                formData.append('action', 'updateUser');
+                if (document.getElementById('password').value === '') {
+                    formData.set('Password', '************');
+                }
+                const result = await fetchAPI('updateUser', {
+                    method: 'POST',
+                    body: formData
+                });
+                hideModal(document.getElementById('saveConfirmModal'));
+                if (result && result.success) {
+                    // *** MODIFIED: Use the correct keys to update local data and sidebar ***
+                    // Update local user data
+                    userData.Name = formData.get('Fname'); // Form has 'Fname', save to 'Name'
+                    userData.Lname = formData.get('Lname');
+                    userData.Mname = formData.get('Mname');
+                    userData.EmailAddress = formData.get('EmailAddress');
+                    userData.Username = formData.get('Username');
+                    userData.Birthday = formData.get('Birthday');
+                    userData.ContactNumber = formData.get('ContactNumber');
+                    userData.Address = formData.get('Address');
+                    
+                    // Now, update the sidebar with the new name
+                    const sidebarName = document.querySelector('.profile-header h3');
+                    if (sidebarName) sidebarName.textContent = `${userData.Name}`; // Use the correct key
+                    
+                    showModal(document.getElementById('saveSuccessModal'));
+                    showToast(result.message || 'Account details updated!');
+                }
+            });
+        }
+    }
+
+    // ========================================================
+    // SORTING EVENT LISTENERS (This version is correct)
+    // ========================================================
+    function setupSortListeners() {
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const column = th.dataset.sort;
+                const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
+                
+                if (!sortState[activeTab]) return; // Not a sortable tab
+
+                const currentSort = sortState[activeTab];
+                let direction = 'asc';
+
+                if (currentSort.column === column) {
+                    direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                }
+                
+                sortState[activeTab] = { column, direction };
+
+                // Reset to page 1
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                
+                // *** This function now re-filters and re-sorts all data ***
+                // It's faster than re-fetching from the API
+                
+                // Get the filtered data first, *then* sort it
+                const filterAndSortData = (tab) => {
+                    let filteredData = [];
+                    let sortCol = sortState[tab].column;
+                    let sortDir = sortState[tab].direction;
+
+                    if (tab === 'dashboard') {
+                        const filterArea = document.getElementById('areaFilterDashboard').value;
+                        filteredData = dashboardTableData
+                            .filter(area => filterArea === "all" || area.AreaName === filterArea);
+                        
+                        const newCardTotals = filteredData.reduce((acc, area) => {
+                            acc.occupied += parseFloat(area.occupied) || 0;
+                            acc.available += parseFloat(area.available) || 0;
+                            acc.total += parseFloat(area.total) || 0;
+                            return acc;
+                        }, { occupied: 0, available: 0, total: 0 });
+                        
+                        sortData(filteredData, column, direction);
+                        renderDashboard({ cards: newCardTotals, table: filteredData });
+
+                    } else if (tab === 'slots') {
+                        const filterArea = document.getElementById('areaFilterSlots').value;
+                        const filterStatus = document.getElementById('statusFilterSlots').value;
+                        const searchTerm = document.getElementById('searchSlots').value.toLowerCase();
+                        filteredData = slotsData
+                            .filter(s => filterArea === "all" || s.AreaName.includes(filterArea))
+                            .filter(s => filterStatus === "all" || s.Status === filterStatus)
+                            .filter(s => !searchTerm || s.SlotName.toLowerCase().includes(searchTerm));
+                        sortData(filteredData, column, direction);
+                        renderSlots(filteredData);
+
+                    } else if (tab === 'vehicleIn') {
+                        const filterArea = document.getElementById('areaFilterVehicleIn').value;
+                        const searchTerm = document.getElementById('searchVehicleIn').value.toLowerCase();
+                        filteredData = vehiclesInData
+                            .filter(s => filterArea === "all" || s.AreaName === filterArea)
+                            .filter(s => !searchTerm || 
+                                (s.GuestName && s.GuestName.toLowerCase().includes(searchTerm)) ||
+                                (s.PlateNumber && s.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                                (s.RoomNumber && s.RoomNumber.toLowerCase().includes(searchTerm))
+                            );
+                        sortData(filteredData, column, direction);
+                        renderVehicleIn(filteredData);
+
+                    } else if (tab === 'history') {
+                        const filterArea = document.getElementById('areaFilterHistory').value;
+                        const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
+                        filteredData = historyData
+                            .filter(v => filterArea === "all" || v.AreaName === filterArea) 
+                            .filter(v => !searchTerm || 
+                                (v.GuestName && v.GuestName.toLowerCase().includes(searchTerm)) ||
+                                (v.PlateNumber && v.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                                (v.RoomNumber && v.RoomNumber.toLowerCase().includes(searchTerm))
+                            );
+                        sortData(filteredData, column, direction);
+                        renderHistory(filteredData);
+                    }
+                };
+
+                filterAndSortData(activeTab);
+            });
+        });
+    }
+    
+    // ========================================================
+    // INITIALIZE ON PAGE LOAD
+    // ========================================================
+    
+    async function loadFilterDropdowns() {
+        const data = await fetchAPI('getParkingAreas');
+        if (data && data.areas) {
+            const areaFilterOptions = data.areas.map(a => `<option value="${a.AreaName}">${a.AreaName}</option>`).join('');
+            const allAreaFilters = document.querySelectorAll('.filterDropdown[id^="areaFilter"]');
+            allAreaFilters.forEach(select => {
+                select.innerHTML = `<option value="all">All Areas</option>${areaFilterOptions}`;
+            });
+        }
+    }
+    
+    function initializeApp() {
+        setupUIListeners();
+        setupParkingListeners();
+        setupSortListeners(); 
+        
+        // *** MODIFIED: These lines are removed to prevent the "undefined" bug ***
+        // const sidebarName = document.querySelector('.profile-header h3');
+        // const sidebarRole = document.querySelector('.profile-header p');
+        // if (sidebarName) sidebarName.textContent = `${userData.Name}`; // This is now done by PHP
+        // if (sidebarRole) sidebarRole.textContent = `${userData.Accounttype}`; // This is now done by PHP
+
+        loadFilterDropdowns();
+
         performFilterAndSearch();
-    });
-    controlsDiv.appendChild(nextButton);
-
-    paginationContainer.appendChild(controlsDiv);
-}
-
-// ========================================================
-// SEARCH & FILTER FUNCTION (MAIN)
-// ========================================================
-
-function performFilterAndSearch() {
-    const searchInput = document.querySelector('.search-box input');
-    const areaSelect = document.getElementById('areaSelect');
-    
-    if (!searchInput || !areaSelect) return;
-    
-    const searchTerm = searchInput.value.toLowerCase();
-    const filterValue = areaSelect.value;
-    
-    // Check which tab is active and call the appropriate render function
-    if (!document.getElementById('dashboardContent').classList.contains('hidden')) {
-        let filteredData = slotsData;
-        if (filterValue !== "all") {
-            filteredData = slotsData.filter(s => s.area == filterValue);
-        }
-        renderDashboardSummary(filteredData);
-        renderDashboardTable(filteredData);
-
-    } else if (!document.getElementById('slotsContent').classList.contains('hidden')) {
-        let filteredData = slotsData;
-        if (filterValue !== "all") filteredData = filteredData.filter(s => s.slotNumber === filterValue);
-        if (searchTerm) {
-            filteredData = filteredData.filter(s => 
-                s.slotNumber.toLowerCase().includes(searchTerm) ||
-                (s.parkedVehicle && s.parkedVehicle.name.toLowerCase().includes(searchTerm)) ||
-                (s.parkedVehicle && s.parkedVehicle.plate.toLowerCase().includes(searchTerm))
-            );
-        }
-        renderSlots(filteredData);
-
-    } else if (!document.getElementById('vehicleInContent').classList.contains('hidden')) {
-        let filteredData = slotsData.filter(slot => slot.status === 'occupied');
-        if (filterValue !== "all") filteredData = filteredData.filter(s => s.slotNumber === filterValue);
-        if (searchTerm) {
-            filteredData = filteredData.filter(s => 
-                s.slotNumber.toLowerCase().includes(searchTerm) ||
-                (s.parkedVehicle && s.parkedVehicle.name.toLowerCase().includes(searchTerm)) ||
-                (s.parkedVehicle && s.parkedVehicle.plate.toLowerCase().includes(searchTerm)) ||
-                (s.parkedVehicle && s.parkedVehicle.room.toLowerCase().includes(searchTerm))
-            );
-        }
-        renderVehicleIn(filteredData);
-
-    } else if (!document.getElementById('historyContent').classList.contains('hidden')) {
-        let filteredData = historyData;
-        if (filterValue !== "all") filteredData = filteredData.filter(v => v.slotNumber === filterValue);
-        if (searchTerm) {
-            filteredData = filteredData.filter(v => 
-                v.slotNumber.toLowerCase().includes(searchTerm) ||
-                v.name.toLowerCase().includes(searchTerm) ||
-                v.plate.toLowerCase().includes(searchTerm) ||
-                v.room.toLowerCase().includes(searchTerm)
-            );
-        }
-        renderHistory(filteredData);
     }
-}
-
-// ========================================================
-// SETUP EVENT LISTENERS
-// ========================================================
-function setupEventListeners() {
-    // User icon
-    const userIcon = document.querySelector('.user-icon');
-    if (userIcon) userIcon.addEventListener('click', toggleUserMenu);
     
-    const btnAccountDetails = document.getElementById('btnAccountDetails');
-    if (btnAccountDetails) btnAccountDetails.addEventListener('click', showAccountDetails);
-    
-    const btnLogout = document.getElementById('btnLogout');
-    if (btnLogout) btnLogout.addEventListener('click', () => {
-    console.log('Logout confirmed - redirecting to logout script');
-    window.location.href = 'logout.php'; 
-  });
-    
-    const btnConfirmLogout = document.getElementById('btnConfirmLogout');
-    if (btnConfirmLogout) btnConfirmLogout.addEventListener('click', logout);
-
-    // Tabs
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', (e) => {
-            switchTab(e.target.dataset.tab);
-        });
-    });
-    
-    // Search and Filter
-    const searchBtn = document.querySelector('.search-btn');
-    if (searchBtn) searchBtn.addEventListener('click', performFilterAndSearch);
-    
-    const searchInput = document.querySelector('.search-box input');
-    if (searchInput) searchInput.addEventListener('keyup', performFilterAndSearch);
-    
-    const areaSelect = document.getElementById('areaSelect');
-    if (areaSelect) areaSelect.addEventListener('change', performFilterAndSearch);
-
-    // Download
-    const downloadIcon = document.getElementById('downloadIcon');
-    if (downloadIcon) downloadIcon.addEventListener('click', () => openModal('downloadModal'));
-    
-    const btnConfirmDownload = document.getElementById('btnConfirmDownload');
-    if (btnConfirmDownload) btnConfirmDownload.addEventListener('click', downloadFile);
-
-    // Enter Vehicle Flow
-    const btnSaveVehicle = document.getElementById('btnSaveVehicle');
-    if (btnSaveVehicle) btnSaveVehicle.addEventListener('click', showConfirmModal);
-    
-    const btnConfirmEnter = document.getElementById('btnConfirmEnter');
-    if (btnConfirmEnter) btnConfirmEnter.addEventListener('click', confirmEnterVehicle);
-    
-    const btnEditCategory = document.getElementById('btnEditCategory');
-    if (btnEditCategory) btnEditCategory.addEventListener('click', openEditCategory);
-
-// Exit Vehicle Flow (Event delegation for dynamic buttons)
-    document.body.addEventListener('click', e => {
-        // Inayos para sa Exit Vehicle Button (na may <img> sa loob)
-        const exitButton = e.target.closest('.exit-btn');
-        if (exitButton) {
-            openExitModal(exitButton.dataset.slotId);
-            return; // Para 'di mag-conflict
-        }
-
-        // Inayos para sa Enter Vehicle Button (para iwas-bug din)
-        const enterButton = e.target.closest('.btn-enter');
-        if (enterButton) {
-            openEnterVehicleModal(enterButton.dataset.slotId);
-            return;
-        }
-    });
-    const btnConfirmExit = document.getElementById('btnConfirmExit');
-    if (btnConfirmExit) btnConfirmExit.addEventListener('click', confirmExit);
-
-    // Save Account Flow
-    const btnSaveChanges = document.getElementById('btnSaveChanges');
-    if (btnSaveChanges) btnSaveChanges.addEventListener('click', showSaveConfirm);
-    
-    const btnConfirmSave = document.getElementById('btnConfirmSave');
-    if (btnConfirmSave) btnConfirmSave.addEventListener('click', confirmSaveChanges);
-    
-    // Change Password
-    const changePasswordSpan = document.querySelector('.change-password');
-    if (changePasswordSpan) {
-        changePasswordSpan.addEventListener('click', () => {
-            showToast('Change password feature is not yet implemented.', 'error');
-        });
-    }
-
-    // Damage Modal
-    const btnAddDamage = document.getElementById('btnAddDamage');
-    if (btnAddDamage) btnAddDamage.addEventListener('click', addDamageItem);
-
-    // Close Modals
-    document.querySelectorAll('.modal-close, button[data-modal-id]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const modalId = e.target.dataset.modalId || (e.target.closest('.modal-overlay') ? e.target.closest('.modal-overlay').id : null);
-            if (modalId) {
-                closeModal(modalId);
-            }
-        });
-    });
-
-    // Close modal when clicking overlay
-    document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) {
-                closeModal(overlay.id);
-            }
-        });
-    });
-
-    // Close user menu when clicking outside
-    document.addEventListener('click', function(e) {
-        const userMenu = document.getElementById('userMenu');
-        const userIcon = document.querySelector('.user-icon');
-        if (!userIcon || !userMenu) return; 
-        if (!userIcon.contains(e.target) && !userMenu.contains(e.target) && userMenu.classList.contains('active')) {
-            userMenu.classList.remove('active');
-        }
-    });
-}
-
-// ========================================================
-// INITIALIZE ON PAGE LOAD
-// ========================================================
-document.addEventListener('DOMContentLoaded', function() {
-    loadDataFromLocal();      // 1. Load data
-    setupEventListeners();    // 2. Setup all buttons
-    
-    // 3. Populate user info
-    const userInfoH3 = document.querySelector('.user-menu-header .user-info h3');
-    if (userInfoH3) userInfoH3.textContent = `${userData.firstName} ${userData.lastName}`;
-    
-    const userRoleDiv = document.querySelector('.user-menu-header .user-info .user-role');
-    if (userRoleDiv) userRoleDiv.textContent = userData.role;
-
-    // 4. Initialize damage list
-    updateDamageList();
-
-    // 5. Trigger initial render
-    switchTab('dashboard'); // Start with dashboard
+    initializeApp();
 });

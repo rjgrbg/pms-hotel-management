@@ -1,3 +1,51 @@
+<?php
+// 1. Start the session with the same secure settings
+session_start([
+  'cookie_httponly' => true,
+  'cookie_secure' => isset($_SERVER['HTTPS']),
+  'use_strict_mode' => true
+]);
+
+// 2. !! THE FIX !! 
+// Tell the browser to not cache this page
+header('Cache-Control: no-cache, no-store, must-revalidate'); // HTTP 1.1.
+header('Pragma: no-cache'); // HTTP 1.0.
+header('Expires: 0'); // Proxies.
+
+// 3. Check if the user is actually logged in.
+// If no UserID is in the session, they aren't logged in.
+if (!isset($_SESSION['UserID'])) {
+  // Redirect them to the login page (adjust to your login page name)
+  header("Location: signin.php"); 
+  exit();
+}
+
+// 4. Load database and user data
+require_once('db_connection.php');
+require_once('User.php');
+
+// Get database connection
+$conn = get_db_connection('pms');
+if (!$conn) {
+    // Handle database connection error gracefully
+    die("Database connection failed. Please try again later.");
+}
+
+// Pass the connection to the function
+$userData = getUserData($conn); 
+if (!$userData) {
+    // User data not found, maybe session is valid but user deleted?
+    // Log out and redirect to login
+    session_destroy();
+    header("Location: signin.php?error=userNotFound");
+    exit();
+}
+
+// *** MODIFIED: Using the correct keys 'Name' and 'Accounttype' from inventory.php ***
+$Fname = htmlspecialchars($userData['Name'] ?? 'Guest');
+$Accounttype = htmlspecialchars($userData['Accounttype'] ?? 'Unknown');
+$conn->close();
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,431 +53,421 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Celestia Hotel - Parking Management</title>
     
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/parking.css?v=1.5">
     
-    <link rel="stylesheet" href="css/parking.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
-    <div class="header">
-        <div class="header-left">
-            <div class="logo">
-                <img src="assets/images/celestia-logo.png" alt="The Celestia Hotel Logo">
-            </div>
-            <h1 class="hotel-name">THE CELESTIA HOTEL</h1>
+    <header class="header">
+        <div class="headerLeft">
+            <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" />
+            <span class="hotelName">THE CELESTIA HOTEL</span>
         </div>
-        <div class="user-icon"> 👤
-            <div class="user-menu" id="userMenu">
-                <div class="user-menu-header">
-                    <div class="user-avatar">👤</div>
-                    <div class="user-info">
-                        <h3>Juan Bagayan</h3>
-                        <div class="user-role">Parking Management Head</div>
-                    </div>
-                </div>
-                <button id="btnAccountDetails">⚙️ Account Details</button> <button id="btnLogout">🚪 Logout</button> </div>
+        <img src="assets/icons/profile-icon.png" alt="Profile" class="profileIcon" id="profileBtn" />
+    </header> 
+
+    <aside class="profile-sidebar" id="profile-sidebar">
+        <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
+        
+        <div class="profile-header">
+            <div class="profile-pic-container">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h3><?php echo $Fname; ?></h3>
+            <p><?php echo $Accounttype; ?></p>
+        </div>
+
+        <nav class="profile-nav">
+            <a href="#" id="account-details-link">
+                <i class="fas fa-user-edit" style="margin-right: 10px;"></i> Account Details
+            </a>
+        </nav>
+        
+        <div class="profile-footer">
+            <a id="logoutBtn">
+                <i class="fas fa-sign-out-alt" style="margin-right: 10px;"></i> Logout
+            </a>
+        </div>
+    </aside>
+
+    <div class="modalBackdrop" id="logoutModal" style="display: none;">
+        <div class="logoutModal">
+            <button class="closeBtn" id="closeLogoutBtn">×</button>
+            <div class="modalIcon">
+                <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
+            </div>
+            <h2>Are you sure you want to logout?</h2>
+            <p>You will be logged out from your account and redirected to the login page.</p>
+            <div class="modalButtons">
+                <button class="modalBtn cancelBtn" id="cancelLogoutBtn">CANCEL</button>
+                <button class="modalBtn confirmBtn" id="confirmLogoutBtn">YES, LOGOUT</button>
+            </div>
         </div>
     </div>
 
-    <div class="container">
-        <div class="title-bar">
-            <h2 class="title">PARKING</h2>
-            <div class="controls">
-                <select id="areaSelect">
-                    <option value="all">Area</option> 
-                </select>
-                <div class="search-box">
-                    <input type="text" placeholder="Search">
-                    <button class="search-btn">🔍</button>
+
+    <div class="mainContainer">
+        <h1 class="pageTitle">Parking</h1>
+
+        <div class="tabNavigation">
+            <button class="tabBtn active" data-tab="dashboard">
+                <i class="fas fa-tachometer-alt tabIcon" style="font-size: 16px;"></i> Dashboard
+            </button>
+            <button class="tabBtn" data-tab="slots">
+                <i class="fas fa-parking tabIcon" style="font-size: 16px;"></i> Slots
+            </button>
+            <button class="tabBtn" data-tab="vehicleIn">
+                <i class="fas fa-car-side tabIcon" style="font-size: 16px;"></i> Vehicle In
+            </button>
+            <button class="tabBtn" data-tab="history">
+                <i class="fas fa-history tabIcon" style="font-size: 16px;"></i> History
+            </button>
+        </div>
+
+        <div class="tabContent active" id="dashboard-tab">
+            <div class="controlsRow">
+                <div class="filterControls">
+                    <select class="filterDropdown" id="areaFilterDashboard">
+                        <option value="all">All Areas</option>
+                    </select>
+                    <button class="refreshBtn" id="refreshBtnDashboard">
+                        <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+                    </button>
                 </div>
-                <button class="download-icon" id="downloadIcon">⬇️</button> </div>
-        </div>
-
-        <div class="tabs">
-            <button class="tab active" data-tab="dashboard">Dashboard</button>
-            <button class="tab" data-tab="slots">Slots</button>
-            <button class="tab" data-tab="vehicleIn">Vehicle In</button>
-            <button class="tab" data-tab="history">History</button>
-        </div>
-
-        <div class="content" id="dashboardContent">
-            <div class="section-header">Current Parking Details</div>
+            </div>
             
             <div class="summary-cards">
                 <div class="card">
                     <div class="card-label">Occupied</div>
-                    <div class="card-value">0</div> </div>
+                    <div class="card-value">0</div> 
+                </div>
                 <div class="card">
                     <div class="card-label">Available</div>
-                    <div class="card-value">0</div> </div>
+                    <div class="card-value">0</div> 
+                </div>
                 <div class="card">
                     <div class="card-label">Total</div>
-                    <div class="card-value">0</div> </div>
+                    <div class="card-value">0</div> 
+                </div>
             </div>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Area</th>
-                        <th>Available</th>
-                        <th>Occupied</th>
-                        <th>Total</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
+            <div class="tableWrapper">
+                <table class="requestsTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="AreaName">Area</th>
+                            <th class="sortable" data-sort="available">Available</th>
+                            <th class="sortable" data-sort="occupied">Occupied</th>
+                            <th class="sortable" data-sort="total">Total</th>
+                            <th class="sortable" data-sort="status">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dashboardTableBody">
+                        <tr><td colspan="5" style="text-align: center;">Loading...</td></tr>
                     </tbody>
-            </table>
+                </table>
+            </div>
         </div>
 
-        <div class="content hidden" id="slotsContent">
-            <div class="table-header grid-5">
-                <div>Area</div>
-                <div>Slot Number</div>
-                <div>Allowed Vehicle</div>
-                <div>Status</div>
-                <div>Park Vehicle</div>
+        <div class="tabContent" id="slots-tab">
+            <div class="controlsRow">
+                <div class="filterControls">
+                    <select class="filterDropdown" id="areaFilterSlots">
+                        <option value="all">All Areas</option>
+                    </select>
+                    <select class="filterDropdown" id="statusFilterSlots">
+                        <option value="all">All Status</option>
+                        <option value="available">Available</option>
+                        <option value="occupied">Occupied</option>
+                    </select>
+                    <div class="searchBox">
+                        <input type="text" placeholder="Search by Slot..." class="searchInput" id="searchSlots" />
+                        <button class="searchBtn">
+                            <img src="assets/icons/search-icon.png" alt="Search" />
+                        </button>
+                    </div>
+                    <button class="refreshBtn" id="refreshBtnSlots">
+                        <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+                    </button>
+                </div>
             </div>
-            <div id="slotsTable"></div>
-            <div class="pagination" id="pagination-slots"></div> </div>
+            <div class="tableWrapper">
+                <table class="requestsTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="AreaName">Area</th>
+                            <th class="sortable" data-sort="SlotName">Slot Number</th>
+                            <th class="sortable" data-sort="AllowedVehicle">Allowed Vehicle</th>
+                            <th class="sortable" data-sort="Status">Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="slotsTableBody">
+                        <tr><td colspan="5" style="text-align: center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination-slots"></div>
+        </div>
 
-        <div class="content hidden" id="vehicleInContent">
-            <div class="table-header grid-8">
-                <div>Slot Number</div>
-                <div>Plate #</div>
-                <div>Room</div>
-                <div>Name</div>
-                <div>Vehicle Type</div>
-                <div>Category</div>
-                <div>Enter Time</div>
-                <div>Enter Date</div>
-                <div>Exit Vehicle</div>
+        <div class="tabContent" id="vehicleIn-tab">
+            <div class="controlsRow">
+                 <div class="filterControls">
+                    <select class="filterDropdown" id="areaFilterVehicleIn">
+                        <option value="all">All Areas</option>
+                    </select>
+                    <div class="searchBox">
+                        <input type="text" placeholder="Search Plate, Name, Room..." class="searchInput" id="searchVehicleIn" />
+                        <button class="searchBtn">
+                            <img src="assets/icons/search-icon.png" alt="Search" />
+                        </button>
+                    </div>
+                    <button class="refreshBtn" id="refreshBtnVehicleIn">
+                        <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+                    </button>
+                </div>
             </div>
-            <div id="vehicleInTable"></div>
-            <div class="pagination" id="pagination-vehicleIn"></div> </div>
+            <div class="tableWrapper">
+                <table class="requestsTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="SlotName">Slot Number</th>
+                            <th class="sortable" data-sort="PlateNumber">Plate #</th>
+                            <th class="sortable" data-sort="RoomNumber">Room</th>
+                            <th class="sortable" data-sort="GuestName">Name</th>
+                            <th class="sortable" data-sort="VehicleType">Vehicle Type</th>
+                            <th class="sortable" data-sort="VehicleCategory">Category</th>
+                            <th class="sortable" data-sort="EntryTime">Enter Time</th>
+                            <th class="sortable" data-sort="EntryTime">Enter Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vehicleInTableBody">
+                        <tr><td colspan="9" style="text-align: center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination-vehicleIn"></div>
+        </div>
 
-        <div class="content hidden" id="historyContent">
-            <div class="table-header grid-9">
-                <div>Slot Number</div>
-                <div>Plate #</div>
-                <div>Room</div>
-                <div>Name</div>
-                <div>Vehicle Type</div>
-                <div>Category</div>
-                <div>Parking Time</div>
-                <div>Enter Time</div>
-                <div>Enter Date</div>
+        <div class="tabContent" id="history-tab">
+            <div class="controlsRow">
+                <div class="filterControls">
+                    <select class="filterDropdown" id="areaFilterHistory">
+                        <option value="all">All Areas</option>
+                    </select>
+                    <div class="searchBox">
+                        <input type="text" placeholder="Search Plate, Name, Room..." class="searchInput" id="searchHistory" />
+                        <button class="searchBtn">
+                            <img src="assets/icons/search-icon.png" alt="Search" />
+                        </button>
+                    </div>
+                    <button class="refreshBtn" id="refreshBtnHistory">
+                        <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+                    </button>
+                    <button class="downloadBtn" id="downloadBtnHistory">
+                        <img src="assets/icons/download-icon.png" alt="Download" />
+                    </button>
+                </div>
             </div>
-            <div id="historyTable"></div>
-            <div class="pagination" id="pagination-history"></div> </div>
+            <div class="tableWrapper">
+                <table class="requestsTable">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-sort="SlotName">Slot Number</th>
+                            <th class="sortable" data-sort="PlateNumber">Plate #</th>
+                            <th class="sortable" data-sort="RoomNumber">Room</th>
+                            <th class="sortable" data-sort="GuestName">Name</th>
+                            <th class="sortable" data-sort="VehicleType">Vehicle Type</th>
+                            <th class="sortable" data-sort="VehicleCategory">Category</th>
+                            <th>Parking Time</th>
+                            <th class="sortable" data-sort="EntryTime">Enter Time/Date</th>
+                            <th class="sortable" data-sort="ExitTime">Exit Time/Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr><td colspan="9" style="text-align: center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="pagination" id="pagination-history"></div>
+        </div>
+
     </div>
 
     <div class="modal-overlay" id="enterVehicleModal">
-        <div class="modal">
-            <button class="modal-close" data-modal-id="enterVehicleModal">×</button>
+        <div class="modal-content">
             <div class="modal-header">
-                <div class="modal-icon">🚗</div>
-                <div>
-                    <div class="modal-title" id="slotNumberTitle">1A56</div>
-                    <div class="modal-text">You can update the details of guest information below. Make sure all information is accurate before saving the changes to keep the parking records up to date.</div>
+                <div class="modal-title">
+                    <i class="fas fa-car-side modal-icon-fa"></i>
+                    <h2 id="slotNumberTitle"></h2>
                 </div>
+                <button class="modal-close-btn" data-modal-id="enterVehicleModal">&times;</button>
             </div>
-            
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr 1fr; padding-bottom: 0;">
-                <div class="form-field">
-                    <label>Name</label>
-                    <input type="text" id="guestName">
-                </div>
-                <div class="form-field">
-                    <label>Plate #</label>
-                    <input type="text" id="plateNumber">
-                </div>
-                <div class="form-field">
-                    <label>Room</label>
-                    <input type="text" id="roomNumber">
-                </div>
-            </div>
-            
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr; padding-top: 1rem;">
-                <div class="form-field">
-                    <label>Vehicle 🚗</label>
-                    <select id="vehicleType">
-                        <option value="">Select</option>
-                        <option>2 Wheeled</option>
-                        <option>4 Wheeled</option>
-                    </select>
-                </div>
-                <div class="form-field">
-                    <label>Category 🚗</label>
-                    <div class="flex-field">
-                        <select id="categorySelect">
-                            <option>Sedan</option>
-                            <option>SUV</option>
-                            <option>Pickup</option>
-                            <option>Van</option>
-                            <option>Motorcycle</option>
-                            <option>Truck</option>
-                        </select>
-                        <button class="edit-btn" id="btnEditCategory">✏️</button>
+            <p class="modal-description">
+                Enter the details of the guest information below. Make sure all information is accurate.
+            </p>
+            <div class="modal-body">
+                <form id="enter-vehicle-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="guestName">Name</label>
+                            <input type="text" id="guestName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="plateNumber">Plate #</label>
+                            <input type="text" id="plateNumber" required>
+                        </div>
                     </div>
-                </div>
-                <div class="form-field full-width">
-                    <label>Slot Number</label>
-                    <select id="slotSelect" disabled>
-                        <option>1A56</option>
-                    </select>
-                </div>
-            </div>
-            <div class="text-center">
-                <button class="btn-yellow" id="btnSaveVehicle">SAVE</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="editCategoryModal">
-        <div class="modal">
-            <button class="modal-close" data-modal-id="editCategoryModal">×</button>
-            <div class="modal-title" style="text-align: center; margin-bottom: 1.5rem;">Edit Category</div>
-            
-            <div class="form-field" style="margin-bottom: 1.5rem;">
-                <label>Vehicle</label>
-                <input type="text" placeholder="Enter category name">
-            </div>
-            <div class="category-list">
-              <div class="category-item">
-                    <span>2 Wheeled</span>
-                    <div class="category-wheels">
-                        <span class="wheel-icon">🚲</span>
-                        <span class="wheel-icon">🚗</span>
-                    </div>
-                </div>
-                <div class="category-item">
-                    <span>4 Wheeled</span>
-                    <div class="category-wheels">
-                        <span class="wheel-icon">🚲</span>
-                        <span class="wheel-icon">🚗</span>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-yellow">ADD CATEGORY</button>
-                <button class="btn-yellow" data-modal-id="editCategoryModal">SAVE CHANGES</button>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="roomNumber">Room</label>
+                            <input type="text" id="roomNumber">
+                        </div>
+                        <div class="form-group">
+                            <label for="vehicleType">Vehicle Type</label>
+                            <select id="vehicleType" required>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="categorySelect">Category</label>
+                        <select id="categorySelect" required>
+                             <option value="">Select vehicle type first...</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="submit-btn" id="btnSaveVehicle">SAVE</button>
+                </form>
             </div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="damageModal">
-        <div class="modal modal-damage">
-            <button class="modal-close" data-modal-id="damageModal">×</button>
-            <div class="modal-title-center">⚠️ DAMAGE ITEMS</div>
-             <table class="damage-summary-table">
-                <thead>
-                    <tr>
-                        <th>ID, 101</th>
-                        <th>Total</th>
-                        <th>Damage</th>
-                        <th>Non Damage</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td id="damageId">101</td>
-                        <td id="damageTotal">5</td>
-                        <td id="damageDamaged">2</td>
-                        <td id="damageNonDamaged">3</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="damage-form">
-                <div class="form-row-damage">
-                    <div class="form-field-damage">
-                        <label>Types Of Damages</label>
-                        <input type="text" id="damageType" placeholder="e.g., Burnt">
-                    </div>
-                    <div class="form-field-damage-small">
-                        <label>No. Of Damages</label>
-                        <input type="number" id="damageCount" min="1" value="1">
-                    </div>
-                    <button class="btn-add-damage" id="btnAddDamage">Add Damage Item</button>
-                </div>
-            </div>
-
-            <div class="damages-section">
-                <h3>Damages</h3>
-                <table class="damages-list-table">
-                    <thead>
-                        <tr>
-                            <th>Types of Damages</th>
-                            <th>Date Damages</th>
-                            <th>No. Of Damages</th>
-                        </tr>
-                    </thead>
-                    <tbody id="damagesListBody">
-tr>
-                            <td>Burnt</td>
-                            <td>10/25/25</td>
-                            <td>2</td>
-                    </a> </tr>
-                    </tbody>
-                </table>
-Â          </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="confirmModal">
-        <div class="modal modal-gradient">
-            <h2 class="modal-title-yellow">Are you sure you want to enter this vehicle into the parking area?</h2>
-            <p class="modal-text-gray">Please review the details before confirming. Once entered, the vehicle will be recorded and visible in the parking system.</p>
-            <div class="modal-buttons">
-                <button class="btn-yellow" data-modal-id="confirmModal">CANCEL</button>
-                <button class="btn-yellow" id="btnConfirmEnter">YES, ENTER VEHICLE</button>
+    <div class="modal-overlay-confirm" id="confirmModal">
+        <div class="modal-content-confirm">
+            <h3>Are you sure you want to enter this vehicle?</h3>
+            <p>Please review the details before confirming.</p>
+            <div class="confirm-buttons">
+                <button type="button" class="btn btn-cancel" data-modal-id="confirmModal">CANCEL</button>
+                <button type="button" class="btn btn-confirm" id="btnConfirmEnter">YES, ENTER</button>
             </div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="successModal">
-        <div class="modal modal-gradient">
-            <div class="modal-icon-large">P</div>
-            <h2 class="modal-subtitle">Vehicle Entered Successfully</h2>
-            <button class="btn-yellow" data-modal-id="successModal">OKAY</button>
+    <div class="modal-overlay-success" id="successModal">
+        <div class="modal-content-success">
+            <i class="fas fa-check-circle modal-icon" style="font-size: 60px; color: #FFA237; margin-bottom: 20px;"></i>
+            <h3>Vehicle Entered Successfully</h3>
+            <button type="button" class="btn btn-okay" data-modal-id="successModal">OKAY</button>
         </div>
     </div>
 
-    <div class="modal-overlay" id="exitModal">
-        <div class="modal modal-gradient">
-            <h2 class="modal-title-yellow">Exit?</h2>
-            <div class="info-section">
-                <div class="info-row">
-                    <span>Slot Number:</span>
-                    <span id="exitSlotNumber">1L - A6</span>
-                </div>
-                <div class="info-row">
-                    <span>Plate #:</span>
-                    <span id="exitPlate">AB123C</span>
-                </div>
-                <div class="info-row">
-                    <span>Vehicle:</span>
-                    <span id="exitVehicle">Sedan</span>
-                </div>
-                <div class="info-row">
-                    <span>Enter Date and Time:</span>
-                    <span id="exitDateTime">2025.10.25 / 6:30PM</span>
-                </div>
-            </div>
-            <div class="modal-buttons">
-                <button class="btn-yellow" data-modal-id="exitModal">CANCEL</button>
-                <button class="btn-yellow" id="btnConfirmExit">EXIT</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="logoutModal">
-        <div class="modal modal-gradient">
-            <div class="modal-icon-large">🚪</div>
-            <h2 class="modal-subtitle">Are you sure you want to log out on your account?</h2>
-            <div class="modal-buttons">
-                <button class="btn-yellow" data-modal-id="logoutModal">CANCEL</button>
-                <button class="btn-yellow" id="btnConfirmLogout">YES, LOGOUT</button>
+    <div class="modal-overlay-confirm" id="exitModal">
+        <div class="modal-content-confirm" style="text-align: left;">
+            <h3 style="text-align: center;">Exit Vehicle?</h3>
+            <p>
+                <strong>Slot:</strong> <span id="exitSlotNumber"></span><br>
+                <strong>Plate #:</strong> <span id="exitPlate"></span><br>
+                <strong>Vehicle:</strong> <span id="exitVehicle"></span><br>
+                <strong>Entered:</strong> <span id="exitDateTime"></span>
+            </p>
+            <div class="confirm-buttons">
+                <button type="button" class="btn btn-cancel" data-modal-id="exitModal">CANCEL</button>
+                <button type="button" class="btn btn-confirm" id="btnConfirmExit" style="background-color: #c9302c; color: white;">YES, EXIT</button>
             </div>
         </div>
     </div>
 
     <div class="modal-overlay" id="accountModal">
-        <div class="modal modal-large">
-            <button class="modal-close" data-modal-id="accountModal">×</button>
-            <div class="account-header">
-                <div class="user-avatar">👤</div>
-                <div class="account-info">
-                    <h2>Juan Bagayan</h2>
-                    <p>ID: 019284738475</p>
-                    <p>Parking Management Head</p>
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-user-edit modal-icon-fa"></i>
+                    <h2>Account Details</h2>
                 </div>
+                <button class="modal-close-btn" data-modal-id="accountModal">&times;</button>
             </div>
-            <div class="form-grid">
-                <div class="form-field">
-                    <label>First Name</label>
-                    <input type="text" id="firstName" value="Juan">
-                </div>
-                <div class="form-field">
-                    <label>Email Address</label>
-                    <input type="email" id="emailAddress" value="Juan@housekeeper.com">
-                </div>
-                <div class="form-field">
-                    <label>Middle Name (Optional)</label>
-                    <input type="text" id="middleName" value="Constant">
-                </div>
-                <div class="form-field">
-                    <label>Username</label>
-                    <input type="text" id="username" value="Juana">
-                </div>
-                <div class="form-field">
-                    <label>Last Name</label>
-                    <input type="text" id="lastName" value="Bagayan">
-                </div>
-                <div class="form-field">
-                    <label>Password <span class="change-password">Change Password?</span></label>
-                    <input type="password" id="password" value="************">
-                </div>
-                <div class="form-field">
-                    <label>Birthday</label>
-                    <input type="date" id="birthday" value="2004-10-25">
-                </div>
-                <div class="form-field">
-                    <label>Contact</label>
-                    <input type="text" id="contact" value="09222222222">
-                </div>
-                <div class="form-field">
-                    <label>Shift</label>
-                    <select id="shift">
-                        <option selected>Day</option>
-                        <option>Night</option>
-                    </select>
-                </div>
-                <div class="form-field full-width">
-                    <label>Address</label>
-                    <input type="text" id="address" value="Block 1 Lot 2, Quezon City">
-                </div>
-            </div>
-            <div class="text-center">
-                <button class="btn-yellow" id="btnSaveChanges">SAVE CHANGES</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay" id="saveConfirmModal">
-        <div class="modal modal-gradient">
-            <h2 class="modal-title-yellow">Are you sure you want to save information?</h2>
-            <p class="modal-text-gray">Please double-check all entered details before proceeding. Once confirmed, your account will be updated.</p>
-            <div class="modal-buttons">
-                <button class="btn-yellow" data-modal-id="saveConfirmModal">CANCEL</button>
-                <button class="btn-yellow" id="btnConfirmSave">YES, UPDATE</button>
+            <div class="modal-body">
+                <form id="account-details-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="firstName">First Name</label>
+                            <input type="text" id="firstName" name="Fname">
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" id="lastName" name="Lname">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="middleName">Middle Name (Optional)</label>
+                            <input type="text" id="middleName" name="Mname">
+                        </div>
+                        <div class="form-group">
+                            <label for="emailAddress">Email Address</label>
+                            <input type="email" id="emailAddress" name="EmailAddress">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" name="Username">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" name="Password" placeholder="Enter new password to change">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="birthday">Birthday</label>
+                            <input type="date" id="birthday" name="Birthday">
+                        </div>
+                        <div class="form-group">
+                            <label for="contact">Contact</label>
+                            <input type="text" id="contact" name="ContactNumber">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="address">Address</label>
+                        <input type="text" id="address" name="Address">
+                    </div>
+                    <button type="submit" class="submit-btn" id="btnSaveChanges">SAVE CHANGES</button>
+                </form>
             </div>
         </div>
     </div>
 
-    <div class="modal-overlay" id="saveSuccessModal">
-        <div class="modal modal-gradient">
-            <div class="modal-icon-user">
-                👤
-                <div class="checkmark">✓</div>
+    <div class="modal-overlay-confirm" id="saveConfirmModal">
+        <div class="modal-content-confirm">
+            <h3>Are you sure you want to save?</h3>
+            <p>Please double-check all details. Your account will be updated.</p>
+            <div class="confirm-buttons">
+                <button type="button" class="btn btn-cancel" data-modal-id="saveConfirmModal">CANCEL</button>
+                <button type="button" class="btn btn-confirm" id="btnConfirmSave">YES, UPDATE</button>
             </div>
-            <h2 class="modal-subtitle">Save Changes Successfully</h2>
-            <button class="btn-yellow" data-modal-id="saveSuccessModal">OKAY</button>
         </div>
     </div>
 
-    <div class="modal-overlay" id="downloadModal">
-        <div class="modal modal-gradient">
-            <div class="download-icon-large">⬇️</div>
-            <h2 class="modal-subtitle">Download File?</h2>
-            <button class="btn-yellow" id="btnConfirmDownload">DOWNLOAD</button>
+    <div class="modal-overlay-success" id="saveSuccessModal">
+        <div class="modal-content-success">
+            <i class="fas fa-user-check modal-icon" style="font-size: 60px; color: #FFA237; margin-bottom: 20px;"></i>
+            <h3>Changes Saved Successfully</h3>
+            <button type="button" class="btn btn-okay" data-modal-id="saveSuccessModal">OKAY</button>
         </div>
     </div>
+
 
     <div id="toast-container"></div>
 
-    <script src="script/parking.js"></script>
+    <script>
+        window.INJECTED_USER_DATA = <?php echo json_encode($userData); ?>;
+    </script>
+    
+    <script src="script/parking.js?v=1.5"></script>
 </body>
 </html>
