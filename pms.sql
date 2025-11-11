@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 11, 2025 at 04:04 AM
+-- Generation Time: Nov 11, 2025 at 10:14 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -20,35 +20,6 @@ SET time_zone = "+00:00";
 --
 -- Database: `pms`
 --
-
--- --------------------------------------------------------
-
---
--- Table structure for table `auth_tokens`
---
-
-CREATE TABLE `auth_tokens` (
-  `id` int(11) NOT NULL,
-  `selector` char(32) NOT NULL,
-  `hashed_validator` char(255) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `expires` datetime NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `auth_tokens`
---
-
-INSERT INTO `auth_tokens` (`id`, `selector`, `hashed_validator`, `user_id`, `expires`) VALUES
-(1, 'b25c6de43f4148da96199c7fc499fd6c', '$2y$10$IVrlpHnNisvApBcsKWhOr.FRGIR4MIhIGO6.X6fGqrrLSDhFIa17u', 1, '2025-11-20 11:21:39'),
-(2, 'e9cfdd1564ca84bc5f391c4dbaccd82a', '$2y$10$j4IgDtgzCMyRfPZ9hDHlouDodNN2Q6AOo7rr9KXAUbFFt.ahHYBEa', 1, '2025-11-20 11:22:15'),
-(3, '951ba576d478816b4b089007770e9ad8', '$2y$10$2rRZq9ZjCWNlyk81OTIQveeH2ghmY5jGRI1l7VJVk/YwkZdUQ8W3K', 1, '2025-11-20 11:24:45'),
-(4, '037a5269db024aba8d37f8b9b0c5d57d', '$2y$10$fgsmLl18bgL1.1hoSESePe.PtXydnScDzGbVCmuX.GQ3K/aoBhXCG', 1, '2025-11-20 11:28:11'),
-(5, '737ccd17b442cd280a2e63bd9e0e5353', '$2y$10$zvg.s9kqZWHHKtC0mho3YuEp0FpAjfMfeeNFjNBZAeUvrG.pDmy1i', 1, '2025-11-20 11:30:29'),
-(6, 'b3c83cf9348fba6bfbdc95bf62846e8b', '$2y$10$zb.7rGa9GSXC/qAm5lqlZuOH7.ntsRdrToYKsWda7aLamXDQP2oxq', 1, '2025-11-20 11:38:07'),
-(7, '8010b32db512ef8df57a0b9ef31c14d8', '$2y$10$SiZR5tOKDuGGh6fAFm3rWuqhl676CxHtL3Z/UorGp58U9Ho6XPi.W', 1, '2025-11-20 11:50:32'),
-(8, '980b6a14cb6b535f1de2cb1eef3ed89f', '$2y$10$HsXHr.wk33qFrX8nqmuvM.gotUPaQbK0ZYDkanGdz24sMpHqf/1R2', 1, '2025-11-20 14:28:08'),
-(9, '680070b8cc1f43c09d4169348edc0ba6', '$2y$10$eiTcj0syJkdpkWuj7k3xp.QkZeIpFlmyuOSvm3ThDeEFE/d9vY/te', 1, '2025-11-20 14:33:52');
 
 -- --------------------------------------------------------
 
@@ -79,23 +50,6 @@ CREATE TABLE `cleaningtask` (
   `DateTimeCompleted` timestamp NULL DEFAULT NULL,
   `CleaningRemarks` varchar(255) DEFAULT NULL,
   `StatusUpdateToken` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `hvacmaintenance`
---
-
-CREATE TABLE `hvacmaintenance` (
-  `UnitID` int(11) NOT NULL,
-  `UnitName` varchar(255) NOT NULL,
-  `RoomID` int(11) NOT NULL,
-  `UnitType` varchar(255) NOT NULL,
-  `Manufacturer` varchar(255) NOT NULL,
-  `ModelNumber` varchar(255) NOT NULL,
-  `InstallDate` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `UnitStatus` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -185,17 +139,30 @@ INSERT INTO `itemcategory` (`ItemCategoryID`, `ItemCategoryName`) VALUES
 -- --------------------------------------------------------
 
 --
--- Table structure for table `maintenancelog`
+-- Table structure for table `maintenance_logs`
 --
 
-CREATE TABLE `maintenancelog` (
-  `MaintenanceLogID` int(11) NOT NULL,
-  `WorkOrderID` int(11) NOT NULL,
-  `UserID` int(11) NOT NULL,
-  `PartReplace` varchar(255) DEFAULT NULL,
-  `ResolutionRemarks` varchar(255) NOT NULL,
-  `TimeDateMaintenance` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+CREATE TABLE `maintenance_logs` (
+  `LogID` int(11) NOT NULL,
+  `RequestID` int(11) DEFAULT NULL,
+  `RoomID` int(11) NOT NULL,
+  `UserID` int(11) DEFAULT NULL COMMENT 'User who performed the action (e.g., manager, staff)',
+  `Timestamp` datetime NOT NULL DEFAULT current_timestamp(),
+  `Action` varchar(255) NOT NULL COMMENT 'e.g., CREATED, ASSIGNED, STATUS_CHANGED, COMPLETED, CANCELLED',
+  `Details` text DEFAULT NULL COMMENT 'e.g., Status changed to In Progress by StaffID 5. Assigned to StaffID 5.'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `maintenance_logs`
+--
+
+INSERT INTO `maintenance_logs` (`LogID`, `RequestID`, `RoomID`, `UserID`, `Timestamp`, `Action`, `Details`) VALUES
+(1, 25, 4, 35, '2025-11-12 04:21:53', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Electrical & Lighting'),
+(2, 25, 4, 39, '2025-11-12 04:23:43', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: '),
+(3, 26, 1, 35, '2025-11-12 04:25:03', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Bathroom Area'),
+(4, 26, 1, 39, '2025-11-12 04:25:19', 'IN PROGRESS', 'Status set to \'In Progress\' by staff (ID: 39). Remarks: '),
+(5, 26, 1, 39, '2025-11-12 04:25:37', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: '),
+(6, 27, 1, 35, '2025-11-12 04:26:54', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: HVAC');
 
 -- --------------------------------------------------------
 
@@ -207,25 +174,31 @@ CREATE TABLE `maintenance_requests` (
   `RequestID` int(11) NOT NULL,
   `RoomID` int(11) NOT NULL,
   `UserID` int(11) NOT NULL,
-  `IssueType` varchar(100) NOT NULL,
-  `Description` text DEFAULT NULL,
+  `IssueType` varchar(200) NOT NULL,
   `Status` varchar(50) NOT NULL DEFAULT 'Pending',
+  `Remarks` text DEFAULT NULL,
   `DateRequested` datetime NOT NULL,
   `DateCompleted` datetime DEFAULT NULL,
-  `AssignedUserID` int(11) DEFAULT NULL,
-  `Notes` text DEFAULT NULL,
-  `Remarks` text DEFAULT NULL,
-  `WorkType` varchar(100) DEFAULT NULL,
-  `UnitType` varchar(100) DEFAULT NULL,
-  `WorkDescription` text DEFAULT NULL
+  `AssignedUserID` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `maintenance_requests`
 --
 
-INSERT INTO `maintenance_requests` (`RequestID`, `RoomID`, `UserID`, `IssueType`, `Description`, `Status`, `DateRequested`, `DateCompleted`, `AssignedUserID`, `Notes`, `Remarks`, `WorkType`, `UnitType`, `WorkDescription`) VALUES
-(12, 1, 35, 'Appliance', 'Appliance reported as \'Needs Repair\' or \'Out of Service\'.', 'Pending', '2025-11-11 10:57:27', NULL, 39, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO `maintenance_requests` (`RequestID`, `RoomID`, `UserID`, `IssueType`, `Status`, `Remarks`, `DateRequested`, `DateCompleted`, `AssignedUserID`) VALUES
+(16, 1, 35, 'Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety ', 'Completed', '', '2025-11-12 02:57:10', '2025-11-12 03:01:13', 39),
+(17, 1, 35, 'Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds', 'Completed', NULL, '2025-11-12 03:08:56', '2025-11-12 03:11:22', 39),
+(18, 1, 35, 'Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds', 'Completed', '', '2025-11-12 03:13:11', '2025-11-12 03:13:38', 39),
+(19, 1, 35, 'Flooring & Walls', 'Completed', 'daasdasds\n', '2025-11-12 03:14:06', '2025-11-12 03:14:33', 39),
+(20, 1, 35, 'Bathroom Area', 'Completed', 'dsfsdf', '2025-11-12 03:17:29', '2025-11-12 03:18:18', 39),
+(21, 1, 35, 'Doors & Windows, Bathroom Area', 'Completed', 'asadsssssssssssssss', '2025-11-12 03:21:21', '2025-11-12 03:21:39', 39),
+(22, 2, 35, 'Bathroom Area', 'Completed', '', '2025-11-12 03:30:08', '2025-11-12 03:30:35', 39),
+(23, 5, 35, 'Electrical & Lighting', 'Completed', '', '2025-11-12 03:31:00', '2025-11-12 03:31:27', 39),
+(24, 6, 35, 'HVAC', 'Completed', '', '2025-11-12 03:34:49', '2025-11-12 03:35:12', 39),
+(25, 4, 35, 'Electrical & Lighting', 'Completed', '', '2025-11-12 04:21:49', '2025-11-12 04:23:43', 39),
+(26, 1, 35, 'Bathroom Area', 'Completed', '', '2025-11-12 04:24:59', '2025-11-12 04:25:37', 39),
+(27, 1, 35, 'HVAC', 'Completed', '', '2025-11-12 04:26:51', '2025-11-12 04:55:12', 39);
 
 -- --------------------------------------------------------
 
@@ -356,20 +329,6 @@ INSERT INTO `parking_sessions` (`SessionID`, `SlotID`, `PlateNumber`, `GuestName
 -- --------------------------------------------------------
 
 --
--- Table structure for table `rate`
---
-
-CREATE TABLE `rate` (
-  `RateID` int(11) NOT NULL,
-  `AreaID` int(11) NOT NULL,
-  `VehicleCategoryID` int(11) NOT NULL,
-  `VehicleTypeID` int(11) NOT NULL,
-  `HourlyRate` decimal(15,2) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `room`
 --
 
@@ -385,37 +344,6 @@ CREATE TABLE `room` (
   `LastMaintenance` timestamp NULL DEFAULT NULL,
   `FloorNumber` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `room_appliances`
---
-
-CREATE TABLE `room_appliances` (
-  `ApplianceID` int(11) NOT NULL,
-  `RoomID` int(11) NOT NULL,
-  `ApplianceType` varchar(100) NOT NULL,
-  `ApplianceName` varchar(255) NOT NULL,
-  `Manufacturer` varchar(255) DEFAULT NULL,
-  `ModelNumber` varchar(255) DEFAULT NULL,
-  `InstalledDate` date NOT NULL,
-  `Status` varchar(50) NOT NULL DEFAULT 'Working',
-  `Remarks` text DEFAULT NULL,
-  `LastMaintainedDate` date DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `room_appliances`
---
-
-INSERT INTO `room_appliances` (`ApplianceID`, `RoomID`, `ApplianceType`, `ApplianceName`, `Manufacturer`, `ModelNumber`, `InstalledDate`, `Status`, `Remarks`, `LastMaintainedDate`) VALUES
-(5, 4, 'HVAC', 'sad', 'asda', 'dasd', '2025-11-01', 'Working', '', '2025-11-11'),
-(9, 4, 'Electric', 'sad', 'wq', 'hghhjgg', '2025-11-01', 'Working', '', NULL),
-(14, 1, 'Electric', 'sad', 'asd', 'asds', '2025-11-01', 'Needs Repair', '', '2025-11-11'),
-(15, 4, 'Electric', 'asd', 'sadd', 'sddd', '2025-11-01', 'Working', '', '2025-11-11'),
-(16, 5, 'Electric', 'asde', 's', 'bab', '2025-11-01', 'Working', '', NULL),
-(17, 2, 'Electric', 'sad', 'sadas', 'asd', '2025-11-01', 'Working', '', NULL);
 
 -- --------------------------------------------------------
 
@@ -438,11 +366,12 @@ CREATE TABLE `room_status` (
 --
 
 INSERT INTO `room_status` (`StatusID`, `RoomNumber`, `RoomStatus`, `LastClean`, `LastMaintenance`, `UserID`, `LastUpdated`) VALUES
-(1, '101', 'Maintenance', NULL, '2025-11-11 02:57:27', 35, '2025-11-11 02:57:27'),
-(3, '102', 'Available', NULL, NULL, 35, '2025-11-11 01:25:44'),
+(1, '101', 'Available', NULL, '2025-11-11 20:25:37', 1, '2025-11-11 21:01:58'),
+(3, '102', 'Available', NULL, NULL, 35, '2025-11-11 19:30:35'),
 (9, '103', 'Available', NULL, NULL, 1, '2025-11-10 23:54:25'),
-(10, '201', 'Available', NULL, '2025-11-11 01:12:47', 1, '2025-11-11 01:17:29'),
-(15, '202', 'Available', NULL, NULL, 1, '2025-11-10 23:54:33');
+(10, '201', 'Available', NULL, '2025-11-11 20:23:43', 35, '2025-11-11 20:23:43'),
+(15, '202', 'Available', NULL, NULL, 35, '2025-11-11 19:31:27'),
+(56, '301', 'Available', NULL, NULL, 35, '2025-11-11 19:35:12');
 
 -- --------------------------------------------------------
 
@@ -479,7 +408,7 @@ INSERT INTO `users` (`UserID`, `EmployeeID`, `Fname`, `Lname`, `Mname`, `Birthda
 (35, 'E1012', 'maintain', 'nance', 'manager', '2015-11-02', 'maintenance_manager', 'Available', 'maintenance', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'asd@sf.com', 'ss', 'asd', 'asd', NULL, NULL),
 (37, '1010', 'Testting', 'Admin', 'X', '1990-01-01', 'admin', 'Available', 'test.admins', '$2y$10$.yNgmWda3eza4nJtB9wz0.rGydS62.9ta4rvnAZskPauf2C3yN2la', 'dayvoice993@gmail.com', 'Morning', '123 Admin Street, Manila', '09000001010', '414a629dd94a755c3c936c40c46455766c205352ca0f09cf10769b83ea8fc51a', '2025-11-08 03:01:01'),
 (38, '1009', 'Michael', 'Brown', 'F', '1992-09-18', 'parking_manager', 'Available', 'mmanager', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'michael.brown@example.com', 'Morning', '606 Parking Way, Taguig', '09220001009', '6543fd95970924b4af1da17b312e6fd145c34424ee1f999d858778fdbd2a65ee', '2025-11-08 03:25:04'),
-(39, '1008', 'Emily', 'Chen', 'E', '2001-06-20', 'maintenance_staff', 'Assigned', 'mstaff', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'farmersday96@gmail.com', 'Morning', '505 Repair Ln, Makati', '09210001008', '8a9a372ed04b1ab93f4e1d7b4eb9ed67f56b3e8941812b5dfe4f26741226afb6', '2025-11-08 03:28:56'),
+(39, '1008', 'Emily', 'Chen', 'E', '2001-06-20', 'maintenance_staff', 'Available', 'mstaff', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'farmersday96@gmail.com', 'Morning', '505 Repair Ln, Makati', '09210001008', '8a9a372ed04b1ab93f4e1d7b4eb9ed67f56b3e8941812b5dfe4f26741226afb6', '2025-11-08 03:28:56'),
 (40, '1023', 'sadas', 'ssss', 'nase', '2015-11-03', 'parking_manager', 'Available', 'pmanager', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'as', 'sd', 'asd', 'asd', NULL, NULL);
 
 -- --------------------------------------------------------
@@ -661,7 +590,45 @@ INSERT INTO `user_logs` (`LogID`, `UserID`, `ActionType`, `Timestamp`) VALUES
 (159, 1, 'Logged Out', '2025-11-11 02:43:09'),
 (160, 35, 'Logged In', '2025-11-11 02:43:19'),
 (161, 35, 'Logged Out', '2025-11-11 02:57:05'),
-(162, 1, 'Logged In', '2025-11-11 02:57:09');
+(162, 1, 'Logged In', '2025-11-11 02:57:09'),
+(163, 1, 'Logged In', '2025-11-11 15:07:21'),
+(164, 1, 'Logged Out', '2025-11-11 15:07:31'),
+(165, 35, 'Logged In', '2025-11-11 15:07:35'),
+(166, 35, 'Logged Out', '2025-11-11 15:36:07'),
+(167, 38, 'Logged In', '2025-11-11 15:36:12'),
+(168, 38, 'Logged Out', '2025-11-11 15:36:28'),
+(169, 39, 'Logged In', '2025-11-11 15:36:39'),
+(170, 39, 'Logged Out', '2025-11-11 15:36:43'),
+(171, 34, 'Logged In', '2025-11-11 15:36:48'),
+(172, 34, 'Logged Out', '2025-11-11 15:39:25'),
+(173, 35, 'Logged In', '2025-11-11 15:39:29'),
+(174, 1, 'Logged In', '2025-11-11 15:58:34'),
+(175, 1, 'Logged Out', '2025-11-11 16:03:02'),
+(176, 35, 'Logged In', '2025-11-11 16:03:09'),
+(177, 34, 'Logged In', '2025-11-11 16:14:58'),
+(178, 34, 'Logged Out', '2025-11-11 16:15:06'),
+(179, 35, 'Logged In', '2025-11-11 16:15:22'),
+(180, 35, 'Logged Out', '2025-11-11 17:21:11'),
+(181, 1, 'Logged In', '2025-11-11 17:21:14'),
+(182, 1, 'Logged Out', '2025-11-11 17:21:31'),
+(183, 35, 'Logged In', '2025-11-11 17:21:35'),
+(184, 35, 'Logged Out', '2025-11-11 19:50:24'),
+(185, 1, 'Logged In', '2025-11-11 19:50:37'),
+(186, 1, 'Logged Out', '2025-11-11 19:50:45'),
+(187, 1, 'Logged In', '2025-11-11 19:50:48'),
+(188, 1, 'Logged Out', '2025-11-11 19:52:10'),
+(189, 35, 'Logged In', '2025-11-11 19:52:15'),
+(190, 35, 'Logged Out', '2025-11-11 20:06:09'),
+(191, 35, 'Logged In', '2025-11-11 20:06:14'),
+(192, 35, 'Logged Out', '2025-11-11 20:56:33'),
+(193, 1, 'Logged In', '2025-11-11 20:56:37'),
+(194, 1, 'Logged Out', '2025-11-11 20:59:09'),
+(195, 35, 'Logged In', '2025-11-11 20:59:15'),
+(196, 1, 'Logged In', '2025-11-11 21:01:50'),
+(197, 35, 'Logged Out', '2025-11-11 21:05:09'),
+(198, 35, 'Logged In', '2025-11-11 21:05:15'),
+(199, 35, 'Logged In', '2025-11-11 21:13:41'),
+(200, 35, 'Logged Out', '2025-11-11 21:13:51');
 
 -- --------------------------------------------------------
 
@@ -706,37 +673,9 @@ INSERT INTO `vehicletype` (`VehicleTypeID`, `TypeName`) VALUES
 (1, '2 Wheeled'),
 (2, '4 Wheeled');
 
--- --------------------------------------------------------
-
---
--- Table structure for table `workorder`
---
-
-CREATE TABLE `workorder` (
-  `WorkOrderID` int(11) NOT NULL,
-  `UnitID` int(11) NOT NULL,
-  `UserID` int(11) NOT NULL,
-  `WorkOrderType` varchar(255) NOT NULL,
-  `Status` varchar(255) NOT NULL,
-  `TimeDateAssigned` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  `TimeDateCompleted` timestamp NULL DEFAULT NULL,
-  `MaintenanceRemark` varchar(255) DEFAULT NULL,
-  `UpdateStatusToken` varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
 --
 -- Indexes for dumped tables
 --
-
---
--- Indexes for table `auth_tokens`
---
-ALTER TABLE `auth_tokens`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `selector` (`selector`),
-  ADD KEY `user_id` (`user_id`),
-  ADD KEY `idx_auth_tokens_selector` (`selector`),
-  ADD KEY `idx_auth_tokens_expires` (`expires`);
 
 --
 -- Indexes for table `cleaninglog`
@@ -753,13 +692,6 @@ ALTER TABLE `cleaningtask`
   ADD PRIMARY KEY (`CleaningID`),
   ADD KEY `RoomID` (`RoomID`),
   ADD KEY `UserID` (`UserID`);
-
---
--- Indexes for table `hvacmaintenance`
---
-ALTER TABLE `hvacmaintenance`
-  ADD PRIMARY KEY (`UnitID`),
-  ADD UNIQUE KEY `RoomID` (`RoomID`);
 
 --
 -- Indexes for table `inventory`
@@ -783,12 +715,13 @@ ALTER TABLE `itemcategory`
   ADD PRIMARY KEY (`ItemCategoryID`);
 
 --
--- Indexes for table `maintenancelog`
+-- Indexes for table `maintenance_logs`
 --
-ALTER TABLE `maintenancelog`
-  ADD PRIMARY KEY (`MaintenanceLogID`),
-  ADD KEY `WorkOrderID` (`WorkOrderID`),
-  ADD KEY `UserID` (`UserID`);
+ALTER TABLE `maintenance_logs`
+  ADD PRIMARY KEY (`LogID`),
+  ADD KEY `idx_request_id` (`RequestID`),
+  ADD KEY `idx_room_id` (`RoomID`),
+  ADD KEY `idx_user_id` (`UserID`);
 
 --
 -- Indexes for table `maintenance_requests`
@@ -826,29 +759,12 @@ ALTER TABLE `parking_sessions`
   ADD KEY `idx_plate_number` (`PlateNumber`);
 
 --
--- Indexes for table `rate`
---
-ALTER TABLE `rate`
-  ADD PRIMARY KEY (`RateID`),
-  ADD UNIQUE KEY `idx_rate_unique` (`AreaID`,`VehicleCategoryID`,`VehicleTypeID`),
-  ADD KEY `VehicleCategoryID` (`VehicleCategoryID`),
-  ADD KEY `VehicletypeID` (`VehicleTypeID`);
-
---
 -- Indexes for table `room`
 --
 ALTER TABLE `room`
   ADD PRIMARY KEY (`RoomID`),
   ADD UNIQUE KEY `RoomNumber` (`RoomNumber`),
   ADD KEY `UserID` (`UserID`);
-
---
--- Indexes for table `room_appliances`
---
-ALTER TABLE `room_appliances`
-  ADD PRIMARY KEY (`ApplianceID`),
-  ADD UNIQUE KEY `UK_ModelNumber` (`ModelNumber`),
-  ADD KEY `FK_Appliance_Room` (`RoomID`);
 
 --
 -- Indexes for table `room_status`
@@ -891,22 +807,8 @@ ALTER TABLE `vehicletype`
   ADD PRIMARY KEY (`VehicleTypeID`);
 
 --
--- Indexes for table `workorder`
---
-ALTER TABLE `workorder`
-  ADD PRIMARY KEY (`WorkOrderID`),
-  ADD KEY `UnitID` (`UnitID`),
-  ADD KEY `UserID` (`UserID`);
-
---
 -- AUTO_INCREMENT for dumped tables
 --
-
---
--- AUTO_INCREMENT for table `auth_tokens`
---
-ALTER TABLE `auth_tokens`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `cleaninglog`
@@ -919,12 +821,6 @@ ALTER TABLE `cleaninglog`
 --
 ALTER TABLE `cleaningtask`
   MODIFY `CleaningID` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `hvacmaintenance`
---
-ALTER TABLE `hvacmaintenance`
-  MODIFY `UnitID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `inventory`
@@ -945,16 +841,16 @@ ALTER TABLE `itemcategory`
   MODIFY `ItemCategoryID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
--- AUTO_INCREMENT for table `maintenancelog`
+-- AUTO_INCREMENT for table `maintenance_logs`
 --
-ALTER TABLE `maintenancelog`
-  MODIFY `MaintenanceLogID` int(11) NOT NULL AUTO_INCREMENT;
+ALTER TABLE `maintenance_logs`
+  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `maintenance_requests`
 --
 ALTER TABLE `maintenance_requests`
-  MODIFY `RequestID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `RequestID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
 
 --
 -- AUTO_INCREMENT for table `parkingarea`
@@ -975,28 +871,16 @@ ALTER TABLE `parking_sessions`
   MODIFY `SessionID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
--- AUTO_INCREMENT for table `rate`
---
-ALTER TABLE `rate`
-  MODIFY `RateID` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- AUTO_INCREMENT for table `room`
 --
 ALTER TABLE `room`
   MODIFY `RoomID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT for table `room_appliances`
---
-ALTER TABLE `room_appliances`
-  MODIFY `ApplianceID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
-
---
 -- AUTO_INCREMENT for table `room_status`
 --
 ALTER TABLE `room_status`
-  MODIFY `StatusID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `StatusID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
 
 --
 -- AUTO_INCREMENT for table `users`
@@ -1008,7 +892,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `user_logs`
 --
 ALTER TABLE `user_logs`
-  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=163;
+  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=201;
 
 --
 -- AUTO_INCREMENT for table `vehiclecategory`
@@ -1023,20 +907,8 @@ ALTER TABLE `vehicletype`
   MODIFY `VehicleTypeID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
--- AUTO_INCREMENT for table `workorder`
---
-ALTER TABLE `workorder`
-  MODIFY `WorkOrderID` int(11) NOT NULL AUTO_INCREMENT;
-
---
 -- Constraints for dumped tables
 --
-
---
--- Constraints for table `auth_tokens`
---
-ALTER TABLE `auth_tokens`
-  ADD CONSTRAINT `auth_tokens_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`UserID`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `cleaninglog`
@@ -1053,12 +925,6 @@ ALTER TABLE `cleaningtask`
   ADD CONSTRAINT `cleaningtask_ibfk_2` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`) ON UPDATE CASCADE;
 
 --
--- Constraints for table `hvacmaintenance`
---
-ALTER TABLE `hvacmaintenance`
-  ADD CONSTRAINT `hvacmaintenance_ibfk_1` FOREIGN KEY (`RoomID`) REFERENCES `room` (`RoomID`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
 -- Constraints for table `inventory`
 --
 ALTER TABLE `inventory`
@@ -1070,13 +936,6 @@ ALTER TABLE `inventory`
 ALTER TABLE `inventorylog`
   ADD CONSTRAINT `inventorylog_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`) ON UPDATE CASCADE,
   ADD CONSTRAINT `inventorylog_ibfk_2` FOREIGN KEY (`ItemID`) REFERENCES `inventory` (`ItemID`) ON UPDATE CASCADE;
-
---
--- Constraints for table `maintenancelog`
---
-ALTER TABLE `maintenancelog`
-  ADD CONSTRAINT `maintenancelog_ibfk_1` FOREIGN KEY (`WorkOrderID`) REFERENCES `workorder` (`WorkOrderID`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `maintenancelog_ibfk_2` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`) ON UPDATE CASCADE;
 
 --
 -- Constraints for table `maintenance_requests`
@@ -1103,24 +962,10 @@ ALTER TABLE `parking_sessions`
   ADD CONSTRAINT `FK_Session_VehicleType` FOREIGN KEY (`VehicleTypeID`) REFERENCES `vehicletype` (`VehicleTypeID`);
 
 --
--- Constraints for table `rate`
---
-ALTER TABLE `rate`
-  ADD CONSTRAINT `FK_Rate_Area` FOREIGN KEY (`AreaID`) REFERENCES `parkingarea` (`AreaID`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `FK_Rate_VehicleType` FOREIGN KEY (`VehicleTypeID`) REFERENCES `vehicletype` (`VehicleTypeID`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `rate_ibfk_2` FOREIGN KEY (`VehicleCategoryID`) REFERENCES `vehiclecategory` (`VehicleCategoryID`) ON UPDATE CASCADE;
-
---
 -- Constraints for table `room`
 --
 ALTER TABLE `room`
   ADD CONSTRAINT `room_ibfk_1` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`) ON UPDATE CASCADE;
-
---
--- Constraints for table `room_appliances`
---
-ALTER TABLE `room_appliances`
-  ADD CONSTRAINT `FK_Appliance_Room_crm` FOREIGN KEY (`RoomID`) REFERENCES `crm`.`rooms` (`RoomID`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `room_status`
@@ -1139,13 +984,6 @@ ALTER TABLE `user_logs`
 --
 ALTER TABLE `vehiclecategory`
   ADD CONSTRAINT `FK_Category_VehicleType` FOREIGN KEY (`VehicleTypeID`) REFERENCES `vehicletype` (`VehicleTypeID`);
-
---
--- Constraints for table `workorder`
---
-ALTER TABLE `workorder`
-  ADD CONSTRAINT `workorder_ibfk_1` FOREIGN KEY (`UnitID`) REFERENCES `hvacmaintenance` (`UnitID`) ON UPDATE CASCADE,
-  ADD CONSTRAINT `workorder_ibfk_2` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`) ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

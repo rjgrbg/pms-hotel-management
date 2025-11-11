@@ -37,28 +37,53 @@ function formatDbDateTimeForDisplay($datetime) {
 // ===== END OF HELPER FUNCTIONS =====
 
 
-// 4. Fetch ALL Rooms and their status
+// ===== 4. Fetch ALL Rooms and their status (MODIFIED) =====
 $allRoomsStatus = [];
-// --- UPDATED: Added 'pms.' prefix to the maintenance_requests subquery ---
+// --- This query joins maintenance_requests and users
+// --- to get the *correct* current status and assigned staff name ---
 $sql_rooms = "SELECT
                 r.RoomID,
                 r.FloorNumber,
                 r.RoomNumber,
+                rs.LastMaintenance,
+                
+                -- Determine the most accurate current status
                 CASE 
+                    WHEN active_req.Status IS NOT NULL THEN active_req.Status -- 'Pending' or 'In Progress'
                     WHEN rs.RoomStatus = 'Maintenance' THEN 'Needs Maintenance'
                     ELSE COALESCE(rs.RoomStatus, 'Available') 
                 END as RoomStatus,
-                rs.LastMaintenance,
-                --
-                -- FIXED: Added 'pms.' prefix here
-                --
-                (SELECT mr.DateRequested FROM pms.maintenance_requests mr
-                 WHERE mr.RoomID = r.RoomID AND mr.Status IN ('Pending', 'In Progress')
-                 ORDER BY mr.DateRequested DESC LIMIT 1) as MaintenanceRequestDate
+                
+                active_req.DateRequested as MaintenanceRequestDate,
+                
+                -- *** ADDED: Get RequestID ***
+                active_req.RequestID, 
+                
+                -- Get assigned staff member's name
+                u.Fname,
+                u.Lname,
+                u.Mname
               FROM
                 crm.rooms r
               LEFT JOIN
                 pms.room_status rs ON r.RoomNumber = rs.RoomNumber
+              LEFT JOIN (
+                -- Subquery to find the *single* latest active request per room
+                SELECT 
+                    mr.RequestID, -- *** Added RequestID ***
+                    mr.RoomID, 
+                    mr.Status, 
+                    mr.DateRequested, 
+                    mr.AssignedUserID,
+                    ROW_NUMBER() OVER(PARTITION BY mr.RoomID ORDER BY mr.DateRequested DESC) as rn
+                FROM 
+                    pms.maintenance_requests mr
+                WHERE 
+                    mr.Status IN ('Pending', 'In Progress')
+              ) AS active_req ON active_req.RoomID = r.RoomID AND active_req.rn = 1
+              LEFT JOIN
+                -- Join users table to get the staff name
+                pms.users u ON u.UserID = active_req.AssignedUserID
               ORDER BY
                 r.FloorNumber, r.RoomNumber ASC";
 
@@ -68,21 +93,33 @@ if ($result_rooms = $conn->query($sql_rooms)) {
         $requestDate = 'N/A';
         $requestTime = 'N/A';
         
-        // This 'if' block will now work correctly because $row['MaintenanceRequestDate'] will be filled
         if (in_array($row['RoomStatus'], ['Needs Maintenance', 'Pending', 'In Progress']) && $row['MaintenanceRequestDate']) {
             $requestDate = formatDbDateForDisplay($row['MaintenanceRequestDate']);
             $requestTime = date('g:i A', strtotime($row['MaintenanceRequestDate']));
         }
 
+        // --- NEW STAFF NAME LOGIC (MODIFIED) ---
+        $staffName = 'Not Assigned';
+        if (!empty($row['Fname'])) {
+            $staffName = trim(
+                htmlspecialchars($row['Fname']) .
+                (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+                ' ' .
+                htmlspecialchars($row['Lname'])
+            );
+        }
+        // --- END NEW STAFF NAME LOGIC ---
+
         $allRoomsStatus[] = [
             'id' => $row['RoomID'], // This is the RoomID from CRM
+            'requestId' => $row['RequestID'], // *** ADDED RequestID ***
             'floor' => $row['FloorNumber'],
             'room' => $row['RoomNumber'],
             'lastMaintenance' => formatDbDateTimeForDisplay($row['LastMaintenance']),
             'date' => $requestDate,
             'requestTime' => $requestTime,
-            'status' => $row['RoomStatus'],
-            'staff' => 'Not Assigned'
+            'status' => $row['RoomStatus'], // This now correctly gets 'Pending'
+            'staff' => $staffName           // This now correctly gets the name
         ];
     }
     $result_rooms->free();
@@ -92,7 +129,6 @@ if ($result_rooms = $conn->query($sql_rooms)) {
 
 // 5. Fetch Maintenance Staff
 $maintenanceStaff = [];
-// --- UPDATED: Read the new AvailabilityStatus column from pms.users ---
 $sql_staff = "SELECT 
                 u.UserID, 
                 u.Fname, 
@@ -113,7 +149,6 @@ if ($result_staff = $conn->query($sql_staff)) {
             htmlspecialchars($row['Lname'])
         );
         
-        // The availability now comes directly from the database
         $availability = $row['AvailabilityStatus']; // e.g., 'Available', 'Assigned', 'Offline'
 
         $maintenanceStaff[] = [
@@ -126,19 +161,9 @@ if ($result_staff = $conn->query($sql_staff)) {
 } else {
     error_log("Error fetching maintenance staff: ". $conn->error);
 }
-// 6. Fetch Appliances Types
-$appliancesTypes = [];
-$sql_types = "SELECT DISTINCT ApplianceType FROM pms.room_appliances WHERE ApplianceType IS NOT NULL AND ApplianceType != '' ORDER BY ApplianceType";
-if ($result_types = $conn->query($sql_types)) {
-    while ($row = $result_types->fetch_assoc()) {
-        $appliancesTypes[] = $row['ApplianceType'];
-    }
-    $result_types->free();
-}
 
-// 7. Fetch all rooms for dropdowns
+// 6. Fetch all rooms for dropdowns
 $allRooms = [];
-// --- UPDATED: Fetch from crm.rooms (master list) ---
 $sql_all_rooms = "SELECT RoomID, FloorNumber, RoomNumber FROM crm.rooms ORDER BY FloorNumber, RoomNumber";
 if ($result_all_rooms = $conn->query($sql_all_rooms)) {
     while ($row = $result_all_rooms->fetch_assoc()) {
@@ -151,55 +176,9 @@ if ($result_all_rooms = $conn->query($sql_all_rooms)) {
     $result_all_rooms->free();
 }
 
-// 8. Fetch Appliances
-$appliancesData = [];
-// --- UPDATED: JOIN pms.room_appliances with crm.rooms ---
-$sql_appliances = "SELECT 
-                        ra.ApplianceID, 
-                        ra.RoomID, 
-                        r.FloorNumber, 
-                        r.RoomNumber, 
-                        ra.InstalledDate, 
-                        ra.ApplianceType, 
-                        ra.ApplianceName, 
-                        ra.Manufacturer, 
-                        ra.ModelNumber, 
-                        ra.LastMaintainedDate, 
-                        ra.Status, 
-                        ra.Remarks 
-                   FROM 
-                        pms.room_appliances ra
-                   JOIN 
-                        crm.rooms r ON ra.RoomID = r.RoomID
-                   ORDER BY 
-                        r.FloorNumber, r.RoomNumber, ra.ApplianceName";
-
-if ($result_appliances = $conn->query($sql_appliances)) {
-    while ($row = $result_appliances->fetch_assoc()) {
-        $appliancesData[] = [
-            'id' => $row['ApplianceID'],
-            'roomId' => $row['RoomID'], // CRM RoomID
-            'floor' => $row['FloorNumber'],
-            'room' => $row['RoomNumber'],
-            'installedDate' => formatDbDateForDisplay($row['InstalledDate']),
-            'type' => $row['ApplianceType'],
-            'item' => $row['ApplianceName'],
-            'manufacturer' => $row['Manufacturer'],
-            'modelNumber' => $row['ModelNumber'],
-            'lastMaintained' => formatDbDateTimeForDisplay($row['LastMaintainedDate']),
-            'status' => $row['Status'],
-            'remarks' => $row['Remarks']
-        ];
-    }
-    $result_appliances->free();
-} else {
-    error_log("Error fetching appliances: " . $conn->error);
-}
-
-
-// 9. Fetch History Data
+// 7. Fetch History Data
 $historyData = [];
-// --- UPDATED: JOIN pms.maintenance_requests with crm.rooms ---
+// *** MODIFIED: Added mr.Remarks back to SELECT ***
 $sql_history = "SELECT 
                     mr.RequestID, 
                     r.FloorNumber, 
@@ -211,7 +190,7 @@ $sql_history = "SELECT
                     u.Lname, 
                     u.Mname, 
                     mr.Status, 
-                    mr.Notes 
+                    mr.Remarks 
                 FROM 
                     pms.maintenance_requests mr 
                 JOIN 
@@ -245,7 +224,8 @@ if ($result_history = $conn->query($sql_history)) {
             'completedTime' => $row['DateCompleted'] ? date('g:i A', strtotime($row['DateCompleted'])) : 'N/A',
             'staff' => $staffName,
             'status' => $row['Status'],
-            'remarks' => $row['Notes']
+            // *** ADDED: 'remarks' key is back ***
+            'remarks' => $row['Remarks']
         ];
     }
     $result_history->free();
@@ -253,7 +233,7 @@ if ($result_history = $conn->query($sql_history)) {
     error_log("Error fetching maintenance history: " . $conn->error);
 }
 
-// 10. Close database connection
+// 8. Close database connection
 $conn->close();
 ?>
 <!DOCTYPE html>
@@ -263,7 +243,12 @@ $conn->close();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Celestia Hotel - Maintenance Management</title>
     <link rel="stylesheet" href="css/maintenance.css">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    
 </head>
 <body>
     <header class="header">
@@ -320,11 +305,7 @@ $conn->close();
                 <img src="assets/icons/history-icon.png" alt="History" class="tabIcon" />
                 History
             </button>
-            <button class="tabBtn" data-tab="appliances">
-                <img src="assets/icons/appliances.png" alt="Appliances" class="tabIcon" />
-                Appliances
-            </button>
-        </div>
+            </div>
 
         <div class="tabContent active" id="requests-tab">
             <div class="controlsRow">
@@ -361,7 +342,7 @@ $conn->close();
                             <th>Last Maintenance</th>
                             <th>Status</th>
                             <th>Staff In Charge</th>
-                        </tr>
+                            <th>ACTIONS</th> </tr>
                     </thead>
                     <tbody id="requestsTableBody"></tbody>
                 </table>
@@ -404,7 +385,7 @@ $conn->close();
                         <tr>
                             <th>Floor</th>
                             <th>Room</th>
-                            <th>Issue Type</th>
+                            <th>Type</th>
                             <th>Date</th>
                             <th>Requested Time</th>
                             <th>Completed Time</th>
@@ -422,60 +403,7 @@ $conn->close();
             </div>
         </div>
 
-        <div class="tabContent" id="appliances-tab">
-            <div class="controlsRow">
-                <div class="filterControls">
-                    <select class="filterDropdown" id="floorFilterAppliances">
-                        <option value="">Floor</option>
-                    </select>
-                    <select class="filterDropdown" id="roomFilterAppliances">
-                        <option value="">Room</option>
-                    </select>
-                    <select class="filterDropdown" id="typeFilterAppliances">
-                        <option value="">Type</option>
-                    </select>
-                    <div class="searchBox">
-                        <input type="text" placeholder="Search" class="searchInput" id="appliancesSearchInput" />
-                        <button class="searchBtn">
-                            <img src="assets/icons/search-icon.png" alt="Search" />
-                        </button>
-                    </div>
-                    <button class="refreshBtn" id="appliancesRefreshBtn">
-                        <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-                    </button>
-                    <button class="downloadBtn" id="appliancesDownloadBtn">
-                        <img src="assets/icons/download-icon.png" alt="Download" />
-                    </button>
-                    <button class="addItemBtnInline" id="addApplianceBtn">
-                        <img src="assets/icons/add.png" alt="Add" />
-                    </button>
-                </div>
-            </div>
-
-            <div class="tableWrapper">
-                <table class="appliancesTable">
-                    <thead>
-                        <tr>
-                            <th>FLOOR</th>
-                            <th>ROOM</th>
-                            <th>INSTALLED DATE</th>
-                            <th>TYPES</th>
-                            <th>ITEMS</th>
-                            <th>LAST MAINTAINED</th>
-                            <th>STATUS</th>
-                            <th>REMARKS</th>
-                            <th>ACTIONS</th>
-                        </tr>
-                    </thead>
-                    <tbody id="appliancesTableBody"></tbody>
-                </table>
-            </div>
-            <div class="pagination">
-                <span class="paginationInfo">Display Records <span id="appliancesRecordCount">0</span></span>
-                <div class="paginationControls" id="appliancesPaginationControls"></div>
-            </div>
         </div>
-    </div>
 
     <div class="modalBackdrop" id="staffModal" style="display: none;">
         <div class="staffSelectionModal">
@@ -496,88 +424,96 @@ $conn->close();
         </div>
     </div>
 
-    <div class="modalBackdrop" id="addApplianceModal" style="display: none;">
+    <div class="modalBackdrop" id="issueTypeModal" style="display: none;">
         <div class="addItemModal">
-            <button class="closeBtn" id="closeAddApplianceBtn">×</button>
+            <button class="closeBtn" id="closeIssueTypeModalBtn">×</button>
             <div class="modalIconHeader">
-                <i class="fas fa-tools" style="font-size: 48px; color: #FFA237;"></i>
+                <i class="fas fa-tasks" style="font-size: 48px; color: #FFA237;"></i>
             </div>
-            <h2 id="addApplianceModalTitle">Add Appliance</h2>
-            <p class="modalSubtext" id="addApplianceModalSubtext">Please fill out the appliance details carefully before submitting. Ensure that all information is accurate to help track maintenance and proper records.</p>
+            <h2>Select Issue Types</h2>
+            <p class="modalSubtext">Select all relevant categories for the maintenance request in Room <strong id="issueTypeModalRoomNumber">---</strong>.</p>
             
-            <form id="addApplianceForm">
-                <input type="hidden" id="applianceId" value="">
-                <div class="formRow">
-                    <div class="formGroup">
-                        <label>Floor</label>
-                        <select class="formInput" id="applianceFloor" required>
-                            <option value="">Select Floor</option>
-                        </select>
-                    </div>
-                    <div class="formGroup">
-                        <label>Room</label>
-                        <select class="formInput" id="applianceRoom" required>
-                            <option value="">Select Room</option>
-                        </select>
-                    </div>
+            <form id="issueTypeForm">
+                <input type="hidden" id="issueTypeRoomId" value="">
+                
+                <div class="formGroup checkboxGroup" style="width: 100%; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 10px;">
+                    <input type="checkbox" id="issue_select_all" name="issue_select_all">
+                    <label for="issue_select_all" style="font-weight: 700; color: #333;">SELECT ALL</label>
                 </div>
-                <div class="formRow">
-                    <div class="formGroup">
-                        <label>Appliance Name</label>
-                        <input type="text" class="formInput" id="applianceName" placeholder="Enter appliance name" required>
+
+                <div class="formRow" id="issueTypeCheckboxContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px 15px; max-height: 250px; overflow-y: auto;">
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="issue_electrical" name="issueType[]" value="Electrical & Lighting">
+                        <label for="issue_electrical">Electrical & Lighting</label>
                     </div>
-                     <div class="formGroup">
-                        <label>Type</label>
-                        <select class="formInput" id="applianceType" required>
-                            <option value="">Select Type</option>
-                            <option value="Electric">Electric</option>
-                            <option value="HVAC">HVAC</option>
-                            <option value="Water System">Water System</option>
-                        </select>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="issue_plumbing" name="issueType[]" value="Plumbing">
+                        <label for="issue_plumbing">Plumbing</label>
                     </div>
-                </div>
-                <div class="formRow">
-                    <div class="formGroup">
-                        <label>Manufacturer</label>
-                        <input type="text" class="formInput" id="applianceManufacturer" placeholder="Enter manufacturer" required>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="issue_furniture" name="issueType[]" value="Furniture & Fixtures">
+                        <label for="issue_furniture">Furniture & Fixtures</label>
                     </div>
-                    <div class="formGroup">
-                        <label>Model Number</label>
-                        <input type="text" class="formInput" id="applianceModelNumber" placeholder="Enter model number" required>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="issue_hvac" name="issueType[]" value="HVAC">
+                        <label for="issue_hvac">HVAC</label>
                     </div>
-                </div>
-                <div class="formRow">
-                    <div class="formGroup">
-                        <label>Installed Date</label>
-                        <input type="date" class="formInput" id="applianceInstalledDate" required>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="issue_doors" name="issueType[]" value="Doors & Windows">
+                        <label for="issue_doors">Doors & Windows</label>
+                    </div>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="issue_bathroom" name="issueType[]" value="Bathroom Area">
+                        <label for="issue_bathroom">Bathroom Area</label>
+                    </div>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="issue_safety" name="issueType[]" value="Safety & Security">
+                        <label for="issue_safety">Safety & Security</label>
+                    </div>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="issue_flooring" name="issueType[]" value="Flooring & Walls">
+                        <label for="issue_flooring">Flooring & Walls</label>
+                    </div>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="issue_windows" name="issueType[]" value="Windows, Curtains, & Blinds">
+                        <label for="issue_windows">Windows, Curtains, & Blinds</label>
                     </div>
                 </div>
                 
-                <div class="formRow" id="formGroup-status" style="display: none;">
-                    <div class="formGroup">
-                        <label>Status</label>
-                        <select class="formInput" id="applianceStatus">
-                            <option value="Working">Working</option>
-                            <option value="Needs Repair">Needs Repair</option>
-                            <option value="Under Maintenance">Under Maintenance</option>
-                            <option value="Out of Service">Out of Service</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="formRow" id="formGroup-remarks" style="display: none;">
-                     <div class="formGroup">
-                        <label>Remarks</label>
-                        <input type="text" class="formInput" id="applianceRemarks" placeholder="Enter remarks (optional)">
-                    </div>
-                </div>
                 <div class="modalButtons">
-                    <button type="button" class="modalBtn cancelBtn" id="cancelAddApplianceBtn">CANCEL</button>
-                    <button type="submit" class="modalBtn confirmBtn" id="submitApplianceBtn">ADD APPLIANCE</button>
+                    <button type="button" class="modalBtn cancelBtn" id="cancelIssueTypeBtn">CANCEL</button>
+                    <button type="submit" class="modalBtn confirmBtn" id="confirmIssueTypeBtn">NEXT</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <div class="modalBackdrop" id="editRoomStatusModal" style="display: none;">
+        <div class="addItemModal"> <button class="closeBtn" id="closeEditRoomStatusBtn">×</button>
+            <div class="modalIconHeader">
+                <i class="fas fa-bed" style="font-size: 48px; color: #FFA237;"></i>
+            </div>
+            <h2 id="editRoomStatusModalTitle">Edit Room Status</h2>
+            <p class="modalSubtext">Update the status for Room <strong id="editRoomStatusRoomNumber">---</strong>.</p>
+            
+            <form id="editRoomStatusForm">
+                <input type="hidden" id="editRoomStatusRoomId" value="">
+                <div class="formRow">
+                    <div class="formGroup">
+                        <label>Room Status</label>
+                        <select class="formInput" id="editRoomStatusSelect" required>
+                            <option value="Available">Available</option>
+                            <option value="Needs Maintenance">Needs Maintenance</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modalButtons">
+                    <button type="button" class="modalBtn cancelBtn" id="cancelEditRoomStatusBtn">CANCEL</button>
+                    <button type="submit" class="modalBtn confirmBtn" id="submitEditRoomStatusBtn">UPDATE STATUS</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <div class="modalBackdrop" id="confirmModal" style="display: none;">
         <div class="confirmModal">
             <h2 id="confirmModalTitle">Are you sure?</h2>
@@ -602,31 +538,24 @@ $conn->close();
         </div>
     </div>
 
-    <div class="modalBackdrop" id="deleteModal" style="display: none;">
-        <div class="confirmModal deleteConfirmModal">
-            <button class="closeBtn" id="closeDeleteBtn">×</button>
-            <div class="modalIconHeader">
-                <i class="fas fa-exclamation-triangle" style="font-size: 64px; color: #FFA237;"></i>
-            </div>
-            <h2>Are you sure you want to delete this appliance?</h2>
-            <p class="modalSubtext">This action cannot be undone, and all related records will be permanently removed.</p>
-            <div class="modalButtons">
-                <button class="modalBtn cancelBtn" id="cancelDeleteBtn">CANCEL</button>
-                <button class="modalBtn confirmBtn deleteBtn" id="confirmDeleteBtn">YES, DELETE</button>
-            </div>
-        </div>
-    </div>
-
     <script>
-        // Pass PHP data to JavaScript
+        // Pass PHP data to JavaScript as global variables
         const initialRequestsData = <?php echo json_encode($allRoomsStatus); ?>;
         const availableStaffData = <?php echo json_encode($maintenanceStaff); ?>;
-        const initialAppliancesData = <?php echo json_encode($appliancesData); ?>;
+        // REMOVED initialHotelAssetsData
         const initialHistoryData = <?php echo json_encode($historyData); ?>;
         const allRoomsData = <?php echo json_encode($allRooms); ?>;
-        const appliancesTypesData = <?php echo json_encode($appliancesTypes); ?>;
+        // REMOVED hotelAssetsTypesData
     </script>
 
-    <script src="script/maintenance.js?v=4"></script>
-</body>
+    <script src="script/maintenance.pagination.js"></script>
+    <script src="script/maintenance.utils.js"></script>
+
+    <script src="script/maintenance.ui.js"></script>
+
+    <script src="script/maintenance.requests.js"></script> 
+    
+    <script src="script/maintenance.history.js"></script>
+    <script src="script/maintenance.js"></script>
+    </body>
 </html>

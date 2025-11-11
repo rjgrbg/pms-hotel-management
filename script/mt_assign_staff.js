@@ -9,6 +9,7 @@ const roomTypeValue = document.getElementById('room-type-value');
 const dateValue = document.getElementById('date-value');
 const requestTimeValue = document.getElementById('request-time-value');
 const statusValue = document.getElementById('status-value');
+const issueTypeValue = document.getElementById('issue-type-value'); // *** ADDED ***
 
 const remarksTextarea = document.querySelector('.remarks-textarea');
 const workTypeSelect = document.getElementById('workType');
@@ -46,8 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function fetchTaskDetails(requestId) {
   try {
-    // ===== CHANGED THIS LINE =====
-    const response = await fetch(`http://localhost:8000/api_staff_task.php?action=get_task_details&request_id=${requestId}`);
+    // ===== CHANGED THIS LINE (use relative path) =====
+    const response = await fetch(`api_staff_task.php?action=get_task_details&request_id=${requestId}`);
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -77,6 +78,7 @@ function initializePageData(data) {
   dateValue.textContent = data.DateRequested || 'N/A';
   requestTimeValue.textContent = data.TimeRequested || 'N/A';
   statusValue.textContent = data.Status || 'N/A';
+  issueTypeValue.textContent = data.IssueType || 'N/A'; // *** ADDED ***
   
   // Set button states based on status
   if (data.Status === 'In Progress') {
@@ -113,8 +115,8 @@ modalSave.addEventListener('click', () => {
   console.log('Setting status to Completed...');
   
   // Validate that work details are filled
-  if (!workTypeSelect.value || !unitTypeSelect.value || !issueTextarea.value) {
-    alert('⚠️ Please fill in Work Type, Unit Type, and Issue Description before completing the task.');
+  if (maintenanceCheck.checked && (!workTypeSelect.value || !unitTypeSelect.value || !issueTextarea.value)) {
+    alert('⚠️ "Log Work Done" is checked. Please fill in Work Type, Unit Type, and Issue Description before completing the task.');
     return;
   }
   
@@ -142,15 +144,15 @@ async function updateTaskStatus(newStatus) {
   };
 
   // If completing, add the extra details
-  if (newStatus === 'Completed') {
+  if (newStatus === 'Completed' && maintenanceCheck.checked) {
     taskData.workType = workTypeSelect.value;
     taskData.unitType = unitTypeSelect.value;
     taskData.workDescription = issueTextarea.value;
   }
 
   try {
-    // ===== CHANGED THIS LINE =====
-    const response = await fetch('http://localhost:8000/api_staff_task.php', {
+    // ===== CHANGED THIS LINE (use relative path) =====
+    const response = await fetch('api_staff_task.php', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

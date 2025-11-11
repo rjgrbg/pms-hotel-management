@@ -6,7 +6,10 @@ header('Cache-Control: no-cache, must-revalidate');
 // 1. Include DB connection and ensure user is logged in
 require_once('db_connection.php'); 
 
-if (!isset($_SESSION['UserID']) || $_SESSION['UserType'] !== 'admin') {
+// --- MODIFIED: Define allowed roles ---
+$allowedRoles = ['admin', 'maintenance_manager'];
+
+if (!isset($_SESSION['UserID']) || !in_array($_SESSION['UserType'], $allowedRoles)) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     exit();
@@ -26,24 +29,27 @@ if ($pms_conn === null || $crm_conn === null) {
 
 $user_id = $_SESSION['UserID'];
 $request_method = $_SERVER['REQUEST_METHOD'];
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
 $response = ['success' => false, 'message' => 'Invalid action or request method.'];
+$action = '';
+
+// --- MODIFIED: Handle JSON payload for POST/PUT ---
+$data = [];
+if ($request_method === 'POST' || $request_method === 'PUT') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        $data = []; // Not valid JSON, fall back to POST
+    }
+}
+
+// --- MODIFIED: Determine action from GET, POST, or JSON body ---
+$action = $_GET['action'] ?? $_POST['action'] ?? $data['action'] ?? '';
+
 
 // ====================================================================
 // --- FETCH ROOMS (READ) ---
 // Fetches details from CRM, joins Status from PMS
 // ====================================================================
 if ($request_method === 'GET' && $action === 'fetch_rooms') {
-    
-    // This query gets room details from CRM (crm.rooms)
-    // and LEFT JOINS the status from PMS (pms.room_status).
-    // IFNULL is used to show 'Available' for rooms not in the PMS status table.
-    
-    // *** ASSUMPTION ***:
-    // 1. Your CRM database has a table named 'rooms'
-    // 2. Your PMS database has a new table named 'room_status'
-    // 3. 'crm.rooms' has: RoomID, FloorNumber, RoomNumber, RoomType, GuestCapacity, Rate
-    // 4. 'pms.room_status' has: RoomNumber (UNIQUE key), RoomStatus
     
     $sql = "SELECT 
                 c.RoomID, 
@@ -64,7 +70,6 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
         $rooms = [];
         while ($row = $result->fetch_assoc()) {
             $rooms[] = [
-                // Note: We use the CRM RoomID as the primary identifier
                 'RoomID' => $row['RoomID'], 
                 'Floor' => $row['FloorNumber'],
                 'Room' => $row['RoomNumber'],
@@ -83,24 +88,18 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
     }
 
 // ====================================================================
-// --- SET ROOM STATUS (UPDATE) ---
-// This handles 'edit_room' calls from admin.js
-// It only creates/updates the status in the PMS database.
+// --- NEW: SET ROOM STATUS (from maintenance.js) ---
+// This handles 'update_status' calls from maintenance.js (JSON)
 // ====================================================================
-} elseif ($request_method === 'POST' && $action === 'edit_room') { // MODIFIED: Removed 'add_room'
+} elseif ($request_method === 'POST' && $action === 'update_status') {
     
-    // We only care about RoomNumber and RoomStatus.
-    // The other fields (Type, Rate, etc.) are from CRM and not editable here.
-    $number = $pms_conn->real_escape_string($_POST['roomNumber'] ?? '');
-    $status = $pms_conn->real_escape_string($_POST['roomStatus'] ?? '');
+    $number = $pms_conn->real_escape_string($data['room_number'] ?? '');
+    $status = $pms_conn->real_escape_string($data['new_status'] ?? '');
 
-    // The 'roomID' from the form is ignored, as RoomNumber is the true key.
-    
     if (empty($number) || empty($status)) {
-        $response['message'] = 'Missing Room Number or Status.';
+        $response['message'] = 'Missing Room Number or New Status from JSON body.';
     } else {
-        // Use INSERT...ON DUPLICATE KEY UPDATE to create or update the status entry
-        // This query assumes 'RoomNumber' is a UNIQUE key in your 'pms.room_status' table.
+        // Use INSERT...ON DUPLICATE KEY UPDATE
         $sql = "INSERT INTO room_status (RoomNumber, RoomStatus, UserID) 
                 VALUES (?, ?, ?) 
                 ON DUPLICATE KEY UPDATE RoomStatus = ?, UserID = ?";
@@ -110,16 +109,49 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
             
             if ($stmt->execute()) {
                 $response['success'] = true;
-                // MODIFIED: Removed 'add_room' conditional message
                 $response['message'] = 'Room status updated successfully!';
             } else {
                 $response['message'] = 'Failed to set room status: '. $stmt->error;
-                error_log("Set room status error: ". $stmt->error);
+                error_log("Set room status error (update_status): ". $stmt->error);
             }
             $stmt->close();
         } else {
             $response['message'] = 'Database preparation error.';
-            error_log("Set room status preparation error: ". $pms_conn->error);
+            error_log("Set room status prep error (update_status): ". $pms_conn->error);
+        }
+    }
+
+// ====================================================================
+// --- SET ROOM STATUS (from admin.js) ---
+// This handles 'edit_room' calls from admin.js (Form Data)
+// ====================================================================
+} elseif ($request_method === 'POST' && $action === 'edit_room') { 
+    
+    $number = $pms_conn->real_escape_string($_POST['roomNumber'] ?? '');
+    $status = $pms_conn->real_escape_string($_POST['roomStatus'] ?? '');
+    
+    if (empty($number) || empty($status)) {
+        $response['message'] = 'Missing Room Number or Status from POST data.';
+    } else {
+        // Use INSERT...ON DUPLICATE KEY UPDATE
+        $sql = "INSERT INTO room_status (RoomNumber, RoomStatus, UserID) 
+                VALUES (?, ?, ?) 
+                ON DUPLICATE KEY UPDATE RoomStatus = ?, UserID = ?";
+        
+        if ($stmt = $pms_conn->prepare($sql)) {
+            $stmt->bind_param("ssisi", $number, $status, $user_id, $status, $user_id);
+            
+            if ($stmt->execute()) {
+                $response['success'] = true;
+                $response['message'] = 'Room status updated successfully!';
+            } else {
+                $response['message'] = 'Failed to set room status: '. $stmt->error;
+                error_log("Set room status error (edit_room): ". $stmt->error);
+            }
+            $stmt->close();
+        } else {
+            $response['message'] = 'Database preparation error.';
+            error_log("Set room status preparation error (edit_room): ". $pms_conn->error);
         }
     }
 
@@ -129,8 +161,7 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
 // ====================================================================
 } elseif ($request_method === 'POST' && $action === 'delete_room') {
     
-    // In the previous step, admin.js was passing 'roomID' which came from CRM.
-    // We need to fetch the RoomNumber associated with that CRM RoomID first.
+    // This action still expects POST form data
     $room_id = $crm_conn->real_escape_string($_POST['roomID'] ?? '');
 
     if (empty($room_id)) {

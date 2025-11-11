@@ -1196,3 +1196,37 @@ tbody tr:hover {
     color: #9e9e9e;
     cursor: not-allowed;
 }
+/* ===== ADD THIS TO maintenance.css ===== */
+
+/* Styles for the new checkbox groups in the modal */
+.formGroup.checkboxGroup {
+    display: flex;
+    align-items: center; /* Vertically aligns the checkbox and label */
+    margin-bottom: 10px; /* Adds spacing between rows */
+}
+
+.formGroup.checkboxGroup input[type="checkbox"] {
+    margin-right: 10px; /* Adds spacing between checkbox and label */
+    width: auto;
+    flex-shrink: 0; /* Prevents checkbox from shrinking */
+}
+
+.formGroup.checkboxGroup label {
+    margin-bottom: 0; /* Resets any default bottom margin */
+    font-weight: normal;
+    line-height: 1.3; /* Improves readability for wrapped labels */
+}
+/* --- Add this to your maintenance.css file --- */
+
+/* Statuses for History Tab */
+.statusBadge.completed {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.statusBadge.cancelled {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
