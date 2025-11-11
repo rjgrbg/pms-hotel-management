@@ -12,7 +12,7 @@ let filteredHistory = []; // This will be used by maintenance.history.js
 
 let selectedStaffId = null;
 let currentRoomId = null; // Used for both assigning and editing room status
-// REMOVED currentHotelAssetId
+// *** REMOVED: currentRequestIdToCancel ***
 let selectedIssueTypes = ''; // For the new assign staff workflow
 
 // Pagination State
@@ -41,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   loadRequestFiltersFromSession(); 
 
-  // *** MODIFIED: Swapped order. Populate filters first, THEN render. ***
   populateStaticFilters();
   populateHistoryFilters();
   
@@ -65,13 +64,11 @@ function setupEventListeners() {
       });
     });
 
-    // --- *** MODIFIED: Request Filters & Actions (Matches History Logic) *** ---
+    // --- Request Filters & Actions ---
     document.getElementById('floorFilter')?.addEventListener('change', () => {
-        // 1. Update the room filter options based on the new floor
-        updateRoomFilterOptions();
-        // 2. Apply filters and re-render
+        document.getElementById('roomFilter').value = ''; 
+        sessionStorage.removeItem('requests_roomFilter'); 
         applyRequestFiltersAndRender();
-        // 3. Save the new state
         saveRequestFiltersToSession(); 
     });
     document.getElementById('roomFilter')?.addEventListener('change', () => {
@@ -148,6 +145,8 @@ function setupEventListeners() {
     document.getElementById('closeSuccessBtn')?.addEventListener('click', hideSuccessModal);
     document.getElementById('okaySuccessBtn')?.addEventListener('click', hideSuccessModal);
 
+    // --- *** REMOVED: Confirmation Modal listeners *** ---
+    
     // --- REMOVED Delete Modal (for Hotel Assets) ---
 
     // --- Profile Sidebar & Logout ---
@@ -205,15 +204,11 @@ function populateHistoryFilters() {
 
 // REMOVED populateHotelAssetsFilters()
 
-// *** MODIFIED: This function now correctly restores the saved room value ***
 function updateRoomFilterOptions() {
     const floor = document.getElementById('floorFilter')?.value;
     const roomFilter = document.getElementById('roomFilter');
     if (!roomFilter) return;
 
-    // *** Get the saved room from storage. If it's the first load, this will be null. ***
-    // *** If it's a floor change, this will be null. ***
-    // *** If it's a page load, this will be the saved value. ***
     const savedRoom = sessionStorage.getItem('requests_roomFilter');
 
     while (roomFilter.options.length > 1) roomFilter.remove(1);
@@ -230,7 +225,6 @@ function updateRoomFilterOptions() {
         roomFilter.appendChild(option);
     });
     
-    // *** Set the value to the saved room ***
     if (savedRoom) {
         roomFilter.value = savedRoom;
     }
@@ -241,7 +235,6 @@ function updateHistoryRoomFilterOptions() {
     const roomFilter = document.getElementById('roomFilterHistory');
     if (!roomFilter) return;
 
-    // This logic is correct for the history tab
     const currentRoom = roomFilter.value;
     while (roomFilter.options.length > 1) roomFilter.remove(1);
 
@@ -340,14 +333,17 @@ function renderRequestsTable() {
 
         if (req.staff !== 'Not Assigned') {
             assignButton = `<button class="assignBtn assigned" disabled>${req.staff}</button>`;
-        } else if (['Needs Maintenance'].includes(status)) { // *** Can ONLY assign if status is 'Needs Maintenance' ***
+        } else if (['Needs Maintenance'].includes(status)) { 
             assignButton = `<button class="assignBtn assign-staff-btn" data-room-id="${req.id}" data-room-number="${req.room}">Assign Staff</button>`;
         } else {
             assignButton = `<button class="assignBtn" data-room-id="${req.id}" disabled>Not Required</button>`;
         }
+        
+        // *** REMOVED: Cancel button logic ***
+        let cancelButton = ''; 
 
         return `
-          <tr data-room-id="${req.id}" data-room-number="${req.room}" data-status="${req.status}">
+          <tr data-room-id="${req.id}" data-request-id="${req.requestId}" data-room-number="${req.room}" data-status="${req.status}">
             <td>${req.floor ?? 'N/A'}</td>
             <td>${req.room ?? 'N/A'}</td>
             <td>${req.date ?? 'N/A'}</td>
@@ -355,10 +351,11 @@ function renderRequestsTable() {
             <td>${req.lastMaintenance ?? 'N/A'}</td>
             <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
             <td>${assignButton}</td>
-            <td>
+            <td class="action-cell">
                 <button class="actionIconBtn edit-room-status-btn" title="Edit Room Status">
                     <i class="fas fa-edit"></i>
                 </button>
+                ${cancelButton} 
             </td>
           </tr>
         `;
@@ -378,6 +375,7 @@ function renderRequestsTable() {
 
 // --- Event handler for ALL clicks on Requests table body ---
 function handleRequestsTableClick(e) {
+    // Assign Staff Button
     const assignBtn = e.target.closest('.assign-staff-btn');
     if (assignBtn && !assignBtn.disabled) {
         const row = assignBtn.closest('tr');
@@ -391,6 +389,7 @@ function handleRequestsTableClick(e) {
         return;
     }
 
+    // Edit Room Status Button
     const editBtn = e.target.closest('.edit-room-status-btn');
     if (editBtn) {
         const row = editBtn.closest('tr');
@@ -401,7 +400,6 @@ function handleRequestsTableClick(e) {
         document.getElementById('editRoomStatusRoomNumber').textContent = roomNumber;
         document.getElementById('editRoomStatusRoomId').value = currentRoomId;
         
-        // Set the dropdown value, default to 'Available' if status is not 'Needs Maintenance'
         const statusSelect = document.getElementById('editRoomStatusSelect');
         if (status === 'Needs Maintenance') {
             statusSelect.value = 'Needs Maintenance';
@@ -412,6 +410,8 @@ function handleRequestsTableClick(e) {
         showEditRoomStatusModal();
         return;
     }
+    
+    // *** REMOVED: Cancel Request Button logic ***
 }
 
 // --- Handle Final Staff Assignment ---
@@ -446,7 +446,6 @@ async function handleStaffAssign() {
                 roomInRequests.status = 'Pending'; // Set status to pending
                 roomInRequests.staff = result.staffName; // Get staff name from response
             }
-            applyRequestFiltersAndRender();
             
             const staffInList = currentStaffData.find(staff => staff.id == selectedStaffId);
             if (staffInList) {
@@ -454,7 +453,14 @@ async function handleStaffAssign() {
             }
             
             hideStaffModal();
+            // *** SYNTAX ERROR FIXED: Changed .message to result.message ***
             showSuccessModal(result.message || 'Task Assigned Successfully!');
+            
+            // Reload data from server to get all new info (like new RequestID)
+            setTimeout(() => {
+                 window.location.reload();
+            }, 1500); // Reload after 1.5s
+            
         } else {
             alert("Failed to assign task: " + (result.message || 'Unknown error'));
         }
@@ -531,6 +537,8 @@ async function handleEditRoomStatusSubmit(e) {
     }
 }
 
+// *** REMOVED: handleCancelAction function ***
+
 
 // ===== REQUESTS FILTERING LOGIC =====
 
@@ -559,27 +567,28 @@ function loadRequestFiltersFromSession() {
 
 // --- applyRequestFiltersAndRender ---
 function applyRequestFiltersAndRender() {
-  // *** MODIFIED: updateRoomFilterOptions is now called in populateStaticFilters ***
-  // *** and in the 'floorFilter' event listener. It no longer needs to be here. ***
-  // updateRoomFilterOptions(); 
-
+  // 1. Get filter values *before* updating room options
   const floor = document.getElementById('floorFilter')?.value || '';
-  const room = document.getElementById('roomFilter')?.value || '';
+  
+  // *** THIS IS THE KEY: Get the SAVED room value, not the current one ***
+  const room = sessionStorage.getItem('requests_roomFilter') || ''; 
+  
   const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
 
+  // 2. Populate rooms. This will also set the value from session storage.
+  updateRoomFilterOptions(); 
+
+  // 3. Filter data
   filteredRequests = currentRequestsData.filter(req => {
     const matchFloor = !floor || (req.floor && req.floor.toString() === floor);
-    const matchRoom = !room || (req.room && req.room.toString() === room);
+    // *** Use the 'room' variable which holds the saved value ***
+    const matchRoom = !room || (req.room && req.room.toString() === room); 
     const matchSearch = !search || (req.room && req.room.toString().includes(search));
     return matchFloor && matchRoom && matchSearch;
   });
 
+  // 4. Render
   paginationState.requests.currentPage = 1;
-  
-  // *** This was the bug. It's now handled by the event listener and page load logic. ***
-  // const savedRoom = sessionStorage.getItem('requests_roomFilter');
-  // ... (removed broken logic) ...
-
   renderRequestsTable();
 }
 
@@ -593,8 +602,7 @@ function resetRequestFilters() {
     sessionStorage.removeItem('requests_roomFilter');
     sessionStorage.removeItem('requests_searchInput');
 
-    // *** ADDED: Must call updateRoomFilterOptions after clearing filters ***
-    updateRoomFilterOptions();
+    updateRoomFilterOptions(); // Must update rooms after clearing filters
     applyRequestFiltersAndRender();
 }
 

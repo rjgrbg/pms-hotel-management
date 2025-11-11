@@ -19,7 +19,7 @@ use PHPMailer\PHPMailer\Exception;
 require __DIR__ . '/vendor/autoload.php';
 require __DIR__ . '/email_config.php'; // keep your config as-is
 
-// ✅ Create a local mailer instance for this file (no getMailer dependency)
+// Create a local mailer instance
 $mail = new PHPMailer(true);
 $mail->isSMTP();
 $mail->Host       = 'smtp.gmail.com';
@@ -29,7 +29,8 @@ $mail->Password   = GMAIL_APP_PASSWORD;   // must be defined in your config
 $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
 $mail->Port       = 465;
 
-// ===== HELPER FUNCTIONS FOR DATE FORMATTING =====
+// ===== HELPER FUNCTIONS =====
+
 function formatDbDateForDisplay($date) {
     if (!$date) return 'N/A';
     try {
@@ -47,6 +48,21 @@ function formatDbDateTimeForDisplay($datetime) {
         return 'Never';
     }
 }
+
+// *** NEW: Logging Function ***
+function logMaintenanceAction($conn, $requestId, $roomId, $userId, $action, $details) {
+    try {
+        $stmt = $conn->prepare(
+            "INSERT INTO pms.maintenance_logs (RequestID, RoomID, UserID, Action, Details) 
+             VALUES (?, ?, ?, ?, ?)"
+        );
+        $stmt->bind_param("iiiss", $requestId, $roomId, $userId, $action, $details);
+        $stmt->execute();
+    } catch (Exception $e) {
+        // Log the error but don't stop the main process
+        error_log("Failed to log maintenance action: " . $e->getMessage());
+    }
+}
 // ===== END OF HELPER FUNCTIONS =====
 
 // Get the incoming JSON data
@@ -58,18 +74,18 @@ if (!$data || !isset($data['action'])) {
 }
 
 $action = $data['action'];
+$managerUserId = $_SESSION['UserID']; // Get manager's ID for logging
 
 switch ($action) {
 
     // --- ASSIGN MAINTENANCE TASK (MODIFIED) ---
     case 'assign_task':
         try {
+            $conn->begin_transaction();
+            
             $roomId = $data['roomId'];
             $staffId = $data['staffId'];
-            $issueTypes = $data['issueTypes'] ?? 'Not Specified'; // Get from maintenance.js
-            
-            // *** FIXED: Get the manager's UserID from the session ***
-            $managerUserId = $_SESSION['UserID'];
+            $issueTypes = $data['issueTypes'] ?? 'Not Specified';
 
             // 1. Check if an active request *already* exists for this room
             $stmt_check = $conn->prepare(
@@ -84,27 +100,19 @@ switch ($action) {
                 throw new Exception("This room already has an active maintenance request.");
             }
 
-            // 2. No active request found, so CREATE a new one
-            // *** FIXED: Added UserID (the manager) to the INSERT query ***
+            // 2. CREATE a new request
             $stmt_insert = $conn->prepare(
                 "INSERT INTO pms.maintenance_requests 
                  (RoomID, UserID, AssignedUserID, IssueType, Status, DateRequested) 
                  VALUES (?, ?, ?, ?, 'Pending', NOW())"
             );
-            // *** FIXED: Added manager's ID and changed bind_param to "iiis" ***
             $stmt_insert->bind_param("iiis", $roomId, $managerUserId, $staffId, $issueTypes);
             
-            // *** FIXED: Added check to show the *real* SQL error if it fails ***
             if (!$stmt_insert->execute()) {
                 throw new Exception("Database INSERT failed: " . $stmt_insert->error);
             }
             
-            $requestId = $conn->insert_id; // Get the ID of the new request
-
-            if ($requestId === 0) {
-                 // This is now a fallback error
-                 throw new Exception("Failed to create new maintenance request (insert_id was 0). Check table AUTO_INCREMENT.");
-            }
+            $requestId = $conn->insert_id;
 
             // 3. Update staff status to 'Assigned'
             $stmt_status = $conn->prepare(
@@ -127,7 +135,6 @@ switch ($action) {
                 WHERE 
                     u.UserID = ?"
             );
-            // Bind params for RoomID and UserID
             $stmt_info->bind_param("ii", $roomId, $staffId);
             $stmt_info->execute();
             $info = $stmt_info->get_result()->fetch_assoc();
@@ -143,9 +150,7 @@ switch ($action) {
             $mail->setFrom(GMAIL_EMAIL, EMAIL_FROM_NAME);
             $mail->addAddress($staffEmail, $staffName);
             $mail->Subject = 'New Maintenance Task Assigned: Room ' . $info['RoomNumber'];
-
             $taskLink = "http://localhost:3000/mt_assign_staff.html?request_id=" . $requestId;
-
             $mail->isHTML(true);
             $mail->Body = "
                 <p>Hello $staffName,</p>
@@ -155,8 +160,12 @@ switch ($action) {
                 <p><a href='$taskLink' style='padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;'>View Task Details</a></p>
                 <p>Thank you,<br>Maintenance Management</p>
             ";
-
             $mail->send();
+
+            // 6. *** ADDED: Log the action ***
+            logMaintenanceAction($conn, $requestId, $roomId, $managerUserId, 'ASSIGNED', "Task assigned to staff $staffName (ID: $staffId) by manager (ID: $managerUserId). Issues: $issueTypes");
+            
+            $conn->commit();
             
             echo json_encode([
                 'status' => 'success',
@@ -165,6 +174,7 @@ switch ($action) {
             ]);
 
         } catch (Exception $e) {
+            $conn->rollback();
             error_log("Assign Task Error: " . $e->getMessage());
             echo json_encode([
                 'status' => 'error',
@@ -173,6 +183,8 @@ switch ($action) {
         }
         break;
 
+    // --- *** REMOVED: 'cancel_task' case *** ---
+        
     default:
         echo json_encode(['status' => 'error', 'message' => 'Unknown action.']);
         break;

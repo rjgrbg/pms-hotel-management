@@ -9,12 +9,9 @@ const roomTypeValue = document.getElementById('room-type-value');
 const dateValue = document.getElementById('date-value');
 const requestTimeValue = document.getElementById('request-time-value');
 const statusValue = document.getElementById('status-value');
-const issueTypeValue = document.getElementById('issue-type-value'); // *** ADDED ***
+const issueTypeValue = document.getElementById('issue-type-value'); 
 
 const remarksTextarea = document.querySelector('.remarks-textarea');
-const workTypeSelect = document.getElementById('workType');
-const unitTypeSelect = document.getElementById('unitType');
-const issueTextarea = document.querySelector('.issue-textarea');
 
 const inProgressBtn = document.getElementById('inProgressBtn');
 const doneBtn = document.getElementById('doneBtn');
@@ -40,6 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 2. Fetch task details from API
   fetchTaskDetails(CURRENT_REQUEST_ID);
+
+  // 3. *** ADDED: Setup event listeners for buttons ***
+  setupEventListeners();
 });
 
 /**
@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 async function fetchTaskDetails(requestId) {
   try {
-    // ===== CHANGED THIS LINE (use relative path) =====
     const response = await fetch(`api_staff_task.php?action=get_task_details&request_id=${requestId}`);
     
     if (!response.ok) {
@@ -72,63 +71,65 @@ async function fetchTaskDetails(requestId) {
  * Fill the HTML fields with data from the API
  */
 function initializePageData(data) {
-  // --- THESE ARE THE CORRECTED LINES ---
   roomValue.textContent = data.RoomNumber || 'N/A';
   roomTypeValue.textContent = data.RoomType || 'N/A';
   dateValue.textContent = data.DateRequested || 'N/A';
   requestTimeValue.textContent = data.TimeRequested || 'N/A';
   statusValue.textContent = data.Status || 'N/A';
-  issueTypeValue.textContent = data.IssueType || 'N/A'; // *** ADDED ***
+  issueTypeValue.textContent = data.IssueType || 'N/A'; 
+  
+  remarksTextarea.value = data.Remarks || '';
   
   // Set button states based on status
   if (data.Status === 'In Progress') {
     inProgressBtn.disabled = true;
     inProgressBtn.textContent = 'In Progress';
+    remarksTextarea.disabled = false; // Make sure remarks can be edited
   } else if (data.Status === 'Completed') {
     inProgressBtn.disabled = true;
     doneBtn.disabled = true;
     inProgressBtn.textContent = 'Task Completed';
     doneBtn.textContent = 'Task Completed';
+    remarksTextarea.disabled = true; // Disable remarks if completed
+  } else {
+    // Pending status
+    inProgressBtn.disabled = false;
+    remarksTextarea.disabled = false;
   }
 }
 
-// ===== ACTION BUTTONS & MODAL =====
+// ===== *** NEW: EVENT LISTENER SETUP *** =====
+function setupEventListeners() {
+    // --- "In Progress" Button ---
+    inProgressBtn.addEventListener('click', () => {
+        console.log('Setting status to In Progress...');
+        updateTaskStatus('In Progress');
+    });
 
-// --- "In Progress" Button ---
-inProgressBtn.addEventListener('click', () => {
-  console.log('Setting status to In Progress...');
-  updateTaskStatus('In Progress');
-});
+    // --- "Done" Button (opens modal) ---
+    doneBtn.addEventListener('click', () => {
+        modalBackdrop.style.display = 'flex'; // Use display flex to show
+    });
 
-// --- "Done" Button (opens modal) ---
-doneBtn.addEventListener('click', () => {
-  modalBackdrop.classList.add('active');
-});
+    // --- Modal "Cancel" Button ---
+    modalCancel.addEventListener('click', () => {
+        modalBackdrop.style.display = 'none'; // Use display none to hide
+    });
 
-// --- Modal "Cancel" Button ---
-modalCancel.addEventListener('click', () => {
-  modalBackdrop.classList.remove('active');
-});
+    // --- *** FIXED: Modal "Save" Button (completes task) *** ---
+    modalSave.addEventListener('click', () => {
+        console.log('Setting status to Completed...');
+        updateTaskStatus('Completed');
+    });
 
-// --- Modal "Save" Button (completes task) ---
-modalSave.addEventListener('click', () => {
-  console.log('Setting status to Completed...');
-  
-  // Validate that work details are filled
-  if (maintenanceCheck.checked && (!workTypeSelect.value || !unitTypeSelect.value || !issueTextarea.value)) {
-    alert('⚠️ "Log Work Done" is checked. Please fill in Work Type, Unit Type, and Issue Description before completing the task.');
-    return;
-  }
-  
-  updateTaskStatus('Completed');
-});
+    // --- Modal Backdrop (closes modal) ---
+    modalBackdrop.addEventListener('click', (e) => {
+        if (e.target === modalBackdrop) {
+            modalBackdrop.style.display = 'none'; // Use display none to hide
+        }
+    });
+}
 
-// --- Modal Backdrop (closes modal) ---
-modalBackdrop.addEventListener('click', (e) => {
-  if (e.target === modalBackdrop) {
-    modalBackdrop.classList.remove('active');
-  }
-});
 
 /**
  * Send the status update to the backend
@@ -137,21 +138,10 @@ async function updateTaskStatus(newStatus) {
   const taskData = {
     request_id: CURRENT_REQUEST_ID,
     status: newStatus,
-    remarks: remarksTextarea.value,
-    workType: '',
-    unitType: '',
-    workDescription: ''
+    remarks: remarksTextarea.value 
   };
 
-  // If completing, add the extra details
-  if (newStatus === 'Completed' && maintenanceCheck.checked) {
-    taskData.workType = workTypeSelect.value;
-    taskData.unitType = unitTypeSelect.value;
-    taskData.workDescription = issueTextarea.value;
-  }
-
   try {
-    // ===== CHANGED THIS LINE (use relative path) =====
     const response = await fetch('api_staff_task.php', {
       method: 'POST',
       headers: {
@@ -172,7 +162,7 @@ async function updateTaskStatus(newStatus) {
     if (result.status === 'success') {
       alert(`✅ Task status updated to ${newStatus}`);
       if (newStatus === 'Completed') {
-         modalBackdrop.classList.remove('active');
+         modalBackdrop.style.display = 'none'; // Use display none to hide
       }
       // Reload details to show new status
       fetchTaskDetails(CURRENT_REQUEST_ID); 
@@ -184,18 +174,3 @@ async function updateTaskStatus(newStatus) {
     alert('Error: Could not connect to server to update status.');
   }
 }
-
-// ===== MAINTENANCE CHECKBOX TOGGLE =====
-const maintenanceCheck = document.getElementById('maintenanceCheck');
-const maintenanceDropdowns = document.getElementById('maintenanceDropdowns');
-const issueSection = document.getElementById('issueSection');
-
-maintenanceCheck.addEventListener('change', function() {
-  if (this.checked) {
-    maintenanceDropdowns.classList.add('active');
-    issueSection.classList.add('active');
-  } else {
-    maintenanceDropdowns.classList.remove('active');
-    issueSection.classList.remove('active');
-  }
-});
