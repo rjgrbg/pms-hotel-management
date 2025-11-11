@@ -1372,3 +1372,40 @@ tbody tr:hover {
   padding: 6px 4px;
   color: #999;
 }
+
+.modal-body .form-row.form-row-align-bottom {
+  align-items: flex-end; /* Aligns the form groups to the bottom */
+  gap: 15px; /* Adds spacing between the two columns */
+}
+
+.modal-body .form-row-align-bottom .form-group {
+  flex: 1; /* Makes both columns take equal space */
+}
+
+/* * This new class styles the <span> to look exactly 
+ * like a regular, non-editable text input.
+ */
+.form-group-static span {
+  display: block;
+  width: 100%;
+  box-sizing: border-box; 
+  padding: 10px 12px;
+  font-size: 1rem;
+  font-weight: 400; /* Match normal input text */
+  color: #555; /* Match normal input text */
+  background-color: #fff; /* Match 'Add Stock' background */
+  border: 1px solid #ddd; /* Match 'Add Stock' border */
+  border-radius: 6px;
+  min-height: 42.5px; /* Match input height */
+}
+
+
+/* ==== MODIFICATION: Added Column Alignment Rules ==== */
+.requestsTable th[data-sort="DateofStockIn"],
+.requestsTable #requestsTableBody td:nth-child(7) {
+    text-align: center;
+}
+
+.requestsTable th:nth-child(8) { /* Action Header */
+     text-align: center;
+}

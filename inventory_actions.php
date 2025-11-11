@@ -20,7 +20,6 @@ if (!isset($_SESSION['UserID'])) {
 $currentUserID = $_SESSION['UserID'];
 
 // 4. Determine which action to perform
-// We expect an 'action' parameter (e.g., ?action=get_inventory)
 $action = $_GET['action'] ?? '';
 
 // We use a switch statement to route the request to the correct function
@@ -36,24 +35,22 @@ try {
       getCategories($conn);
       break;
     case 'add_item':
-      // Data from 'add_item_form' will be sent via POST
       addItem($conn, $_POST, $currentUserID);
       break;
     case 'update_item':
-      // Data from 'edit-item-form' will be sent via POST
       updateItem($conn, $_POST, $currentUserID);
       break;
+    case 'issue_item':
+    issueItem($conn, $_POST, $currentUserID);
+    break;
     case 'delete_item':
-      // The ItemID will be sent via POST
       deleteItem($conn, $_POST, $currentUserID);
       break;
     default:
-      // Set 400 Bad Request status code
       http_response_code(400);
       echo json_encode(['error' => 'Invalid action specified.']);
   }
 } catch (Exception $e) {
-  // Set 500 Internal Server Error status code
   http_response_code(500);
   echo json_encode(['error' => $e->getMessage()]);
 }
@@ -67,9 +64,9 @@ $conn->close();
 
 /**
  * Fetches the main inventory list for the "Stocks" tab.
- * Joins with 'itemcategory' to get the category name.
  */
 function getInventory($conn) {
+  // DamageItem has been removed from this query.
   $sql = "SELECT 
             i.ItemID, 
             i.ItemName, 
@@ -77,9 +74,7 @@ function getInventory($conn) {
             i.ItemQuantity, 
             i.ItemDescription, 
             i.ItemStatus, 
-            i.DamageItem, 
             DATE_FORMAT(i.DateofStockIn, '%Y-%m-%d') AS DateofStockIn, 
-            DATE_FORMAT(i.DateofStockOut, '%Y-%m-%d') AS DateofStockOut,
             ic.ItemCategoryID
           FROM inventory i
           JOIN itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
@@ -99,27 +94,43 @@ function getInventory($conn) {
 
 /**
  * Fetches the inventory log for the "History" tab.
- * Joins with 'inventory', 'itemcategory', and 'users' to get full details.
+ * DamageItem has been removed from this query.
  */
 function getInventoryHistory($conn) {
   $sql = "SELECT 
-            il.InvLogID,
+            rt.InvLogID,
             i.ItemName,
             ic.ItemCategoryName AS Category,
-            i.ItemQuantity,
-            il.Quantity AS QuantityChange,
+            rt.Quantity AS QuantityChange, 
+            (rt.NewQuantity - rt.Quantity) AS OldQuantity,
+            rt.NewQuantity,
             i.ItemStatus,
-            i.DamageItem,
-            DATE_FORMAT(i.DateofStockIn, '%Y-%m-%d') AS DateofStockIn,
-            DATE_FORMAT(i.DateofStockOut, '%Y-%m-%d') AS DateofStockOut,
-            il.InventoryLogReason AS ActionType,
+            CASE
+    WHEN rt.ActionType = 'Initial Stock In' OR rt.ActionType = 'Stock Added'
+    THEN DATE_FORMAT(i.DateofStockIn, '%Y-%m-%d')
+    ELSE NULL
+END AS DateofStockIn,
+            rt.ActionType,
             CONCAT(u.Fname, ' ', u.Lname) AS PerformedBy,
-            il.DateofRelease
-          FROM inventorylog il
-          JOIN inventory i ON il.ItemID = i.ItemID
+            rt.DateofRelease
+          FROM (
+              SELECT 
+                  il.InvLogID,
+                  il.ItemID,
+                  il.UserID,
+                  il.Quantity,
+                  il.InventoryLogReason AS ActionType,
+                  il.DateofRelease,
+                  SUM(il.Quantity) OVER (
+                      PARTITION BY il.ItemID 
+                      ORDER BY il.DateofRelease, il.InvLogID
+                  ) AS NewQuantity
+              FROM inventorylog il
+          ) AS rt
+          JOIN inventory i ON rt.ItemID = i.ItemID
           JOIN itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
-          JOIN users u ON il.UserID = u.UserID
-          ORDER BY il.DateofRelease DESC";
+          JOIN users u ON rt.UserID = u.UserID
+          ORDER BY rt.DateofRelease DESC, rt.InvLogID DESC";
 
   $result = $conn->query($sql);
   if (!$result) {
@@ -151,41 +162,39 @@ function getCategories($conn) {
 }
 
 /**
- * Adds a new item to the 'inventory' table and creates an initial log
- * in the 'inventorylog' table.
+ * Adds a new item to the 'inventory' table.
+ * DamageItem logic has been removed.
  */
 function addItem($conn, $data, $userID) {
-  // Extract and sanitize data from the POST request
   $name = $data['name'];
   $categoryID = (int)$data['category_id'];
   $description = $data['description'];
   $quantity = (int)$data['quantity'];
   $stockInDate = $data['stock_in_date'];
 
-  // === User is in control of status, so we auto-calculate it ===
   $status = 'In Stock';
   if ($quantity == 0) {
     $status = 'Out of Stock';
-  } elseif ($quantity <= 10) { // Assuming 10 is the 'low stock' threshold
+  } elseif ($quantity <= 10) { 
     $status = 'Low Stock';
   }
 
-  // Use a transaction to ensure both inserts succeed or fail together
   $conn->begin_transaction();
 
   // 1. Insert into 'inventory' table
+  // DamageItem column has been removed from the INSERT.
   $stmt = $conn->prepare(
-    "INSERT INTO inventory (ItemName, ItemCategoryID, ItemQuantity, ItemDescription, ItemStatus, DateofStockIn, DamageItem) 
-     VALUES (?, ?, ?, ?, ?, ?, 0)"
+    "INSERT INTO inventory (ItemName, ItemCategoryID, ItemQuantity, ItemDescription, ItemStatus, DateofStockIn) 
+     VALUES (?, ?, ?, ?, ?, ?)"
   );
-  $stmt->bind_param("sisiss", $name, $categoryID, $quantity, $description, $status, $stockInDate);
+  // Bind types: s(Name), i(CatID), i(Qty), s(Desc), s(Status), s(StockInDate)
+  $stmt->bind_param("siisss", $name, $categoryID, $quantity, $description, $status, $stockInDate);
   
   if (!$stmt->execute()) {
     $conn->rollback();
-    throw new Exception("Error adding item: " . $stmt->error);
+    throw new Exception("Error adding item: " + $stmt->error);
   }
 
-  // Get the ID of the item we just inserted
   $newItemID = $conn->insert_id;
 
   // 2. Insert into 'inventorylog' table
@@ -198,10 +207,9 @@ function addItem($conn, $data, $userID) {
 
   if (!$logStmt->execute()) {
     $conn->rollback();
-    throw new Exception("Error logging item creation: " . $logStmt->error);
+    throw new Exception("Error logging item creation: " + $logStmt->error);
   }
 
-  // If both queries were successful, commit the transaction
   $conn->commit();
   header('Content-Type: application/json');
   echo json_encode(['success' => true, 'message' => 'Item added successfully.', 'new_item_id' => $newItemID]);
@@ -209,25 +217,27 @@ function addItem($conn, $data, $userID) {
 
 /**
  * Updates an existing item in the 'inventory' table.
- * If the stock level is changed, it creates a new log entry.
+ * Only allows positive stock adjustments.
  */
 function updateItem($conn, $data, $userID) {
-  // Extract and sanitize data
   $itemID = (int)$data['item_id'];
   $name = $data['name'];
   $categoryID = (int)$data['category_id'];
   $description = $data['description'];
   $stockAdjustment = (int)$data['stock_adjustment'];
-  // === MODIFICATION START: Status is no longer taken from form ===
-  // $status = $data['status']; // This line is removed.
 
-  // Use a transaction
+  // Enforce only positive stock adjustments
+  if ($stockAdjustment < 0) {
+      $stockAdjustment = 0;
+  }
+
   $conn->begin_transaction();
 
-  // 1. Get the current quantity first
+  // 1. Get the current quantity
   $currentQuantity = 0;
   $qtyStmt = $conn->prepare("SELECT ItemQuantity FROM inventory WHERE ItemID = ?");
   $qtyStmt->bind_param("i", $itemID);
+  
   if ($qtyStmt->execute()) {
     $result = $qtyStmt->get_result();
     if ($row = $result->fetch_assoc()) {
@@ -235,39 +245,39 @@ function updateItem($conn, $data, $userID) {
     }
   } else {
     $conn->rollback();
-    throw new Exception("Error fetching current quantity: " . $qtyStmt->error);
+    throw new Exception("Error fetching current item state: " . $qtyStmt->error);
   }
   $qtyStmt->close();
 
-  // 2. Calculate new quantity and determine status
+  // 2. Calculate new quantity and status
   $newQuantity = $currentQuantity + $stockAdjustment;
-  
   $status = 'In Stock';
+
   if ($newQuantity <= 0) {
     $status = 'Out of Stock';
-    $newQuantity = 0; // Don't allow negative stock
-  } elseif ($newQuantity <= 10) {
+    $newQuantity = 0; 
+  } else if ($newQuantity <= 10) {
     $status = 'Low Stock';
   }
-  // === MODIFICATION END ===
 
-  // 3. Update the 'inventory' table with new quantity and calculated status
+  // 3. Update the 'inventory' table
   $stmt = $conn->prepare(
     "UPDATE inventory 
-     SET ItemName = ?, ItemCategoryID = ?, ItemDescription = ?, ItemQuantity = ?, ItemStatus = ?
+     SET ItemName = ?, ItemCategoryID = ?, ItemDescription = ?, 
+         ItemQuantity = ?, ItemStatus = ?
      WHERE ItemID = ?"
   );
-  // Bind $newQuantity instead of $stockAdjustment
+  // Bind types: s(Name), i(CatID), s(Desc), i(Qty), s(Status), i(ItemID)
   $stmt->bind_param("sisisi", $name, $categoryID, $description, $newQuantity, $status, $itemID);
   
   if (!$stmt->execute()) {
     $conn->rollback();
-    throw new Exception("Error updating item: " . $stmt->error);
+    throw new Exception("Error updating item: " + $stmt->error);
   }
 
   // 4. If stock was changed, log it
   if ($stockAdjustment != 0) {
-    $logReason = $stockAdjustment > 0 ? "Stock Added" : "Stock Removed";
+    $logReason = "Stock Added";
     
     $logStmt = $conn->prepare(
       "INSERT INTO inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
@@ -277,11 +287,10 @@ function updateItem($conn, $data, $userID) {
 
     if (!$logStmt->execute()) {
       $conn->rollback();
-      throw new Exception("Error logging stock adjustment: " . $logStmt->error);
+      throw new Exception("Error logging stock adjustment: " + $logStmt->error);
     }
   }
 
-  // Commit the transaction
   $conn->commit();
   header('Content-Type: application/json');
   echo json_encode(['success' => true, 'message' => 'Item updated successfully.']);
@@ -289,7 +298,6 @@ function updateItem($conn, $data, $userID) {
 
 /**
  * Deletes an item from the 'inventory' table.
- * WARNING: This will also delete all associated logs due to the database schema.
  */
 function deleteItem($conn, $data, $userID) {
   $itemID = (int)$data['item_id'];
@@ -312,10 +320,84 @@ function deleteItem($conn, $data, $userID) {
     throw new Exception("Error deleting item: " . $stmt->error);
   }
 
-  // Commit the transaction
   $conn->commit();
   header('Content-Type: application/json');
   echo json_encode(['success' => true, 'message' => 'Item and all associated logs have been deleted.']);
 }
 
+
+function issueItem($conn, $data, $userID) {
+  $itemID = (int)$data['item_id'];
+  // The stock adjustment from JS is already negative (e.g., -5)
+  $stockAdjustment = (int)$data['stock_adjustment'];
+  $logReason = $data['log_reason'] ?? 'Item Issued'; // Get reason from JS
+
+  // Security check: ensure stock adjustment is negative
+  if ($stockAdjustment >= 0) {
+    throw new Exception("Issue action requires a negative stock adjustment.");
+  }
+
+  $conn->begin_transaction();
+
+  // 1. Get the current quantity
+  $currentQuantity = 0;
+  $qtyStmt = $conn->prepare("SELECT ItemQuantity FROM inventory WHERE ItemID = ?");
+  $qtyStmt->bind_param("i", $itemID);
+
+  if ($qtyStmt->execute()) {
+    $result = $qtyStmt->get_result();
+    if ($row = $result->fetch_assoc()) {
+      $currentQuantity = (int)$row['ItemQuantity'];
+    } else {
+       $conn->rollback();
+       throw new Exception("Item with ID $itemID not found.");
+    }
+  } else {
+    $conn->rollback();
+    throw new Exception("Error fetching current item state: " . $qtyStmt->error);
+  }
+  $qtyStmt->close();
+
+  // 2. Calculate new quantity and status
+  $newQuantity = $currentQuantity + $stockAdjustment; // e.g., 100 + (-5) = 95
+  $status = 'In Stock';
+
+  if ($newQuantity < $currentQuantity && $newQuantity <= 0) {
+    $status = 'Out of Stock';
+    $newQuantity = 0; // Don't allow negative inventory
+  } else if ($newQuantity <= 10) { // Assuming 10 is the 'low stock' threshold
+    $status = 'Low Stock';
+  }
+
+  // 3. Update the 'inventory' table (quantity and status only)
+  $stmt = $conn->prepare(
+    "UPDATE inventory 
+     SET ItemQuantity = ?, ItemStatus = ?
+     WHERE ItemID = ?"
+  );
+  // Bind types: i(Qty), s(Status), i(ItemID)
+  $stmt->bind_param("isi", $newQuantity, $status, $itemID);
+
+  if (!$stmt->execute()) {
+    $conn->rollback();
+    throw new Exception("Error updating item quantity: " . $stmt->error);
+  }
+
+  // 4. Log the change
+  $logStmt = $conn->prepare(
+    "INSERT INTO inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
+     VALUES (?, ?, ?, ?, NOW())"
+  );
+  // We log the negative adjustment (e.g., -5)
+  $logStmt->bind_param("iiis", $userID, $itemID, $stockAdjustment, $logReason);
+
+  if (!$logStmt->execute()) {
+    $conn->rollback();
+    throw new Exception("Error logging stock issue: " . $logStmt->error);
+  }
+
+  $conn->commit();
+  header('Content-Type: application/json');
+  echo json_encode(['success' => true, 'message' => 'Item issued successfully.']);
+}
 ?>

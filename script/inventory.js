@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const searchInputHistory = document.getElementById('historySearchInput');
 
   const refreshBtn = document.getElementById('refreshBtn');
+  // ==== MODIFICATION: Added History Refresh Button Selector ====
+  const refreshBtnHistory = document.getElementById('refreshBtnHistory');
   const downloadBtnRequests = document.getElementById('downloadBtnRequests');
   const downloadBtnHistory = document.getElementById('downloadBtn');
 
@@ -218,12 +220,15 @@ document.addEventListener('DOMContentLoaded', () => {
           let valA = a[column];
           let valB = b[column];
 
-          if (column === 'ItemID' || column === 'ItemQuantity' || column === 'DamageItem' || column === 'InvLogID' || column === 'QuantityChange') {
+          // DamageItem removed from this list
+          if (column === 'ItemID' || column === 'ItemQuantity' || 
+              column === 'InvLogID' || column === 'QuantityChange' || 
+              column === 'OldQuantity' || column === 'NewQuantity') {
               valA = parseFloat(valA) || 0;
               valB = parseFloat(valB) || 0;
           }
 
-          if (column === 'DateofStockIn' || column === 'DateofStockOut' || column === 'DateofRelease') {
+          if (column === 'DateofStockIn' || column === 'DateofRelease') {
               valA = parseDateWhen(valA, null);
               valB = parseDateWhen(valB, null);
           }
@@ -234,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           if (valA === null || valA === undefined) valA = direction === 'asc' ? Infinity : -Infinity;
-          if (valB === null || valB === undefined) valB = direction === 'asc' ? Infinity : -Infinity;
+          if (valB === null || valB === undefined) valB = direction ==="asc" ? Infinity : -Infinity;
 
           let comparison = 0;
           if (valA > valB) {
@@ -280,8 +285,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (error) {
       handleError('Error fetching inventory: ' + error.message);
+      // Colspan updated to 8
       requestsTableBody.innerHTML =
-        '<tr><td colspan="10" class="no-data-cell">Error loading data.</td></tr>';
+        '<tr><td colspan="8" class="no-data-cell">Error loading data.</td></tr>';
     }
   }
 
@@ -300,6 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (error) {
       handleError('Error fetching history: ' + error.message);
+      // Colspan updated to 9
       historyTableBody.innerHTML =
         '<tr><td colspan="9" class="no-data-cell">Error loading data.</td></tr>';
     }
@@ -362,8 +369,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPagination(totalItems, 'pagination-stocks', page);
 
     if (totalItems === 0) {
+      // Colspan updated to 8
       requestsTableBody.innerHTML =
-        '<tr><td colspan="10" class="no-data-cell">No inventory items found</td></tr>';
+        '<tr><td colspan="8" class="no-data-cell">No inventory items found</td></tr>';
       return;
     }
 
@@ -375,6 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .map((item) => {
         const badgeClass = item.ItemStatus.toLowerCase().replace(/\s+/g, '-');
 
+        // Damage <td> has been removed from this template.
         return `
         <tr>
           <td>${item.ItemID}</td>
@@ -385,9 +394,7 @@ document.addEventListener('DOMContentLoaded', () => {
           
           <td><span class="statusBadge ${badgeClass}">${item.ItemStatus}</span></td>
           
-          <td>${item.DamageItem}</td>
           <td>${item.DateofStockIn}</td>
-          <td>${item.DateofStockOut || 'N/A'}</td>
           <td class="action-cell">
               <button class="action-btn edit-btn" data-id="${item.ItemID}">Edit</button>
               <button class="action-btn delete-btn" data-id="${item.ItemID}">Delete</button>
@@ -447,6 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPagination(totalItems, 'pagination-history', page);
 
     if (totalItems === 0) {
+      // Colspan is 9
       historyTableBody.innerHTML =
         '<tr><td colspan="9" class="no-data-cell">No history found</td></tr>';
       return;
@@ -458,19 +466,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
     historyTableBody.innerHTML = paginatedData
       .map(
-        (log) => `
-      <tr>
-        <td>${log.InvLogID}</td>
-        <td>${log.ItemName}</td>
-        <td>${log.Category}</td>
-        <td>${log.ItemQuantity}</td>
-        <td>${log.QuantityChange}</td>
-        <td>${log.ItemStatus}</td>
-        <td>${log.DateofStockIn || 'N/A'}</td>
-        <td>${log.DateofStockOut || 'N/A'}</td>
-        <td>${log.PerformedBy}</td>
-      </tr>
-    `
+        (log) => {
+          let quantityChangeText = log.QuantityChange;
+          let changeClass = '';
+          const changeAmount = parseInt(log.QuantityChange, 10);
+          
+          if (changeAmount > 0) {
+            quantityChangeText = `+${changeAmount}`;
+            changeClass = 'text-success'; 
+          } else if (changeAmount < 0) {
+            quantityChangeText = `${changeAmount}`;
+            changeClass = 'text-danger';
+          } else {
+             quantityChangeText = '0';
+          }
+          
+          const oldQty = (log.OldQuantity === null || log.OldQuantity === undefined) ? 'N/A' : log.OldQuantity;
+          const newQty = (log.NewQuantity === null || log.NewQuantity === undefined) ? 'N/A' : log.NewQuantity;
+
+          // DamageItem <td> was never here, so this is correct.
+          return `
+            <tr>
+              <td>${log.InvLogID}</td>
+              <td>${log.ItemName}</td>
+              <td>${log.Category}</td>
+              <td>${oldQty}</td>
+              <td class="${changeClass}">${quantityChangeText}</td>
+              <td>${newQty}</td>
+              <td>${log.ItemStatus}</td>
+              <td>${log.DateofStockIn || 'N/A'}</td>
+              <td>${log.PerformedBy}</td>
+            </tr>
+          `;
+        }
       )
       .join('');
       
@@ -530,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // This function populates the edit modal with the item's data
   function openEditModal(item) {
     currentEditItemId = item.ItemID;
     editItemIdSpan.textContent = item.ItemID;
@@ -537,8 +566,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('edit-item-name').value = item.ItemName;
     editCategorySelect.value = item.ItemCategoryID;
     document.getElementById('edit-item-description').value = item.ItemDescription;
-    // document.getElementById('edit-item-status').value = item.ItemStatus; // This line is no longer needed
-    editStockInput.value = 0;
+    
+    // Set "Add Stock" value to empty string to show placeholder
+    editStockInput.value = '';
+
+    // Populate the read-only current quantity field
+    document.getElementById('edit-item-current-qty').textContent = item.ItemQuantity;
 
     showModal(editItemModal);
   }
@@ -555,11 +588,10 @@ document.addEventListener('DOMContentLoaded', () => {
       'description',
       document.getElementById('edit-item-description').value
     );
-    formData.append('stock_adjustment', editStockInput.value);
+    // Use .value or default to 0 if empty
+    const stockToAdd = editStockInput.value || 0;
+    formData.append('stock_adjustment', stockToAdd);
     
-    // === MODIFICATION: Removed this line ===
-    // formData.append('status', document.getElementById('edit-item-status').value);
-
     try {
       const response = await fetch('inventory_actions.php?action=update_item', {
         method: 'POST',
@@ -711,6 +743,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ==== MODIFICATION: Added Event Listener for History Refresh Button ====
+  if (refreshBtnHistory) {
+    refreshBtnHistory.addEventListener('click', () => {
+      categoryFilterHistory.value = '';
+      statusFilterHistory.value = '';
+      searchInputHistory.value = '';
+      currentPages.history = 1;
+      fetchHistory(); 
+      alert('History data refreshed!');
+    });
+  }
+
   function downloadPDF(data, headers, bodyKeys, title, filename) {
       if (data.length === 0) {
           alert('No data to download.');
@@ -760,8 +804,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const { column, direction } = sortState.requests;
       sortData(filteredData, column, direction);
 
-      const headers = ['ID', 'Name', 'Category', 'Qty', 'Description', 'Status', 'Dmg', 'Stock In', 'Stock Out'];
-      const bodyKeys = ['ItemID', 'ItemName', 'Category', 'ItemQuantity', 'ItemDescription', 'ItemStatus', 'DamageItem', 'DateofStockIn', 'DateofStockOut'];
+      // 'Dmg' and 'DamageItem' removed from headers and keys
+      const headers = ['ID', 'Name', 'Category', 'Qty', 'Description', 'Status', 'Stock In'];
+      const bodyKeys = ['ItemID', 'ItemName', 'Category', 'ItemQuantity', 'ItemDescription', 'ItemStatus', 'DateofStockIn'];
       
       downloadPDF(filteredData, headers, bodyKeys, 'Inventory Stocks Report', 'inventory-stocks');
     });
@@ -785,8 +830,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const { column, direction } = sortState.history;
       sortData(filteredData, column, direction);
       
-      const headers = ['Log ID', 'Name', 'Category', 'Current Qty', 'Change', 'Status', 'Stock In', 'Stock Out', 'Performed By'];
-      const bodyKeys = ['InvLogID', 'ItemName', 'Category', 'ItemQuantity', 'QuantityChange', 'ItemStatus', 'DateofStockIn', 'DateofStockOut', 'PerformedBy'];
+      // DamageItem was never in this report, so it's correct
+      const headers = ['Log ID', 'Name', 'Category', 'Old Qty', 'Change', 'New Qty', 'Status', 'Stock In', 'Performed By'];
+      const bodyKeys = ['InvLogID', 'ItemName', 'Category', 'OldQuantity', 'QuantityChange', 'NewQuantity', 'ItemStatus', 'DateofStockIn', 'PerformedBy'];
       
       downloadPDF(filteredData, headers, bodyKeys, 'Inventory History Report', 'inventory-history');
     });

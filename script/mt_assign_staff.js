@@ -1,4 +1,187 @@
-// ===== HOUSEKEEPING DETAILS PAGE SCRIPT =====
+// ===== MAINTENANCE TASK DETAILS PAGE SCRIPT =====
+
+// --- GLOBALS ---
+let CURRENT_REQUEST_ID = null;
+
+// --- DOM ELEMENTS ---
+const roomValue = document.getElementById('room-value');
+const roomTypeValue = document.getElementById('room-type-value');
+const dateValue = document.getElementById('date-value');
+const requestTimeValue = document.getElementById('request-time-value');
+const statusValue = document.getElementById('status-value');
+
+const remarksTextarea = document.querySelector('.remarks-textarea');
+const workTypeSelect = document.getElementById('workType');
+const unitTypeSelect = document.getElementById('unitType');
+const issueTextarea = document.querySelector('.issue-textarea');
+
+const inProgressBtn = document.getElementById('inProgressBtn');
+const doneBtn = document.getElementById('doneBtn');
+
+const modalBackdrop = document.getElementById('modalBackdrop');
+const modalCancel = document.getElementById('modalCancel');
+const modalSave = document.getElementById('modalSave');
+
+// ===== PAGE INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('Maintenance Details page loaded');
+
+  // 1. Get request_id from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const requestId = urlParams.get('request_id');
+
+  if (!requestId) {
+    document.body.innerHTML = '<h1>Error: No Request ID provided.</h1>';
+    return;
+  }
+
+  CURRENT_REQUEST_ID = requestId;
+  
+  // 2. Fetch task details from API
+  fetchTaskDetails(CURRENT_REQUEST_ID);
+});
+
+/**
+ * Fetch task details from the backend
+ */
+async function fetchTaskDetails(requestId) {
+  try {
+    // ===== CHANGED THIS LINE =====
+    const response = await fetch(`http://localhost:8000/api_staff_task.php?action=get_task_details&request_id=${requestId}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const result = await response.json();
+
+    if (result.status === 'success') {
+      // 3. Populate the page with data
+      initializePageData(result.data);
+    } else {
+      document.body.innerHTML = `<h1>Error: ${result.message}</h1>`;
+    }
+  } catch (error) {
+    console.error('Error fetching task details:', error);
+    document.body.innerHTML = '<h1>Error: Could not load task details.</h1>';
+  }
+}
+
+/**
+ * Fill the HTML fields with data from the API
+ */
+function initializePageData(data) {
+  // --- THESE ARE THE CORRECTED LINES ---
+  roomValue.textContent = data.RoomNumber || 'N/A';
+  roomTypeValue.textContent = data.RoomType || 'N/A';
+  dateValue.textContent = data.DateRequested || 'N/A';
+  requestTimeValue.textContent = data.TimeRequested || 'N/A';
+  statusValue.textContent = data.Status || 'N/A';
+  
+  // Set button states based on status
+  if (data.Status === 'In Progress') {
+    inProgressBtn.disabled = true;
+    inProgressBtn.textContent = 'In Progress';
+  } else if (data.Status === 'Completed') {
+    inProgressBtn.disabled = true;
+    doneBtn.disabled = true;
+    inProgressBtn.textContent = 'Task Completed';
+    doneBtn.textContent = 'Task Completed';
+  }
+}
+
+// ===== ACTION BUTTONS & MODAL =====
+
+// --- "In Progress" Button ---
+inProgressBtn.addEventListener('click', () => {
+  console.log('Setting status to In Progress...');
+  updateTaskStatus('In Progress');
+});
+
+// --- "Done" Button (opens modal) ---
+doneBtn.addEventListener('click', () => {
+  modalBackdrop.classList.add('active');
+});
+
+// --- Modal "Cancel" Button ---
+modalCancel.addEventListener('click', () => {
+  modalBackdrop.classList.remove('active');
+});
+
+// --- Modal "Save" Button (completes task) ---
+modalSave.addEventListener('click', () => {
+  console.log('Setting status to Completed...');
+  
+  // Validate that work details are filled
+  if (!workTypeSelect.value || !unitTypeSelect.value || !issueTextarea.value) {
+    alert('⚠️ Please fill in Work Type, Unit Type, and Issue Description before completing the task.');
+    return;
+  }
+  
+  updateTaskStatus('Completed');
+});
+
+// --- Modal Backdrop (closes modal) ---
+modalBackdrop.addEventListener('click', (e) => {
+  if (e.target === modalBackdrop) {
+    modalBackdrop.classList.remove('active');
+  }
+});
+
+/**
+ * Send the status update to the backend
+ */
+async function updateTaskStatus(newStatus) {
+  const taskData = {
+    request_id: CURRENT_REQUEST_ID,
+    status: newStatus,
+    remarks: remarksTextarea.value,
+    workType: '',
+    unitType: '',
+    workDescription: ''
+  };
+
+  // If completing, add the extra details
+  if (newStatus === 'Completed') {
+    taskData.workType = workTypeSelect.value;
+    taskData.unitType = unitTypeSelect.value;
+    taskData.workDescription = issueTextarea.value;
+  }
+
+  try {
+    // ===== CHANGED THIS LINE =====
+    const response = await fetch('http://localhost:8000/api_staff_task.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'update_task_status',
+        data: taskData
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (result.status === 'success') {
+      alert(`✅ Task status updated to ${newStatus}`);
+      if (newStatus === 'Completed') {
+         modalBackdrop.classList.remove('active');
+      }
+      // Reload details to show new status
+      fetchTaskDetails(CURRENT_REQUEST_ID); 
+    } else {
+      alert(`⚠️ Error: ${result.message}`);
+    }
+  } catch (error) {
+    console.error('Error updating task status:', error);
+    alert('Error: Could not connect to server to update status.');
+  }
+}
 
 // ===== MAINTENANCE CHECKBOX TOGGLE =====
 const maintenanceCheck = document.getElementById('maintenanceCheck');
@@ -13,163 +196,4 @@ maintenanceCheck.addEventListener('change', function() {
     maintenanceDropdowns.classList.remove('active');
     issueSection.classList.remove('active');
   }
-});
-
-// ===== MODAL FUNCTIONALITY =====
-const doneBtn = document.getElementById('doneBtn');
-const modalBackdrop = document.getElementById('modalBackdrop');
-const modalCancel = document.getElementById('modalCancel');
-const modalSave = document.getElementById('modalSave');
-
-// Open modal when Done button is clicked
-doneBtn.addEventListener('click', () => {
-  modalBackdrop.classList.add('active');
-});
-
-// Close modal when Cancel button is clicked
-modalCancel.addEventListener('click', () => {
-  modalBackdrop.classList.remove('active');
-});
-
-// Close modal when clicking outside
-modalBackdrop.addEventListener('click', (e) => {
-  if (e.target === modalBackdrop) {
-    modalBackdrop.classList.remove('active');
-  }
-});
-
-// Save and close modal
-modalSave.addEventListener('click', () => {
-  // Get form data
-  const formData = getFormData();
-  
-  // Validate required fields
-  if (!validateForm(formData)) {
-    alert('⚠️ Please fill in all required fields!');
-    return;
-  }
-  
-  // Save data (you would send this to your backend)
-  console.log('Saving data:', formData);
-  
-  alert('✅ Task marked as complete!');
-  modalBackdrop.classList.remove('active');
-  
-  // Here you would typically:
-  // 1. Send data to backend API
-  // 2. Redirect to housekeeping list page
-  // Example:
-  // window.location.href = 'housekeeping.html';
-});
-
-// ===== IN PROGRESS BUTTON =====
-const inProgressBtn = document.getElementById('inProgressBtn');
-
-inProgressBtn.addEventListener('click', () => {
-  const formData = getFormData();
-  
-  console.log('Setting status to In Progress:', formData);
-  
-  alert('📋 Task marked as In Progress!');
-  
-  // Here you would typically:
-  // 1. Update status in backend
-  // 2. Optionally redirect back to list
-  // Example:
-  // window.location.href = 'housekeeping.html';
-});
-
-// ===== HELPER FUNCTIONS =====
-
-/**
- * Get all form data
- */
-function getFormData() {
-  const remarks = document.querySelector('.remarks-textarea').value;
-  const isMaintenance = maintenanceCheck.checked;
-  
-  const data = {
-    room: document.querySelector('.detail-row:nth-child(1) .detail-value').textContent,
-    guest: document.querySelector('.detail-row:nth-child(2) .detail-value').textContent,
-    date: document.querySelector('.detail-row:nth-child(3) .detail-value').textContent,
-    requestTime: document.querySelector('.detail-row:nth-child(4) .detail-value').textContent,
-    status: document.querySelector('.detail-row:nth-child(5) .detail-value').textContent,
-    remarks: remarks,
-    maintenance: isMaintenance
-  };
-  
-  // If maintenance is checked, get maintenance details
-  if (isMaintenance) {
-    data.workType = document.getElementById('workType').value;
-    data.unitType = document.getElementById('unitType').value;
-    data.issueDescription = document.querySelector('.issue-textarea').value;
-  }
-  
-  return data;
-}
-
-/**
- * Validate form data
- */
-function validateForm(data) {
-  // If maintenance is checked, validate maintenance fields
-  if (data.maintenance) {
-    if (!data.workType || !data.unitType || !data.issueDescription) {
-      return false;
-    }
-  }
-  
-  return true;
-}
-
-/**
- * Initialize page with data (call this when page loads with data from URL params or API)
- */
-function initializePageData(requestData) {
-  if (!requestData) return;
-  
-  // Set room details
-  if (requestData.room) {
-    document.querySelector('.detail-row:nth-child(1) .detail-value').textContent = requestData.room;
-  }
-  if (requestData.guest) {
-    document.querySelector('.detail-row:nth-child(2) .detail-value').textContent = requestData.guest;
-  }
-  if (requestData.date) {
-    document.querySelector('.detail-row:nth-child(3) .detail-value').textContent = requestData.date;
-  }
-  if (requestData.requestTime) {
-    document.querySelector('.detail-row:nth-child(4) .detail-value').textContent = requestData.requestTime;
-  }
-  if (requestData.status) {
-    document.querySelector('.detail-row:nth-child(5) .detail-value').textContent = requestData.status;
-  }
-}
-
-// ===== PAGE INITIALIZATION =====
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('Maintenance Details page loaded');
-  
-  // Example: Get data from URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
-  const room = urlParams.get('room');
-  
-  if (room) {
-    // You would typically fetch the full request data from your backend here
-    // Example:
-    // fetch(`/api/housekeeping/request/${room}`)
-    //   .then(res => res.json())
-    //   .then(data => initializePageData(data));
-    
-    console.log('Loading data for room:', room);
-  }
-  
-  // Example of setting initial data (replace with actual data from your backend)
-  // initializePageData({
-  //   room: '101',
-  //   guest: '001',
-  //   date: '10/25/25',
-  //   requestTime: '2:30 PM',
-  //   status: 'Dirty / Unoccupied'
-  // });
 });

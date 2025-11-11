@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('stock_adjustment', item.stock_adjustment);
             formData.append('status', item.status);
 
-            return fetch('inventory_actions.php?action=update_item', {
+            return fetch('inventory_actions.php?action=issue_item', {
                 method: 'POST',
                 body: formData
             }).then(response => response.json());

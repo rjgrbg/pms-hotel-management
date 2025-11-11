@@ -462,7 +462,7 @@ tbody tr:hover {
   color: #fff;
 }
 
-.statusBadge.maintenance {
+.statusBadge.needs-maintenance {
   background-color: #c9302c;
   color: #fff;
 }

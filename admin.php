@@ -197,20 +197,19 @@ if (isset($_SESSION['UserID'])) {
               <h3 class="statLabel">Vacant</h3>
               <p class="statValue">0</p>
             </div>
-            <div class="statCard">
-              <h3 class="statLabel">Reserved</h3>
-              <p class="statValue">0</p>
-            </div>
           </div>
         </section>
 
         <section class="dashboardSection">
           <h2 class="sectionTitle">Users</h2>
-          <div class="statsGrid">
+          <div class="statsGrid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
             <div class="statCard">
               <h3 class="statLabel">Total Employees</h3>
               <p class="statValue">0</p>
-              <p class="statSubtext"></p>
+            </div>
+            <div class="statCard">
+              <h3 class="statLabel">Admin</h3>
+              <p class="statValue">0</p>
             </div>
             <div class="statCard">
               <h3 class="statLabel">Housekeeping</h3>
@@ -222,6 +221,10 @@ if (isset($_SESSION['UserID'])) {
             </div>
             <div class="statCard">
               <h3 class="statLabel">Parking</h3>
+              <p class="statValue">0</p>
+            </div>
+            <div class="statCard">
+              <h3 class="statLabel">Inventory</h3>
               <p class="statValue">0</p>
             </div>
           </div>
@@ -297,7 +300,7 @@ if (isset($_SESSION['UserID'])) {
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="hkRecordCount">0</span></span>
-            <div class="paginationControls">
+            <div class="paginationControls" id="hk-requests-tab-pagination">
               </div>
           </div>
         </div>
@@ -352,7 +355,7 @@ if (isset($_SESSION['UserID'])) {
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="hkHistRecordCount">0</span></span>
-            <div class="paginationControls">
+            <div class="paginationControls" id="hk-history-tab-pagination">
                </div>
           </div>
         </div>
@@ -421,7 +424,7 @@ if (isset($_SESSION['UserID'])) {
 
             <div class="pagination">
               <span class="paginationInfo">Display Records <span id="hkLinensRecordCount">0</span></span>
-              <div class="paginationControls">
+              <div class="paginationControls" id="linens-subtab-pagination">
                  </div>
             </div>
           </div>
@@ -479,7 +482,7 @@ if (isset($_SESSION['UserID'])) {
 
             <div class="pagination">
               <span class="paginationInfo">Display Records <span id="hkAmenitiesRecordCount">0</span></span>
-              <div class="paginationControls">
+              <div class="paginationControls" id="amenities-subtab-pagination">
                  </div>
             </div>
           </div>
@@ -557,7 +560,7 @@ if (isset($_SESSION['UserID'])) {
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="mtRequestsRecordCount">0</span></span>
-            <div class="paginationControls">
+            <div class="paginationControls" id="mt-requests-tab-pagination">
               </div>
           </div>
         </div>
@@ -612,7 +615,7 @@ if (isset($_SESSION['UserID'])) {
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="mtHistRecordCount">0</span></span>
-            <div class="paginationControls">
+            <div class="paginationControls" id="mt-history-tab-pagination">
               </div>
           </div>
         </div>
@@ -671,7 +674,7 @@ if (isset($_SESSION['UserID'])) {
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="mtAppliancesRecordCount">0</span></span>
-            <div class="paginationControls">
+            <div class="paginationControls" id="mt-appliances-tab-pagination">
               </div>
           </div>
         </div>
@@ -720,7 +723,7 @@ if (isset($_SESSION['UserID'])) {
           </table>
         </div>
 
-        <div class="pagination">
+        <div class="pagination" id="parking-page-pagination">
           <span class="paginationInfo">Display Records <span id="parkingHistoryRecordCount">0</span></span>
           <div class="paginationControls">
              </div>
@@ -781,16 +784,14 @@ if (isset($_SESSION['UserID'])) {
             <th>Quantity</th>
             <th>Description</th>
             <th>Status</th>
-            <th>Damage</th>
             <th>Stock In Date</th>
-            <th>Stock Out Date</th>
           </tr>
         </thead>
         <tbody id="inventoryTableBody"></tbody>
       </table>
     </div>
 
-    <div class="pagination">
+    <div class="pagination" id="inv-items-tab-pagination">
       <span class="paginationInfo">Display Records <span id="inventoryRecordCount">0</span></span>
       <div class="paginationControls"></div>
     </div>
@@ -809,8 +810,9 @@ if (isset($_SESSION['UserID'])) {
         </select>
         <select class="filterDropdown" id="invHistActionFilter">
           <option value="">Action</option>
-          <option value="Stock In">Stock In</option>
-          <option value="Stock Out">Stock Out</option>
+          <option value="Initial Stock In">Initial Stock In</option>
+          <option value="Stock Added">Stock Added</option>
+          <option value="Item Issued">Item Issued</option>
         </select>
         <div class="searchBox">
           <input type="text" placeholder="Search" class="searchInput" id="invHistSearchInput" />
@@ -831,21 +833,22 @@ if (isset($_SESSION['UserID'])) {
       <table>
         <thead>
           <tr>
-            <th>ID</th>
+            <th>Log ID</th>
             <th>Name</th>
             <th>Category</th>
-            <th>Quantity</th>
-            <th>Action</th>
-            <th>Transaction Date</th>
+            <th>Old Qty</th>
+            <th>Change</th>
+            <th>New Qty</th>
+            <th>Status</th>
+            <th>Stock In</th>
             <th>Performed By</th>
-            <th>Remarks</th>
           </tr>
         </thead>
         <tbody id="invHistTableBody"></tbody>
       </table>
     </div>
 
-    <div class="pagination">
+    <div class="pagination" id="inv-history-tab-pagination">
       <span class="paginationInfo">Display Records <span id="invHistRecordCount">0</span></span>
       <div class="paginationControls"></div>
     </div>
@@ -876,7 +879,7 @@ if (isset($_SESSION['UserID'])) {
               <option value="">Status</option>
               <option value="Available">Available</option>
               <option value="Needs Cleaning">Needs Cleaning</option>
-              <option value="Maintenance">Maintenance</option>
+              <option value="Needs Maintenance">Needs Maintenance</option>
             </select>
             <div class="searchBox">
               <input type="text" placeholder="Search" class="searchInput" id="roomsSearchInput" />
@@ -911,7 +914,7 @@ if (isset($_SESSION['UserID'])) {
           </table>
         </div>
 
-        <div class="pagination">
+        <div class="pagination" id="rooms-page-pagination">
           <span class="paginationInfo">Display Records <span id="roomsRecordCount">0</span></span>
           <div class="paginationControls">
             </div>
@@ -985,7 +988,7 @@ if (isset($_SESSION['UserID'])) {
             </table>
           </div>
 
-          <div class="pagination">
+          <div class="pagination" id="user-management-tab-pagination">
             <span class="paginationInfo">Display Records <span id="usersRecordCount">0</span></span>
             <div class="paginationControls"></div>
           </div>
@@ -1047,7 +1050,7 @@ if (isset($_SESSION['UserID'])) {
             </table>
           </div>
 
-          <div class="pagination">
+          <div class="pagination" id="user-logs-tab-pagination">
             <span class="paginationInfo">Display Records <span id="logsRecordCount">0</span></span>
             <div class="paginationControls"></div>
           </div>
@@ -1101,8 +1104,9 @@ if (isset($_SESSION['UserID'])) {
           <label for="roomStatus">Status *</label>
           <select id="roomStatus" name="roomStatus" required>
             <option value="">Select Status</option>
+            <option value="Available">Available</option>
             <option value="Needs Cleaning">Needs Cleaning</option>
-            <option value="Maintenance">Maintenance</option>
+            <option value="Needs Maintenance">Needs Maintenance</option>
           </select>
         </div>
         
@@ -1228,7 +1232,19 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
 
-  <script src="script/shared-data.js"></script>
-  <script src="script/admin.js"></script>
+<script src="script/shared-data.js"></script>
+<script src="script/admin.config.js"></script>
+<script src="script/admin.utils.js"></script>
+<script src="script/admin.pagination.js"></script>
+<script src="script/admin.dashboard.js"></script>
+<script src="script/admin.ui.js"></script>
+<script src="script/admin.rooms.js"></script>
+<script src="script/admin.users.js"></script>
+<script src="script/admin.userLogs.js"></script>
+<script src="script/admin.housekeeping.js"></script>
+<script src="script/admin.maintenance.js"></script>
+<script src="script/admin.parking.js"></script>
+<script src="script/admin.inventory.js"></script>
+<script src="script/admin.js"></script>
 </body>
 </html>

@@ -465,6 +465,52 @@ switch ($action) {
         $stmt_delete->close();
         break;
 
+    // --- (NEW) FETCH USER LOGS (from PMS) ---
+    case 'fetch_user_logs':
+        // Check authentication
+        if (!isset($_SESSION['UserID']) || $_SESSION['UserType'] !== 'admin') {
+            send_json_response(false, 'Unauthorized access.');
+        }
+
+        $pms_conn = get_db_connection('pms');
+        if ($pms_conn === null) {
+            send_json_response(false, 'PMS Database connection error.');
+        }
+
+        // We join user_logs with users to get all the info in one query
+        $sql = "SELECT
+                    ul.LogID,
+                    ul.ActionType,
+                    ul.Timestamp,
+                    u.UserID,
+                    u.EmployeeID,
+                    u.Fname,
+                    u.Lname,
+                    u.Mname,
+                    u.AccountType,
+                    u.Shift,
+                    u.Username,
+                    u.EmailAddress
+                FROM
+                    user_logs ul
+                JOIN
+                    users u ON ul.UserID = u.UserID
+                ORDER BY
+                    ul.LogID DESC"; // Show newest logs first
+        
+        $result = $pms_conn->query($sql);
+
+        if ($result === false) {
+             error_log("Database query error (fetch logs): " . $pms_conn->error);
+             send_json_response(false, 'Database query error: ' . $pms_conn->error);
+        } else {
+             $logs = $result->fetch_all(MYSQLI_ASSOC);
+             $result->free();
+             send_json_response(true, 'User logs fetched successfully.', $logs);
+        }
+        break;
+
+
     default:
         send_json_response(false, 'Invalid action specified.');
         break;

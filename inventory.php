@@ -72,7 +72,7 @@ if (isset($_SESSION['UserID'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Celestia Hotel - Inventory Management</title>
   
-  <link rel="stylesheet" href="css/inventory.css?v=1.3">
+  <link rel="stylesheet" href="css/inventory.css?v=1.4">
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -187,14 +187,12 @@ if (isset($_SESSION['UserID'])) {
                           <th class="sortable" data-sort="ItemQuantity">Quantity</th>
                           <th class="sortable" data-sort="ItemDescription">Description</th>
                           <th class="sortable" data-sort="ItemStatus">Status</th>
-                          <th class="sortable" data-sort="DamageItem">Damage</th>
                           <th class="sortable" data-sort="DateofStockIn">Stock In Date</th>
-                          <th class="sortable" data-sort="DateofStockOut">Stock Out Date</th>
                           <th>Action</th> 
                       </tr>
           </thead>
           <tbody id="requestsTableBody">
-            <tr><td colspan="10" style="text-align: center;">Loading...</td></tr>
+            <tr><td colspan="8" style="text-align: center;">Loading...</td></tr>
           </tbody>
         </table>
       </div>
@@ -227,6 +225,10 @@ if (isset($_SESSION['UserID'])) {
             </button>
           </div>
 
+          <button class="refreshBtn" id="refreshBtnHistory">
+            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+          </button>
+
           <button class="downloadBtn" id="downloadBtn">
             <img src="assets/icons/download-icon.png" alt="Download" />
           </button>
@@ -240,11 +242,11 @@ if (isset($_SESSION['UserID'])) {
                           <th class="sortable" data-sort="InvLogID">ID</th>
                           <th class="sortable" data-sort="ItemName">Name</th>
                           <th class="sortable" data-sort="Category">Category</th>
-                          <th class="sortable" data-sort="ItemQuantity">Quantity</th>
+                          <th class="sortable" data-sort="OldQuantity">Old Qty</th>
                           <th class="sortable" data-sort="QuantityChange">Change</th>
+                          <th class="sortable" data-sort="NewQuantity">New Qty</th>
                           <th class="sortable" data-sort="ItemStatus">Status</th>
                           <th class="sortable" data-sort="DateofStockIn">Stock In</th>
-                          <th class="sortable" data-sort="DateofStockOut">Stock Out</th>
                           <th class="sortable" data-sort="PerformedBy">Performed By</th>
                       </tr>
                     </thead>
@@ -363,16 +365,17 @@ if (isset($_SESSION['UserID'])) {
                     <textarea id="edit-item-description" rows="3"></textarea>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group stock-adder-group">
-                        <label for="edit-item-add-stock">Adjust Stock</label>
-                        <div class="stock-input-wrapper">
-                            <input type="number" id="edit-item-add-stock" value="0">
-                        </div>
+                <div class="form-row form-row-align-bottom">
+                    <div class="form-group form-group-static">
+                        <label>Current Quantity</label>
+                        <span id="edit-item-current-qty">0</span>
                     </div>
                     
+                    <div class="form-group stock-adder-group">
+                        <label for="edit-item-add-stock">Add Stock</label>
+                        <input type="number" id="edit-item-add-stock" min="0" placeholder="0">
                     </div>
-
+                </div>
                 <div class="edit-modal-buttons">
                     <button type="button" class="submit-btn btn-cancel-white" id="edit-modal-cancel-btn">CANCEL</button>
                     <button type="submit" class="submit-btn">SAVE CHANGES</button>
@@ -399,7 +402,7 @@ if (isset($_SESSION['UserID'])) {
 </div>
 
   <script src="script/shared-data.js"></script>
-  <script src="script/inventory.js?v=1.3"></script>
+  <script src="script/inventory.js?v=1.9"></script>
 </body>
 
 </html>
