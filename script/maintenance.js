@@ -12,7 +12,8 @@ let filteredHistory = []; // This will be used by maintenance.history.js
 
 let selectedStaffId = null;
 let currentRoomId = null; // Used for both assigning and editing room status
-// *** REMOVED: currentRequestIdToCancel ***
+// *** ADDED: For confirmation modal ***
+let confirmCallback = null; 
 let selectedIssueTypes = ''; // For the new assign staff workflow
 
 // Pagination State
@@ -145,7 +146,22 @@ function setupEventListeners() {
     document.getElementById('closeSuccessBtn')?.addEventListener('click', hideSuccessModal);
     document.getElementById('okaySuccessBtn')?.addEventListener('click', hideSuccessModal);
 
-    // --- *** REMOVED: Confirmation Modal listeners *** ---
+    // --- *** ADDED: Confirmation Modal listeners (for Cancel button) *** ---
+    const confirmActionBtn = document.getElementById('confirmActionBtn');
+    const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
+    const confirmModal = document.getElementById('confirmModal');
+
+    confirmActionBtn?.addEventListener('click', () => {
+        if (typeof confirmCallback === 'function') {
+            confirmCallback();
+        }
+        hideConfirmModal();
+    });
+    cancelConfirmBtn?.addEventListener('click', hideConfirmModal);
+    confirmModal?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) hideConfirmModal();
+    });
+    // --- END: Confirmation Modal listeners ---
     
     // --- REMOVED Delete Modal (for Hotel Assets) ---
 
@@ -301,6 +317,27 @@ function handleIssueTypeSubmit(e) {
   }
 }
 
+// =======================================================
+// ===== CONFIRMATION MODAL FUNCTIONS (FOR CANCEL) =====
+// =======================================================
+
+function showConfirmModal(title, text, onConfirm) {
+    document.getElementById('confirmModalTitle').textContent = title;
+    document.getElementById('confirmModalText').textContent = text;
+    
+    // Store the confirm callback globally (as defined in listener setup)
+    confirmCallback = onConfirm; 
+    
+    const modal = document.getElementById('confirmModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function hideConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) modal.style.display = 'none';
+    confirmCallback = null;
+}
+
 
 // =======================================================
 // ===== REQUESTS TAB FUNCTIONS (MOVED FROM requests.js) =====
@@ -339,8 +376,14 @@ function renderRequestsTable() {
             assignButton = `<button class="assignBtn" data-room-id="${req.id}" disabled>Not Required</button>`;
         }
         
-        // *** REMOVED: Cancel button logic ***
+        // *** MODIFIED: Add Cancel button logic ***
         let cancelButton = ''; 
+        if (req.status === 'Pending') {
+            // Use the RequestID for cancellation
+            cancelButton = `<button class="actionIconBtn cancel-request-btn" title="Cancel Request" data-request-id="${req.requestId}">
+                                <i class="fas fa-times"></i>
+                            </button>`;
+        }
 
         return `
           <tr data-room-id="${req.id}" data-request-id="${req.requestId}" data-room-number="${req.room}" data-status="${req.status}">
@@ -411,7 +454,21 @@ function handleRequestsTableClick(e) {
         return;
     }
     
-    // *** REMOVED: Cancel Request Button logic ***
+    // *** ADDED: Cancel Request Button logic ***
+    const cancelBtn = e.target.closest('.cancel-request-btn');
+    if (cancelBtn) {
+        const requestId = cancelBtn.dataset.requestId;
+        // Use the new confirmation modal
+        showConfirmModal(
+            'Cancel Maintenance Request?',
+            'Are you sure you want to cancel this request? This action cannot be undone.',
+            () => {
+                // This callback function is executed when user clicks "YES, CONFIRM"
+                handleCancelRequest(requestId);
+            }
+        );
+        return;
+    }
 }
 
 // --- Handle Final Staff Assignment ---
@@ -505,7 +562,7 @@ async function handleEditRoomStatusSubmit(e) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            throw new Error(`Server error (HTTP ${response.status}): ${errorText}`);
+            throw new Error(`Server error (HTTP ${response.status}): ${text}`);
         }
 
         const result = await response.json();
@@ -537,7 +594,40 @@ async function handleEditRoomStatusSubmit(e) {
     }
 }
 
-// *** REMOVED: handleCancelAction function ***
+// *** ADDED: handleCancelRequest function ***
+async function handleCancelRequest(requestId) {
+    if (!requestId) {
+        alert('Error: Request ID is missing.');
+        return;
+    }
+
+    try {
+        const payload = {
+            action: 'cancel_task',
+            requestId: requestId
+        };
+
+        // Assumes handleApiCall is defined in maintenance.utils.js and points to api_maintenance.php
+        const result = await handleApiCall(payload.action, payload);
+
+        if (result.status === 'success') {
+            hideConfirmModal();
+            showSuccessModal(result.message || 'Request cancelled successfully!');
+            
+            // Reload data from server to reflect all changes (staff status, room status, etc.)
+            setTimeout(() => {
+                 window.location.reload();
+            }, 1500); // Reload after 1.5s
+
+        } else {
+            hideConfirmModal();
+            alert('Failed to cancel request: ' + (result.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error cancelling request:', error);
+        alert('An error occurred. Please try again.');
+    }
+}
 
 
 // ===== REQUESTS FILTERING LOGIC =====
@@ -570,18 +660,21 @@ function applyRequestFiltersAndRender() {
   // 1. Get filter values *before* updating room options
   const floor = document.getElementById('floorFilter')?.value || '';
   
-  // *** THIS IS THE KEY: Get the SAVED room value, not the current one ***
-  const room = sessionStorage.getItem('requests_roomFilter') || ''; 
+  // *** FIX: Get the room from the dropdown's *current value*, not session storage ***
+  const room = document.getElementById('roomFilter')?.value || ''; 
   
   const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
 
-  // 2. Populate rooms. This will also set the value from session storage.
+  // 2. Populate rooms. This will also set the value from session storage *if* it's the initial load.
+  // On change, this will just repopulate the list based on the floor.
   updateRoomFilterOptions(); 
+  // After repopulating, we must re-set the room value we just captured
+  document.getElementById('roomFilter').value = room;
 
   // 3. Filter data
   filteredRequests = currentRequestsData.filter(req => {
     const matchFloor = !floor || (req.floor && req.floor.toString() === floor);
-    // *** Use the 'room' variable which holds the saved value ***
+    // *** Use the 'room' variable which now holds the correct current value ***
     const matchRoom = !room || (req.room && req.room.toString() === room); 
     const matchSearch = !search || (req.room && req.room.toString().includes(search));
     return matchFloor && matchRoom && matchSearch;

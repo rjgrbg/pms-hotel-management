@@ -183,7 +183,72 @@ switch ($action) {
         }
         break;
 
-    // --- *** REMOVED: 'cancel_task' case *** ---
+    // --- *** ADDED: 'cancel_task' case *** ---
+    case 'cancel_task':
+        try {
+            $conn->begin_transaction();
+
+            $requestId = $data['requestId'] ?? null;
+            if (!$requestId) {
+                throw new Exception("Request ID is required.");
+            }
+
+            // 1. Get request info (RoomID, AssignedUserID) *before* updating
+            $stmt_info = $conn->prepare(
+                "SELECT RoomID, AssignedUserID, Status FROM pms.maintenance_requests WHERE RequestID = ?"
+            );
+            $stmt_info->bind_param("i", $requestId);
+            $stmt_info->execute();
+            $info = $stmt_info->get_result()->fetch_assoc();
+
+            if (!$info) {
+                throw new Exception("Request not found.");
+            }
+            
+            if ($info['Status'] !== 'Pending') {
+                throw new Exception("Only 'Pending' requests can be cancelled.");
+            }
+
+            $roomId = $info['RoomID'];
+            $staffId = $info['AssignedUserID'];
+
+            // 2. Update the request status to 'Cancelled' and add a remark
+            $stmt_update = $conn->prepare(
+                "UPDATE pms.maintenance_requests 
+                 SET Status = 'Cancelled', Remarks = 'Cancelled by Manager' 
+                 WHERE RequestID = ?"
+            );
+            $stmt_update->bind_param("i", $requestId);
+            $stmt_update->execute();
+
+            // 3. If a staff member was assigned, update their status back to 'Available'
+            if ($staffId) {
+                $stmt_staff = $conn->prepare(
+                    "UPDATE pms.users SET AvailabilityStatus = 'Available' WHERE UserID = ?"
+                );
+                $stmt_staff->bind_param("i", $staffId);
+                $stmt_staff->execute();
+            }
+
+            // 4. Log the action
+            logMaintenanceAction($conn, $requestId, $roomId, $managerUserId, 'CANCELLED', "Request cancelled by manager (ID: $managerUserId).");
+
+            $conn->commit();
+
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Maintenance request has been cancelled.'
+            ]);
+
+        } catch (Exception $e) {
+            $conn->rollback();
+            error_log("Cancel Task Error: " . $e->getMessage());
+            echo json_encode([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ]);
+        }
+        break;
         
     default:
         echo json_encode(['status' => 'error', 'message' => 'Unknown action.']);
