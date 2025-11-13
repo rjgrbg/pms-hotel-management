@@ -23,18 +23,23 @@ function renderRequestsTable() {
         let assignButton;
         const status = req.status;
 
-        // Use 'Not Assigned' check from my previous (working) logic
         if (req.staff !== 'Not Assigned') {
             assignButton = `<button class="assignBtn assigned" disabled>${req.staff}</button>`;
-        } else if (['Needs Maintenance', 'Pending'].includes(status)) {
-            // *** MODIFICATION: Added data-room-number to the button for easier access ***
+        } else if (['Needs Maintenance'].includes(status)) { 
             assignButton = `<button class="assignBtn assign-staff-btn" data-room-id="${req.id}" data-room-number="${req.room}">Assign Staff</button>`;
         } else {
             assignButton = `<button class="assignBtn" data-room-id="${req.id}" disabled>Not Required</button>`;
         }
+        
+        let cancelButton = ''; 
+        if (req.status === 'Pending') {
+            cancelButton = `<button class="actionIconBtn cancel-request-btn" title="Cancel Request" data-request-id="${req.requestId}">
+                                <i class="fas fa-times"></i>
+                            </button>`;
+        }
 
         return `
-          <tr data-room-id="${req.id}" data-room-number="${req.room}" data-status="${req.status}">
+          <tr data-room-id="${req.id}" data-request-id="${req.requestId}" data-room-number="${req.room}" data-status="${req.status}">
             <td>${req.floor ?? 'N/A'}</td>
             <td>${req.room ?? 'N/A'}</td>
             <td>${req.date ?? 'N/A'}</td>
@@ -42,10 +47,11 @@ function renderRequestsTable() {
             <td>${req.lastMaintenance ?? 'N/A'}</td>
             <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
             <td>${assignButton}</td>
-            <td>
+            <td class="action-cell">
                 <button class="actionIconBtn edit-room-status-btn" title="Edit Room Status">
                     <i class="fas fa-edit"></i>
                 </button>
+                ${cancelButton} 
             </td>
           </tr>
         `;
@@ -63,11 +69,11 @@ function renderRequestsTable() {
   });
 }
 
-// --- MODIFIED: Event handler for ALL clicks on Requests table body ---
+// --- Event handler for ALL clicks on Requests table body ---
 function handleRequestsTableClick(e) {
+    // Assign Staff Button
     const assignBtn = e.target.closest('.assign-staff-btn');
     if (assignBtn && !assignBtn.disabled) {
-        // *** MODIFICATION: Get row, roomId, and roomNumber to pass to modal ***
         const row = assignBtn.closest('tr');
         currentRoomId = row.dataset.roomId; // Set global ID
         const roomNumber = row.dataset.roomNumber; // Get room number
@@ -75,56 +81,60 @@ function handleRequestsTableClick(e) {
         document.getElementById('issueTypeForm').reset();
         selectedIssueTypes = '';
         
-        // *** MODIFICATION: Call modal with correct arguments ***
         showIssueTypeModal(currentRoomId, roomNumber);
         return;
     }
 
+    // Edit Room Status Button
     const editBtn = e.target.closest('.edit-room-status-btn');
+    
     if (editBtn) {
         const row = editBtn.closest('tr');
-        currentRoomId = row.dataset.roomId;
+        const currentStatus = row.dataset.status;
         const roomNumber = row.dataset.roomNumber;
-        const status = row.dataset.status;
+        const roomId = row.dataset.roomId;
         
+        // Only block editing if status is Pending or In Progress
+        if (currentStatus === 'Pending' || currentStatus === 'In Progress') {
+            // Show alert and don't open modal
+            alert(`Cannot edit status for Room ${roomNumber} while a maintenance task is ${currentStatus}.`);
+            return;
+        }
+        
+        // Normal edit - open modal (including for "Needs Maintenance")
+        currentRoomId = roomId;
         document.getElementById('editRoomStatusRoomNumber').textContent = roomNumber;
-        document.getElementById('editRoomStatusRoomId').value = currentRoomId;
-        document.getElementById('editRoomStatusSelect').value = status;
+        document.getElementById('editRoomStatusRoomId').value = roomId;
+        document.getElementById('editRoomStatusSelect').value = currentStatus;
         
         showEditRoomStatusModal();
         return;
     }
-}
-
-// ===== HANDLE STAFF ASSIGNMENT (NEW WORKFLOW) =====
-
-// --- Step 1 - Handle Issue Type Submission (This was already correct) ---
-function handleIssueTypeSubmit(e) {
-    e.preventDefault();
-    const form = document.getElementById('issueTypeForm');
-    const checkedBoxes = form.querySelectorAll('input[name="issueType[]"]:checked'); // Match 'name' from HTML
+    // --- MODIFICATION END ---
     
-    if (checkedBoxes.length === 0) {
-        alert("Please select at least one issue type.");
+    
+    // Cancel Request Button logic
+    const cancelBtn = e.target.closest('.cancel-request-btn');
+    if (cancelBtn) {
+        const requestId = cancelBtn.dataset.requestId;
+        showConfirmModal(
+            'Cancel Maintenance Request?',
+            'Are you sure you want to cancel this request? This action cannot be undone.',
+            () => {
+                handleCancelRequest(requestId);
+            }
+        );
         return;
     }
-
-    // Get types and store them
-    selectedIssueTypes = Array.from(checkedBoxes).map(cb => cb.value).join(', ');
-    
-    hideIssueTypeModal();
-    // We assume showStaffModal() exists (e.g., in maintenance.ui.js) and uses currentRoomId
-    showStaffModal(currentRoomId); 
 }
 
-// --- MODIFIED: Step 2 - Handle Final Staff Assignment ---
+// --- Handle Final Staff Assignment ---
 async function handleStaffAssign() {
     if (!selectedStaffId || !currentRoomId) {
         alert("Error: Staff or Room ID is missing.");
         return;
     }
     if (!selectedIssueTypes) {
-        // This check is a fallback, should be caught by the new workflow
         alert("Error: Maintenance issue type was not selected. Please restart the assignment.");
         return;
     }
@@ -134,7 +144,6 @@ async function handleStaffAssign() {
     assignBtn.textContent = 'ASSIGNING...';
 
     try {
-        // *** MODIFICATION: Payload matches api_maintenance.php ***
         const payload = {
             action: 'assign_task', // Matches 'assign_task' case
             roomId: currentRoomId,
@@ -142,17 +151,14 @@ async function handleStaffAssign() {
             issueTypes: selectedIssueTypes // Matches 'issueTypes' key (plural)
         };
         
-        // We assume handleApiCall is a wrapper that fetches from api_maintenance.php
         const result = await handleApiCall(payload.action, payload);
 
-        // *** MODIFICATION: Check for 'status' (string) from api_maintenance.php ***
         if (result.status === 'success') { 
             const roomInRequests = currentRequestsData.find(room => room.id == currentRoomId);
             if (roomInRequests) {
-                roomInRequests.status = 'Pending';
+                roomInRequests.status = 'Pending'; // Set status to pending
                 roomInRequests.staff = result.staffName; // Get staff name from response
             }
-            applyRequestFiltersAndRender();
             
             const staffInList = currentStaffData.find(staff => staff.id == selectedStaffId);
             if (staffInList) {
@@ -161,6 +167,11 @@ async function handleStaffAssign() {
             
             hideStaffModal();
             showSuccessModal(result.message || 'Task Assigned Successfully!');
+            
+            setTimeout(() => {
+                 window.location.reload();
+            }, 1500); 
+            
         } else {
             alert("Failed to assign task: " + (result.message || 'Unknown error'));
         }
@@ -170,22 +181,37 @@ async function handleStaffAssign() {
     } finally {
         assignBtn.disabled = false;
         assignBtn.textContent = 'ASSIGN STAFF';
-        // Clear temp state variables
         selectedIssueTypes = '';
         currentRoomId = null;
     }
 }
 
-// --- Handle Edit Room Status Submission (Unchanged, talks to a different API) ---
+// --- Handle Edit Room Status Submission ---
 async function handleEditRoomStatusSubmit(e) {
     e.preventDefault();
     const roomId = document.getElementById('editRoomStatusRoomId').value;
     const newStatus = document.getElementById('editRoomStatusSelect').value;
-    const roomNumber = document.getElementById('editRoomStatusRoomNumber').textContent;
+    
+    // --- MODIFICATION: Safer way to get room number ---
+    const roomNumberEl = document.getElementById('editRoomStatusRoomNumber');
+    const roomNumber = roomNumberEl ? roomNumberEl.textContent : '';
+    // --- END MODIFICATION ---
+
     const submitBtn = document.getElementById('submitEditRoomStatusBtn');
+    
+    // --- MODIFICATION: Get error message element ---
+    const errorP = document.getElementById('editRoomStatusErrorMessage');
+    if (errorP) {
+        errorP.textContent = ''; // Clear previous error
+    }
+    // --- END MODIFICATION ---
 
     if (!roomId || !newStatus || !roomNumber) {
-        alert("Error: Missing room data.");
+        // --- MODIFICATION: Show error in modal, NOT alert ---
+        if(errorP) {
+            errorP.textContent = "Error: Missing room data.";
+        }
+        // --- END MODIFICATION ---
         return;
     }
     submitBtn.disabled = true;
@@ -197,7 +223,6 @@ async function handleEditRoomStatusSubmit(e) {
             new_status: newStatus
         };
 
-        // This API call goes to 'room_actions.php'
         const response = await fetch('room_actions.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -205,13 +230,14 @@ async function handleEditRoomStatusSubmit(e) {
         });
 
         if (!response.ok) {
+            // This error is for network issues
             const errorText = await response.text();
             throw new Error(`Server error (HTTP ${response.status}): ${errorText}`);
         }
 
         const result = await response.json();
 
-        if (result.success) { // This API (room_actions.php) might correctly return 'success'
+        if (result.success) { 
             hideEditRoomStatusModal();
             showSuccessModal(result.message || 'Room status updated!');
             
@@ -219,7 +245,6 @@ async function handleEditRoomStatusSubmit(e) {
             const roomInRequests = currentRequestsData.find(room => room.id == roomId);
             if (roomInRequests) {
                 roomInRequests.status = newStatus;
-                // If status is set to Available, reset the request fields
                 if (newStatus === 'Available') {
                     roomInRequests.staff = 'Not Assigned';
                     roomInRequests.date = 'N/A';
@@ -228,82 +253,163 @@ async function handleEditRoomStatusSubmit(e) {
             }
             applyRequestFiltersAndRender(); // Re-render table
         } else {
-            alert('Failed to update status: ' + result.message);
+            // --- MODIFICATION: Show API error (like the one in your screenshot) in modal ---
+            if (errorP) {
+                errorP.innerHTML = result.message; // Use innerHTML for <strong> tags
+            }
+            // --- END MODIFICATION ---
         }
 
     } catch (error) {
         console.error('Error updating room status:', error);
-        alert('An error occurred: ' + error.message);
+        // --- MODIFICATION: Show fetch/network error in modal ---
+        if (errorP) {
+            errorP.textContent = 'An error occurred: ' + error.message;
+        }
+        // --- END MODIFICATION ---
     } finally {
         submitBtn.disabled = false;
     }
 }
 
+// --- handleCancelRequest function ---
+async function handleCancelRequest(requestId) {
+    if (!requestId) {
+        alert('Error: Request ID is missing.');
+        return;
+    }
+
+    try {
+        const payload = {
+            action: 'cancel_task',
+            requestId: requestId
+        };
+
+        const result = await handleApiCall(payload.action, payload);
+
+        if (result.status === 'success') {
+            hideConfirmModal();
+            showSuccessModal(result.message || 'Request cancelled successfully!');
+            
+            setTimeout(() => {
+                 window.location.reload();
+            }, 1500); 
+
+        } else {
+            hideConfirmModal();
+            alert('Failed to cancel request: ' + (result.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error cancelling request:', error);
+        alert('An error occurred. Please try again.');
+    }
+}
+
 
 // ===== REQUESTS FILTERING LOGIC =====
-function applyRequestFiltersAndRender() {
+
+// --- Functions to save/load filters to session storage ---
+function saveRequestFiltersToSession() {
   const floor = document.getElementById('floorFilter')?.value || '';
   const room = document.getElementById('roomFilter')?.value || '';
+  const search = document.getElementById('searchInput')?.value || '';
+  
+  sessionStorage.setItem('requests_floorFilter', floor);
+  sessionStorage.setItem('requests_roomFilter', room);
+  sessionStorage.setItem('requests_searchInput', search);
+}
+
+function loadRequestFiltersFromSession() {
+  const floor = sessionStorage.getItem('requests_floorFilter');
+  const search = sessionStorage.getItem('requests_searchInput');
+
+  if (floor) {
+    document.getElementById('floorFilter').value = floor;
+  }
+  if (search) {
+    document.getElementById('searchInput').value = search;
+  }
+}
+
+// --- applyRequestFiltersAndRender ---
+function applyRequestFiltersAndRender() {
+  // 1. Get filter values *before* updating room options
+  const floor = document.getElementById('floorFilter')?.value || '';
+  
+  const room = document.getElementById('roomFilter')?.value || ''; 
+  
   const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
 
+  // 2. Populate rooms.
+  updateRoomFilterOptions(); 
+  document.getElementById('roomFilter').value = room;
+
+  // 3. Filter data
   filteredRequests = currentRequestsData.filter(req => {
     const matchFloor = !floor || (req.floor && req.floor.toString() === floor);
-    const matchRoom = !room || (req.room && req.room.toString() === room);
+    const matchRoom = !room || (req.room && req.room.toString() === room); 
     const matchSearch = !search || (req.room && req.room.toString().includes(search));
     return matchFloor && matchRoom && matchSearch;
   });
 
+  // 4. Render
   paginationState.requests.currentPage = 1;
   renderRequestsTable();
-  updateRoomFilterOptions(); // Keep this from user's code
 }
 
+// --- resetRequestFilters ---
 function resetRequestFilters() {
     document.getElementById('floorFilter').value = '';
     document.getElementById('roomFilter').value = '';
     document.getElementById('searchInput').value = '';
+
+    sessionStorage.removeItem('requests_floorFilter');
+    sessionStorage.removeItem('requests_roomFilter');
+    sessionStorage.removeItem('requests_searchInput');
+
+    updateRoomFilterOptions(); 
     applyRequestFiltersAndRender();
 }
 
-// ===== REQUESTS CSV DOWNLOAD =====
-function downloadRequestsCSV() {
+// ===== REQUESTS PDF DOWNLOAD =====
+function downloadRequestsPDF() {
     if (filteredRequests.length === 0) {
         alert("No request data to export based on current filters.");
         return;
     }
-    const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff In Charge'];
-    const csvContent = [
-        headers.join(','),
-        ...filteredRequests.map(req =>
-            [
-                req.floor ?? 'N/A',
-                req.room ?? 'N/A',
-                req.date ?? 'N/A',
-                req.requestTime ?? 'N/A',
-                req.lastMaintenance ?? 'N/A',
-                req.status ?? 'N/A',
-                req.staff ?? 'N/A'
-             ].join(',')
-        )
-    ].join('\n');
-    downloadCSV(csvContent, 'maintenance-requests');
-}
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
 
-// --- We assume handleApiCall is defined elsewhere (e.g., maintenance.utils.js) ---
-// async function handleApiCall(action, payload) {
-//    // Example implementation:
-//    try {
-//        const response = await fetch('api_maintenance.php', {
-//            method: 'POST',
-//            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-//            body: JSON.stringify(payload)
-//        });
-//        if (!response.ok) {
-//            throw new Error('Network response was not ok');
-//        }
-//        return await response.json();
-//    } catch (error) {
-//        console.error('API Call Error:', error);
-//        return { status: 'error', message: error.message }; // Match error structure
-//    }
-// }
+    const headers = [
+        ['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff In Charge']
+    ];
+
+    const bodyData = filteredRequests.map(req => [
+        req.floor ?? 'N/A',
+        req.room ?? 'N/A',
+        req.date ?? 'N/A',
+        req.requestTime ?? 'N/A',
+        req.lastMaintenance ?? 'N/A',
+        req.status ?? 'N/A',
+        req.staff ?? 'N/A'
+    ]);
+
+    doc.setFontSize(18);
+    doc.text("Maintenance Requests Report", 14, 22);
+
+    doc.autoTable({
+        startY: 30,
+        head: headers,
+        body: bodyData,
+        theme: 'striped',
+        headStyles: { fillColor: [41, 128, 185] }, 
+        styles: { fontSize: 8 },
+        columnStyles: {
+            4: { cellWidth: 30 }, 
+            6: { cellWidth: 30 }
+        }
+    });
+
+    doc.save('maintenance-requests.pdf');
+}

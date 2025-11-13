@@ -249,7 +249,36 @@ $conn->close();
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     
-</head>
+    <style>
+        /* This style block is new and required */
+
+        /* By default, hide the error message paragraph */
+        #editRoomStatusModal .modalSubtext.error-message {
+            display: none;
+            color: #d9534f; /* Red color for error */
+            font-weight: 500;
+            margin-bottom: 25px;
+        }
+
+        /* When the modal has the 'error-view' class... */
+        
+        /* 1. HIDE the normal form elements */
+        #editRoomStatusModal.error-view #editRoomStatusForm .formRow,
+        #editRoomStatusModal.error-view #submitEditRoomStatusBtn {
+            display: none;
+        }
+
+        /* 2. HIDE the normal subtext */
+        #editRoomStatusModal.error-view .modalSubtext.normal-message {
+            display: none;
+        }
+
+        /* 3. SHOW the error message */
+        #editRoomStatusModal.error-view .modalSubtext.error-message {
+            display: block;
+        }
+    </style>
+    </head>
 <body>
     <header class="header">
         <div class="headerLeft">
@@ -494,8 +523,12 @@ $conn->close();
                 <i class="fas fa-bed" style="font-size: 48px; color: #FFA237;"></i>
             </div>
             <h2 id="editRoomStatusModalTitle">Edit Room Status</h2>
-            <p class="modalSubtext">Update the status for Room <strong id="editRoomStatusRoomNumber">---</strong>.</p>
             
+            <p class="modalSubtext normal-message">
+                Update the status for Room <strong id="editRoomStatusRoomNumber">---</strong>.
+            </p>
+            <p class="modalSubtext error-message" id="editRoomStatusErrorMessage">
+                </p>
             <form id="editRoomStatusForm">
                 <input type="hidden" id="editRoomStatusRoomId" value="">
                 <div class="formRow">
@@ -548,14 +581,12 @@ $conn->close();
         // REMOVED hotelAssetsTypesData
     </script>
 
-    <script src="script/maintenance.pagination.js"></script>
-    <script src="script/maintenance.utils.js"></script>
+    <script src="script/maintenance.pagination.js?v=<?php echo time(); ?>"></script>
+<script src="script/maintenance.utils.js?v=<?php echo time(); ?>"></script>
+<script src="script/maintenance.ui.js?v=<?php echo time(); ?>"></script>
+<script src="script/maintenance.requests.js?v=<?php echo time(); ?>"></script>
+<script src="script/maintenance.history.js?v=<?php echo time(); ?>"></script>
+<script src="script/maintenance.js?v=<?php echo time(); ?>"></script>
 
-    <script src="script/maintenance.ui.js"></script>
-
-    <script src="script/maintenance.requests.js"></script> 
-    
-    <script src="script/maintenance.history.js"></script>
-    <script src="script/maintenance.js"></script>
     </body>
 </html>

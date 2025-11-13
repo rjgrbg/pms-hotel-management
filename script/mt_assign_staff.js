@@ -59,7 +59,29 @@ async function fetchTaskDetails(requestId) {
       // 3. Populate the page with data
       initializePageData(result.data);
     } else {
-      document.body.innerHTML = `<h1>Error: ${result.message}</h1>`;
+      // --- MODIFICATION START ---
+      // Show a user-friendly error card instead of just text
+      const container = document.querySelector('.container');
+      if (container) {
+          container.innerHTML = `
+              <div class="header">
+                  <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" style="height: 50px; width: 50px;">
+                  <div class="hotel-name">The Celestia Hotel</div>
+              </div>
+              <div class="content" style="padding: 30px;">
+                  <div class="task-error-card" style="display: block;">
+                      <h2 style="font-size: 1.5rem; color: #d9534f; margin-bottom: 15px;">Task Not Available</h2>
+                      <p style="font-size: 1rem; color: #555; margin-bottom: 25px; line-height: 1.5;">
+                          ${result.message || 'This task is completed, cancelled, or no longer exists.'}
+                      </p>
+                  </div>
+              </div>
+          `;
+      } else {
+          // Fallback if the .container element isn't found
+          document.body.innerHTML = `<h1>Error: ${result.message}</h1>`;
+      }
+      // --- MODIFICATION END ---
     }
   } catch (error) {
     console.error('Error fetching task details:', error);

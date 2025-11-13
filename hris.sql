@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 11, 2025 at 10:14 PM
+-- Generation Time: Nov 13, 2025 at 01:52 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -51,7 +51,8 @@ INSERT INTO `employees` (`EmployeeID`, `Fname`, `Lname`, `Mname`, `Birthday`, `E
 ('1007', 'David', 'Lee', 'D', '1988-12-05', 'david.lee@example.com', '404 Maintenance Blvd, Caloocan', '09200001007', 'Senior Maintenance', '2023-04-13'),
 ('1008', 'Emily', 'Chen', 'E', '2001-06-20', 'farmersday96@gmail.com', '505 Repair Ln, Makati', '09210001008', 'Maintenance', '2023-05-14'),
 ('1009', 'Michael', 'Brown', 'F', '1992-09-18', 'michael.brown@example.com', '606 Parking Way, Taguig', '09220001009', 'Parking Attendant', '2023-06-15'),
-('1010', 'Testting', 'Admin', 'X', '1990-01-01', 'dayvoice993@gmail.com', '123 Admin Street, Manila', '09000001010', 'Admin', '2025-11-05');
+('1010', 'Testting', 'Admin', 'X', '1990-01-01', 'dayvoice993@gmail.com', '123 Admin Street, Manila', '09000001010', 'Admin', '2025-11-05'),
+('1011', 's', 's', 's', '2025-11-01', 'farmday26@gmail.com', 'ss', 'sdsd', 'Housekeeper', '0000-00-00');
 
 --
 -- Indexes for dumped tables

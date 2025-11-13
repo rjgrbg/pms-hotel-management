@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 11, 2025 at 10:14 PM
+-- Generation Time: Nov 13, 2025 at 01:52 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -51,6 +51,71 @@ CREATE TABLE `cleaningtask` (
   `CleaningRemarks` varchar(255) DEFAULT NULL,
   `StatusUpdateToken` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `housekeeping_logs`
+--
+
+CREATE TABLE `housekeeping_logs` (
+  `LogID` int(11) NOT NULL,
+  `TaskID` int(11) DEFAULT NULL,
+  `RoomID` int(11) DEFAULT NULL,
+  `UserID` int(11) DEFAULT NULL COMMENT 'User who performed the action',
+  `Action` varchar(50) NOT NULL,
+  `Details` text DEFAULT NULL,
+  `Timestamp` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `housekeeping_logs`
+--
+
+INSERT INTO `housekeeping_logs` (`LogID`, `TaskID`, `RoomID`, `UserID`, `Action`, `Details`, `Timestamp`) VALUES
+(1, 1, 2, 34, 'ASSIGNED', 'Task assigned to staff s s (ID: 41) by manager (ID: 34). Tasks: Bed and Linen Care', '2025-11-13 07:48:09'),
+(2, 1, 2, 34, 'CANCELLED', 'Task cancelled by manager (ID: 34).', '2025-11-13 07:48:43'),
+(3, 2, 2, 34, 'ASSIGNED', 'Task assigned to staff s s (ID: 41) by manager (ID: 34). Tasks: General Cleaning, Bed and Linen Care, Bathroom Cleaning, Restocking Supplies, Trash Removal, Window & Curtains Care', '2025-11-13 08:11:36'),
+(4, 2, 2, 34, 'CANCELLED', 'Task cancelled by manager (ID: 34).', '2025-11-13 08:12:39'),
+(5, 3, 2, 34, 'ASSIGNED', 'Task assigned to staff s s (ID: 41) by manager (ID: 34). Tasks: Bed and Linen Care', '2025-11-13 08:14:47'),
+(6, 3, 2, 34, 'CANCELLED', 'Task cancelled by manager (ID: 34).', '2025-11-13 08:24:00'),
+(7, 4, 2, 34, 'ASSIGNED', 'Task assigned to staff s s (ID: 41) by manager (ID: 34). Tasks: Bed and Linen Care', '2025-11-13 08:24:33'),
+(8, 4, 2, 34, 'CANCELLED', 'Task cancelled by manager (ID: 34).', '2025-11-13 08:26:11'),
+(9, 5, 2, 34, 'ASSIGNED', 'Task assigned to staff s s (ID: 41) by manager (ID: 34). Tasks: General Cleaning, Bed and Linen Care, Bathroom Cleaning, Restocking Supplies, Trash Removal, Window & Curtains Care', '2025-11-13 08:26:22'),
+(10, 5, 2, 34, 'CANCELLED', 'Task cancelled by manager (ID: 34).', '2025-11-13 08:27:42'),
+(11, 6, 2, 34, 'ASSIGNED', 'Task assigned to staff s s (ID: 41) by manager (ID: 34). Tasks: Bed and Linen Care, Restocking Supplies', '2025-11-13 08:27:52'),
+(12, 6, 2, 41, 'IN PROGRESS', 'Status set to \'In Progress\' by staff (ID: 41). Remarks: s', '2025-11-13 08:28:03'),
+(13, 6, 2, 41, 'COMPLETED', 'Task completed by staff (ID: 41). Remarks: s', '2025-11-13 08:28:14');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `housekeeping_tasks`
+--
+
+CREATE TABLE `housekeeping_tasks` (
+  `TaskID` int(11) NOT NULL,
+  `RoomID` int(11) NOT NULL,
+  `UserID` int(11) DEFAULT NULL COMMENT 'Manager who created the task',
+  `AssignedUserID` int(11) DEFAULT NULL COMMENT 'Staff member assigned to the task',
+  `TaskType` varchar(255) DEFAULT 'Not Specified',
+  `Status` varchar(50) NOT NULL DEFAULT 'Pending',
+  `DateRequested` datetime NOT NULL DEFAULT current_timestamp(),
+  `DateCompleted` datetime DEFAULT NULL,
+  `Remarks` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `housekeeping_tasks`
+--
+
+INSERT INTO `housekeeping_tasks` (`TaskID`, `RoomID`, `UserID`, `AssignedUserID`, `TaskType`, `Status`, `DateRequested`, `DateCompleted`, `Remarks`) VALUES
+(1, 2, 34, 41, 'Bed and Linen Care', 'Cancelled', '2025-11-13 07:48:05', NULL, 'Cancelled by Manager'),
+(2, 2, 34, 41, 'General Cleaning, Bed and Linen Care, Bathroom Cleaning, Restocking Supplies, Trash Removal, Window & Curtains Care', 'Cancelled', '2025-11-13 08:11:33', NULL, 'Cancelled by Manager'),
+(3, 2, 34, 41, 'Bed and Linen Care', 'Cancelled', '2025-11-13 08:14:45', NULL, 'Cancelled by Manager'),
+(4, 2, 34, 41, 'Bed and Linen Care', 'Cancelled', '2025-11-13 08:24:30', NULL, 'Cancelled by Manager'),
+(5, 2, 34, 41, 'General Cleaning, Bed and Linen Care, Bathroom Cleaning, Restocking Supplies, Trash Removal, Window & Curtains Care', 'Cancelled', '2025-11-13 08:26:19', NULL, 'Cancelled by Manager'),
+(6, 2, 34, 41, 'Bed and Linen Care, Restocking Supplies', 'Completed', '2025-11-13 08:27:49', '2025-11-13 08:28:14', 's');
 
 -- --------------------------------------------------------
 
@@ -162,7 +227,73 @@ INSERT INTO `maintenance_logs` (`LogID`, `RequestID`, `RoomID`, `UserID`, `Times
 (3, 26, 1, 35, '2025-11-12 04:25:03', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Bathroom Area'),
 (4, 26, 1, 39, '2025-11-12 04:25:19', 'IN PROGRESS', 'Status set to \'In Progress\' by staff (ID: 39). Remarks: '),
 (5, 26, 1, 39, '2025-11-12 04:25:37', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: '),
-(6, 27, 1, 35, '2025-11-12 04:26:54', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: HVAC');
+(6, 27, 1, 35, '2025-11-12 04:26:54', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: HVAC'),
+(7, 29, 1, 39, '2025-11-12 05:26:21', 'IN PROGRESS', 'Status set to \'In Progress\' by staff (ID: 39). Remarks: '),
+(8, 29, 1, 39, '2025-11-12 05:32:35', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: '),
+(9, 30, 2, 35, '2025-11-12 05:33:41', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Doors & Windows'),
+(10, 30, 2, 39, '2025-11-12 05:33:51', 'IN PROGRESS', 'Status set to \'In Progress\' by staff (ID: 39). Remarks: '),
+(11, 30, 2, 39, '2025-11-12 05:34:03', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: fhxghgffdh'),
+(12, 31, 1, 35, '2025-11-13 01:50:05', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Flooring & Walls'),
+(13, 31, 1, 35, '2025-11-13 01:50:13', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(14, 31, 1, 39, '2025-11-13 01:50:35', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: Cancelled by Manager'),
+(15, 32, 1, 35, '2025-11-13 01:53:00', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: HVAC'),
+(16, 32, 1, 35, '2025-11-13 01:57:03', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(17, 33, 1, 35, '2025-11-13 01:57:23', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Doors & Windows, Safety & Security'),
+(18, 33, 1, 35, '2025-11-13 01:59:39', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(19, 34, 1, 35, '2025-11-13 01:59:48', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds'),
+(20, 34, 1, 35, '2025-11-13 02:10:35', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(21, 35, 1, 35, '2025-11-13 02:10:46', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Plumbing, Bathroom Area'),
+(22, 35, 1, 35, '2025-11-13 02:14:34', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(23, 36, 1, 35, '2025-11-13 02:16:17', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Doors & Windows'),
+(24, 36, 1, 35, '2025-11-13 02:16:53', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(25, 37, 1, 35, '2025-11-13 02:17:15', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Furniture & Fixtures'),
+(26, 37, 1, 39, '2025-11-13 02:29:14', 'IN PROGRESS', 'Status set to \'In Progress\' by staff (ID: 39). Remarks: asd'),
+(27, 37, 1, 39, '2025-11-13 02:29:18', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: asd'),
+(28, 38, 1, 35, '2025-11-13 02:29:53', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Flooring & Walls'),
+(29, 38, 1, 35, '2025-11-13 02:29:57', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(30, 39, 1, 35, '2025-11-13 02:38:23', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Flooring & Walls'),
+(31, 39, 1, 39, '2025-11-13 02:38:31', 'IN PROGRESS', 'Status set to \'In Progress\' by staff (ID: 39). Remarks: asd'),
+(32, 39, 1, 39, '2025-11-13 02:38:38', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: asd'),
+(33, 40, 1, 35, '2025-11-13 02:42:20', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: HVAC'),
+(34, 40, 1, 35, '2025-11-13 02:47:12', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(35, 41, 1, 35, '2025-11-13 02:47:22', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Furniture & Fixtures, Doors & Windows'),
+(36, 41, 1, 35, '2025-11-13 02:52:18', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(37, 42, 1, 35, '2025-11-13 02:52:29', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Safety & Security, Windows, Curtains, & Blinds'),
+(38, 42, 1, 35, '2025-11-13 02:55:02', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(39, 43, 1, 35, '2025-11-13 02:55:39', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Windows, Curtains, & Blinds'),
+(40, 43, 1, 35, '2025-11-13 04:42:25', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(41, 44, 1, 35, '2025-11-13 04:42:46', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Furniture & Fixtures, Doors & Windows'),
+(42, 44, 1, 35, '2025-11-13 04:50:13', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(43, 45, 1, 35, '2025-11-13 04:54:26', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Plumbing'),
+(44, 45, 1, 35, '2025-11-13 05:03:07', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(45, 46, 1, 35, '2025-11-13 05:06:15', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Electrical & Lighting'),
+(46, 46, 1, 39, '2025-11-13 05:06:48', 'IN PROGRESS', 'Status set to \'In Progress\' by staff (ID: 39). Remarks: '),
+(47, 46, 1, 39, '2025-11-13 05:07:04', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: '),
+(48, 47, 1, 35, '2025-11-13 05:18:55', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Furniture & Fixtures. Desc: '),
+(49, 47, 1, 39, '2025-11-13 05:19:11', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: '),
+(50, 48, 1, 35, '2025-11-13 05:37:16', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Furniture & Fixtures. Desc: '),
+(51, 48, 1, 35, '2025-11-13 05:37:50', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(52, 49, 1, 35, '2025-11-13 05:38:03', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Electrical & Lighting, Furniture & Fixtures. Desc: '),
+(53, 49, 1, 39, '2025-11-13 05:39:00', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: '),
+(54, 50, 1, 35, '2025-11-13 05:44:42', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Flooring & Walls. Desc: '),
+(55, 50, 1, 39, '2025-11-13 05:46:18', 'IN PROGRESS', 'Status set to \'In Progress\' by staff (ID: 39). Remarks: '),
+(56, 50, 1, 39, '2025-11-13 05:46:23', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: asd'),
+(57, 51, 1, 35, '2025-11-13 05:52:34', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds. Desc: '),
+(58, 51, 1, 35, '2025-11-13 06:10:40', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(59, 52, 1, 35, '2025-11-13 06:10:54', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Furniture & Fixtures. Desc: '),
+(60, 52, 1, 35, '2025-11-13 06:20:45', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(61, 53, 1, 35, '2025-11-13 06:29:58', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Furniture & Fixtures. Desc: '),
+(62, 53, 1, 35, '2025-11-13 06:38:43', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(63, 54, 1, 35, '2025-11-13 06:38:54', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Doors & Windows. Desc: '),
+(64, 54, 1, 35, '2025-11-13 06:47:25', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(65, 55, 1, 35, '2025-11-13 06:47:36', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Furniture & Fixtures. Desc: '),
+(66, 55, 1, 35, '2025-11-13 06:50:14', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(67, 56, 1, 35, '2025-11-13 06:50:29', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds'),
+(68, 56, 1, 39, '2025-11-13 06:50:54', 'IN PROGRESS', 'Status set to \'In Progress\' by staff (ID: 39). Remarks: c'),
+(69, 56, 1, 39, '2025-11-13 06:52:50', 'COMPLETED', 'Task completed by staff (ID: 39). Remarks: c'),
+(70, 57, 1, 35, '2025-11-13 07:17:22', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds'),
+(71, 57, 1, 35, '2025-11-13 07:17:25', 'CANCELLED', 'Request cancelled by manager (ID: 35).'),
+(72, 58, 1, 35, '2025-11-13 08:15:31', 'ASSIGNED', 'Task assigned to staff Emily Chen (ID: 39) by manager (ID: 35). Issues: Electrical & Lighting');
 
 -- --------------------------------------------------------
 
@@ -198,7 +329,37 @@ INSERT INTO `maintenance_requests` (`RequestID`, `RoomID`, `UserID`, `IssueType`
 (24, 6, 35, 'HVAC', 'Completed', '', '2025-11-12 03:34:49', '2025-11-12 03:35:12', 39),
 (25, 4, 35, 'Electrical & Lighting', 'Completed', '', '2025-11-12 04:21:49', '2025-11-12 04:23:43', 39),
 (26, 1, 35, 'Bathroom Area', 'Completed', '', '2025-11-12 04:24:59', '2025-11-12 04:25:37', 39),
-(27, 1, 35, 'HVAC', 'Completed', '', '2025-11-12 04:26:51', '2025-11-12 04:55:12', 39);
+(27, 1, 35, 'HVAC', 'Completed', '', '2025-11-12 04:26:51', '2025-11-12 04:55:12', 39),
+(29, 1, 35, 'Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds', 'Completed', '', '2025-11-12 05:21:33', '2025-11-12 05:32:35', 39),
+(30, 2, 35, 'Doors & Windows', 'Completed', 'fhxghgffdh', '2025-11-12 05:33:37', '2025-11-12 05:34:03', 39),
+(31, 1, 35, 'Flooring & Walls', 'Completed', 'Cancelled by Manager', '2025-11-13 01:50:00', '2025-11-13 01:50:35', 39),
+(32, 1, 35, 'HVAC', 'Cancelled', 'Cancelled by Manager', '2025-11-13 01:52:57', NULL, 39),
+(33, 1, 35, 'Doors & Windows, Safety & Security', 'Cancelled', 'Cancelled by Manager', '2025-11-13 01:57:20', NULL, 39),
+(34, 1, 35, 'Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds', 'Cancelled', 'Cancelled by Manager', '2025-11-13 01:59:45', NULL, 39),
+(35, 1, 35, 'Plumbing, Bathroom Area', 'Cancelled', 'Cancelled by Manager', '2025-11-13 02:10:43', NULL, 39),
+(36, 1, 35, 'Doors & Windows', 'Cancelled', 'Cancelled by Manager', '2025-11-13 02:16:14', NULL, 39),
+(37, 1, 35, 'Furniture & Fixtures', 'Completed', 'asd', '2025-11-13 02:17:12', '2025-11-13 02:29:18', 39),
+(38, 1, 35, 'Flooring & Walls', 'Cancelled', 'Cancelled by Manager', '2025-11-13 02:29:48', NULL, 39),
+(39, 1, 35, 'Flooring & Walls', 'Completed', 'asd', '2025-11-13 02:38:20', '2025-11-13 02:38:38', 39),
+(40, 1, 35, 'HVAC', 'Cancelled', 'Cancelled by Manager', '2025-11-13 02:42:17', NULL, 39),
+(41, 1, 35, 'Furniture & Fixtures, Doors & Windows', 'Cancelled', 'Cancelled by Manager', '2025-11-13 02:47:18', NULL, 39),
+(42, 1, 35, 'Safety & Security, Windows, Curtains, & Blinds', 'Cancelled', 'Cancelled by Manager', '2025-11-13 02:52:25', NULL, 39),
+(43, 1, 35, 'Windows, Curtains, & Blinds', 'Cancelled', 'Cancelled by Manager', '2025-11-13 02:55:36', NULL, 39),
+(44, 1, 35, 'Furniture & Fixtures, Doors & Windows', 'Cancelled', 'Cancelled by Manager', '2025-11-13 04:42:37', NULL, 39),
+(45, 1, 35, 'Plumbing', 'Cancelled', 'Cancelled by Manager', '2025-11-13 04:54:23', NULL, 39),
+(46, 1, 35, 'Electrical & Lighting', 'Completed', '', '2025-11-13 05:06:12', '2025-11-13 05:07:04', 39),
+(47, 1, 35, 'Furniture & Fixtures', 'Completed', '', '2025-11-13 05:18:51', '2025-11-13 05:19:11', 39),
+(48, 1, 35, 'Furniture & Fixtures', 'Cancelled', 'Cancelled by Manager', '2025-11-13 05:37:12', NULL, 39),
+(49, 1, 35, 'Electrical & Lighting, Furniture & Fixtures', 'Completed', '', '2025-11-13 05:38:00', '2025-11-13 05:39:00', 39),
+(50, 1, 35, 'Flooring & Walls', 'Completed', 'asd', '2025-11-13 05:44:39', '2025-11-13 05:46:23', 39),
+(51, 1, 35, 'Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds', 'Cancelled', 'Cancelled by Manager', '2025-11-13 05:52:31', NULL, 39),
+(52, 1, 35, 'Furniture & Fixtures', 'Cancelled', 'Cancelled by Manager', '2025-11-13 06:10:51', NULL, 39),
+(53, 1, 35, 'Furniture & Fixtures', 'Cancelled', 'Cancelled by Manager', '2025-11-13 06:29:56', NULL, 39),
+(54, 1, 35, 'Doors & Windows', 'Cancelled', 'Cancelled by Manager', '2025-11-13 06:38:51', NULL, 39),
+(55, 1, 35, 'Furniture & Fixtures', 'Cancelled', 'Cancelled by Manager', '2025-11-13 06:47:33', NULL, 39),
+(56, 1, 35, 'Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds', 'Completed', 'c', '2025-11-13 06:50:26', '2025-11-13 06:52:50', 39),
+(57, 1, 35, 'Electrical & Lighting, Plumbing, Furniture & Fixtures, HVAC, Doors & Windows, Bathroom Area, Safety & Security, Flooring & Walls, Windows, Curtains, & Blinds', 'Cancelled', 'Cancelled by Manager', '2025-11-13 07:17:18', NULL, 39),
+(58, 1, 35, 'Electrical & Lighting', 'Pending', NULL, '2025-11-13 08:15:28', NULL, 39);
 
 -- --------------------------------------------------------
 
@@ -366,12 +527,13 @@ CREATE TABLE `room_status` (
 --
 
 INSERT INTO `room_status` (`StatusID`, `RoomNumber`, `RoomStatus`, `LastClean`, `LastMaintenance`, `UserID`, `LastUpdated`) VALUES
-(1, '101', 'Available', NULL, '2025-11-11 20:25:37', 1, '2025-11-11 21:01:58'),
-(3, '102', 'Available', NULL, NULL, 35, '2025-11-11 19:30:35'),
+(1, '101', 'Needs Maintenance', NULL, '2025-11-12 22:52:50', 35, '2025-11-12 23:25:15'),
+(3, '102', 'Available', '2025-11-13 00:28:14', '2025-11-11 21:34:03', 34, '2025-11-13 00:28:14'),
 (9, '103', 'Available', NULL, NULL, 1, '2025-11-10 23:54:25'),
 (10, '201', 'Available', NULL, '2025-11-11 20:23:43', 35, '2025-11-11 20:23:43'),
 (15, '202', 'Available', NULL, NULL, 35, '2025-11-11 19:31:27'),
-(56, '301', 'Available', NULL, NULL, 35, '2025-11-11 19:35:12');
+(56, '301', 'Available', NULL, NULL, 35, '2025-11-11 19:35:12'),
+(93, '---', 'Available', NULL, NULL, 35, '2025-11-12 22:25:46');
 
 -- --------------------------------------------------------
 
@@ -408,8 +570,9 @@ INSERT INTO `users` (`UserID`, `EmployeeID`, `Fname`, `Lname`, `Mname`, `Birthda
 (35, 'E1012', 'maintain', 'nance', 'manager', '2015-11-02', 'maintenance_manager', 'Available', 'maintenance', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'asd@sf.com', 'ss', 'asd', 'asd', NULL, NULL),
 (37, '1010', 'Testting', 'Admin', 'X', '1990-01-01', 'admin', 'Available', 'test.admins', '$2y$10$.yNgmWda3eza4nJtB9wz0.rGydS62.9ta4rvnAZskPauf2C3yN2la', 'dayvoice993@gmail.com', 'Morning', '123 Admin Street, Manila', '09000001010', '414a629dd94a755c3c936c40c46455766c205352ca0f09cf10769b83ea8fc51a', '2025-11-08 03:01:01'),
 (38, '1009', 'Michael', 'Brown', 'F', '1992-09-18', 'parking_manager', 'Available', 'mmanager', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'michael.brown@example.com', 'Morning', '606 Parking Way, Taguig', '09220001009', '6543fd95970924b4af1da17b312e6fd145c34424ee1f999d858778fdbd2a65ee', '2025-11-08 03:25:04'),
-(39, '1008', 'Emily', 'Chen', 'E', '2001-06-20', 'maintenance_staff', 'Available', 'mstaff', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'farmersday96@gmail.com', 'Morning', '505 Repair Ln, Makati', '09210001008', '8a9a372ed04b1ab93f4e1d7b4eb9ed67f56b3e8941812b5dfe4f26741226afb6', '2025-11-08 03:28:56'),
-(40, '1023', 'sadas', 'ssss', 'nase', '2015-11-03', 'parking_manager', 'Available', 'pmanager', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'as', 'sd', 'asd', 'asd', NULL, NULL);
+(39, '1008', 'Emily', 'Chen', 'E', '2001-06-20', 'maintenance_staff', 'Assigned', 'mstaff', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'farmersday96@gmail.com', 'Morning', '505 Repair Ln, Makati', '09210001008', '8a9a372ed04b1ab93f4e1d7b4eb9ed67f56b3e8941812b5dfe4f26741226afb6', '2025-11-08 03:28:56'),
+(40, '1023', 'sadas', 'ssss', 'nase', '2015-11-03', 'parking_manager', 'Available', 'pmanager', '$2y$10$iZ6eUM/sMo1dmZGvFE5AGuYB8yLQidcRds9tk9zcXzx.2ySanAUUC', 'as', 'sd', 'asd', 'asd', NULL, NULL),
+(41, '1011', 's', 's', 's', '2025-11-01', 'housekeeping_staff', 'Available', 's.1011', '$2y$10$616gfHtMdprxzuO3.7nUjOlX3oU.6tB7PoY8n/LXFZK0aOMVJ.xrC', 'farmday26@gmail.com', 'Morning', 'ss', 'sdsd', '83706a98a81c800faf0d8d1bab418e146b9a9b8be04568079a88d9673798b6ad', '2025-11-14 00:47:36');
 
 -- --------------------------------------------------------
 
@@ -628,7 +791,49 @@ INSERT INTO `user_logs` (`LogID`, `UserID`, `ActionType`, `Timestamp`) VALUES
 (197, 35, 'Logged Out', '2025-11-11 21:05:09'),
 (198, 35, 'Logged In', '2025-11-11 21:05:15'),
 (199, 35, 'Logged In', '2025-11-11 21:13:41'),
-(200, 35, 'Logged Out', '2025-11-11 21:13:51');
+(200, 35, 'Logged Out', '2025-11-11 21:13:51'),
+(201, 35, 'Logged In', '2025-11-11 21:16:20'),
+(202, 35, 'Logged Out', '2025-11-11 21:36:06'),
+(203, 35, 'Logged In', '2025-11-12 17:45:06'),
+(204, 35, 'Logged Out', '2025-11-12 18:50:32'),
+(205, 35, 'Logged In', '2025-11-12 18:50:36'),
+(206, 35, 'Logged In', '2025-11-12 18:51:30'),
+(207, 35, 'Logged Out', '2025-11-12 18:55:08'),
+(208, 35, 'Logged In', '2025-11-12 18:55:16'),
+(209, 35, 'Logged In', '2025-11-12 20:39:19'),
+(210, 35, 'Logged Out', '2025-11-12 20:47:06'),
+(211, 35, 'Logged In', '2025-11-12 20:47:19'),
+(212, 35, 'Logged In', '2025-11-12 20:54:49'),
+(213, 35, 'Logged Out', '2025-11-12 22:53:28'),
+(214, 34, 'Logged In', '2025-11-12 22:53:32'),
+(215, 34, 'Logged Out', '2025-11-12 23:17:01'),
+(216, 35, 'Logged In', '2025-11-12 23:17:09'),
+(217, 35, 'Logged Out', '2025-11-12 23:19:14'),
+(218, 34, 'Logged In', '2025-11-12 23:19:20'),
+(219, 34, 'Logged Out', '2025-11-12 23:23:03'),
+(220, 35, 'Logged In', '2025-11-12 23:23:07'),
+(221, 35, 'Logged Out', '2025-11-12 23:24:43'),
+(222, 34, 'Logged In', '2025-11-12 23:24:46'),
+(223, 34, 'Logged Out', '2025-11-12 23:24:57'),
+(224, 35, 'Logged In', '2025-11-12 23:25:01'),
+(225, 35, 'Logged Out', '2025-11-12 23:27:02'),
+(226, 34, 'Logged In', '2025-11-12 23:27:05'),
+(227, 34, 'Logged Out', '2025-11-12 23:47:16'),
+(228, 1, 'Logged In', '2025-11-12 23:47:21'),
+(229, 1, 'Logged Out', '2025-11-12 23:47:46'),
+(230, 34, 'Logged In', '2025-11-12 23:47:49'),
+(231, 35, 'Logged In', '2025-11-12 23:51:40'),
+(232, 34, 'Logged Out', '2025-11-13 00:24:06'),
+(233, 1, 'Logged In', '2025-11-13 00:24:09'),
+(234, 1, 'Logged Out', '2025-11-13 00:24:19'),
+(235, 34, 'Logged In', '2025-11-13 00:24:23'),
+(236, 34, 'Logged Out', '2025-11-13 00:27:15'),
+(237, 1, 'Logged In', '2025-11-13 00:27:20'),
+(238, 1, 'Logged Out', '2025-11-13 00:27:34'),
+(239, 34, 'Logged In', '2025-11-13 00:27:39'),
+(240, 34, 'Logged Out', '2025-11-13 00:29:28'),
+(241, 1, 'Logged In', '2025-11-13 00:29:32'),
+(242, 35, 'Logged In', '2025-11-13 00:48:45');
 
 -- --------------------------------------------------------
 
@@ -691,6 +896,24 @@ ALTER TABLE `cleaninglog`
 ALTER TABLE `cleaningtask`
   ADD PRIMARY KEY (`CleaningID`),
   ADD KEY `RoomID` (`RoomID`),
+  ADD KEY `UserID` (`UserID`);
+
+--
+-- Indexes for table `housekeeping_logs`
+--
+ALTER TABLE `housekeeping_logs`
+  ADD PRIMARY KEY (`LogID`),
+  ADD KEY `TaskID` (`TaskID`),
+  ADD KEY `RoomID` (`RoomID`),
+  ADD KEY `UserID` (`UserID`);
+
+--
+-- Indexes for table `housekeeping_tasks`
+--
+ALTER TABLE `housekeeping_tasks`
+  ADD PRIMARY KEY (`TaskID`),
+  ADD KEY `RoomID` (`RoomID`),
+  ADD KEY `AssignedUserID` (`AssignedUserID`),
   ADD KEY `UserID` (`UserID`);
 
 --
@@ -823,6 +1046,18 @@ ALTER TABLE `cleaningtask`
   MODIFY `CleaningID` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `housekeeping_logs`
+--
+ALTER TABLE `housekeeping_logs`
+  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT for table `housekeeping_tasks`
+--
+ALTER TABLE `housekeeping_tasks`
+  MODIFY `TaskID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
 -- AUTO_INCREMENT for table `inventory`
 --
 ALTER TABLE `inventory`
@@ -844,13 +1079,13 @@ ALTER TABLE `itemcategory`
 -- AUTO_INCREMENT for table `maintenance_logs`
 --
 ALTER TABLE `maintenance_logs`
-  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
 
 --
 -- AUTO_INCREMENT for table `maintenance_requests`
 --
 ALTER TABLE `maintenance_requests`
-  MODIFY `RequestID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `RequestID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
 
 --
 -- AUTO_INCREMENT for table `parkingarea`
@@ -880,19 +1115,19 @@ ALTER TABLE `room`
 -- AUTO_INCREMENT for table `room_status`
 --
 ALTER TABLE `room_status`
-  MODIFY `StatusID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=63;
+  MODIFY `StatusID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=108;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
+  MODIFY `UserID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `user_logs`
 --
 ALTER TABLE `user_logs`
-  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=201;
+  MODIFY `LogID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=243;
 
 --
 -- AUTO_INCREMENT for table `vehiclecategory`
@@ -923,6 +1158,14 @@ ALTER TABLE `cleaninglog`
 ALTER TABLE `cleaningtask`
   ADD CONSTRAINT `cleaningtask_ibfk_1` FOREIGN KEY (`RoomID`) REFERENCES `room` (`RoomID`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `cleaningtask_ibfk_2` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`) ON UPDATE CASCADE;
+
+--
+-- Constraints for table `housekeeping_tasks`
+--
+ALTER TABLE `housekeeping_tasks`
+  ADD CONSTRAINT `fk_housekeeping_tasks_assigned_user` FOREIGN KEY (`AssignedUserID`) REFERENCES `users` (`UserID`),
+  ADD CONSTRAINT `fk_housekeeping_tasks_room` FOREIGN KEY (`RoomID`) REFERENCES `crm`.`rooms` (`RoomID`),
+  ADD CONSTRAINT `fk_housekeeping_tasks_user` FOREIGN KEY (`UserID`) REFERENCES `users` (`UserID`);
 
 --
 -- Constraints for table `inventory`

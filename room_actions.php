@@ -7,7 +7,7 @@ header('Cache-Control: no-cache, must-revalidate');
 require_once('db_connection.php'); 
 
 // --- MODIFIED: Define allowed roles ---
-$allowedRoles = ['admin', 'maintenance_manager'];
+$allowedRoles = ['admin', 'maintenance_manager', 'housekeeping_manager'];
 
 if (!isset($_SESSION['UserID']) || !in_array($_SESSION['UserType'], $allowedRoles)) {
     http_response_code(401);
@@ -99,6 +99,41 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
     if (empty($number) || empty($status)) {
         $response['message'] = 'Missing Room Number or New Status from JSON body.';
     } else {
+        
+        // --- NEW SECURITY CHECK ---
+        if ($status === 'Available') { // Only check if they are setting it to 'Available'
+            // 1. Get RoomID from CRM
+            $stmt_crm = $crm_conn->prepare("SELECT RoomID FROM crm.rooms WHERE RoomNumber = ?");
+            $stmt_crm->bind_param("s", $number);
+            $stmt_crm->execute();
+            $crm_result = $stmt_crm->get_result();
+            if ($room_row = $crm_result->fetch_assoc()) {
+                $roomId = $room_row['RoomID'];
+                
+                // 2. Check for active tasks in PMS
+                $stmt_check = $pms_conn->prepare("SELECT COUNT(*) as active_tasks FROM pms.maintenance_requests WHERE RoomID = ? AND Status IN ('Pending', 'In Progress')");
+                $stmt_check->bind_param("i", $roomId);
+                $stmt_check->execute();
+                $task_result = $stmt_check->get_result()->fetch_assoc();
+                
+                if ($task_result && $task_result['active_tasks'] > 0) {
+                    // BLOCK THE ACTION
+                    $response['success'] = false;
+                    $response['message'] = "Cannot set status to 'Available' because an active maintenance task (Pending or In Progress) exists for this room.";
+                    
+                    $stmt_crm->close();
+                    $stmt_check->close();
+                    $pms_conn->close();
+                    $crm_conn->close();
+                    echo json_encode($response);
+                    exit();
+                }
+                $stmt_check->close();
+            }
+            $stmt_crm->close();
+        }
+        // --- END OF SECURITY CHECK ---
+
         // Use INSERT...ON DUPLICATE KEY UPDATE
         $sql = "INSERT INTO room_status (RoomNumber, RoomStatus, UserID) 
                 VALUES (?, ?, ?) 
@@ -133,6 +168,38 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
     if (empty($number) || empty($status)) {
         $response['message'] = 'Missing Room Number or Status from POST data.';
     } else {
+
+        // --- NEW SECURITY CHECK (Copied from above) ---
+        if ($status === 'Available') { 
+            $stmt_crm = $crm_conn->prepare("SELECT RoomID FROM crm.rooms WHERE RoomNumber = ?");
+            $stmt_crm->bind_param("s", $number);
+            $stmt_crm->execute();
+            $crm_result = $stmt_crm->get_result();
+            if ($room_row = $crm_result->fetch_assoc()) {
+                $roomId = $room_row['RoomID'];
+                
+                $stmt_check = $pms_conn->prepare("SELECT COUNT(*) as active_tasks FROM pms.maintenance_requests WHERE RoomID = ? AND Status IN ('Pending', 'In Progress')");
+                $stmt_check->bind_param("i", $roomId);
+                $stmt_check->execute();
+                $task_result = $stmt_check->get_result()->fetch_assoc();
+                
+                if ($task_result && $task_result['active_tasks'] > 0) {
+                    $response['success'] = false;
+                    $response['message'] = "Cannot set status to 'Available' because an active maintenance task (Pending or In Progress) exists for this room.";
+                    
+                    $stmt_crm->close();
+                    $stmt_check->close();
+                    $pms_conn->close();
+                    $crm_conn->close();
+                    echo json_encode($response);
+                    exit();
+                }
+                $stmt_check->close();
+            }
+            $stmt_crm->close();
+        }
+        // --- END OF SECURITY CHECK ---
+
         // Use INSERT...ON DUPLICATE KEY UPDATE
         $sql = "INSERT INTO room_status (RoomNumber, RoomStatus, UserID) 
                 VALUES (?, ?, ?) 

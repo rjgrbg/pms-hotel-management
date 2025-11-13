@@ -1,110 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Housekeeping Details - The Celestia Hotel</title>
-  <link rel="stylesheet" href="css/hk_assign_staff.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Housekeeping Task - The Celestia Hotel</title>
+    <link rel="stylesheet" href="css/mt_assign_staff.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-  <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" style="height: 50px; width: 50px;">
-      <div class="hotel-name">The Celestia Hotel</div>
+    <div class="container">
+        <div class="header">
+            <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" style="height: 50px; width: 50px;">
+            <div class="hotel-name">The Celestia Hotel</div>
+        </div>
+
+        <div class="content" id="task-content">
+            <h1 class="page-title">Housekeeping Task Details</h1>
+
+            <input type="hidden" id="task-id" value="">
+
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Room</span>
+                    <span class="detail-value" id="room-number">---</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Date Requested</span>
+                    <span class="detail-value" id="date-requested">--/--/----</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Time Requested</span>
+                    <span class="detail-value" id="time-requested">--:-- --</span>
+                </div>
+                <div class="detail-row full-width">
+                    <span class="detail-label">Task Type</span>
+                    <span class="detail-value" id="task-type">---</span>
+                </div>
+                <div class="detail-row full-width">
+                    <span class="detail-label">Current Status</span>
+                    <span class="detail-value" id="current-status">---</span>
+                </div>
+            </div>
+
+            <div class="remarks-section">
+                <label class="remarks-label">Remarks</label>
+                <textarea class="remarks-textarea" id="remarks-textarea" placeholder="Enter any remarks or notes..."></textarea>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-in-progress" id="inProgressBtn">In Progress</button>
+                <button class="btn btn-done" id="doneBtn">Done</button>
+            </div>
+        </div>
+
+        <div class="content" id="loading-state" style="display: none; text-align: center; padding: 40px;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #FFA237;"></i>
+            <h2 style="color: #555;">Loading Task Details...</h2>
+        </div>
+
+        <div class="content" id="error-state" style="display: none; text-align: center; padding: 40px;">
+            <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #d9534f;"></i>
+            <h2 style="color: #555;">Task Not Found</h2>
+            <p id="error-message" style="color: #666;">This task may have been completed, cancelled, or the link is invalid.</p>
+        </div>
+
     </div>
 
-    <!-- Content -->
-    <div class="content">
-      <h1 class="page-title">Housekeeping Details</h1>
-
-      <!-- Details Grid -->
-      <div class="details-grid">
-        <div class="detail-row">
-          <span class="detail-label">Room</span>
-          <span class="detail-value">101</span>
+    <div class="modal-backdrop" id="modalBackdrop">
+        <div class="modal">
+            <h2 class="modal-title">Done?</h2>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-cancel" id="modalCancel">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" id="modalSave">Save</button>
+            </div>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">Guest</span>
-          <span class="detail-value">001</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Date</span>
-          <span class="detail-value">10/25/25</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Request Time</span>
-          <span class="detail-value">2:30 PM</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Status</span>
-          <span class="detail-value">Dirty / Unoccupied</span>
-        </div>
-      </div>
-
-      <!-- Remarks -->
-      <div class="remarks-section">
-        <label class="remarks-label">Remarks</label>
-        <textarea class="remarks-textarea" placeholder="Enter any remarks or special instructions..."></textarea>
-      </div>
-
-      <!-- Maintenance Checkbox -->
-      <label class="maintenance-check">
-        <input type="checkbox" id="maintenanceCheck">
-        <div class="checkbox-custom"></div>
-        <span class="maintenance-label">Maintenance</span>
-      </label>
-
-      <!-- Maintenance Dropdowns (Hidden by default) -->
-      <div class="dropdowns-container" id="maintenanceDropdowns">
-        <div class="dropdown-wrapper">
-          <select class="dropdown-select" id="workType">
-            <option value="">Work Type</option>
-            <option value="plumbing">Corrective</option>
-            <option value="electrical">Preventive</option>
-            <option value="hvac">Routine</option>
-            <option value="carpentry">Predictive</option>
-          </select>
-        </div>
-        <div class="dropdown-wrapper">
-          <select class="dropdown-select" id="unitType">
-            <option value="">Unit Type</option>
-            <option value="sink">Sink</option>
-            <option value="toilet">Toilet</option>
-            <option value="shower">Shower</option>
-            <option value="ac">Air Conditioning</option>
-            <option value="lights">Lights</option>
-            <option value="door">Door</option>
-            <option value="window">Window</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Issue Description (Hidden by default) -->
-      <div class="issue-section" id="issueSection">
-        <textarea class="issue-textarea" placeholder="Describe the issue in detail..."></textarea>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="action-buttons">
-        <button class="btn btn-in-progress" id="inProgressBtn">In Progress</button>
-        <button class="btn btn-done" id="doneBtn">Done</button>
-      </div>
     </div>
-  </div>
 
-  <!-- Confirmation Modal -->
-  <div class="modal-backdrop" id="modalBackdrop">
-    <div class="modal">
-      <h2 class="modal-title">Done?</h2>
-      <div class="modal-buttons">
-        <button class="modal-btn modal-btn-cancel" id="modalCancel">Cancel</button>
-        <button class="modal-btn modal-btn-confirm" id="modalSave">Save</button>
-      </div>
+    <div class="modalBackdrop" id="successModal" style="display: none;">
+        <div class="successModal">
+            <div class="modalIconHeader">
+                <i class="fas fa-check-circle" style="font-size: 80px; color: #28a745;"></i>
+            </div>
+            <h2>Success!</h2>
+            <p>Task status has been updated.</p>
+            <div class="modalButtons">
+                <button class="modalBtn okayBtn" id="okaySuccessBtn">OKAY</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script src="script/hk_assign_staff.js"></script>
+    <script src="script/hk_assign_staff.js"></script>
 </body>
 </html>
