@@ -625,6 +625,7 @@ td.text-right {
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 }
 
+/* Generic Modal Header (Used by some modals) */
 .modal-header {
     display: flex;
     justify-content: space-between;

@@ -66,7 +66,29 @@ if (isset($_SESSION['UserID'])) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+     <?php
+  // ======================================================
+  // === PHP Logic Orchestration (REQUIRED FILES) ===
+  // ======================================================
+
+  // 1. Load the database configuration and connection ($conn is now available)
+  require_once('db_connection.php');
+
+  // 2. Load the user data function
+  require_once('User.php');
+
+  // 3. Execute the function to get dynamic data
+  $userData = getUserData($conn);
+
+  // Set the variables used in the HTML, applying security (htmlspecialchars)
+  $Fname = htmlspecialchars($userData['Name']);
+  $Accounttype = htmlspecialchars($userData['Accounttype']); // Using Accounttype to match your error
+  // Close the DB connection (optional, but good practice)
+  $conn->close();
+
+  ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Celestia Hotel - Parking Management</title>
