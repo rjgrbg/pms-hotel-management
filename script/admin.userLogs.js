@@ -109,22 +109,44 @@ function initUserLogsFilters() {
       fetchAndRenderUserLogs(); // This will now re-fetch from the database
     });
 
+    // === MODIFIED FOR PDF DOWNLOAD ===
     document.getElementById('logsDownloadBtn')?.addEventListener('click', () => {
-      const headers = ['Log ID', 'User ID', 'Last Name', 'First Name', 'Middle Name', 'Account Type', 'Role', 'Shift', 'Username', 'Email Address', 'Action Type', 'Timestamp'];
-      const csvContent = [
-        headers.join(','),
-        ...userLogsDataList.map(row => {
+      // 1. Get filter values
+      const search = document.getElementById('logsSearchInput').value.toLowerCase();
+      const role = document.getElementById('logsRoleFilter').value;
+      const shift = document.getElementById('logsShiftFilter').value;
+
+      // 2. Filter data
+      const filteredData = userLogsDataList.filter(row => {
+          const searchMatch = !search || (row.Username && row.Username.toLowerCase().includes(search)) || (row.Fname && row.Fname.toLowerCase().includes(search)) || (row.Lname && row.Lname.toLowerCase().includes(search)) || (row.EmailAddress && row.EmailAddress.toLowerCase().includes(search)) || (row.UserID && row.UserID.toString().includes(search));
+          const roleMatch = !role || row.AccountType === role;
+          const shiftMatch = !shift || row.Shift === shift;
+          return searchMatch && roleMatch && shiftMatch;
+      });
+
+      // 3. Define PDF headers and body
+      const headers = ['Log ID', 'User ID', 'Full Name', 'Role', 'Shift', 'Username', 'Action', 'Timestamp'];
+      const body = filteredData.map(row => {
+          const fullName = `${row.Lname}, ${row.Fname}${row.Mname ? ' ' + row.Mname.charAt(0) + '.' : ''}`;
           const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
-          return [row.LogID, row.UserID, row.Lname, row.Fname, row.Mname, row.AccountType, roleName, row.Shift, row.Username, row.EmailAddress, row.ActionType, row.Timestamp].join(',');
-        })
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `user-logs-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+          return [
+              row.LogID,
+              row.UserID,
+              fullName,
+              roleName,
+              row.Shift,
+              row.Username,
+              row.ActionType,
+              row.Timestamp
+          ];
+      });
+
+      // 4. Call helper
+      generatePdfReport(
+          'User Logs Report',
+          `user-logs-${new Date().toISOString().split('T')[0]}.pdf`,
+          headers,
+          body
+      );
     });
 }

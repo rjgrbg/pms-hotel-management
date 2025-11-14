@@ -7,22 +7,20 @@ function renderMTRequestsTable(data = mtRequestsData) {
   const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
   
   if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
   } else {
     tbody.innerHTML = paginatedData.map(row => {
-      const statusClass = row.status === 'pending' ? 'pending' : row.status === 'in-progress' ? 'request' : row.status;
-      const statusText = row.status === 'in-progress' ? 'In Progress' : row.status.charAt(0).toUpperCase() + row.status.slice(1);
+      const statusClass = getStatusClass(row.status);
+      const statusText = formatStatus(row.status);
       return `
         <tr>
           <td>${row.floor}</td>
           <td>${row.room}</td>
-          <td>${row.issue}</td>
           <td>${row.date}</td>
-          <td>${row.requestedTime}</td>
-          <td>${row.completedTime}</td>
+          <td>${row.requestTime}</td>
+          <td>${row.lastMaintenance}</td>
           <td><span class="statusBadge ${statusClass}">${statusText}</span></td>
           <td>${row.staff}</td>
-          <td>${row.remarks}</td>
         </tr>
       `;
     }).join('');
@@ -50,13 +48,13 @@ function renderMTHistTable(data = mtHistData) {
       <tr>
         <td>${row.floor}</td>
         <td>${row.room}</td>
-        <td>${row.issue}</td>
+        <td>${row.issueType}</td>
         <td>${row.date}</td>
         <td>${row.requestedTime}</td>
         <td>${row.completedTime}</td>
-        <td><span class="statusBadge repaired">${row.status === 'repaired' ? 'Repaired' : row.status}</span></td>
         <td>${row.staff}</td>
-        <td>${row.remarks}</td>
+        <td><span class="statusBadge ${row.status === 'Completed' ? 'cleaned' : 'cancelled'}">${row.status}</span></td>
+        <td>${row.remarks || 'N/A'}</td>
       </tr>
     `).join('');
   }
@@ -69,45 +67,13 @@ function renderMTHistTable(data = mtHistData) {
   });
 }
 
-function renderMTAppliancesTable(data = mtAppliancesData) {
-  const tbody = document.getElementById('mtAppliancesTableBody');
-  if (!tbody) return;
-  const state = paginationState.maintenanceAppliances;
-  const totalPages = getTotalPages(data.length, state.itemsPerPage);
-  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
-  
-  if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-  } else {
-    tbody.innerHTML = paginatedData.map(row => `
-      <tr>
-        <td>${row.floor}</td>
-        <td>${row.room}</td>
-        <td>${row.installedDate}</td>
-        <td>${row.types}</td>
-        <td>${row.items}</td>
-        <td>${row.lastMaintained}</td>
-        <td>${row.remarks}</td>
-      </tr>
-    `).join('');
-  }
-  
-  const recordCount = document.getElementById('mtAppliancesRecordCount');
-  if (recordCount) recordCount.textContent = data.length;
-  renderPaginationControls('mt-appliances-tab', totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderMTAppliancesTable(data);
-  });
-}
-
 // ===== MAINTENANCE (REQUESTS) FILTERS =====
 function initMTRequestFilters() {
     document.getElementById('mtSearchInput')?.addEventListener('input', (e) => {
       const search = e.target.value.toLowerCase();
       const filtered = mtRequestsData.filter(row => 
-        row.issue.toLowerCase().includes(search) ||
-        row.staff.toLowerCase().includes(search) ||
-        row.room.toString().includes(search)
+        row.room.toLowerCase().includes(search) ||
+        (row.staff && row.staff.toLowerCase().includes(search))
       );
       paginationState.maintenance.currentPage = 1;
       renderMTRequestsTable(filtered);
@@ -127,38 +93,51 @@ function initMTRequestFilters() {
       renderMTRequestsTable(filtered);
     });
 
-    document.getElementById('mtStatusFilter')?.addEventListener('change', (e) => {
-      const status = e.target.value;
-      const filtered = status ? mtRequestsData.filter(row => row.status === status) : mtRequestsData;
-      paginationState.maintenance.currentPage = 1;
-      renderMTRequestsTable(filtered);
-    });
-
     document.getElementById('mtRefreshBtn')?.addEventListener('click', () => {
       document.getElementById('mtSearchInput').value = '';
       document.getElementById('mtFloorFilter').value = '';
       document.getElementById('mtRoomFilter').value = '';
-      document.getElementById('mtStatusFilter').value = '';
       
-      mtRequestsData = [...maintenanceRequests];
+      // Reset data from the initial PHP-loaded array
+      mtRequestsData = [...(initialMtRequestsData || [])];
       paginationState.maintenance.currentPage = 1;
       renderMTRequestsTable(mtRequestsData);
     });
 
+    // === MODIFIED FOR PDF DOWNLOAD ===
     document.getElementById('mtDownloadBtn')?.addEventListener('click', () => {
-      const headers = ['Floor', 'Room', 'Issue Type', 'Date', 'Requested Time', 'Completed Time', 'Status', 'Staff In Charge', 'Remarks'];
-      const csvContent = [
-        headers.join(','),
-        ...mtRequestsData.map(row => [row.floor, row.room, row.issue, row.date, row.requestedTime, row.completedTime, row.status, row.staff, row.remarks].join(','))
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `maintenance-requests-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      // 1. Get filter values
+      const search = document.getElementById('mtSearchInput').value.toLowerCase();
+      const floor = document.getElementById('mtFloorFilter').value;
+      const room = document.getElementById('mtRoomFilter').value;
+
+      // 2. Filter data
+      const filteredData = mtRequestsData.filter(row => {
+          const searchMatch = !search || row.room.toLowerCase().includes(search) || (row.staff && row.staff.toLowerCase().includes(search));
+          const floorMatch = !floor || row.floor.toString() === floor;
+          const roomMatch = !room || row.room.toString() === room;
+          return searchMatch && floorMatch && roomMatch;
+      });
+
+      // 3. Define PDF headers and body
+      const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff In Charge'];
+      const body = filteredData.map(row => [
+          row.floor,
+          row.room,
+          row.date,
+          row.requestTime,
+          row.lastMaintenance,
+          formatStatus(row.status),
+          row.staff
+      ]);
+
+      // 4. Call helper
+      generatePdfReport(
+          'Maintenance Requests Report',
+          `maintenance-requests-${new Date().toISOString().split('T')[0]}.pdf`,
+          headers,
+          body
+      );
     });
 }
 
@@ -167,9 +146,9 @@ function initMTHistoryFilters() {
     document.getElementById('mtHistSearchInput')?.addEventListener('input', (e) => {
       const search = e.target.value.toLowerCase();
       const filtered = mtHistData.filter(row => 
-        row.issue.toLowerCase().includes(search) ||
-        row.staff.toLowerCase().includes(search) ||
-        row.room.toString().includes(search)
+        row.room.toLowerCase().includes(search) ||
+        (row.staff && row.staff.toLowerCase().includes(search)) ||
+        row.issueType.toLowerCase().includes(search)
       );
       paginationState.maintenanceHistory.currentPage = 1;
       renderMTHistTable(filtered);
@@ -188,92 +167,78 @@ function initMTHistoryFilters() {
       paginationState.maintenanceHistory.currentPage = 1;
       renderMTHistTable(filtered);
     });
+    
+    document.getElementById('dateFilterMtHist')?.addEventListener('change', (e) => {
+        const date = e.target.value; // Format: YYYY-MM-DD
+        if (!date) {
+            renderMTHistTable(mtHistData); // Reset if date is cleared
+            return;
+        }
+        
+        // Convert YYYY-MM-DD to MM.DD.YYYY to match our data format
+        const [y, m, d] = date.split('-');
+        const formattedDate = `${m}.${d}.${y}`;
+        
+        const filtered = mtHistData.filter(row => row.date === formattedDate);
+        paginationState.maintenanceHistory.currentPage = 1;
+        renderMTHistTable(filtered);
+    });
 
     document.getElementById('mtHistRefreshBtn')?.addEventListener('click', () => {
       document.getElementById('mtHistSearchInput').value = '';
       document.getElementById('mtFloorFilterHist').value = '';
       document.getElementById('mtRoomFilterHist').value = '';
+      document.getElementById('dateFilterMtHist').value = '';
       
-      mtHistData = [...maintenanceHistory];
+      // Reset data from the initial PHP-loaded array
+      mtHistData = [...(initialMtHistoryData || [])];
       paginationState.maintenanceHistory.currentPage = 1;
       renderMTHistTable(mtHistData);
     });
 
+    // === MODIFIED FOR PDF DOWNLOAD ===
     document.getElementById('mtHistDownloadBtn')?.addEventListener('click', () => {
-      const headers = ['Floor', 'Room', 'Issue Type', 'Date', 'Requested Time', 'Completed Time', 'Status', 'Staff In Charge', 'Remarks'];
-      const csvContent = [
-        headers.join(','),
-        ...mtHistData.map(row => [row.floor, row.room, row.issue, row.date, row.requestedTime, row.completedTime, row.status, row.staff, row.remarks].join(','))
-      ].join('\n');
+      // 1. Get filter values
+      const search = document.getElementById('mtHistSearchInput').value.toLowerCase();
+      const floor = document.getElementById('mtFloorFilterHist').value;
+      const room = document.getElementById('mtRoomFilterHist').value;
+      const date = document.getElementById('dateFilterMtHist').value; // YYYY-MM-DD
       
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `maintenance-history-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    });
-}
+      let formattedDate = '';
+      if (date) {
+          const [y, m, d] = date.split('-');
+          formattedDate = `${m}.${d}.${y}`; // Convert to MM.DD.YYYY
+      }
 
-// ===== MAINTENANCE APPLIANCES FILTERS =====
-function initMTAppliancesFilters() {
-    document.getElementById('appliancesSearchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const filtered = mtAppliancesData.filter(row => 
-        row.items.toLowerCase().includes(search) ||
-        row.types.toLowerCase().includes(search) ||
-        row.room.toString().includes(search)
+      // 2. Filter data
+      const filteredData = mtHistData.filter(row => {
+          const searchMatch = !search || row.room.toLowerCase().includes(search) || (row.staff && row.staff.toLowerCase().includes(search)) || row.issueType.toLowerCase().includes(search);
+          const floorMatch = !floor || row.floor.toString() === floor;
+          const roomMatch = !room || row.room.toString() === room;
+          const dateMatch = !formattedDate || row.date === formattedDate;
+          return searchMatch && floorMatch && roomMatch && dateMatch;
+      });
+
+      // 3. Define PDF headers and body
+      const headers = ['Floor', 'Room', 'Type', 'Date', 'Requested', 'Completed', 'Staff', 'Status', 'Remarks'];
+      const body = filteredData.map(row => [
+          row.floor,
+          row.room,
+          row.issueType,
+          row.date,
+          row.requestedTime,
+          row.completedTime,
+          row.staff,
+          row.status,
+          row.remarks || 'N/A'
+      ]);
+
+      // 4. Call helper
+      generatePdfReport(
+          'Maintenance History Report',
+          `maintenance-history-${new Date().toISOString().split('T')[0]}.pdf`,
+          headers,
+          body
       );
-      paginationState.maintenanceAppliances.currentPage = 1;
-      renderMTAppliancesTable(filtered);
-    });
-
-    document.getElementById('appFloorFilter')?.addEventListener('change', (e) => {
-      const floor = e.target.value;
-      const filtered = floor ? mtAppliancesData.filter(row => row.floor.toString() === floor) : mtAppliancesData;
-      paginationState.maintenanceAppliances.currentPage = 1;
-      renderMTAppliancesTable(filtered);
-    });
-
-    document.getElementById('appRoomFilter')?.addEventListener('change', (e) => {
-      const room = e.target.value;
-      const filtered = room ? mtAppliancesData.filter(row => row.room.toString() === room) : mtAppliancesData;
-      paginationState.maintenanceAppliances.currentPage = 1;
-      renderMTAppliancesTable(filtered);
-    });
-
-    document.getElementById('appTypeFilter')?.addEventListener('change', (e) => {
-      const type = e.target.value;
-      const filtered = type ? mtAppliancesData.filter(row => row.types === type) : mtAppliancesData;
-      paginationState.maintenanceAppliances.currentPage = 1;
-      renderMTAppliancesTable(filtered);
-    });
-
-    document.getElementById('appliancesRefreshBtn')?.addEventListener('click', () => {
-      document.getElementById('appliancesSearchInput').value = '';
-      document.getElementById('appFloorFilter').value = '';
-      document.getElementById('appRoomFilter').value = '';
-      document.getElementById('appTypeFilter').value = '';
-      
-      mtAppliancesData = [...maintenanceAppliances];
-      paginationState.maintenanceAppliances.currentPage = 1;
-      renderMTAppliancesTable(mtAppliancesData);
-    });
-
-    document.getElementById('appliancesDownloadBtn')?.addEventListener('click', () => {
-      const headers = ['Floor', 'Room', 'Installed Date', 'Types', 'Items', 'Last Maintained', 'Remarks'];
-      const csvContent = [
-        headers.join(','),
-        ...mtAppliancesData.map(row => [row.floor, row.room, row.installedDate, row.types, row.items, row.lastMaintained, row.remarks].join(','))
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `maintenance-appliances-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
     });
 }

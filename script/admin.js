@@ -1,10 +1,12 @@
 // ===== USE SHARED DATA (Global Variables) =====
-let hkData = [...housekeepingRequests];
-let hkHistData = [...housekeepingHistory];
-let hkLinensAmenitiesData = [...housekeepingLinens, ...housekeepingAmenities];
-let mtRequestsData = [...maintenanceRequests];
-let mtHistData = [...maintenanceHistory];
-let mtAppliancesData = [...maintenanceAppliances];
+// MODIFIED: Use the data from admin.php (initialHkRequestsData) instead of old static data
+let hkData = typeof initialHkRequestsData !== 'undefined' ? [...initialHkRequestsData] : [];
+let hkHistData = typeof initialHkHistoryData !== 'undefined' ? [...initialHkHistoryData] : [];
+let hkLinensAmenitiesData = []; // No longer used
+let mtRequestsData = typeof initialMtRequestsData !== 'undefined' ? [...initialMtRequestsData] : [];
+let mtHistData = typeof initialMtHistoryData !== 'undefined' ? [...initialMtHistoryData] : [];
+let mtAppliancesData = []; // No longer used
+
 let roomData = [];
 let parkingHistoryDataList = [];
 let inventoryDataList = typeof inventoryData !== 'undefined' ? [...inventoryData] : [];
@@ -103,13 +105,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Initialize Dashboard ---
   updateDashboardStats(dashData);
   
-  // --- Initialize Static Tables (from shared-data.js) ---
+  // --- Initialize Tables with data from PHP ---
   renderHKTable(hkData);
   renderHKHistTable(hkHistData);
-  renderHKLinensAmenitiesTable(hkLinensAmenitiesData);
   renderMTRequestsTable(mtRequestsData);
   renderMTHistTable(mtHistData);
-  renderMTAppliancesTable(mtAppliancesData);
+  // REMOVED: renderHKLinensAmenitiesTable();
+  // REMOVED: renderMTAppliancesTable();
   
   // --- Initialize Dynamic Pages & Dashboard Data (via API) ---
   fetchAndRenderRooms();
@@ -174,14 +176,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize housekeeping page
   if(document.getElementById('housekeeping-page')) {
     initHKRequestFilters();
-    initHKLinensAmenitiesFilters();
+    initHKHistoryFilters(); // Added this
+    // REMOVED: initHKLinensAmenitiesFilters();
   }
   
   // Initialize maintenance page
   if(document.getElementById('maintenance-page')) {
     initMTRequestFilters();
     initMTHistoryFilters();
-    initMTAppliancesFilters();
+    // REMOVED: initMTAppliancesFilters();
   }
 
   console.log('Data Loaded:', { roomData, inventoryDataList, usersData, userLogsDataList });

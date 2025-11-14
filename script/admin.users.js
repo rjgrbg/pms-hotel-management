@@ -299,23 +299,42 @@ function initUserFilters() {
       await fetchAndRenderUsers();
     });
 
+    // === MODIFIED FOR PDF DOWNLOAD ===
     document.getElementById('usersDownloadBtn')?.addEventListener('click', () => {
+      // 1. Get filter values
+      const search = document.getElementById('usersSearchInput').value.toLowerCase();
+      const role = document.getElementById('usersRoleFilter').value;
+      const shift = document.getElementById('usersShiftFilter').value;
+
+      // 2. Filter data
+      const filteredData = usersData.filter(row => {
+          const searchMatch = !search || row.Username.toLowerCase().includes(search) || row.Fname.toLowerCase().includes(search) || row.Lname.toLowerCase().includes(search) || row.EmailAddress.toLowerCase().includes(search);
+          const roleMatch = !role || row.AccountType === role;
+          const shiftMatch = !shift || row.Shift === shift;
+          return searchMatch && roleMatch && shiftMatch;
+      });
+
+      // 3. Define PDF headers and body
       const headers = ['Username', 'Full Name', 'Role', 'Email', 'Shift', 'Employee Code'];
-      const csvContent = [
-        headers.join(','),
-        ...usersData.map(row => {
-          const fullName = `${row.Lname} ${row.Fname}${row.Mname ? ' ' + row.Mname : ''}`;
+      const body = filteredData.map(row => {
+          const fullName = `${row.Lname}, ${row.Fname}${row.Mname ? ' ' + row.Mname.charAt(0) + '.' : ''}`;
           const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
-          return [row.Username, fullName, roleName, row.EmailAddress, row.Shift, row.EmployeeID].join(',');
-        })
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `users-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+          return [
+              row.Username,
+              fullName,
+              roleName,
+              row.EmailAddress,
+              row.Shift,
+              row.EmployeeID
+          ];
+      });
+
+      // 4. Call helper
+      generatePdfReport(
+          'User Management Report',
+          `users-${new Date().toISOString().split('T')[0]}.pdf`,
+          headers,
+          body
+      );
     });
 }

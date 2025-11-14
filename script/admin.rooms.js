@@ -312,19 +312,43 @@ function initRoomFilters() {
       fetchAndRenderRooms();
     });
 
+    // === MODIFIED FOR PDF DOWNLOAD ===
     document.getElementById('roomsDownloadBtn')?.addEventListener('click', () => {
+      // 1. Get filter values
+      const search = document.getElementById('roomsSearchInput').value.toLowerCase();
+      const floor = document.getElementById('roomsFloorFilter').value;
+      const room = document.getElementById('roomsRoomFilter').value;
+      const type = document.getElementById('roomsTypeFilter').value;
+      const status = document.getElementById('roomsStatusFilter').value;
+
+      // 2. Filter data
+      const filteredData = roomData.filter(row => {
+          const searchMatch = !search || row.Type.toLowerCase().includes(search) || row.Room.toString().includes(search) || row.Status.toLowerCase().includes(search);
+          const floorMatch = !floor || row.Floor.toString() === floor;
+          const roomMatch = !room || row.Room.toString() === room;
+          const typeMatch = !type || row.Type === type;
+          const statusMatch = !status || row.Status === status;
+          return searchMatch && floorMatch && roomMatch && typeMatch && statusMatch;
+      });
+
+      // 3. Define PDF headers and body
       const headers = ['Floor', 'Room', 'Type', 'No. Guests', 'Rate', 'Status'];
-      const csvContent = [
-        headers.join(','),
-        ...roomData.map(row => [row.Floor, row.Room, row.Type, row.NoGuests, row.Rate, row.Status].join(','))
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `rooms-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
+      const body = filteredData.map(row => [
+          row.Floor,
+          row.Room,
+          row.Type,
+          row.NoGuests,
+          `$${parseFloat(row.Rate).toFixed(2)}`,
+          row.Status
+      ]);
+
+      // 4. Call helper
+      generatePdfReport(
+          'Rooms Report',
+          `rooms-${new Date().toISOString().split('T')[0]}.pdf`,
+          headers,
+          body,
+          'portrait' // This table is narrow, portrait is better
+      );
     });
 }
