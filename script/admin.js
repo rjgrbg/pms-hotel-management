@@ -110,8 +110,8 @@ document.addEventListener('DOMContentLoaded', () => {
   renderHKHistTable(hkHistData);
   renderMTRequestsTable(mtRequestsData);
   renderMTHistTable(mtHistData);
-  // REMOVED: renderHKLinensAmenitiesTable();
-  // REMOVED: renderMTAppliancesTable();
+  // REMOVED: renderHKLinensAmenitiesTable(hkLinensAmenitiesData);
+  // REMOVED: renderMTAppliancesTable(mtAppliancesData);
   
   // --- Initialize Dynamic Pages & Dashboard Data (via API) ---
   fetchAndRenderRooms();

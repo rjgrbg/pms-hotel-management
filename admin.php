@@ -251,7 +251,7 @@ $sql_mt_rooms = "SELECT
                     mr.Status, 
                     mr.DateRequested, 
                     mr.AssignedUserID,
-                    ROW_NUMBER() OVER(PARTITION BY mr.RoomID ORDER BY ht.DateRequested DESC) as rn
+                    ROW_NUMBER() OVER(PARTITION BY mr.RoomID ORDER BY mr.DateRequested DESC) as rn
                 FROM 
                     pms_maintenance_requests mr
                 WHERE 
@@ -365,7 +365,7 @@ $conn->close();
   <link rel="stylesheet" href="css/admin.css">
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf-autotable.umd.min.js"></script> 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script> 
   </head>
 <body>
   <header class="header">
@@ -822,7 +822,7 @@ $conn->close();
         <select class="filterDropdown" id="inventoryCategoryFilter">
           <option value="">Category</option>
           <option value="Cleaning solution">Cleaning solution</option>
-          <option value."Electrical">Electrical</option>
+          <option value="Electrical">Electrical</option>
           <option value="Bathroom Supplies">Bathroom Supplies</option>
           <option value="Linens">Linens</option>
           <option value="Cleaning Equipment">Cleaning Equipment</option>
@@ -1179,7 +1179,7 @@ $conn->close();
           <select id="roomStatus" name="roomStatus" required>
             <option value="">Select Status</option>
             <option value="Available">Available</option>
-            <option value"Needs Cleaning">Needs Cleaning</option>
+            <option value="Needs Cleaning">Needs Cleaning</option>
             <option value="Needs Maintenance">Needs Maintenance</option>
           </select>
         </div>

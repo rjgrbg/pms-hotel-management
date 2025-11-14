@@ -126,40 +126,29 @@ function initHKRequestFilters() {
       renderHKTable(hkData);
     });
 
-    // === MODIFIED FOR PDF DOWNLOAD ===
     document.getElementById('hkDownloadBtn')?.addEventListener('click', () => {
-      // 1. Get filter values
-      const search = document.getElementById('hkSearchInput').value.toLowerCase();
-      const floor = document.getElementById('floorFilter').value;
-      const room = document.getElementById('roomFilter').value;
-
-      // 2. Filter data
-      const filteredData = hkData.filter(row => {
-          const searchMatch = !search || row.room.toLowerCase().includes(search) || (row.staff && row.staff.toLowerCase().includes(search));
-          const floorMatch = !floor || row.floor.toString() === floor;
-          const roomMatch = !room || row.room.toString() === room;
-          return searchMatch && floorMatch && roomMatch;
-      });
-
-      // 3. Define PDF headers and body
+      // Updated headers to match the table
       const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Clean', 'Status', 'Staff In Charge'];
-      const body = filteredData.map(row => [
-          row.floor,
-          row.room,
-          row.date,
-          row.requestTime,
-          row.lastClean,
-          formatStatus(row.status),
+      const csvContent = [
+        headers.join(','),
+        ...hkData.map(row => [
+          row.floor, 
+          row.room, 
+          row.date, 
+          row.requestTime, 
+          row.lastClean, 
+          formatStatus(row.status), 
           row.staff
-      ]);
-
-      // 4. Call helper
-      generatePdfReport(
-          'Housekeeping Requests Report',
-          `housekeeping-requests-${new Date().toISOString().split('T')[0]}.pdf`,
-          headers,
-          body
-      );
+        ].join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `housekeeping-requests-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
     });
 }
 
@@ -218,49 +207,29 @@ function initHKHistoryFilters() {
       renderHKHistTable(hkHistData);
     });
 
-    // === MODIFIED FOR PDF DOWNLOAD ===
     document.getElementById('hkHistDownloadBtn')?.addEventListener('click', () => {
-      // 1. Get filter values
-      const search = document.getElementById('hkHistSearchInput').value.toLowerCase();
-      const floor = document.getElementById('floorFilterHkHist').value;
-      const room = document.getElementById('roomFilterHkHist').value;
-      const date = document.getElementById('dateFilterHkHist').value; // YYYY-MM-DD
-      
-      let formattedDate = '';
-      if (date) {
-          const [y, m, d] = date.split('-');
-          formattedDate = `${m}.${d}.${y}`; // Convert to MM.DD.YYYY
-      }
-
-      // 2. Filter data
-      const filteredData = hkHistData.filter(row => {
-          const searchMatch = !search || row.room.toLowerCase().includes(search) || (row.staff && row.staff.toLowerCase().includes(search)) || row.issueType.toLowerCase().includes(search);
-          const floorMatch = !floor || row.floor.toString() === floor;
-          const roomMatch = !room || row.room.toString() === room;
-          const dateMatch = !formattedDate || row.date === formattedDate;
-          return searchMatch && floorMatch && roomMatch && dateMatch;
-      });
-
-      // 3. Define PDF headers and body
-      const headers = ['Floor', 'Room', 'Task', 'Date', 'Requested', 'Completed', 'Staff', 'Status', 'Remarks'];
-      const body = filteredData.map(row => [
+      const headers = ['Floor', 'Room', 'Task', 'Date', 'Requested Time', 'Completed Time', 'Staff In Charge', 'Status', 'Remarks'];
+      const csvContent = [
+        headers.join(','),
+        ...hkHistData.map(row => [
           row.floor,
           row.room,
-          row.issueType,
+          `"${row.issueType.replace(/"/g, '""')}"`, // Handle commas in issueType
           row.date,
           row.requestedTime,
           row.completedTime,
           row.staff,
           row.status,
-          row.remarks || 'N/A'
-      ]);
-
-      // 4. Call helper
-      generatePdfReport(
-          'Housekeeping History Report',
-          `housekeeping-history-${new Date().toISOString().split('T')[0]}.pdf`,
-          headers,
-          body
-      );
+          `"${(row.remarks || '').replace(/"/g, '""')}"` // Handle commas in remarks
+        ].join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `housekeeping-history-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
     });
 }

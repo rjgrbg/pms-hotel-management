@@ -176,44 +176,30 @@ function initInventoryFilters() {
       fetchAndRenderInventory();
     });
 
-    // === MODIFIED FOR PDF DOWNLOAD ===
     document.getElementById('inventoryDownloadBtn')?.addEventListener('click', () => {
-      // 1. Get filter values
-      const search = document.getElementById('inventorySearchInput').value.toLowerCase();
-      const category = document.getElementById('inventoryCategoryFilter').value;
-      const status = document.getElementById('inventoryStatusFilter').value;
-      
-      const statusMap = { 'in-stock': 'In Stock', 'low-stock': 'Low Stock', 'out-of-stock': 'Out of Stock' };
-      const mappedStatus = statusMap[status];
-
-      // 2. Filter data
-      const filteredData = inventoryDataList.filter(row => {
-          const searchMatch = !search || row.ItemName.toLowerCase().includes(search) || row.Category.toLowerCase().includes(search) || (row.ItemDescription && row.ItemDescription.toLowerCase().includes(search));
-          const categoryMatch = !category || row.Category === category;
-          const statusMatch = !mappedStatus || row.ItemStatus === mappedStatus;
-          return searchMatch && categoryMatch && statusMatch;
-      });
-
-      // 3. Define PDF headers and body
       const headers = ['ID', 'Name', 'Category', 'Quantity', 'Description', 'Status', 'Stock In Date'];
-      const body = filteredData.map(row => [
-          row.ItemID,
-          row.ItemName,
-          row.Category,
-          row.ItemQuantity,
-          row.ItemDescription || 'N/A',
-          row.ItemStatus,
-          row.DateofStockIn
-      ]);
-
-      // 4. Call helper
-      generatePdfReport(
-          'Inventory Items Report',
-          `inventory-items-${new Date().toISOString().split('T')[0]}.pdf`,
-          headers,
-          body,
-          'portrait' // This table might be better in portrait
-      );
+      
+      // Use correct data keys
+      const csvContent = [
+        headers.join(','),
+        ...inventoryDataList.map(row => [
+            row.ItemID, 
+            row.ItemName, 
+            row.Category, 
+            row.ItemQuantity, 
+            row.ItemDescription || '', 
+            row.ItemStatus, 
+            row.DateofStockIn
+        ].join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `inventory-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
     });
 }
 
@@ -310,41 +296,29 @@ function initInventoryHistoryFilters() {
       fetchAndRenderInventoryHistory();
     });
 
-    // === MODIFIED FOR PDF DOWNLOAD ===
     document.getElementById('invHistDownloadBtn')?.addEventListener('click', () => {
-      // 1. Get filter values
-      const search = document.getElementById('invHistSearchInput').value.toLowerCase();
-      const category = document.getElementById('invHistCategoryFilter').value;
-      const action = document.getElementById('invHistActionFilter').value;
-
-      // 2. Filter data
-      const filteredData = inventoryHistoryDataList.filter(row => {
-          const searchMatch = !search || (row.ItemName && row.ItemName.toLowerCase().includes(search)) || (row.Category && row.Category.toLowerCase().includes(search)) || (row.PerformedBy && row.PerformedBy.toLowerCase().includes(search));
-          const categoryMatch = !category || row.Category === category;
-          const actionMatch = !action || row.ActionType === action;
-          return searchMatch && categoryMatch && actionMatch;
-      });
-
-      // 3. Define PDF headers and body
       const headers = ['Log ID', 'Name', 'Category', 'Old Qty', 'Change', 'New Qty', 'Status', 'Stock In', 'Performed By'];
-      const body = filteredData.map(row => [
-          row.InvLogID,
-          row.ItemName,
-          row.Category,
-          row.OldQuantity,
-          row.QuantityChange,
-          row.NewQuantity,
-          row.ItemStatus,
-          row.DateofStockIn || 'N/A',
-          row.PerformedBy
-      ]);
-
-      // 4. Call helper
-      generatePdfReport(
-          'Inventory History Report',
-          `inventory-history-${new Date().toISOString().split('T')[0]}.pdf`,
-          headers,
-          body
-      );
+      const csvContent = [
+        headers.join(','),
+        ...inventoryHistoryDataList.map(row => [
+            row.InvLogID, 
+            row.ItemName, 
+            row.Category, 
+            row.OldQuantity, 
+            row.QuantityChange, 
+            row.NewQuantity, 
+            row.ItemStatus, 
+            row.DateofStockIn || 'N/A', 
+            row.PerformedBy
+        ].join(','))
+      ].join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `inventory-history-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
     });
 }
