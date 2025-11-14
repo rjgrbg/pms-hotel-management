@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($username) || empty($password)) {
         $response['message'] = "Both username and password are required.";
     } else {
-        $sql = "SELECT UserID, Password, AccountType FROM users WHERE Username = ?";
+        $sql = "SELECT UserID, Password, AccountType FROM pms_users WHERE Username = ?";
 
         if ($stmt = $conn->prepare($sql)) {
             $stmt->bind_param("s", $username);

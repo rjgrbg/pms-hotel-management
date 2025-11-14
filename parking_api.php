@@ -100,7 +100,7 @@ function handleEnterVehicle($conn, $staffID) {
     $conn->begin_transaction();
     try {
         // Check if slot is still available
-        $stmt_check = $conn->prepare("SELECT Status FROM parkingslot WHERE SlotID = ?");
+        $stmt_check = $conn->prepare("SELECT Status FROM pms_parkingslot WHERE SlotID = ?");
         $stmt_check->bind_param("i", $slotID);
         $stmt_check->execute();
         $slotStatus = $stmt_check->get_result()->fetch_assoc()['Status'] ?? null;
@@ -109,12 +109,12 @@ function handleEnterVehicle($conn, $staffID) {
              throw new Exception("Slot is no longer available. Please refresh.");
         }
 
-        $sql_insert = "INSERT INTO parking_sessions (SlotID, PlateNumber, GuestName, RoomNumber, VehicleTypeID, VehicleCategoryID, EntryTime, StaffID_Entry) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)";
+        $sql_insert = "INSERT INTO pms_parking_sessions (SlotID, PlateNumber, GuestName, RoomNumber, VehicleTypeID, VehicleCategoryID, EntryTime, StaffID_Entry) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)";
         $stmt_insert = $conn->prepare($sql_insert);
         $stmt_insert->bind_param("isssiis", $slotID, $plateNumber, $guestName, $roomNumber, $vehicleTypeID, $vehicleCategoryID, $staffID);
         $stmt_insert->execute();
         
-        $sql_update = "UPDATE parkingslot SET Status = 'occupied' WHERE SlotID = ?";
+        $sql_update = "UPDATE pms_parkingslot SET Status = 'occupied' WHERE SlotID = ?";
         $stmt_update = $conn->prepare($sql_update);
         $stmt_update->bind_param("i", $slotID);
         $stmt_update->execute();
@@ -140,7 +140,7 @@ function handleExitVehicle($conn, $staffID) {
     
     $conn->begin_transaction();
     try {
-        $sql_update_session = "UPDATE parking_sessions SET ExitTime = NOW() WHERE SessionID = ? AND ExitTime IS NULL";
+        $sql_update_session = "UPDATE pms_parking_sessions SET ExitTime = NOW() WHERE SessionID = ? AND ExitTime IS NULL";
         $stmt_session = $conn->prepare($sql_update_session);
         $stmt_session->bind_param("i", $sessionID);
         $stmt_session->execute();
@@ -149,7 +149,7 @@ function handleExitVehicle($conn, $staffID) {
             throw new Exception("Vehicle already exited or not found.");
         }
 
-        $sql_update_slot = "UPDATE parkingslot SET Status = 'available' WHERE SlotID = ?";
+        $sql_update_slot = "UPDATE pms_parkingslot SET Status = 'available' WHERE SlotID = ?";
         $stmt_slot = $conn->prepare($sql_update_slot);
         $stmt_slot->bind_param("i", $slotID);
         $stmt_slot->execute();
@@ -164,7 +164,7 @@ function handleExitVehicle($conn, $staffID) {
 }
 
 function handleGetVehicleTypes($conn) {
-    $sql = "SELECT VehicleTypeID, TypeName FROM vehicletype ORDER BY TypeName";
+    $sql = "SELECT VehicleTypeID, TypeName FROM pms_vehicletype ORDER BY TypeName";
     $result = $conn->query($sql);
     $data = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     echo json_encode(['success' => true, 'types' => $data]);
@@ -176,7 +176,7 @@ function handleGetVehicleCategories($conn) {
         echo json_encode(['success' => true, 'categories' => []]);
         exit;
     }
-    $sql = "SELECT VehicleCategoryID, CategoryName FROM vehiclecategory WHERE VehicleTypeID = ? ORDER BY CategoryName";
+    $sql = "SELECT VehicleCategoryID, CategoryName FROM pms_vehiclecategory WHERE VehicleTypeID = ? ORDER BY CategoryName";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $typeID);
     $stmt->execute();
@@ -193,8 +193,8 @@ function handleGetAvailableSlots($conn) {
     }
     
     $sql = "SELECT s.SlotID, s.SlotName, a.AreaName 
-            FROM parkingslot s
-            JOIN parkingarea a ON s.AreaID = a.AreaID
+            FROM pms_parkingslot s
+            JOIN pms_parkingarea a ON s.AreaID = a.AreaID
             WHERE s.Status = 'available' AND s.AllowedVehicleTypeID = ?
             ORDER BY a.AreaName, s.SlotName";
             
@@ -207,7 +207,7 @@ function handleGetAvailableSlots($conn) {
 }
 
 function handleGetParkingAreas($conn) {
-    $sql = "SELECT AreaID, AreaName FROM parkingarea ORDER BY AreaName";
+    $sql = "SELECT AreaID, AreaName FROM pms_parkingarea ORDER BY AreaName";
     $result = $conn->query($sql);
     $data = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
     echo json_encode(['success' => true, 'areas' => $data]);
@@ -218,7 +218,7 @@ function handleGetDashboardData($conn) {
         SUM(CASE WHEN Status = 'occupied' THEN 1 ELSE 0 END) AS occupied,
         SUM(CASE WHEN Status = 'available' THEN 1 ELSE 0 END) AS available,
         COUNT(SlotID) AS total
-        FROM parkingslot";
+        FROM pms_parkingslot";
     $cards_result = $conn->query($sql_cards)->fetch_assoc();
     
     $sql_table = "SELECT a.AreaName,
@@ -226,8 +226,8 @@ function handleGetDashboardData($conn) {
         SUM(CASE WHEN s.Status = 'occupied' THEN 1 ELSE 0 END) AS occupied,
         COUNT(s.SlotID) AS total,
         CASE WHEN COUNT(s.SlotID) = SUM(CASE WHEN s.Status = 'occupied' THEN 1 ELSE 0 END) THEN 'Full' ELSE 'Available' END AS status
-        FROM parkingslot s
-        JOIN parkingarea a ON s.AreaID = a.AreaID
+        FROM pms_parkingslot s
+        JOIN pms_parkingarea a ON s.AreaID = a.AreaID
         GROUP BY a.AreaID, a.AreaName ORDER BY a.AreaName";
     $table_result = $conn->query($sql_table);
     $table_data = $table_result ? $table_result->fetch_all(MYSQLI_ASSOC) : [];
@@ -237,9 +237,9 @@ function handleGetDashboardData($conn) {
 
 function handleGetAllSlots($conn) {
     $sql = "SELECT s.SlotID, a.AreaName, s.SlotName, t.TypeName AS AllowedVehicle, s.Status
-            FROM parkingslot s
-            JOIN parkingarea a ON s.AreaID = a.AreaID
-            JOIN vehicletype t ON s.AllowedVehicleTypeID = t.VehicleTypeID
+            FROM pms_parkingslot s
+            JOIN pms_parkingarea a ON s.AreaID = a.AreaID
+            JOIN pms_vehicletype t ON s.AllowedVehicleTypeID = t.VehicleTypeID
             ORDER BY a.AreaName, s.SlotName";
     $result = $conn->query($sql);
     $data = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
@@ -255,11 +255,11 @@ function handleGetVehiclesIn($conn) {
         DATE_FORMAT(ps.EntryTime, '%Y-%m-%d') AS EnterDate,
         ps.EntryTime, s.SlotID,
         a.AreaName 
-        FROM parking_sessions ps
-        JOIN parkingslot s ON ps.SlotID = s.SlotID
-        JOIN vehicletype t ON ps.VehicleTypeID = t.VehicleTypeID
-        JOIN vehiclecategory c ON ps.VehicleCategoryID = c.VehicleCategoryID
-        JOIN parkingarea a ON s.AreaID = a.AreaID 
+        FROM pms_parking_sessions ps
+        JOIN pms_parkingslot s ON ps.SlotID = s.SlotID
+        JOIN pms_vehicletype t ON ps.VehicleTypeID = t.VehicleTypeID
+        JOIN pms_vehiclecategory c ON ps.VehicleCategoryID = c.VehicleCategoryID
+        JOIN pms_parkingarea a ON s.AreaID = a.AreaID 
         WHERE ps.ExitTime IS NULL
         ORDER BY ps.EntryTime DESC";
     $result = $conn->query($sql);
@@ -280,11 +280,11 @@ function handleGetHistory($conn) {
         DATE_FORMAT(ps.ExitTime, '%Y-%m-%d / %h:%i %p') AS ExitDateTime,
         ps.EntryTime, ps.ExitTime, 
         a.AreaName
-        FROM parking_sessions ps
-        JOIN parkingslot s ON ps.SlotID = s.SlotID
-        JOIN vehicletype t ON ps.VehicleTypeID = t.VehicleTypeID
-        JOIN vehiclecategory c ON ps.VehicleCategoryID = c.VehicleCategoryID
-        JOIN parkingarea a ON s.AreaID = a.AreaID
+        FROM pms_parking_sessions ps
+        JOIN pms_parkingslot s ON ps.SlotID = s.SlotID
+        JOIN pms_vehicletype t ON ps.VehicleTypeID = t.VehicleTypeID
+        JOIN pms_vehiclecategory c ON ps.VehicleCategoryID = c.VehicleCategoryID
+        JOIN pms_parkingarea a ON s.AreaID = a.AreaID
         WHERE ps.ExitTime IS NOT NULL
         ORDER BY ps.ExitTime DESC";
     $result = $conn->query($sql);
@@ -312,11 +312,11 @@ function handleUpdateUser($conn, $staffID) {
     try {
         if (!empty($password) && $password !== '************') {
             $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $sql = "UPDATE users SET Fname=?, Lname=?, Mname=?, Birthday=?, Username=?, EmailAddress=?, Address=?, ContactNumber=?, Password=? WHERE UserID = ?";
+            $sql = "UPDATE pms_users SET Fname=?, Lname=?, Mname=?, Birthday=?, Username=?, EmailAddress=?, Address=?, ContactNumber=?, Password=? WHERE UserID = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("sssssssssi", $fname, $lname, $mname, $birthday, $username, $email, $address, $contact, $hashedPassword, $staffID);
         } else {
-            $sql = "UPDATE users SET Fname=?, Lname=?, Mname=?, Birthday=?, Username=?, EmailAddress=?, Address=?, ContactNumber=? WHERE UserID = ?";
+            $sql = "UPDATE pms_users SET Fname=?, Lname=?, Mname=?, Birthday=?, Username=?, EmailAddress=?, Address=?, ContactNumber=? WHERE UserID = ?";
             $stmt = $conn->prepare($sql);
             $stmt->bind_param("ssssssssi", $fname, $lname, $mname, $birthday, $username, $email, $address, $contact, $staffID);
         }

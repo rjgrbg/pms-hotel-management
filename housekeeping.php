@@ -38,28 +38,22 @@ function formatDbDateTimeForDisplay($datetime) {
 // ===== END OF HELPER FUNCTIONS =====
 
 
-// ===== 4. Fetch ALL Rooms and their status (MODIFIED) =====
-// This logic mirrors maintenance.php, but targets housekeeping tables/statuses
+// ===== 4. Fetch ALL Rooms and their status (MODIFIED FOR SINGLE DB) =====
 $allRoomsStatus = [];
-// --- This query joins housekeeping_tasks and users
-// --- to get the *correct* current status and assigned staff name ---
-// *** ASSUMPTION: You have a 'pms.housekeeping_tasks' table like 'pms.maintenance_requests' ***
 $sql_rooms = "SELECT
-                r.RoomID,
-                r.FloorNumber,
-                r.RoomNumber,
-                rs.LastClean, -- *** MODIFIED: Changed from LastMaintenance ***
+                r.room_id as RoomID,
+                r.floor_num as FloorNumber,
+                r.room_num as RoomNumber,
+                rs.LastClean,
                 
                 -- Determine the most accurate current status
                 CASE 
-                    WHEN active_task.Status IS NOT NULL THEN active_task.Status -- 'Pending' or 'In Progress'
-                    WHEN rs.RoomStatus = 'Needs Cleaning' THEN 'Needs Cleaning' -- *** MODIFIED ***
+                    WHEN active_task.Status IS NOT NULL THEN active_task.Status
+                    WHEN rs.RoomStatus = 'Needs Cleaning' THEN 'Needs Cleaning'
                     ELSE COALESCE(rs.RoomStatus, 'Available') 
                 END as RoomStatus,
                 
                 active_task.DateRequested as TaskRequestDate,
-                
-                -- *** ADDED: Get TaskID (assuming 'TaskID' is the PK) ***
                 active_task.TaskID, 
                 
                 -- Get assigned staff member's name
@@ -67,28 +61,29 @@ $sql_rooms = "SELECT
                 u.Lname,
                 u.Mname
               FROM
-                crm.rooms r
+                pms_rooms r
               LEFT JOIN
-                pms.room_status rs ON r.RoomNumber = rs.RoomNumber
+                pms_room_status rs ON r.room_num = rs.RoomNumber
               LEFT JOIN (
                 -- Subquery to find the *single* latest active task per room
                 SELECT 
-                    ht.TaskID, -- *** MODIFIED: Assumed TaskID ***
+                    ht.TaskID,
                     ht.RoomID, 
                     ht.Status, 
                     ht.DateRequested, 
                     ht.AssignedUserID,
                     ROW_NUMBER() OVER(PARTITION BY ht.RoomID ORDER BY ht.DateRequested DESC) as rn
                 FROM 
-                    pms.housekeeping_tasks ht -- *** MODIFIED: Assumed housekeeping_tasks table ***
+                    pms_housekeeping_tasks ht
                 WHERE 
                     ht.Status IN ('Pending', 'In Progress')
-              ) AS active_task ON active_task.RoomID = r.RoomID AND active_task.rn = 1
+              ) AS active_task ON active_task.RoomID = r.room_id AND active_task.rn = 1
               LEFT JOIN
-                -- Join users table to get the staff name
-                pms.users u ON u.UserID = active_task.AssignedUserID
+                pms_users u ON u.UserID = active_task.AssignedUserID
+              WHERE
+                r.is_archived = 0
               ORDER BY
-                r.FloorNumber, r.RoomNumber ASC";
+                r.floor_num, r.room_num ASC";
 
 if ($result_rooms = $conn->query($sql_rooms)) {
     while ($row = $result_rooms->fetch_assoc()) {
@@ -96,13 +91,11 @@ if ($result_rooms = $conn->query($sql_rooms)) {
         $requestDate = 'N/A';
         $requestTime = 'N/A';
         
-        // *** MODIFIED: Check for 'Needs Cleaning' status ***
         if (in_array($row['RoomStatus'], ['Needs Cleaning', 'Pending', 'In Progress']) && $row['TaskRequestDate']) {
             $requestDate = formatDbDateForDisplay($row['TaskRequestDate']);
             $requestTime = date('g:i A', strtotime($row['TaskRequestDate']));
         }
 
-        // --- NEW STAFF NAME LOGIC (MODIFIED) ---
         $staffName = 'Not Assigned';
         if (!empty($row['Fname'])) {
             $staffName = trim(
@@ -112,18 +105,17 @@ if ($result_rooms = $conn->query($sql_rooms)) {
                 htmlspecialchars($row['Lname'])
             );
         }
-        // --- END NEW STAFF NAME LOGIC ---
 
         $allRoomsStatus[] = [
-            'id' => $row['RoomID'], // This is the RoomID from CRM
-            'taskId' => $row['TaskID'], // *** MODIFIED: Changed to taskId ***
+            'id' => $row['RoomID'],
+            'taskId' => $row['TaskID'],
             'floor' => $row['FloorNumber'],
             'room' => $row['RoomNumber'],
-            'lastClean' => formatDbDateTimeForDisplay($row['LastClean']), // *** MODIFIED: lastClean ***
+            'lastClean' => formatDbDateTimeForDisplay($row['LastClean']),
             'date' => $requestDate,
             'requestTime' => $requestTime,
-            'status' => $row['RoomStatus'], // This now correctly gets 'Pending'
-            'staff' => $staffName           // This now correctly gets the name
+            'status' => $row['RoomStatus'],
+            'staff' => $staffName
         ];
     }
     $result_rooms->free();
@@ -131,8 +123,7 @@ if ($result_rooms = $conn->query($sql_rooms)) {
     error_log("Error fetching all room statuses: " . $conn->error);
 }
 
-// 5. Fetch Housekeeping Staff
-// *** MODIFIED: Fetches 'housekeeping_staff' ***
+// 5. Fetch Housekeeping Staff (UNCHANGED)
 $housekeepingStaff = [];
 $sql_staff = "SELECT 
                 u.UserID, 
@@ -141,9 +132,9 @@ $sql_staff = "SELECT
                 u.Mname,
                 u.AvailabilityStatus
               FROM 
-                pms.users u
+                pms_users u
               WHERE 
-                u.AccountType = 'housekeeping_staff'"; // *** MODIFIED ***
+                u.AccountType = 'housekeeping_staff'";
 
 if ($result_staff = $conn->query($sql_staff)) {
     while ($row = $result_staff->fetch_assoc()) {
@@ -154,7 +145,7 @@ if ($result_staff = $conn->query($sql_staff)) {
             htmlspecialchars($row['Lname'])
         );
         
-        $availability = $row['AvailabilityStatus']; // e.g., 'Available', 'Assigned', 'Offline'
+        $availability = $row['AvailabilityStatus'];
 
         $housekeepingStaff[] = [
             'id' => $row['UserID'],
@@ -167,28 +158,27 @@ if ($result_staff = $conn->query($sql_staff)) {
     error_log("Error fetching housekeeping staff: ". $conn->error);
 }
 
-// 6. Fetch all rooms for dropdowns
+// 6. Fetch all rooms for dropdowns (MODIFIED FOR SINGLE DB)
 $allRooms = [];
-$sql_all_rooms = "SELECT RoomID, FloorNumber, RoomNumber FROM crm.rooms ORDER BY FloorNumber, RoomNumber";
+$sql_all_rooms = "SELECT room_id, floor_num, room_num FROM pms_rooms WHERE is_archived = 0 ORDER BY floor_num, room_num";
 if ($result_all_rooms = $conn->query($sql_all_rooms)) {
     while ($row = $result_all_rooms->fetch_assoc()) {
         $allRooms[] = [
-            'id' => $row['RoomID'], // This is the RoomID from CRM
-            'floor' => $row['FloorNumber'],
-            'room' => $row['RoomNumber']
+            'id' => $row['room_id'],
+            'floor' => $row['floor_num'],
+            'room' => $row['room_num']
         ];
     }
     $result_all_rooms->free();
 }
 
-// 7. Fetch History Data
+// 7. Fetch History Data (MODIFIED FOR SINGLE DB)
 $historyData = [];
-// *** MODIFIED: Query 'pms.housekeeping_tasks' and 'TaskType' ***
 $sql_history = "SELECT 
                     ht.TaskID, 
-                    r.FloorNumber, 
-                    r.RoomNumber, 
-                    ht.TaskType, -- *** MODIFIED: Assumed TaskType ***
+                    r.floor_num as FloorNumber, 
+                    r.room_num as RoomNumber, 
+                    ht.TaskType,
                     ht.DateRequested, 
                     ht.DateCompleted, 
                     u.Fname, 
@@ -197,11 +187,11 @@ $sql_history = "SELECT
                     ht.Status, 
                     ht.Remarks 
                 FROM 
-                    pms.housekeeping_tasks ht -- *** MODIFIED ***
+                    pms_housekeeping_tasks ht
                 JOIN 
-                    crm.rooms r ON ht.RoomID = r.RoomID 
+                    pms_rooms r ON ht.RoomID = r.room_id
                 LEFT JOIN 
-                    pms.users u ON ht.AssignedUserID = u.UserID 
+                    pms_users u ON ht.AssignedUserID = u.UserID 
                 WHERE 
                     ht.Status IN ('Completed', 'Cancelled')
                 ORDER BY 
@@ -220,10 +210,10 @@ if ($result_history = $conn->query($sql_history)) {
         }
         
         $historyData[] = [
-            'id' => $row['TaskID'], // *** MODIFIED ***
+            'id' => $row['TaskID'],
             'floor' => $row['FloorNumber'],
             'room' => $row['RoomNumber'],
-            'issueType' => $row['TaskType'], // *** MODIFIED ***
+            'issueType' => $row['TaskType'],
             'date' => formatDbDateForDisplay($row['DateRequested']),
             'requestedTime' => date('g:i A', strtotime($row['DateRequested'])),
             'completedTime' => $row['DateCompleted'] ? date('g:i A', strtotime($row['DateCompleted'])) : 'N/A',

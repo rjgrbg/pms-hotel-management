@@ -76,8 +76,8 @@ function getInventory($conn) {
             i.ItemStatus, 
             DATE_FORMAT(i.DateofStockIn, '%Y-%m-%d') AS DateofStockIn, 
             ic.ItemCategoryID
-          FROM inventory i
-          JOIN itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
+          FROM pms_inventory i
+          JOIN pms_itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
           ORDER BY i.ItemName";
   
   $result = $conn->query($sql);
@@ -125,11 +125,11 @@ END AS DateofStockIn,
                       PARTITION BY il.ItemID 
                       ORDER BY il.DateofRelease, il.InvLogID
                   ) AS NewQuantity
-              FROM inventorylog il
+              FROM pms_inventorylog il
           ) AS rt
-          JOIN inventory i ON rt.ItemID = i.ItemID
-          JOIN itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
-          JOIN users u ON rt.UserID = u.UserID
+          JOIN pms_inventory i ON rt.ItemID = i.ItemID
+          JOIN pms_itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
+          JOIN pms_users u ON rt.UserID = u.UserID
           ORDER BY rt.DateofRelease DESC, rt.InvLogID DESC";
 
   $result = $conn->query($sql);
@@ -148,7 +148,7 @@ END AS DateofStockIn,
  * Fetches the list of item categories to populate the dropdowns.
  */
 function getCategories($conn) {
-  $sql = "SELECT ItemCategoryID, ItemCategoryName FROM itemcategory ORDER BY ItemCategoryName";
+  $sql = "SELECT ItemCategoryID, ItemCategoryName FROM pms_itemcategory ORDER BY ItemCategoryName";
   $result = $conn->query($sql);
   if (!$result) {
     throw new Exception("Error fetching categories: " . $conn->error);
@@ -184,7 +184,7 @@ function addItem($conn, $data, $userID) {
   // 1. Insert into 'inventory' table
   // DamageItem column has been removed from the INSERT.
   $stmt = $conn->prepare(
-    "INSERT INTO inventory (ItemName, ItemCategoryID, ItemQuantity, ItemDescription, ItemStatus, DateofStockIn) 
+    "INSERT INTO pms_inventory (ItemName, ItemCategoryID, ItemQuantity, ItemDescription, ItemStatus, DateofStockIn) 
      VALUES (?, ?, ?, ?, ?, ?)"
   );
   // Bind types: s(Name), i(CatID), i(Qty), s(Desc), s(Status), s(StockInDate)
@@ -200,7 +200,7 @@ function addItem($conn, $data, $userID) {
   // 2. Insert into 'inventorylog' table
   $logReason = "Initial Stock In";
   $logStmt = $conn->prepare(
-    "INSERT INTO inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
+    "INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
      VALUES (?, ?, ?, ?, NOW())"
   );
   $logStmt->bind_param("iiis", $userID, $newItemID, $quantity, $logReason);
@@ -235,7 +235,7 @@ function updateItem($conn, $data, $userID) {
 
   // 1. Get the current quantity
   $currentQuantity = 0;
-  $qtyStmt = $conn->prepare("SELECT ItemQuantity FROM inventory WHERE ItemID = ?");
+  $qtyStmt = $conn->prepare("SELECT ItemQuantity FROM pms_inventory WHERE ItemID = ?");
   $qtyStmt->bind_param("i", $itemID);
   
   if ($qtyStmt->execute()) {
@@ -262,7 +262,7 @@ function updateItem($conn, $data, $userID) {
 
   // 3. Update the 'inventory' table
   $stmt = $conn->prepare(
-    "UPDATE inventory 
+    "UPDATE pms_inventory 
      SET ItemName = ?, ItemCategoryID = ?, ItemDescription = ?, 
          ItemQuantity = ?, ItemStatus = ?
      WHERE ItemID = ?"
@@ -280,7 +280,7 @@ function updateItem($conn, $data, $userID) {
     $logReason = "Stock Added";
     
     $logStmt = $conn->prepare(
-      "INSERT INTO inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
+      "INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
        VALUES (?, ?, ?, ?, NOW())"
     );
     $logStmt->bind_param("iiis", $userID, $itemID, $stockAdjustment, $logReason);
@@ -305,7 +305,7 @@ function deleteItem($conn, $data, $userID) {
   $conn->begin_transaction();
 
   // 1. Delete from 'inventorylog'
-  $logStmt = $conn->prepare("DELETE FROM inventorylog WHERE ItemID = ?");
+  $logStmt = $conn->prepare("DELETE FROM pms_inventorylog WHERE ItemID = ?");
   $logStmt->bind_param("i", $itemID);
   if (!$logStmt->execute()) {
     $conn->rollback();
@@ -313,7 +313,7 @@ function deleteItem($conn, $data, $userID) {
   }
 
   // 2. Delete from 'inventory'
-  $stmt = $conn->prepare("DELETE FROM inventory WHERE ItemID = ?");
+  $stmt = $conn->prepare("DELETE FROM pms_inventory WHERE ItemID = ?");
   $stmt->bind_param("i", $itemID);
   if (!$stmt->execute()) {
     $conn->rollback();
@@ -341,7 +341,7 @@ function issueItem($conn, $data, $userID) {
 
   // 1. Get the current quantity
   $currentQuantity = 0;
-  $qtyStmt = $conn->prepare("SELECT ItemQuantity FROM inventory WHERE ItemID = ?");
+  $qtyStmt = $conn->prepare("SELECT ItemQuantity FROM pms_inventory WHERE ItemID = ?");
   $qtyStmt->bind_param("i", $itemID);
 
   if ($qtyStmt->execute()) {
@@ -371,7 +371,7 @@ function issueItem($conn, $data, $userID) {
 
   // 3. Update the 'inventory' table (quantity and status only)
   $stmt = $conn->prepare(
-    "UPDATE inventory 
+    "UPDATE pms_inventory 
      SET ItemQuantity = ?, ItemStatus = ?
      WHERE ItemID = ?"
   );
@@ -385,7 +385,7 @@ function issueItem($conn, $data, $userID) {
 
   // 4. Log the change
   $logStmt = $conn->prepare(
-    "INSERT INTO inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
+    "INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
      VALUES (?, ?, ?, ?, NOW())"
   );
   // We log the negative adjustment (e.g., -5)

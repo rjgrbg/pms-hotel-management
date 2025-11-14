@@ -64,7 +64,7 @@ if ($hashed_password === false) {
 // --- Update Database ---
 // We find the user by their valid token, set their password,
 // and simultaneously NULL the token so it can't be used again.
-$sql = "UPDATE users SET 
+$sql = "UPDATE pms_users SET 
             Password = ?, 
             ActivationToken = NULL, 
             TokenExpiry = NULL 

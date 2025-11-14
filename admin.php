@@ -15,7 +15,7 @@ $Accounttype = 'Administrator'; // Default type
 
 if (isset($_SESSION['UserID'])) {
     $userId = $_SESSION['UserID'];
-    $sql = "SELECT Fname, Mname, Lname, AccountType FROM users WHERE UserID = ?"; 
+    $sql = "SELECT Fname, Mname, Lname, AccountType FROM pms_users WHERE UserID = ?"; 
     
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("i", $userId);
@@ -906,7 +906,7 @@ if (isset($_SESSION['UserID'])) {
                 <th>No. Guests</th>
                 <th>Rate</th>
                 <th>Status</th>
-                <th>Actions</th>
+              
               </tr>
             </thead>
             <tbody id="roomsTableBody">
@@ -1133,89 +1133,275 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
 
-  <div class="modalBackdrop" id="userModal" style="display: none;">
-    <div class="addUserModal">
-      <button class="closeBtn" id="closeUserModalBtn">&times;</button>
-      <h2 id="userModalTitle">Add New User</h2>
-      <div id="userFormMessage" class="formMessage" style="display:none;"></div>
+  <!-- UPDATED USER MODAL - Replace in admin.php -->
+<!-- USER MODAL - EMPLOYEE CODE LOOKUP -->
+<!-- Replace in admin.php -->
+
+<div class="modalBackdrop" id="userModal" style="display: none;">
+  <div class="addUserModal">
+    <button class="closeBtn" id="closeUserModalBtn">&times;</button>
+    <h2 id="userModalTitle">Add User from Employee</h2>
+    <div id="userFormMessage" class="formMessage" style="display:none;"></div>
+    
+    <!-- FORM 1: Enter Employee Code -->
+    <form id="employeeCodeForm" style="display: block;">
+      <div class="formGroup">
+        <label for="employeeCodeInput">Employee Code *</label>
+        <input type="text" id="employeeCodeInput" name="employeeCode" required 
+               placeholder="e.g., EMP-0001" 
+               style="font-size: 16px; padding: 12px;" />
+        <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">
+          Enter the Employee Code from the employees table. Only employees with these positions can be added:<br>
+          <strong>Administrator, Housekeeping Manager, House Keeping Staff, Maintenance Manager, Maintenance Staff, Inventory Manager, Parking Manager</strong>
+        </small>
+      </div>
       
-      <form id="employeeIdForm" style="display: block;">
-        <div class="formGroup">
-          <label for="employeeId">Employee ID</label>
-          <input type="text" id="employeeId" name="employeeId" required placeholder="Enter Employee ID" />
-        </div>
-        <div class="modalButtons">
-          <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeIdBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn">ADD EMPLOYEE</button>
-        </div>
-      </form>
-
-      <form id="userEditForm" style="display: none;">
-        <input type="hidden" id="editUserId" name="userID">
-        
-        <div class="userProfileSection">
-          <div class="profileAvatar">
-            <img src="assets/icons/profile-icon.png" alt="Profile" />
-          </div>
-          <h3 id="editUserFullName" class="editUserName">User Full Name</h3>
-          <p id="editUserEmployeeId" class="editUserEmployeeId">Employee ID: ------</p>
-        </div>
-        
-        <div class="formGroup">
-          <label for="userUsername">Username *</label>
-          <input type="text" id="userUsername" name="username" required />
-        </div>
-        
-        <div class="formGroup">
-          <label for="userPassword">New Password (Optional)</label>
-          <input type="password" id="userPassword" name="password" placeholder="Leave blank to keep unchanged" />
-        </div>
-        
-        <div class="formGroup">
-          <label for="userAccountType">Account Type *</label>
-          <select id="userAccountType" name="accountType" required>
-            <option value="">Select Role</option>
-            <option value="admin">Administrator</option>
-            <option value="housekeeping_manager">Housekeeping Manager</option>
-            <option value="maintenance_manager">Maintenance Manager</option>
-            <option value="inventory_manager">Inventory Manager</option>
-            <option value="parking_manager">Parking Manager</option>
-            <option value="housekeeping_staff">Housekeeping Staff</option>
-            <option value="maintenance_staff">Maintenance Staff</option>
-          </select>
-        </div>
-
-        <div class="formGroup">
-          <label for="userShift">Shift *</label>
-          <select id="userShift" name="shift" required>
-            <option value="">Select Shift</option>
-            <option value="Morning">Morning</option>
-            <option value="Afternoon">Afternoon</option>
-            <option value="Night">Night</option>
-          </select>
-        </div>
-        <div class="modalButtons">
-          <button type="button" class="modalBtn cancelBtn" id="cancelUserEditBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="saveUserBtn">UPDATE USER</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <div class="modalBackdrop" id="deleteUserModal" style="display: none;">
-    <div class="logoutModal">
-      <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
-      <div class="modalIcon">
-        <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
-      </div>
-      <h2>Delete User</h2>
-      <p id="deleteUserText">Are you sure you want to delete this user?</p>
       <div class="modalButtons">
-        <button class="modalBtn cancelBtn" id="cancelDeleteUserBtn">CANCEL</button>
-        <button class="modalBtn confirmBtn" id="confirmDeleteUserBtn">DELETE</button>
+        <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeCodeBtn">CANCEL</button>
+        <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn">ADD EMPLOYEE</button>
       </div>
+    </form>
+
+    <!-- FORM 2: Display User Info & Change Password -->
+    <div id="userDetailsDisplay" style="display: none;">
+      <input type="hidden" id="editUserId" name="userID">
+      
+      <div class="userProfileSection">
+        <div class="profileAvatar">
+          <img src="assets/icons/profile-icon.png" alt="Profile" />
+        </div>
+        <h3 id="displayFullName" class="editUserName">User Full Name</h3>
+        <p class="editUserEmployeeId">Employee Code: <span id="displayEmployeeCode">------</span></p>
+      </div>
+      
+      <div class="infoGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+        <div>
+          <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Email</label>
+          <div id="displayEmail" style="font-size: 14px; font-weight: 500;">-</div>
+        </div>
+        <div>
+          <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Account Type</label>
+          <div id="displayAccountType" style="font-size: 14px; font-weight: 500;">-</div>
+        </div>
+        <div>
+          <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Shift</label>
+          <div id="displayShift" style="font-size: 14px; font-weight: 500;">-</div>
+        </div>
+        <div>
+          <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Username</label>
+          <div id="displayUsername" style="font-size: 14px; font-weight: 500;">-</div>
+        </div>
+      </div>
+      
+      <form id="passwordChangeForm">
+        <div class="formGroup">
+          <label for="newPassword">New Password *</label>
+          <input type="password" id="newPassword" name="password" required 
+                 placeholder="Enter new password" 
+                 style="border: 2px solid #4CAF50;" />
+          <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">
+            All other user information is read-only and comes from the employees table.
+          </small>
+        </div>
+        
+        <div class="modalButtons">
+          <button type="button" class="modalBtn cancelBtn" id="cancelPasswordChangeBtn">CANCEL</button>
+          <button type="submit" class="modalBtn confirmBtn" id="savePasswordBtn">UPDATE PASSWORD</button>
+        </div>
+      </form>
     </div>
   </div>
+</div>
+
+<!-- User Delete Confirmation Modal -->
+<div class="modalBackdrop" id="deleteUserModal" style="display: none;">
+  <div class="logoutModal">
+    <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
+    <div class="modalIcon">
+      <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
+    </div>
+    <h2>Delete User</h2>
+    <p id="deleteUserText">Are you sure you want to delete this user?</p>
+    <div class="modalButtons">
+      <button class="modalBtn cancelBtn" id="cancelDeleteUserBtn">CANCEL</button>
+      <button class="modalBtn confirmBtn" id="confirmDeleteUserBtn">DELETE</button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Modal styling */
+.addUserModal {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+.userProfileSection {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  margin-bottom: 25px;
+  color: white;
+}
+
+.profileAvatar {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 15px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.profileAvatar img {
+  width: 50px;
+  height: 50px;
+  opacity: 0.8;
+}
+
+.editUserName {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 5px 0;
+}
+
+.editUserEmployeeId {
+  font-size: 13px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #333;
+  font-size: 13px;
+}
+
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modalButtons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.modalBtn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cancelBtn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.cancelBtn:hover {
+  background: #e0e0e0;
+}
+
+.confirmBtn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.confirmBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.confirmBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.formMessage {
+  padding: 12px 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.formMessage.error {
+  background: #fee;
+  color: #c33;
+  border: 1px solid #fcc;
+}
+
+.formMessage.success {
+  background: #efe;
+  color: #3c3;
+  border: 1px solid #cfc;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 8px;
+}
+
+.infoGrid label {
+  font-size: 11px;
+  color: #666;
+  display: block;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.infoGrid div div {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+</style>
 
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">

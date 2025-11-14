@@ -137,25 +137,11 @@ function renderRoomsTable(data) {
           <td>${row.NoGuests}</td>
           <td>$${parseFloat(row.Rate).toFixed(2)}</td>
           <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
-          <td>
-            <div class="actionButtons">
-              <button class="actionBtn editBtn" data-room-data='${JSON.stringify(row)}'>
-                <img src="assets/icons/edit-icon.png" alt="Edit" />
-              </button>
-            </div>
-          </td>
+          
         </tr>
       `;
     }).join('');
-
-    tbody.querySelectorAll('.editBtn').forEach(btn => {
-        btn.addEventListener('click', handleEditClick);
-    });
-    
-    // === MODIFICATION: REMOVED DELETE BUTTON LISTENER ===
-    // tbody.querySelectorAll('.deleteBtn').forEach(btn => {
-    //     btn.addEventListener('click', handleDeleteClick);
-    // });
+ 
   }
   
   const recordCount = document.getElementById('roomsRecordCount');

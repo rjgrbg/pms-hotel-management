@@ -8,12 +8,19 @@ header('Content-Type: application/json');
 // This file ONLY connects to the DB. It does NOT check for a login session.
 require_once('db_connection.php');
 
-// *** NEW: Logging Function (Copied from api_staff_task.php) ***
-// MODIFIED: For Housekeeping
+// Get single database connection
+$conn = get_db_connection('pms');
+
+if ($conn === null) {
+    echo json_encode(['status' => 'error', 'message' => 'Database connection error.']);
+    exit;
+}
+
+// *** Logging Function ***
 function logHousekeepingAction($conn, $taskId, $roomId, $userId, $action, $details) {
     try {
         $stmt = $conn->prepare(
-            "INSERT INTO pms.housekeeping_logs (TaskID, RoomID, UserID, Action, Details) 
+            "INSERT INTO pms_housekeeping_logs (TaskID, RoomID, UserID, Action, Details) 
              VALUES (?, ?, ?, ?, ?)"
         );
         $stmt->bind_param("iiiss", $taskId, $roomId, $userId, $action, $details);
@@ -45,30 +52,29 @@ switch ($action) {
 
     // ===== GET TASK DETAILS (for hk_assign_staff.html) =====
     case 'get_task_details':
-        // MODIFIED: Check for task_id
         if (!isset($_GET['task_id'])) {
             echo json_encode(['status' => 'error', 'message' => 'Task ID missing.']);
             exit;
         }
 
-        $taskId = (int)$_GET['task_id']; // MODIFIED
+        $taskId = (int)$_GET['task_id'];
         $response = ['status' => 'error', 'message' => 'Task not found.']; // Default error
 
-        // MODIFIED: Query housekeeping_tasks, TaskID, TaskType
+        // UPDATED: Query from single database with new table/column names
         $sql = "SELECT 
                     ht.TaskID, ht.Status, ht.TaskType, ht.Remarks,
                     DATE_FORMAT(ht.DateRequested, '%m/%d/%Y') as DateRequested,
                     DATE_FORMAT(ht.DateRequested, '%l:%i %p') as TimeRequested,
-                    r.RoomNumber, r.RoomType
+                    r.room_num as RoomNumber, r.room_type as RoomType
                 FROM 
-                    pms.housekeeping_tasks ht
+                    pms_housekeeping_tasks ht
                 JOIN 
-                    crm.rooms r ON ht.RoomID = r.RoomID
+                    pms_rooms r ON ht.RoomID = r.room_id
                 WHERE 
-                    ht.TaskID = ? AND ht.Status IN ('Pending', 'In Progress')"; // MODIFIED
+                    ht.TaskID = ? AND ht.Status IN ('Pending', 'In Progress')";
         
         if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param("i", $taskId); // MODIFIED
+            $stmt->bind_param("i", $taskId);
             $stmt->execute();
             $result = $stmt->get_result();
             
@@ -87,7 +93,7 @@ switch ($action) {
     // ===== UPDATE TASK STATUS (for hk_assign_staff.html) =====
     case 'update_task_status':
         $taskData = $data['data'];
-        $taskId = (int)$taskData['task_id']; // MODIFIED
+        $taskId = (int)$taskData['task_id'];
         $newStatus = $taskData['status'];
         $remarks = $taskData['remarks']; 
         $response = ['status' => 'error', 'message' => 'Failed to update status.'];
@@ -97,8 +103,7 @@ switch ($action) {
             $conn->begin_transaction();
             
             // --- Get Task Info (RoomID, AssignedUserID) ---
-            // MODIFIED: housekeeping_tasks, TaskID
-            $stmt_info = $conn->prepare("SELECT RoomID, AssignedUserID FROM pms.housekeeping_tasks WHERE TaskID = ?");
+            $stmt_info = $conn->prepare("SELECT RoomID, AssignedUserID FROM pms_housekeeping_tasks WHERE TaskID = ?");
             $stmt_info->bind_param("i", $taskId);
             $stmt_info->execute();
             $result_info = $stmt_info->get_result();
@@ -114,8 +119,7 @@ switch ($action) {
 
             $sql = "";
             if ($newStatus === 'Completed') {
-                // MODIFIED: housekeeping_tasks, TaskID
-                $sql = "UPDATE pms.housekeeping_tasks 
+                $sql = "UPDATE pms_housekeeping_tasks 
                         SET Status = ?, DateCompleted = NOW(), Remarks = ?
                         WHERE TaskID = ?";
                 $stmt = $conn->prepare($sql);
@@ -123,8 +127,7 @@ switch ($action) {
                 $logDetails = "Task completed by staff (ID: $staffId). Remarks: $remarks";
             
             } else { // 'In Progress'
-                // MODIFIED: housekeeping_tasks, TaskID
-                $sql = "UPDATE pms.housekeeping_tasks 
+                $sql = "UPDATE pms_housekeeping_tasks 
                         SET Status = ?, Remarks = ?
                         WHERE TaskID = ?";
                 $stmt = $conn->prepare($sql);
@@ -137,32 +140,31 @@ switch ($action) {
             if ($newStatus === 'Completed') {
                 // --- Set staff back to 'Available' ---
                 if ($staffId) {
-                    $stmt_status = $conn->prepare("UPDATE pms.users SET AvailabilityStatus = 'Available' WHERE UserID = ?");
+                    $stmt_status = $conn->prepare("UPDATE pms_users SET AvailabilityStatus = 'Available' WHERE UserID = ?");
                     $stmt_status->bind_param("i", $staffId);
                     $stmt_status->execute();
                 }
 
-                // --- Get RoomNumber ---
-                $stmt_room = $conn->prepare("SELECT RoomNumber FROM crm.rooms WHERE RoomID = ?");
+                // --- Get RoomNumber (UPDATED: using room_num from pms_rooms) ---
+                $stmt_room = $conn->prepare("SELECT room_num FROM pms_rooms WHERE room_id = ?");
                 $stmt_room->bind_param("i", $roomId);
                 $stmt_room->execute();
                 $room_data = $stmt_room->get_result()->fetch_assoc();
                 
                 if ($room_data) {
-                    $roomNumber = $room_data['RoomNumber'];
+                    $roomNumber = $room_data['room_num'];
                     
-                    // *** MODIFIED: Update LastClean Date ***
+                    // *** Update LastClean Date ***
                     $stmt_last_clean = $conn->prepare(
-                        "UPDATE pms.room_status SET LastClean = NOW() WHERE RoomNumber = ?"
+                        "UPDATE pms_room_status SET LastClean = NOW() WHERE RoomNumber = ?"
                     );
-                    $stmt_last_clean->bind_param("s", $roomNumber);
+                    $stmt_last_clean->bind_param("i", $roomNumber);
                     $stmt_last_clean->execute();
 
                     // --- Check for other active tasks for this room ---
-                    // MODIFIED: housekeeping_tasks
                     $stmt_check_other_tasks = $conn->prepare(
                         "SELECT COUNT(*) as active_tasks 
-                         FROM pms.housekeeping_tasks 
+                         FROM pms_housekeeping_tasks 
                          WHERE RoomID = ? AND Status IN ('Pending', 'In Progress')"
                     );
                     $stmt_check_other_tasks->bind_param("i", $roomId);
@@ -172,15 +174,15 @@ switch ($action) {
                     // --- Only set to Available if no other active tasks exist ---
                     if ($result_check['active_tasks'] == 0) {
                         $stmt_room_status = $conn->prepare(
-                            "UPDATE pms.room_status SET RoomStatus = 'Available' WHERE RoomNumber = ?"
+                            "UPDATE pms_room_status SET RoomStatus = 'Available' WHERE RoomNumber = ?"
                         );
-                        $stmt_room_status->bind_param("s", $roomNumber);
+                        $stmt_room_status->bind_param("i", $roomNumber);
                         $stmt_room_status->execute();
                     }
                 }
             }
             
-            // *** MODIFIED: Log the action ***
+            // *** Log the action ***
             logHousekeepingAction($conn, $taskId, $roomId, $staffId, strtoupper($newStatus), $logDetails);
 
             // Commit transaction

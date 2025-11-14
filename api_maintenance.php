@@ -17,15 +17,15 @@ use PHPMailer\PHPMailer\Exception;
 
 // Use __DIR__ for reliable paths
 require __DIR__ . '/vendor/autoload.php';
-require __DIR__ . '/email_config.php'; // keep your config as-is
+require __DIR__ . '/email_config.php';
 
 // Create a local mailer instance
 $mail = new PHPMailer(true);
 $mail->isSMTP();
 $mail->Host       = 'smtp.gmail.com';
 $mail->SMTPAuth   = true;
-$mail->Username   = GMAIL_EMAIL;          // must be defined in your config
-$mail->Password   = GMAIL_APP_PASSWORD;   // must be defined in your config
+$mail->Username   = GMAIL_EMAIL;
+$mail->Password   = GMAIL_APP_PASSWORD;
 $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
 $mail->Port       = 465;
 
@@ -49,11 +49,11 @@ function formatDbDateTimeForDisplay($datetime) {
     }
 }
 
-// *** NEW: Logging Function ***
+// *** Logging Function ***
 function logMaintenanceAction($conn, $requestId, $roomId, $userId, $action, $details) {
     try {
         $stmt = $conn->prepare(
-            "INSERT INTO pms.maintenance_logs (RequestID, RoomID, UserID, Action, Details) 
+            "INSERT INTO pms_maintenance_logs (RequestID, RoomID, UserID, Action, Details) 
              VALUES (?, ?, ?, ?, ?)"
         );
         $stmt->bind_param("iiiss", $requestId, $roomId, $userId, $action, $details);
@@ -76,9 +76,17 @@ if (!$data || !isset($data['action'])) {
 $action = $data['action'];
 $managerUserId = $_SESSION['UserID']; // Get manager's ID for logging
 
+// Get single database connection
+$conn = get_db_connection('pms');
+
+if ($conn === null) {
+    echo json_encode(['status' => 'error', 'message' => 'Database connection error.']);
+    exit;
+}
+
 switch ($action) {
 
-    // --- ASSIGN MAINTENANCE TASK (MODIFIED) ---
+    // --- ASSIGN MAINTENANCE TASK ---
     case 'assign_task':
         try {
             $conn->begin_transaction();
@@ -89,7 +97,7 @@ switch ($action) {
 
             // 1. Check if an active request *already* exists for this room
             $stmt_check = $conn->prepare(
-                "SELECT RequestID FROM pms.maintenance_requests 
+                "SELECT RequestID FROM pms_maintenance_requests 
                  WHERE RoomID = ? AND Status IN ('Pending', 'In Progress')"
             );
             $stmt_check->bind_param("i", $roomId);
@@ -102,7 +110,7 @@ switch ($action) {
 
             // 2. CREATE a new request
             $stmt_insert = $conn->prepare(
-                "INSERT INTO pms.maintenance_requests 
+                "INSERT INTO pms_maintenance_requests 
                  (RoomID, UserID, AssignedUserID, IssueType, Status, DateRequested) 
                  VALUES (?, ?, ?, ?, 'Pending', NOW())"
             );
@@ -116,26 +124,24 @@ switch ($action) {
 
             // 3. Update staff status to 'Assigned'
             $stmt_status = $conn->prepare(
-                "UPDATE pms.users SET AvailabilityStatus = 'Assigned' WHERE UserID = ?"
+                "UPDATE pms_users SET AvailabilityStatus = 'Assigned' WHERE UserID = ?"
             );
             $stmt_status->bind_param("i", $staffId);
             $stmt_status->execute();
 
-            // 4. Get staff + room info for email
+            // 4. Get staff + room info for email (UPDATED FOR SINGLE DB)
             $stmt_info = $conn->prepare(
                 "SELECT 
-                    u.Fname, u.Lname, e.EmailAddress,
-                    r.RoomNumber, r.FloorNumber, r.RoomType
+                    u.Fname, u.Lname, u.EmailAddress,
+                    r.room_num as RoomNumber, r.floor_num as FloorNumber, r.room_type as RoomType
                 FROM 
-                    pms.users u
-                JOIN 
-                    hris.employees e ON u.EmployeeID = e.EmployeeID
-                JOIN
-                    crm.rooms r ON r.RoomID = ?
+                    pms_users u
+                CROSS JOIN
+                    pms_rooms r
                 WHERE 
-                    u.UserID = ?"
+                    u.UserID = ? AND r.room_id = ?"
             );
-            $stmt_info->bind_param("ii", $roomId, $staffId);
+            $stmt_info->bind_param("ii", $staffId, $roomId);
             $stmt_info->execute();
             $info = $stmt_info->get_result()->fetch_assoc();
 
@@ -162,7 +168,7 @@ switch ($action) {
             ";
             $mail->send();
 
-            // 6. *** ADDED: Log the action ***
+            // 6. Log the action
             logMaintenanceAction($conn, $requestId, $roomId, $managerUserId, 'ASSIGNED', "Task assigned to staff $staffName (ID: $staffId) by manager (ID: $managerUserId). Issues: $issueTypes");
             
             $conn->commit();
@@ -183,7 +189,7 @@ switch ($action) {
         }
         break;
 
-    // --- *** ADDED: 'cancel_task' case *** ---
+    // --- CANCEL TASK ---
     case 'cancel_task':
         try {
             $conn->begin_transaction();
@@ -195,7 +201,7 @@ switch ($action) {
 
             // 1. Get request info (RoomID, AssignedUserID) *before* updating
             $stmt_info = $conn->prepare(
-                "SELECT RoomID, AssignedUserID, Status FROM pms.maintenance_requests WHERE RequestID = ?"
+                "SELECT RoomID, AssignedUserID, Status FROM pms_maintenance_requests WHERE RequestID = ?"
             );
             $stmt_info->bind_param("i", $requestId);
             $stmt_info->execute();
@@ -214,7 +220,7 @@ switch ($action) {
 
             // 2. Update the request status to 'Cancelled' and add a remark
             $stmt_update = $conn->prepare(
-                "UPDATE pms.maintenance_requests 
+                "UPDATE pms_maintenance_requests 
                  SET Status = 'Cancelled', Remarks = 'Cancelled by Manager' 
                  WHERE RequestID = ?"
             );
@@ -224,7 +230,7 @@ switch ($action) {
             // 3. If a staff member was assigned, update their status back to 'Available'
             if ($staffId) {
                 $stmt_staff = $conn->prepare(
-                    "UPDATE pms.users SET AvailabilityStatus = 'Available' WHERE UserID = ?"
+                    "UPDATE pms_users SET AvailabilityStatus = 'Available' WHERE UserID = ?"
                 );
                 $stmt_staff->bind_param("i", $staffId);
                 $stmt_staff->execute();

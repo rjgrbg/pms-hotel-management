@@ -18,7 +18,7 @@ $Lname = ''; // Initialize Lname
 
 if (isset($_SESSION['UserID'])) {
     $userId = $_SESSION['UserID'];
-    $sql = "SELECT Fname, Mname, Lname, AccountType FROM users WHERE UserID = ?"; 
+    $sql = "SELECT Fname, Mname, Lname, AccountType FROM pms_users WHERE UserID = ?"; 
     
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("i", $userId);

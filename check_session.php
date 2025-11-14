@@ -13,7 +13,7 @@ session_start([
  */
 function log_user_in($user_id, $conn) {
     // Fetch user details
-    $sql = "SELECT UserID, Username, AccountType FROM users WHERE UserID = ?";
+    $sql = "SELECT UserID, Username, AccountType FROM pms_users WHERE UserID = ?";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("i", $user_id);
         $stmt->execute();

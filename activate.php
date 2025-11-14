@@ -9,7 +9,7 @@ $is_valid_token = false;
 
 if ($token) {
     // Check if the token exists and has not expired
-    $sql = "SELECT EmailAddress FROM users WHERE ActivationToken = ? AND TokenExpiry > NOW()";
+    $sql = "SELECT EmailAddress FROM pms_users WHERE ActivationToken = ? AND TokenExpiry > NOW()";
     if ($stmt = $conn->prepare($sql)) {
         $stmt->bind_param("s", $token);
         if ($stmt->execute()) {

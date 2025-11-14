@@ -3,7 +3,7 @@
 
 // check_session.php already includes session_start()
 include('check_session.php');
-require_login(['housekeeping_manager']); // --- MODIFIED
+require_login(['housekeeping_manager']);
 require_once('db_connection.php');
 
 header('Content-Type: application/json');
@@ -31,18 +31,18 @@ $mail->Port       = 465;
 
 // ===== HELPER FUNCTIONS =====
 
-// *** NEW: Logging Function ***
-function logHousekeepingAction($conn, $taskId, $roomId, $userId, $action, $details) { // --- MODIFIED
+// *** Logging Function ***
+function logHousekeepingAction($conn, $taskId, $roomId, $userId, $action, $details) {
     try {
         $stmt = $conn->prepare(
-            "INSERT INTO pms.housekeeping_logs (TaskID, RoomID, UserID, Action, Details) 
-             VALUES (?, ?, ?, ?, ?)" // --- MODIFIED
+            "INSERT INTO pms_housekeeping_logs (TaskID, RoomID, UserID, Action, Details) 
+             VALUES (?, ?, ?, ?, ?)"
         );
-        $stmt->bind_param("iiiss", $taskId, $roomId, $userId, $action, $details); // --- MODIFIED
+        $stmt->bind_param("iiiss", $taskId, $roomId, $userId, $action, $details);
         $stmt->execute();
     } catch (Exception $e) {
         // Log the error but don't stop the main process
-        error_log("Failed to log housekeeping action: " . $e->getMessage()); // --- MODIFIED
+        error_log("Failed to log housekeeping action: " . $e->getMessage());
     }
 }
 // ===== END OF HELPER FUNCTIONS =====
@@ -58,66 +58,72 @@ if (!$data || !isset($data['action'])) {
 $action = $data['action'];
 $managerUserId = $_SESSION['UserID']; // Get manager's ID for logging
 
+// Get single database connection
+$conn = get_db_connection('pms');
+
+if ($conn === null) {
+    echo json_encode(['status' => 'error', 'message' => 'Database connection error.']);
+    exit;
+}
+
 switch ($action) {
 
-    // --- ASSIGN HOUSEKEEPING TASK (MODIFIED) ---
+    // --- ASSIGN HOUSEKEEPING TASK ---
     case 'assign_task':
         try {
             $conn->begin_transaction();
             
             $roomId = $data['roomId'];
             $staffId = $data['staffId'];
-            $taskTypes = $data['taskTypes'] ?? 'Not Specified'; // --- MODIFIED
+            $taskTypes = $data['taskTypes'] ?? 'Not Specified';
 
             // 1. Check if an active task *already* exists for this room
             $stmt_check = $conn->prepare(
-                "SELECT TaskID FROM pms.housekeeping_tasks 
-                 WHERE RoomID = ? AND Status IN ('Pending', 'In Progress')" // --- MODIFIED
+                "SELECT TaskID FROM pms_housekeeping_tasks 
+                 WHERE RoomID = ? AND Status IN ('Pending', 'In Progress')"
             );
             $stmt_check->bind_param("i", $roomId);
             $stmt_check->execute();
             $result_check = $stmt_check->get_result();
             
             if ($result_check->num_rows > 0) {
-                throw new Exception("This room already has an active housekeeping task."); // --- MODIFIED
+                throw new Exception("This room already has an active housekeeping task.");
             }
 
             // 2. CREATE a new task
             $stmt_insert = $conn->prepare(
-                "INSERT INTO pms.housekeeping_tasks 
+                "INSERT INTO pms_housekeeping_tasks 
                  (RoomID, UserID, AssignedUserID, TaskType, Status, DateRequested) 
-                 VALUES (?, ?, ?, ?, 'Pending', NOW())" // --- MODIFIED
+                 VALUES (?, ?, ?, ?, 'Pending', NOW())"
             );
-            $stmt_insert->bind_param("iiis", $roomId, $managerUserId, $staffId, $taskTypes); // --- MODIFIED
+            $stmt_insert->bind_param("iiis", $roomId, $managerUserId, $staffId, $taskTypes);
             
             if (!$stmt_insert->execute()) {
                 throw new Exception("Database INSERT failed: " . $stmt_insert->error);
             }
             
-            $taskId = $conn->insert_id; // --- MODIFIED
+            $taskId = $conn->insert_id;
 
             // 3. Update staff status to 'Assigned'
             $stmt_status = $conn->prepare(
-                "UPDATE pms.users SET AvailabilityStatus = 'Assigned' WHERE UserID = ?"
+                "UPDATE pms_users SET AvailabilityStatus = 'Assigned' WHERE UserID = ?"
             );
             $stmt_status->bind_param("i", $staffId);
             $stmt_status->execute();
 
-            // 4. Get staff + room info for email
+            // 4. Get staff + room info for email (UPDATED FOR SINGLE DB)
             $stmt_info = $conn->prepare(
                 "SELECT 
-                    u.Fname, u.Lname, e.EmailAddress,
-                    r.RoomNumber, r.FloorNumber, r.RoomType
+                    u.Fname, u.Lname, u.EmailAddress,
+                    r.room_num as RoomNumber, r.floor_num as FloorNumber, r.room_type as RoomType
                 FROM 
-                    pms.users u
-                JOIN 
-                    hris.employees e ON u.EmployeeID = e.EmployeeID
-                JOIN
-                    crm.rooms r ON r.RoomID = ?
+                    pms_users u
+                CROSS JOIN
+                    pms_rooms r
                 WHERE 
-                    u.UserID = ?"
+                    u.UserID = ? AND r.room_id = ?"
             );
-            $stmt_info->bind_param("ii", $roomId, $staffId);
+            $stmt_info->bind_param("ii", $staffId, $roomId);
             $stmt_info->execute();
             $info = $stmt_info->get_result()->fetch_assoc();
 
@@ -131,8 +137,8 @@ switch ($action) {
             // 5. Send email
             $mail->setFrom(GMAIL_EMAIL, EMAIL_FROM_NAME);
             $mail->addAddress($staffEmail, $staffName);
-            $mail->Subject = 'New Housekeeping Task Assigned: Room ' . $info['RoomNumber']; // --- MODIFIED
-            $taskLink = "http://localhost:3000/hk_assign_staff.html?task_id=" . $taskId; // --- MODIFIED
+            $mail->Subject = 'New Housekeeping Task Assigned: Room ' . $info['RoomNumber'];
+            $taskLink = "http://localhost:3000/hk_assign_staff.html?task_id=" . $taskId;
             $mail->isHTML(true);
             $mail->Body = "
                 <p>Hello $staffName,</p>
@@ -141,11 +147,11 @@ switch ($action) {
                 <p>Please review the task details and update the status by clicking the link below:</p>
                 <p><a href='$taskLink' style='padding: 10px 15px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;'>View Task Details</a></p>
                 <p>Thank you,<br>Housekeeping Management</p>
-            "; // --- MODIFIED
+            ";
             $mail->send();
 
-            // 6. *** ADDED: Log the action ***
-            logHousekeepingAction($conn, $taskId, $roomId, $managerUserId, 'ASSIGNED', "Task assigned to staff $staffName (ID: $staffId) by manager (ID: $managerUserId). Tasks: $taskTypes"); // --- MODIFIED
+            // 6. Log the action
+            logHousekeepingAction($conn, $taskId, $roomId, $managerUserId, 'ASSIGNED', "Task assigned to staff $staffName (ID: $staffId) by manager (ID: $managerUserId). Tasks: $taskTypes");
             
             $conn->commit();
             
@@ -165,30 +171,30 @@ switch ($action) {
         }
         break;
 
-    // --- *** ADDED: 'cancel_task' case *** ---
+    // --- CANCEL TASK ---
     case 'cancel_task':
         try {
             $conn->begin_transaction();
 
-            $taskId = $data['taskId'] ?? null; // --- MODIFIED
+            $taskId = $data['taskId'] ?? null;
             if (!$taskId) {
-                throw new Exception("Task ID is required."); // --- MODIFIED
+                throw new Exception("Task ID is required.");
             }
 
             // 1. Get task info (RoomID, AssignedUserID) *before* updating
             $stmt_info = $conn->prepare(
-                "SELECT RoomID, AssignedUserID, Status FROM pms.housekeeping_tasks WHERE TaskID = ?" // --- MODIFIED
+                "SELECT RoomID, AssignedUserID, Status FROM pms_housekeeping_tasks WHERE TaskID = ?"
             );
-            $stmt_info->bind_param("i", $taskId); // --- MODIFIED
+            $stmt_info->bind_param("i", $taskId);
             $stmt_info->execute();
             $info = $stmt_info->get_result()->fetch_assoc();
 
             if (!$info) {
-                throw new Exception("Task not found."); // --- MODIFIED
+                throw new Exception("Task not found.");
             }
             
             if ($info['Status'] !== 'Pending') {
-                throw new Exception("Only 'Pending' tasks can be cancelled."); // --- MODIFIED
+                throw new Exception("Only 'Pending' tasks can be cancelled.");
             }
 
             $roomId = $info['RoomID'];
@@ -196,30 +202,30 @@ switch ($action) {
 
             // 2. Update the task status to 'Cancelled' and add a remark
             $stmt_update = $conn->prepare(
-                "UPDATE pms.housekeeping_tasks 
+                "UPDATE pms_housekeeping_tasks 
                  SET Status = 'Cancelled', Remarks = 'Cancelled by Manager' 
-                 WHERE TaskID = ?" // --- MODIFIED
+                 WHERE TaskID = ?"
             );
-            $stmt_update->bind_param("i", $taskId); // --- MODIFIED
+            $stmt_update->bind_param("i", $taskId);
             $stmt_update->execute();
 
             // 3. If a staff member was assigned, update their status back to 'Available'
             if ($staffId) {
                 $stmt_staff = $conn->prepare(
-                    "UPDATE pms.users SET AvailabilityStatus = 'Available' WHERE UserID = ?"
+                    "UPDATE pms_users SET AvailabilityStatus = 'Available' WHERE UserID = ?"
                 );
                 $stmt_staff->bind_param("i", $staffId);
                 $stmt_staff->execute();
             }
 
             // 4. Log the action
-            logHousekeepingAction($conn, $taskId, $roomId, $managerUserId, 'CANCELLED', "Task cancelled by manager (ID: $managerUserId)."); // --- MODIFIED
+            logHousekeepingAction($conn, $taskId, $roomId, $managerUserId, 'CANCELLED', "Task cancelled by manager (ID: $managerUserId).");
 
             $conn->commit();
 
             echo json_encode([
                 'status' => 'success',
-                'message' => 'Housekeeping task has been cancelled.' // --- MODIFIED
+                'message' => 'Housekeeping task has been cancelled.'
             ]);
 
         } catch (Exception $e) {

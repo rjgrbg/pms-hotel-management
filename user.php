@@ -23,7 +23,7 @@ function getUserData($conn) {
     try {
         // SQL query matches your provided structure: fname, mname, lname, and AccountType.
         // It also matches your column names: 'users' table, 'userid' column.
-        $sql = "SELECT fname, mname, lname, AccountType FROM users WHERE UserID = ?";
+        $sql = "SELECT fname, mname, lname, AccountType FROM pms.pms_users WHERE UserID = ?";
         $stmt = $conn->prepare($sql);
         
         if (!$stmt) {

@@ -43,7 +43,7 @@ if ($type !== 'username' && $type !== 'password') {
 }
 
 // --- MODIFIED BLOCK: Check if email exists in database ---
-$sql = "SELECT UserID FROM users WHERE EmailAddress = ?";
+$sql = "SELECT UserID FROM pms_users WHERE EmailAddress = ?";
 if ($stmt = $conn->prepare($sql)) {
     $stmt->bind_param("s", $email);
     $stmt->execute();
