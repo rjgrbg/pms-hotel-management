@@ -41,11 +41,24 @@ try {
       updateItem($conn, $_POST, $currentUserID);
       break;
     case 'issue_item':
-    issueItem($conn, $_POST, $currentUserID);
-    break;
+      issueItem($conn, $_POST, $currentUserID);
+      break;
     case 'delete_item':
       deleteItem($conn, $_POST, $currentUserID);
       break;
+    
+    // === ACTIONS FOR CATEGORY MANAGEMENT ===
+    case 'add_category':
+      addCategory($conn, $_POST);
+      break;
+    case 'update_category':
+      updateCategory($conn, $_POST);
+      break;
+    case 'delete_category':
+      deleteCategory($conn, $_POST);
+      break;
+    // === END OF NEW ACTIONS ===
+    
     default:
       http_response_code(400);
       echo json_encode(['error' => 'Invalid action specified.']);
@@ -134,7 +147,7 @@ END AS DateofStockIn,
 
   $result = $conn->query($sql);
   if (!$result) {
-    throw new Exception("Error fetching history: " . $conn->error);
+    throw new Exception("Error fetching history: ". $conn->error);
   }
   $logs = [];
   while ($row = $result->fetch_assoc()) {
@@ -151,7 +164,7 @@ function getCategories($conn) {
   $sql = "SELECT ItemCategoryID, ItemCategoryName FROM pms_itemcategory ORDER BY ItemCategoryName";
   $result = $conn->query($sql);
   if (!$result) {
-    throw new Exception("Error fetching categories: " . $conn->error);
+    throw new Exception("Error fetching categories: ". $conn->error);
   }
   $categories = [];
   while ($row = $result->fetch_assoc()) {
@@ -166,11 +179,24 @@ function getCategories($conn) {
  * DamageItem logic has been removed.
  */
 function addItem($conn, $data, $userID) {
-  $name = $data['name'];
-  $categoryID = (int)$data['category_id'];
-  $description = $data['description'];
-  $quantity = (int)$data['quantity'];
-  $stockInDate = $data['stock_in_date'];
+  // === SANITIZE AND STRIP INPUTS ===
+  $name = htmlspecialchars(trim($data['name'] ?? ''), ENT_QUOTES, 'UTF-8');
+  $description = htmlspecialchars(trim($data['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+  $stockInDate = trim($data['stock_in_date'] ?? '');
+  $categoryID = (int)($data['category_id'] ?? 0); 
+  $quantity = (int)($data['quantity'] ?? 0);
+
+  // === VALIDATE INPUTS ===
+  if (empty($name)) {
+      throw new Exception("Item name is required.");
+  }
+  if ($categoryID <= 0) {
+      throw new Exception("Invalid category selected.");
+  }
+  if (empty($stockInDate)) {
+       throw new Exception("Stock in date is required.");
+  }
+  // === END VALIDATION ===
 
   $status = 'In Stock';
   if ($quantity == 0) {
@@ -182,17 +208,15 @@ function addItem($conn, $data, $userID) {
   $conn->begin_transaction();
 
   // 1. Insert into 'inventory' table
-  // DamageItem column has been removed from the INSERT.
   $stmt = $conn->prepare(
     "INSERT INTO pms_inventory (ItemName, ItemCategoryID, ItemQuantity, ItemDescription, ItemStatus, DateofStockIn) 
      VALUES (?, ?, ?, ?, ?, ?)"
   );
-  // Bind types: s(Name), i(CatID), i(Qty), s(Desc), s(Status), s(StockInDate)
   $stmt->bind_param("siisss", $name, $categoryID, $quantity, $description, $status, $stockInDate);
   
   if (!$stmt->execute()) {
     $conn->rollback();
-    throw new Exception("Error adding item: " + $stmt->error);
+    throw new Exception("Error adding item: ". $stmt->error);
   }
 
   $newItemID = $conn->insert_id;
@@ -207,7 +231,7 @@ function addItem($conn, $data, $userID) {
 
   if (!$logStmt->execute()) {
     $conn->rollback();
-    throw new Exception("Error logging item creation: " + $logStmt->error);
+    throw new Exception("Error logging item creation: ". $logStmt->error);
   }
 
   $conn->commit();
@@ -220,12 +244,26 @@ function addItem($conn, $data, $userID) {
  * Only allows positive stock adjustments.
  */
 function updateItem($conn, $data, $userID) {
-  $itemID = (int)$data['item_id'];
-  $name = $data['name'];
-  $categoryID = (int)$data['category_id'];
-  $description = $data['description'];
-  $stockAdjustment = (int)$data['stock_adjustment'];
+  $itemID = (int)($data['item_id'] ?? 0);
+  
+  // === SANITIZE AND STRIP INPUTS ===
+  $name = htmlspecialchars(trim($data['name'] ?? ''), ENT_QUOTES, 'UTF-8');
+  $description = htmlspecialchars(trim($data['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+  $categoryID = (int)($data['category_id'] ?? 0);
+  $stockAdjustment = (int)($data['stock_adjustment'] ?? 0);
 
+  // === VALIDATE INPUTS ===
+  if (empty($name)) {
+      throw new Exception("Item name is required.");
+  }
+  if ($categoryID <= 0) {
+      throw new Exception("Invalid category selected.");
+  }
+  if ($itemID <= 0) {
+      throw new Exception("Invalid item ID.");
+  }
+  // === END VALIDATION ===
+  
   // Enforce only positive stock adjustments
   if ($stockAdjustment < 0) {
       $stockAdjustment = 0;
@@ -242,10 +280,13 @@ function updateItem($conn, $data, $userID) {
     $result = $qtyStmt->get_result();
     if ($row = $result->fetch_assoc()) {
       $currentQuantity = (int)$row['ItemQuantity'];
+    } else {
+        $conn->rollback();
+        throw new Exception("Item not found.");
     }
   } else {
     $conn->rollback();
-    throw new Exception("Error fetching current item state: " . $qtyStmt->error);
+    throw new Exception("Error fetching current item state: ". $qtyStmt->error);
   }
   $qtyStmt->close();
 
@@ -267,12 +308,11 @@ function updateItem($conn, $data, $userID) {
          ItemQuantity = ?, ItemStatus = ?
      WHERE ItemID = ?"
   );
-  // Bind types: s(Name), i(CatID), s(Desc), i(Qty), s(Status), i(ItemID)
   $stmt->bind_param("sisisi", $name, $categoryID, $description, $newQuantity, $status, $itemID);
   
   if (!$stmt->execute()) {
     $conn->rollback();
-    throw new Exception("Error updating item: " + $stmt->error);
+    throw new Exception("Error updating item: ". $stmt->error);
   }
 
   // 4. If stock was changed, log it
@@ -287,7 +327,7 @@ function updateItem($conn, $data, $userID) {
 
     if (!$logStmt->execute()) {
       $conn->rollback();
-      throw new Exception("Error logging stock adjustment: " + $logStmt->error);
+      throw new Exception("Error logging stock adjustment: ". $logStmt->error);
     }
   }
 
@@ -302,6 +342,10 @@ function updateItem($conn, $data, $userID) {
 function deleteItem($conn, $data, $userID) {
   $itemID = (int)$data['item_id'];
 
+  if ($itemID <= 0) {
+      throw new Exception("Invalid item ID.");
+  }
+
   $conn->begin_transaction();
 
   // 1. Delete from 'inventorylog'
@@ -309,7 +353,7 @@ function deleteItem($conn, $data, $userID) {
   $logStmt->bind_param("i", $itemID);
   if (!$logStmt->execute()) {
     $conn->rollback();
-    throw new Exception("Error deleting item logs: " . $logStmt->error);
+    throw new Exception("Error deleting item logs: ". $logStmt->error);
   }
 
   // 2. Delete from 'inventory'
@@ -317,7 +361,7 @@ function deleteItem($conn, $data, $userID) {
   $stmt->bind_param("i", $itemID);
   if (!$stmt->execute()) {
     $conn->rollback();
-    throw new Exception("Error deleting item: " . $stmt->error);
+    throw new Exception("Error deleting item: ". $stmt->error);
   }
 
   $conn->commit();
@@ -327,14 +371,24 @@ function deleteItem($conn, $data, $userID) {
 
 
 function issueItem($conn, $data, $userID) {
-  $itemID = (int)$data['item_id'];
-  // The stock adjustment from JS is already negative (e.g., -5)
-  $stockAdjustment = (int)$data['stock_adjustment'];
-  $logReason = $data['log_reason'] ?? 'Item Issued'; // Get reason from JS
+  $itemID = (int)($data['item_id'] ?? 0);
+  $stockAdjustment = (int)($data['stock_adjustment'] ?? 0);
+  
+  // === SANITIZE AND STRIP INPUT ===
+  $logReason = htmlspecialchars(trim($data['log_reason'] ?? 'Item Issued'), ENT_QUOTES, 'UTF-8');
+  
+  // Set default if it was just whitespace
+  if (empty($logReason)) {
+      $logReason = 'Item Issued';
+  }
 
   // Security check: ensure stock adjustment is negative
   if ($stockAdjustment >= 0) {
     throw new Exception("Issue action requires a negative stock adjustment.");
+  }
+  
+  if ($itemID <= 0) {
+      throw new Exception("Invalid item ID.");
   }
 
   $conn->begin_transaction();
@@ -354,17 +408,22 @@ function issueItem($conn, $data, $userID) {
     }
   } else {
     $conn->rollback();
-    throw new Exception("Error fetching current item state: " . $qtyStmt->error);
+    throw new Exception("Error fetching current item state: ". $qtyStmt->error);
   }
   $qtyStmt->close();
+  
+  // Check if there is enough stock to issue
+  if ($currentQuantity < abs($stockAdjustment)) {
+      $conn->rollback();
+      throw new Exception("Not enough stock. Only $currentQuantity item(s) available.");
+  }
 
   // 2. Calculate new quantity and status
   $newQuantity = $currentQuantity + $stockAdjustment; // e.g., 100 + (-5) = 95
   $status = 'In Stock';
 
-  if ($newQuantity < $currentQuantity && $newQuantity <= 0) {
+  if ($newQuantity <= 0) {
     $status = 'Out of Stock';
-    $newQuantity = 0; // Don't allow negative inventory
   } else if ($newQuantity <= 10) { // Assuming 10 is the 'low stock' threshold
     $status = 'Low Stock';
   }
@@ -375,12 +434,11 @@ function issueItem($conn, $data, $userID) {
      SET ItemQuantity = ?, ItemStatus = ?
      WHERE ItemID = ?"
   );
-  // Bind types: i(Qty), s(Status), i(ItemID)
   $stmt->bind_param("isi", $newQuantity, $status, $itemID);
 
   if (!$stmt->execute()) {
     $conn->rollback();
-    throw new Exception("Error updating item quantity: " . $stmt->error);
+    throw new Exception("Error updating item quantity: ". $stmt->error);
   }
 
   // 4. Log the change
@@ -388,16 +446,132 @@ function issueItem($conn, $data, $userID) {
     "INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
      VALUES (?, ?, ?, ?, NOW())"
   );
-  // We log the negative adjustment (e.g., -5)
   $logStmt->bind_param("iiis", $userID, $itemID, $stockAdjustment, $logReason);
 
   if (!$logStmt->execute()) {
     $conn->rollback();
-    throw new Exception("Error logging stock issue: " . $logStmt->error);
+    throw new Exception("Error logging stock issue: ". $logStmt->error);
   }
 
   $conn->commit();
   header('Content-Type: application/json');
   echo json_encode(['success' => true, 'message' => 'Item issued successfully.']);
+}
+
+
+// ======================================================
+// === NEW CATEGORY MANAGEMENT FUNCTIONS (SANITIZED) ===
+// ======================================================
+
+/**
+ * Adds a new category to the 'pms_itemcategory' table.
+ */
+function addCategory($conn, $data) {
+    header('Content-Type: application/json');
+    
+    // === SANITIZE AND STRIP INPUT ===
+    $name = htmlspecialchars(trim($data['CategoryName'] ?? ''), ENT_QUOTES, 'UTF-8');
+
+    if (empty($name)) {
+        echo json_encode(['success' => false, 'message' => 'Category name cannot be empty.']);
+        return;
+    }
+
+    // Check for duplicates
+    $checkStmt = $conn->prepare("SELECT 1 FROM pms_itemcategory WHERE ItemCategoryName = ?");
+    $checkStmt->bind_param("s", $name);
+    $checkStmt->execute();
+    $result = $checkStmt->get_result();
+    if ($result->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'This category already exists.']);
+        return;
+    }
+    $checkStmt->close();
+
+    // Insert new category
+    $stmt = $conn->prepare("INSERT INTO pms_itemcategory (ItemCategoryName) VALUES (?)");
+    $stmt->bind_param("s", $name);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Category added successfully.']);
+    } else {
+        throw new Exception("Error adding category: ". $stmt->error);
+    }
+    $stmt->close();
+}
+
+/**
+ * Updates an existing category name in the 'pms_itemcategory' table.
+ */
+function updateCategory($conn, $data) {
+    header('Content-Type: application/json');
+    
+    // === SANITIZE AND STRIP INPUTS ===
+    $id = (int)($data['CategoryID'] ?? 0);
+    $name = htmlspecialchars(trim($data['CategoryName'] ?? ''), ENT_QUOTES, 'UTF-8');
+
+    if ($id <= 0 || empty($name)) {
+        echo json_encode(['success' => false, 'message' => 'Both Category ID and Name are required.']);
+        return;
+    }
+
+    // Check for duplicates (excluding itself)
+    $checkStmt = $conn->prepare("SELECT 1 FROM pms_itemcategory WHERE ItemCategoryName = ? AND ItemCategoryID != ?");
+    $checkStmt->bind_param("si", $name, $id);
+    $checkStmt->execute();
+    $result = $checkStmt->get_result();
+    if ($result->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'This category name is already in use.']);
+        return;
+    }
+    $checkStmt->close();
+
+    // Update the category
+    $stmt = $conn->prepare("UPDATE pms_itemcategory SET ItemCategoryName = ? WHERE ItemCategoryID = ?");
+    $stmt->bind_param("si", $name, $id);
+    
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Category updated.']);
+    } else {
+        throw new Exception("Error updating category: ". $stmt->error);
+    }
+    $stmt->close();
+}
+
+/**
+ * Deletes a category from the 'pms_itemcategory' table.
+ */
+function deleteCategory($conn, $data) {
+    header('Content-Type: application/json');
+    
+    $id = (int)($data['CategoryID'] ?? 0);
+    if ($id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Category ID is required.']);
+        return;
+    }
+
+    // 1. Check if any inventory items use this category
+    $checkStmt = $conn->prepare("SELECT 1 FROM pms_inventory WHERE ItemCategoryID = ? LIMIT 1");
+    $checkStmt->bind_param("i", $id);
+    $checkStmt->execute();
+    $result = $checkStmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        // Can't delete. Send a user-friendly error.
+        echo json_encode(['success' => false, 'message' => 'Cannot delete category. It is currently being used by inventory items.']);
+        return;
+    }
+    $checkStmt->close();
+
+    // 2. No items use it, so proceed with deletion
+    $stmt = $conn->prepare("DELETE FROM pms_itemcategory WHERE ItemCategoryID = ?");
+    $stmt->bind_param("i", $id);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Category deleted successfully.']);
+    } else {
+        throw new Exception("Error deleting category: ". $stmt->error);
+    }
+    $stmt->close();
 }
 ?>

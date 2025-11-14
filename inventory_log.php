@@ -94,9 +94,7 @@ if (isset($_SESSION['UserID'])) {
             </div>
 
             <nav class="profile-nav">
-                <a href="#" id="account-details-link">
-                    <i class="fas fa-user-edit" style="margin-right: 10px;"></i> Account Details
-                </a>
+                
             </nav>
             
             <div class="profile-footer">

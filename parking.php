@@ -77,7 +77,130 @@ if (isset($_SESSION['UserID'])) {
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-</head>
+    
+    <style>
+    /* Wrapper for select + edit button */
+    .category-select-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .category-select-wrapper select {
+        flex-grow: 1;
+        width: auto; /* Fix for flex */
+    }
+
+    /* Edit button */
+    .edit-category-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        background-color: #ffc107;
+        color: #212529;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        flex-shrink: 0;
+        width: auto; /* Fix for flex */
+    }
+    .edit-category-btn:hover {
+        background-color: #e0a800;
+    }
+    .edit-category-btn .fa-pencil-alt {
+        margin-right: 5px;
+    }
+
+    /* Input + Add button wrapper */
+    .add-category-wrapper {
+        display: flex;
+        gap: 10px;
+    }
+    .add-category-wrapper input {
+        flex-grow: 1;
+        width: auto; /* Fix orientation */
+    }
+    .add-category-wrapper .submit-btn {
+        flex-shrink: 0;
+        padding: 10px 15px;
+        line-height: 1.5;
+        width: auto; /* Fix orientation */
+    }
+    
+    .category-divider {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 20px 0;
+    }
+
+    /* List container */
+    .category-list-container {
+        max-height: 250px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        background: #fdfdfd;
+    }
+    .category-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    .category-list-item:last-child { border-bottom: none; }
+    .category-list-item .category-name {
+        font-size: 15px;
+        color: #333;
+        font-weight: 500;
+        word-break: break-all; /* Handle long names */
+    }
+    .category-actions .btn-icon {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        color: #555;
+        margin-left: 10px;
+        transition: color 0.2s ease;
+    }
+    .category-actions .btn-edit-category:hover { color: #007bff; }
+    .category-actions .btn-delete-category:hover { color: #dc3545; }
+
+    /* Modal footer */
+    .modal-footer {
+        text-align: right; 
+        padding: 15px 30px;
+        border-top: 1px solid #eee;
+        margin-top: 15px;
+    }
+
+    /* Vertical form group */
+    .form-group-vertical {
+        display: block;
+    }
+    .form-group-vertical label {
+        display: block;
+        margin-bottom: 8px;
+    }
+
+    /* Spinner */
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+  </style>
+  </head>
 <body>
     <header class="header">
         <div class="headerLeft">
@@ -99,9 +222,7 @@ if (isset($_SESSION['UserID'])) {
         </div>
 
         <nav class="profile-nav">
-            <a href="#" id="account-details-link">
-                <i class="fas fa-user-edit" style="margin-right: 10px;"></i> Account Details
-            </a>
+            
         </nav>
         
         <div class="profile-footer">
@@ -259,7 +380,7 @@ if (isset($_SESSION['UserID'])) {
                             <th class="sortable" data-sort="VehicleType">Vehicle Type</th>
                             <th class="sortable" data-sort="VehicleCategory">Category</th>
                             <th class="sortable" data-sort="EntryTime">Enter Time</th>
-                            <th class="sortable" data-sort="EntryTime">Enter Date</th>
+                            <th class="sortable" data-sort="EntryDate">Enter Date</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -331,32 +452,42 @@ if (isset($_SESSION['UserID'])) {
             <div class="modal-body">
                 <form id="enter-vehicle-form">
                     <div class="form-row">
-                        <div class="form-group">
-                            <label for="guestName">Name</label>
-                            <input type="text" id="guestName" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="plateNumber">Plate #</label>
-                            <input type="text" id="plateNumber" required>
-                        </div>
+                    <div class="form-group">
+                        <label for="guestName">Name</label>
+                        <input type="text" id="guestName" required class="sanitize-on-paste">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="roomNumber">Room</label>
-                            <input type="text" id="roomNumber">
-                        </div>
+                    <div class="form-group">
+                        <label for="plateNumber">Plate #</label>
+                        <input type="text" id="plateNumber" required class="sanitize-on-paste">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="roomNumber">Room</label>
+                        <input type="text" id="roomNumber" class="sanitize-on-paste">
+                    </div>
                         <div class="form-group">
                             <label for="vehicleType">Vehicle Type</label>
-                            <select id="vehicleType" required>
-                                <option value="">Loading...</option>
-                            </select>
+                            <div class="category-select-wrapper">
+                                <select id="vehicleType" required>
+                                    <option value="">Loading...</option>
+                                </select>
+                                <button type="button" class="edit-category-btn" id="open-types-modal-btn">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="categorySelect">Category</label>
-                        <select id="categorySelect" required>
-                             <option value="">Select vehicle type first...</option>
-                        </select>
+                        <div class="category-select-wrapper">
+                            <select id="categorySelect" required>
+                                 <option value="">Select vehicle type first...</option>
+                            </select>
+                            <button type="button" class="edit-category-btn" id="open-categories-modal-btn">
+                                <i class="fas fa-pencil-alt"></i>
+                            </button>
+                        </div>
                     </div>
                     <button type="submit" class="submit-btn" id="btnSaveVehicle">SAVE</button>
                 </form>
@@ -399,93 +530,108 @@ if (isset($_SESSION['UserID'])) {
         </div>
     </div>
 
-    <div class="modal-overlay" id="accountModal">
+    
+    <div class="modal-overlay" id="manage-types-modal">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title">
-                    <i class="fas fa-user-edit modal-icon-fa"></i>
-                    <h2>Account Details</h2>
+                    <i class="fas fa-car-side modal-icon-fa"></i>
+                    <h2>Manage Vehicle Types</h2>
                 </div>
-                <button class="modal-close-btn" data-modal-id="accountModal">&times;</button>
+                <button class="modal-close-btn" data-modal-id="manage-types-modal">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="account-details-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="firstName">First Name</label>
-                            <input type="text" id="firstName" name="Fname">
-                        </div>
-                        <div class="form-group">
-                            <label for="lastName">Last Name</label>
-                            <input type="text" id="lastName" name="Lname">
-                        </div>
+                <div class="form-group">
+                    <label for="new-type-name">Add New Type</label>
+                    <div class="add-category-wrapper">
+                        <input type="text" id="new-type-name" placeholder="Enter new type name" class="sanitize-on-paste">
+                        <button type="button" class="submit-btn" id="add-new-type-btn">ADD</button>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="middleName">Middle Name (Optional)</label>
-                            <input type="text" id="middleName" name="Mname">
-                        </div>
-                        <div class="form-group">
-                            <label for="emailAddress">Email Address</label>
-                            <input type="email" id="emailAddress" name="EmailAddress">
-                        </div>
+                </div>
+                <hr class="category-divider">
+                <div class="form-group form-group-vertical">
+                    <label>Existing Types</label>
+                    <div class="category-list-container" id="types-list-container">
+                        <div class="spinner"></div>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="username">Username</label>
-                            <input type="text" id="username" name="Username">
-                        </div>
-                        <div class="form-group">
-                            <label for="password">Password</label>
-                            <input type="password" id="password" name="Password" placeholder="Enter new password to change">
-                        </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                 <button type="button" class="submit-btn btn-cancel-white" data-modal-id="manage-types-modal">DONE</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="manage-categories-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-tags modal-icon-fa"></i>
+                    <h2>Manage Categories</h2>
+                </div>
+                <button class="modal-close-btn" data-modal-id="manage-categories-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="category-manager-type-select">First, select a Vehicle Type:</label>
+                    <select id="category-manager-type-select">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <hr class="category-divider">
+                <div class="form-group">
+                    <label for="new-category-name">Add New Category (for selected type)</label>
+                    <div class="add-category-wrapper">
+                        <input type="text" id="new-category-name" placeholder="Enter new category name" class="sanitize-on-paste">
+                        <button type="button" class="submit-btn" id="add-new-category-btn">ADD</button>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="birthday">Birthday</label>
-                            <input type="date" id="birthday" name="Birthday">
-                        </div>
-                        <div class="form-group">
-                            <label for="contact">Contact</label>
-                            <input type="text" id="contact" name="ContactNumber">
-                        </div>
+                </div>
+                <div class="form-group form-group-vertical" style="margin-top: 15px;">
+                    <label>Existing Categories (for selected type)</label>
+                    <div class="category-list-container" id="categories-list-container">
+                        <p style="text-align:center; color: #777;">Please select a vehicle type above.</p>
                     </div>
-                    <div class="form-group">
-                        <label for="address">Address</label>
-                        <input type="text" id="address" name="Address">
+                </div>
+            </div>
+            <div class="modal-footer">
+                 <button type="button" class="submit-btn btn-cancel-white" data-modal-id="manage-categories-modal">DONE</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="edit-name-modal">
+        <div class="modal-content" style="max-width: 400px;">
+             <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fas fa-pencil-alt modal-icon-fa"></i>
+                    <h2 id="edit-name-title">Edit Name</h2>
+                </div>
+                <button class="modal-close-btn" data-modal-id="edit-name-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-name-form">
+                    <input type="hidden" id="edit-id-input">
+                    <input type="hidden" id="edit-type-input"> <div class="form-group">
+                        <label for="edit-name-input">Name</label>
+                        <input type="text" id="edit-name-input" required class="sanitize-on-paste">
                     </div>
-                    <button type="submit" class="submit-btn" id="btnSaveChanges">SAVE CHANGES</button>
+                    <div class="edit-modal-buttons">
+                         <button type="button" class="submit-btn btn-cancel-white" data-modal-id="edit-name-modal">CANCEL</button>
+                         <button type="submit" class="submit-btn">SAVE</button>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
-
-    <div class="modal-overlay-confirm" id="saveConfirmModal">
-        <div class="modal-content-confirm">
-            <h3>Are you sure you want to save?</h3>
-            <p>Please double-check all details. Your account will be updated.</p>
-            <div class="confirm-buttons">
-                <button type="button" class="btn btn-cancel" data-modal-id="saveConfirmModal">CANCEL</button>
-                <button type="button" class="btn btn-confirm" id="btnConfirmSave">YES, UPDATE</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal-overlay-success" id="saveSuccessModal">
-        <div class="modal-content-success">
-            <i class="fas fa-user-check modal-icon" style="font-size: 60px; color: #FFA237; margin-bottom: 20px;"></i>
-            <h3>Changes Saved Successfully</h3>
-            <button type="button" class="btn btn-okay" data-modal-id="saveSuccessModal">OKAY</button>
-        </div>
-    </div>
-
-
     <div id="toast-container"></div>
 
     <script>
-        window.INJECTED_USER_DATA = <?php echo json_encode($userData); ?>;
+        // This is a fallback in case the PHP fetch fails.
+        // The actual $userData is injected by PHP at the top of the file.
+        if (typeof window.INJECTED_USER_DATA === 'undefined') {
+             window.INJECTED_USER_DATA = <?php echo json_encode(['Fname' => $Fname, 'Lname' => $Lname, 'Mname' => $Mname, 'AccountType' => $Accounttype]); ?>;
+        }
     </script>
     
-    <script src="script/parking.js?v=1.5"></script>
-</body>
+    <script src="script/parking.js?v=1.6"></script> </body>
 </html>

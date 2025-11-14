@@ -192,11 +192,18 @@ $sql_history = "SELECT
                     pms_rooms r ON ht.RoomID = r.room_id
                 LEFT JOIN 
                     pms_users u ON ht.AssignedUserID = u.UserID 
-                WHERE 
-                    ht.Status IN ('Completed', 'Cancelled')
+               WHERE 
+                    ht.Status IN ('In Progress', 'Completed', 'Cancelled')
                 ORDER BY 
-                    ht.DateCompleted DESC";
-
+                    -- 1. Primary Sort: Custom Status Priority
+                    CASE 
+                        WHEN ht.Status = 'In Progress' THEN 1
+                        WHEN ht.Status = 'Completed'   THEN 2
+                        WHEN ht.Status = 'Cancelled'   THEN 3
+                    END ASC,
+                    -- 2. Secondary Sort: By Date
+                    ht.DateCompleted DESC,
+                    ht.DateRequested DESC";
 if ($result_history = $conn->query($sql_history)) {
     while ($row = $result_history->fetch_assoc()) {
         $staffName = 'N/A';
@@ -289,9 +296,7 @@ $conn->close();
                 <p><?php echo ucfirst(str_replace('_', ' ', $Accounttype)); ?></p>
             </div>
             <nav class="profile-nav">
-                <a href="#" id="account-details-link">
-                    <i class="fas fa-user-edit" style="margin-right: 10px;"></i> Account Details
-                </a>
+              
             </nav>
             <div class="profile-footer">
                 <a href="#" id="logoutBtn">

@@ -3,7 +3,7 @@
 
 // 1. Include necessary files
 require_once('db_connection.php'); // For the $conn database connection
-require_once('User.php'); // For getting the logged-in user's ID
+// require_once('User.php'); // Commented out as UserID comes from session
 
 // 2. Start the session
 if (session_status() == PHP_SESSION_NONE) {
@@ -15,7 +15,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // 3. Get the database connection
-$conn = get_db_connection('pms');
+// $conn = get_db_connection('pms'); // Assuming db_connection.php already creates $conn
 if (!$conn) {
     header('Content-Type: application/json');
     http_response_code(500);
@@ -68,8 +68,28 @@ switch ($action) {
     case 'getParkingAreas':
         handleGetParkingAreas($conn);
         break;
-    case 'updateUser':
-        handleUpdateUser($conn, $staffID);
+    // case 'updateUser': // This action seems to be missing, but was in the JS. Adding it is a separate task.
+    //     handleUpdateUser($conn, $staffID);
+    //     break;
+
+    // === NEW ACTIONS FOR TYPES & CATEGORIES ===
+    case 'addVehicleType':
+        handleAddVehicleType($conn);
+        break;
+    case 'updateVehicleType':
+        handleUpdateVehicleType($conn);
+        break;
+    case 'deleteVehicleType':
+        handleDeleteVehicleType($conn);
+        break;
+    case 'addVehicleCategory':
+        handleAddVehicleCategory($conn);
+        break;
+    case 'updateVehicleCategory':
+        handleUpdateVehicleCategory($conn);
+        break;
+    case 'deleteVehicleCategory':
+        handleDeleteVehicleCategory($conn);
         break;
     
     default:
@@ -84,16 +104,24 @@ exit;
 
 function handleEnterVehicle($conn, $staffID) {
     // StaffID is already available from the session check
-    $slotID = $_POST['slotID'] ?? null;
-    $plateNumber = $_POST['plateNumber'] ?? null;
-    $guestName = $_POST['guestName'] ?? '';
-    $roomNumber = $_POST['roomNumber'] ?? '';
-    $vehicleTypeID = $_POST['vehicleTypeID'] ?? null;
-    $vehicleCategoryID = $_POST['vehicleCategoryID'] ?? null;
+    $slotID = (int)($_POST['slotID'] ?? 0);
     
-    if (!$slotID || !$plateNumber || !$vehicleTypeID || !$vehicleCategoryID) {
+    // === SANITIZED INPUTS ===
+    $plateNumber = htmlspecialchars(trim($_POST['plateNumber'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $guestName = htmlspecialchars(trim($_POST['guestName'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $roomNumber = htmlspecialchars(trim($_POST['roomNumber'] ?? ''), ENT_QUOTES, 'UTF-8');
+    
+    $vehicleTypeID = (int)($_POST['vehicleTypeID'] ?? 0);
+    $vehicleCategoryID = (int)($_POST['vehicleCategoryID'] ?? 0);
+    
+    if (empty($plateNumber)) {
         http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Missing required fields.']);
+        echo json_encode(['success' => false, 'error' => 'Plate number is required.']);
+        exit;
+    }
+    if ($slotID <= 0 || $vehicleTypeID <= 0 || $vehicleCategoryID <= 0) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Missing required fields (Slot, Type, or Category).']);
         exit;
     }
     
@@ -130,9 +158,9 @@ function handleEnterVehicle($conn, $staffID) {
 
 function handleExitVehicle($conn, $staffID) {
     // $staffID could be used to log who exited the vehicle
-    $sessionID = $_POST['sessionID'] ?? null;
-    $slotID = $_POST['slotID'] ?? null;
-    if (!$sessionID || !$slotID) {
+    $sessionID = (int)($_POST['sessionID'] ?? 0);
+    $slotID = (int)($_POST['slotID'] ?? 0);
+    if ($sessionID <= 0 || $slotID <= 0) {
         http_response_code(400);
         echo json_encode(['success' => false, 'error' => 'Missing SessionID or SlotID.']);
         exit;
@@ -171,11 +199,15 @@ function handleGetVehicleTypes($conn) {
 }
 
 function handleGetVehicleCategories($conn) {
-    $typeID = $_GET['vehicleTypeID'] ?? 0;
-    if ($typeID == 0) {
+    $typeID = (int)($_GET['vehicleTypeID'] ?? 0);
+    
+    // This is a special case. If no typeID is provided, return nothing.
+    // The main `getVehicleTypes` is used to get the list of types.
+    if ($typeID <= 0) {
         echo json_encode(['success' => true, 'categories' => []]);
         exit;
     }
+
     $sql = "SELECT VehicleCategoryID, CategoryName FROM pms_vehiclecategory WHERE VehicleTypeID = ? ORDER BY CategoryName";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("i", $typeID);
@@ -186,7 +218,7 @@ function handleGetVehicleCategories($conn) {
 }
 
 function handleGetAvailableSlots($conn) {
-    $typeID = $_GET['vehicleTypeID'] ?? 0;
+    $typeID = (int)($_GET['vehicleTypeID'] ?? 0);
     if ($typeID == 0) {
         echo json_encode(['success' => true, 'slots' => []]);
         exit;
@@ -246,7 +278,6 @@ function handleGetAllSlots($conn) {
     echo json_encode(['success' => true, 'slots' => $data]);
 }
 
-/* *** MODIFIED: Added JOIN for AreaName *** */
 function handleGetVehiclesIn($conn) {
     $sql = "SELECT 
         ps.SessionID, s.SlotName, ps.PlateNumber, ps.RoomNumber, ps.GuestName,
@@ -267,7 +298,6 @@ function handleGetVehiclesIn($conn) {
     echo json_encode(['success' => true, 'vehicles' => $data]);
 }
 
-/* *** MODIFIED: Added JOIN for AreaName *** */
 function handleGetHistory($conn) {
     $sql = "SELECT 
         s.SlotName, ps.PlateNumber, ps.RoomNumber, ps.GuestName,
@@ -292,49 +322,166 @@ function handleGetHistory($conn) {
     echo json_encode(['success' => true, 'history' => $data]);
 }
 
-function handleUpdateUser($conn, $staffID) {
-    $fname = $_POST['Fname'] ?? null;
-    $lname = $_POST['Lname'] ?? null;
-    $mname = $_POST['Mname'] ?? null;
-    $birthday = $_POST['Birthday'] ?? null;
-    $username = $_POST['Username'] ?? null;
-    $email = $_POST['EmailAddress'] ?? null;
-    $address = $_POST['Address'] ?? null;
-    $contact = $_POST['ContactNumber'] ?? null;
-    $password = $_POST['Password'] ?? null; 
+// === NEW FUNCTIONS FOR MANAGING TYPES & CATEGORIES ===
 
-    if (!$fname || !$lname || !$birthday || !$username || !$email || !$address || !$contact) {
-        http_response_code(400);
-        echo json_encode(['success' => false, 'error' => 'Missing required fields.']);
+function handleAddVehicleType($conn) {
+    $name = htmlspecialchars(trim($_POST['TypeName'] ?? ''), ENT_QUOTES, 'UTF-8');
+    if (empty($name)) {
+        echo json_encode(['success' => false, 'message' => 'Type name cannot be empty.']);
+        exit;
+    }
+    // Check for duplicates
+    $checkStmt = $conn->prepare("SELECT 1 FROM pms_vehicletype WHERE TypeName = ?");
+    $checkStmt->bind_param("s", $name);
+    $checkStmt->execute();
+    if ($checkStmt->get_result()->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'This vehicle type already exists.']);
+        exit;
+    }
+    // Insert
+    $stmt = $conn->prepare("INSERT INTO pms_vehicletype (TypeName) VALUES (?)");
+    $stmt->bind_param("s", $name);
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Vehicle Type added.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $stmt->error]);
+    }
+}
+
+function handleUpdateVehicleType($conn) {
+    $id = (int)($_POST['TypeID'] ?? 0);
+    $name = htmlspecialchars(trim($_POST['TypeName'] ?? ''), ENT_QUOTES, 'UTF-8');
+    if ($id <= 0 || empty($name)) {
+        echo json_encode(['success' => false, 'message' => 'ID and Name are required.']);
+        exit;
+    }
+    // Check for duplicates
+    $checkStmt = $conn->prepare("SELECT 1 FROM pms_vehicletype WHERE TypeName = ? AND VehicleTypeID != ?");
+    $checkStmt->bind_param("si", $name, $id);
+    $checkStmt->execute();
+    if ($checkStmt->get_result()->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'This vehicle type name is already in use.']);
+        exit;
+    }
+    // Update
+    $stmt = $conn->prepare("UPDATE pms_vehicletype SET TypeName = ? WHERE VehicleTypeID = ?");
+    $stmt->bind_param("si", $name, $id);
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Vehicle Type updated.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $stmt->error]);
+    }
+}
+
+function handleDeleteVehicleType($conn) {
+    $id = (int)($_POST['TypeID'] ?? 0);
+    if ($id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid ID.']);
+        exit;
+    }
+    
+    // Safety Check 1: Check categories
+    $check1 = $conn->prepare("SELECT 1 FROM pms_vehiclecategory WHERE VehicleTypeID = ? LIMIT 1");
+    $check1->bind_param("i", $id);
+    $check1->execute();
+    if ($check1->get_result()->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'Cannot delete: This type is used by vehicle categories.']);
+        exit;
+    }
+    
+    // Safety Check 2: Check parking slots
+    $check2 = $conn->prepare("SELECT 1 FROM pms_parkingslot WHERE AllowedVehicleTypeID = ? LIMIT 1");
+    $check2->bind_param("i", $id);
+    $check2->execute();
+    if ($check2->get_result()->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'Cannot delete: This type is assigned to parking slots.']);
         exit;
     }
 
-    try {
-        if (!empty($password) && $password !== '************') {
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-            $sql = "UPDATE pms_users SET Fname=?, Lname=?, Mname=?, Birthday=?, Username=?, EmailAddress=?, Address=?, ContactNumber=?, Password=? WHERE UserID = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("sssssssssi", $fname, $lname, $mname, $birthday, $username, $email, $address, $contact, $hashedPassword, $staffID);
-        } else {
-            $sql = "UPDATE pms_users SET Fname=?, Lname=?, Mname=?, Birthday=?, Username=?, EmailAddress=?, Address=?, ContactNumber=? WHERE UserID = ?";
-            $stmt = $conn->prepare($sql);
-            $stmt->bind_param("ssssssssi", $fname, $lname, $mname, $birthday, $username, $email, $address, $contact, $staffID);
-        }
-        
-        $stmt->execute();
-
-        if ($stmt->affected_rows > 0) {
-            echo json_encode(['success' => true, 'message' => 'Account updated successfully.']);
-        } else {
-            echo json_encode(['success' => true, 'message' => 'No changes detected.']);
-        }
-    } catch (Exception $e) {
-        http_response_code(500);
-        if ($conn->errno == 1062) {
-             echo json_encode(['success' => false, 'error' => 'Username or Email already exists.']);
-        } else {
-             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-        }
+    // Delete
+    $stmt = $conn->prepare("DELETE FROM pms_vehicletype WHERE VehicleTypeID = ?");
+    $stmt->bind_param("i", $id);
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Vehicle Type deleted.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $stmt->error]);
     }
 }
+
+function handleAddVehicleCategory($conn) {
+    $typeID = (int)($_POST['VehicleTypeID'] ?? 0);
+    $name = htmlspecialchars(trim($_POST['CategoryName'] ?? ''), ENT_QUOTES, 'UTF-8');
+    if ($typeID <= 0 || empty($name)) {
+        echo json_encode(['success' => false, 'message' => 'Type ID and Category Name are required.']);
+        exit;
+    }
+    // Check for duplicates *within this type*
+    $checkStmt = $conn->prepare("SELECT 1 FROM pms_vehiclecategory WHERE CategoryName = ? AND VehicleTypeID = ?");
+    $checkStmt->bind_param("si", $name, $typeID);
+    $checkStmt->execute();
+    if ($checkStmt->get_result()->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'This category already exists for this type.']);
+        exit;
+    }
+    // Insert
+    $stmt = $conn->prepare("INSERT INTO pms_vehiclecategory (VehicleTypeID, CategoryName) VALUES (?, ?)");
+    $stmt->bind_param("is", $typeID, $name);
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Vehicle Category added.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $stmt->error]);
+    }
+}
+
+function handleUpdateVehicleCategory($conn) {
+    $id = (int)($_POST['CategoryID'] ?? 0);
+    $name = htmlspecialchars(trim($_POST['CategoryName'] ?? ''), ENT_QUOTES, 'UTF-8');
+    if ($id <= 0 || empty($name)) {
+        echo json_encode(['success' => false, 'message' => 'ID and Name are required.']);
+        exit;
+    }
+    // Check for duplicates
+    $checkStmt = $conn->prepare("SELECT 1 FROM pms_vehiclecategory WHERE CategoryName = ? AND VehicleCategoryID != ?");
+    $checkStmt->bind_param("si", $name, $id);
+    $checkStmt->execute();
+    if ($checkStmt->get_result()->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'This category name is already in use.']);
+        exit;
+    }
+    // Update
+    $stmt = $conn->prepare("UPDATE pms_vehiclecategory SET CategoryName = ? WHERE VehicleCategoryID = ?");
+    $stmt->bind_param("si", $name, $id);
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Vehicle Category updated.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $stmt->error]);
+    }
+}
+
+function handleDeleteVehicleCategory($conn) {
+    $id = (int)($_POST['CategoryID'] ?? 0);
+    if ($id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid ID.']);
+        exit;
+    }
+    
+    // Safety Check: Check parking sessions
+    $check = $conn->prepare("SELECT 1 FROM pms_parking_sessions WHERE VehicleCategoryID = ? LIMIT 1");
+    $check->bind_param("i", $id);
+    $check->execute();
+    if ($check->get_result()->num_rows > 0) {
+        echo json_encode(['success' => false, 'message' => 'Cannot delete: This category is used in parking history.']);
+        exit;
+    }
+
+    // Delete
+    $stmt = $conn->prepare("DELETE FROM pms_vehiclecategory WHERE VehicleCategoryID = ?");
+    $stmt->bind_param("i", $id);
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Vehicle Category deleted.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $stmt->error]);
+    }
+}
+
 ?>

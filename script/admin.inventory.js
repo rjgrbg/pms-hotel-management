@@ -106,9 +106,12 @@ function renderInventoryTable(data = inventoryDataList) {
   } else {
     tbody.innerHTML = paginatedData.map(row => {
       // Use the correct keys from inventory_actions.php
-      const statusText = row.ItemStatus === 'In Stock' ? 'In Stock' : 
+    const statusText = row.ItemStatus === 'In Stock' ? 'In Stock' : 
                          row.ItemStatus === 'Low Stock' ? 'Low Stock' : 'Out of Stock';
-      const statusClass = row.ItemStatus.toLowerCase().replace(' ', '-');
+      
+      // THIS IS THE FIX:
+      // Create the class from the 'statusText' variable, not the raw 'row.ItemStatus'
+      const statusClass = statusText.toLowerCase().replace(/ /g, '-');
       
       return `
         <tr>

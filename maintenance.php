@@ -192,9 +192,17 @@ $sql_history = "SELECT
                 LEFT JOIN 
                     pms_users u ON mr.AssignedUserID = u.UserID 
                 WHERE 
-                    mr.Status IN ('Completed', 'Cancelled')
+                    mr.Status IN ('Completed', 'Cancelled', 'In Progress')
                 ORDER BY 
-                    mr.DateCompleted DESC";
+                    -- 1. Primary Sort: Custom Status Priority
+                    CASE 
+                        WHEN mr.Status = 'In Progress' THEN 1
+                        WHEN mr.Status = 'Completed'   THEN 2
+                        WHEN mr.Status = 'Cancelled'   THEN 3
+                    END ASC,
+                    -- 2. Secondary Sort: By Date
+                    mr.DateCompleted DESC,
+                    mr.DateRequested DESC";
 
 if ($result_history = $conn->query($sql_history)) {
     while ($row = $result_history->fetch_assoc()) {
@@ -288,9 +296,7 @@ $conn->close();
                 <p><?php echo ucfirst(str_replace('_', ' ', $Accounttype)); ?></p>
             </div>
             <nav class="profile-nav">
-                <a href="#" id="account-details-link">
-                    <i class="fas fa-user-edit" style="margin-right: 10px;"></i> Account Details
-                </a>
+                
             </nav>
             <div class="profile-footer">
                 <a href="#" id="logoutBtn">

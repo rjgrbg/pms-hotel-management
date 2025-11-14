@@ -75,7 +75,7 @@ function renderHistoryTable() {
                     <td>${h.requestedTime ?? 'N/A'}</td>
                     <td>${h.completedTime ?? 'N/A'}</td>
                     <td>${h.staff ?? 'N/A'}</td>
-                    <td><span class="statusBadge ${h.status?.toLowerCase()}">${h.status ?? 'N/A'}</span></td>
+                    <td><span class="statusBadge ${h.status?.toLowerCase().replace(' ', '-')}">${h.status ?? 'N/A'}</span></td>
                     <td>${h.remarks ?? ''}</td>
                 </tr>
             `;

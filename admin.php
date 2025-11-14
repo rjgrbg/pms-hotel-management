@@ -183,9 +183,17 @@ $sql_hk_history = "SELECT
                 LEFT JOIN 
                     pms_users u ON ht.AssignedUserID = u.UserID 
                 WHERE 
-                    ht.Status IN ('Completed', 'Cancelled')
+                    ht.Status IN ('In Progress', 'Completed', 'Cancelled')
                 ORDER BY 
-                    ht.DateCompleted DESC";
+                    -- 1. Primary Sort: Custom Status Priority
+                    CASE 
+                        WHEN ht.Status = 'In Progress' THEN 1
+                        WHEN ht.Status = 'Completed'   THEN 2
+                        WHEN ht.Status = 'Cancelled'   THEN 3
+                    END ASC,
+                    -- 2. Secondary Sort: By Date
+                    ht.DateCompleted DESC,
+                    ht.DateRequested DESC";
 
 if ($result_hk_history = $conn->query($sql_hk_history)) {
     while ($row = $result_hk_history->fetch_assoc()) {
@@ -319,9 +327,17 @@ $sql_mt_history = "SELECT
                 LEFT JOIN 
                     pms_users u ON mr.AssignedUserID = u.UserID 
                 WHERE 
-                    mr.Status IN ('Completed', 'Cancelled')
+                    mr.Status IN ('Completed', 'Cancelled', 'In Progress')
                 ORDER BY 
-                    mr.DateCompleted DESC";
+                    -- 1. Primary Sort: Custom Status Priority
+                    CASE 
+                        WHEN mr.Status = 'In Progress' THEN 1
+                        WHEN mr.Status = 'Completed'   THEN 2
+                        WHEN mr.Status = 'Cancelled'   THEN 3
+                    END ASC,
+                    -- 2. Secondary Sort: By Date
+                    mr.DateCompleted DESC,
+                    mr.DateRequested DESC";
 
 if ($result_mt_history = $conn->query($sql_mt_history)) {
     while ($row = $result_mt_history->fetch_assoc()) {

@@ -475,7 +475,7 @@ tbody tr:hover {
   background-color: #ff9500;
 }
 
-.statusBadge.outofstock {
+.statusBadge.out-of-stock {
   background-color: #ff0800;
 }
 

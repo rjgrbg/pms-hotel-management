@@ -33,6 +33,28 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSlotID = null;
     let currentSlotName = null;
     let currentSessionID = null;
+    
+    // === NEW DOM Elements for Management Modals ===
+    const manageTypesModal = document.getElementById('manage-types-modal');
+    const openTypesModalBtn = document.getElementById('open-types-modal-btn');
+    const addNewTypeBtn = document.getElementById('add-new-type-btn');
+    const newTypeNameInput = document.getElementById('new-type-name');
+    const typesListContainer = document.getElementById('types-list-container');
+
+    const manageCategoriesModal = document.getElementById('manage-categories-modal');
+    const openCategoriesModalBtn = document.getElementById('open-categories-modal-btn');
+    const categoryManagerTypeSelect = document.getElementById('category-manager-type-select');
+    const addNewCategoryBtn = document.getElementById('add-new-category-btn');
+    const newCategoryNameInput = document.getElementById('new-category-name');
+    const categoriesListContainer = document.getElementById('categories-list-container');
+    
+    const editNameModal = document.getElementById('edit-name-modal');
+    const editNameForm = document.getElementById('edit-name-form');
+    const editNameTitle = document.getElementById('edit-name-title');
+    const editIdInput = document.getElementById('edit-id-input');
+    const editTypeInput = document.getElementById('edit-type-input');
+    const editNameInput = document.getElementById('edit-name-input');
+    
 
     // ========================================================
     // API HELPER
@@ -96,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ========================================================
-    // UI (TABS, MODALS, SIDEBAR) (*** MODIFIED ***)
+    // UI (TABS, MODALS, SIDEBAR)
     // ========================================================
     const showModal = (modal) => {
         if (modal) {
@@ -149,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        // --- Profile & Logout (Merged from inventory.js) ---
+        // --- Profile & Logout ---
         const profileBtn = document.getElementById('profileBtn');
         const sidebar = document.getElementById('profile-sidebar');
         const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
@@ -158,7 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const closeLogoutBtn = document.getElementById('closeLogoutBtn');
         const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
         const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
-        const accountDetailsLink = document.getElementById('account-details-link');
 
         if (profileBtn && sidebar && sidebarCloseBtn) {
             profileBtn.addEventListener('click', () => sidebar.classList.add('active'));
@@ -176,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (confirmLogoutBtn) {
             confirmLogoutBtn.addEventListener('click', () => {
-                window.location.href = 'logout.php'; // Standardized logout file
+                window.location.href = 'logout.php';
             });
         }
         if (logoutModal) {
@@ -186,38 +207,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             });
         }
-
-        // --- Account Details (Logic from parking.js, placed correctly) ---
-        if (accountDetailsLink) {
-            accountDetailsLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                
-                // Populate form fields from userData
-                // *** MODIFIED: Use the correct keys from the userData object ***
-                document.getElementById('firstName').value = userData.Fname || userData.Name || ''; // Use Fname first (from form), fallback to Name
-                document.getElementById('middleName').value = userData.Mname || '';
-                document.getElementById('lastName').value = userData.Lname || '';
-                document.getElementById('emailAddress').value = userData.EmailAddress || '';
-                document.getElementById('username').value = userData.Username || '';
-                document.getElementById('password').value = ''; // Always clear password
-                document.getElementById('birthday').value = userData.Birthday || '';
-                document.getElementById('contact').value = userData.ContactNumber || '';
-                document.getElementById('address').value = userData.Address || '';
-                
-                if(sidebar) sidebar.classList.remove('active');
-                
-                showModal(document.getElementById('accountModal'));
-            });
-        }
-
+        
         // --- Generic Modal Close Buttons ---
-        document.querySelectorAll('.modal-close-btn, .btn-okay, button[data-modal-id]').forEach(btn => {
+        document.querySelectorAll('.modal-close-btn, .btn-okay, .btn-cancel, button[data-modal-id]').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                // Check if it's a "cancel" button inside a specific form modal
+                if(e.target.id === 'edit-category-name-cancel-btn') {
+                     e.preventDefault(); // prevent form submission
+                }
                 const modal = e.target.closest('.modal-overlay, .modal-overlay-confirm, .modal-overlay-success, .modalBackdrop');
                 if (modal) hideModal(modal);
             });
         });
         
+        // Close modal on overlay click
         document.querySelectorAll('.modal-overlay, .modal-overlay-confirm, .modal-overlay-success').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -245,7 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderDashboard(data) {
-        // 1. Update Cards (data.cards is now RECALCULATED)
         const cards = document.querySelectorAll('.summary-cards .card .card-value');
         if (data.cards) {
             if (cards[0]) cards[0].textContent = data.cards.occupied || 0;
@@ -253,13 +255,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (cards[2]) cards[2].textContent = data.cards.total || 0;
         }
 
-        // 2. Update Table (data.table is the FILTERED/SORTED array)
         const tbody = document.getElementById('dashboardTableBody');
         if (!tbody) return;
         
         if (!data.table || data.table.length === 0) {
             renderEmptyState(tbody, 5, '📊', 'No Areas Found', 'Try adjusting your filter.');
-            return; // No pagination for dashboard
+            return;
         }
 
         tbody.innerHTML = data.table.map(area => {
@@ -274,8 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
             `;
         }).join('');
-
-        // 3. Update Headers
         updateSortHeaders('dashboard-tab', sortState.dashboard);
     }
 
@@ -285,7 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const page = currentPages.slots;
         const totalItems = filteredData.length;
-
         setupPagination(totalItems, 'pagination-slots', page);
 
         if (totalItems === 0) {
@@ -317,7 +315,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
             `;
         }).join('');
-
         updateSortHeaders('slots-tab', sortState.slots);
     }
 
@@ -327,7 +324,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const page = currentPages.vehicleIn;
         const totalItems = filteredData.length;
-
         setupPagination(totalItems, 'pagination-vehicleIn', page);
 
         if (totalItems === 0) {
@@ -358,7 +354,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
             `;
         }).join('');
-
         updateSortHeaders('vehicleIn-tab', sortState.vehicleIn);
     }
 
@@ -368,7 +363,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const page = currentPages.history;
         const totalItems = filteredData.length;
-
         setupPagination(totalItems, 'pagination-history', page);
 
         if (totalItems === 0) {
@@ -395,47 +389,36 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
             `;
         }).join('');
-        
         updateSortHeaders('history-tab', sortState.history);
     }
 
     // ========================================================
-    // PAGINATION LOGIC (This is the correct, working version)
+    // PAGINATION LOGIC
     // ========================================================
     function setupPagination(totalItems, containerId, currentPage) {
         const paginationContainer = document.getElementById(containerId);
         if (!paginationContainer) return;
 
-        paginationContainer.innerHTML = ''; // Clear it
+        paginationContainer.innerHTML = '';
         const totalPages = Math.ceil(totalItems / rowsPerPage);
 
-        // --- Part 1: Record Info (Always Show) ---
         const recordsInfo = document.createElement('span');
         recordsInfo.className = 'paginationInfo';
-        
         let start, end;
         if (totalItems === 0) {
-            start = 0;
-            end = 0;
+            start = 0; end = 0;
         } else {
             start = (currentPage - 1) * rowsPerPage + 1;
             end = Math.min(start + rowsPerPage - 1, totalItems);
         }
-        
-        // This text will now *always* appear, even for 0 items.
         recordsInfo.textContent = `Displaying ${start}-${end} of ${totalItems} Records`;
         paginationContainer.appendChild(recordsInfo);
         
-        // --- Part 2: Page Buttons (Show if > 1 page) ---
-        if (totalPages <= 1) {
-            return; // We've shown the info, no buttons needed.
-        }
+        if (totalPages <= 1) return;
 
-        // --- Part 3: Render Buttons ---
         const controlsDiv = document.createElement('div');
         controlsDiv.className = 'paginationControls';
 
-        // Prev Button
         const prevButton = document.createElement('button');
         prevButton.className = 'paginationBtn';
         prevButton.innerHTML = '&lt;';
@@ -444,11 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (containerId.includes('slots')) currentPages.slots--;
             if (containerId.includes('vehicleIn')) currentPages.vehicleIn--;
             if (containerId.includes('history')) currentPages.history--;
-            performFilterAndSearch(); // Re-run to render new page
+            performFilterAndSearch();
         });
         controlsDiv.appendChild(prevButton);
 
-        // Page Numbers...
         const pageNumbers = [];
         if (totalPages <= 7) {
             for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
@@ -479,13 +461,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (containerId.includes('slots')) currentPages.slots = num;
                     if (containerId.includes('vehicleIn')) currentPages.vehicleIn = num;
                     if (containerId.includes('history')) currentPages.history = num;
-                    performFilterAndSearch(); // Re-run to render new page
+                    performFilterAndSearch();
                 });
                 controlsDiv.appendChild(button);
             }
         });
 
-        // Next Button
         const nextButton = document.createElement('button');
         nextButton.className = 'paginationBtn';
         nextButton.innerHTML = '&gt;';
@@ -494,54 +475,43 @@ document.addEventListener('DOMContentLoaded', () => {
             if (containerId.includes('slots')) currentPages.slots++;
             if (containerId.includes('vehicleIn')) currentPages.vehicleIn++;
             if (containerId.includes('history')) currentPages.history++;
-            performFilterAndSearch(); // Re-run to render new page
+            performFilterAndSearch();
         });
         controlsDiv.appendChild(nextButton);
-
         paginationContainer.appendChild(controlsDiv);
     }
 
     // ========================================================
-    // SORTING & PARSING LOGIC (This is the correct, working version)
+    // SORTING & PARSING LOGIC
     // ========================================================
-    
-    // Helper for date parsing to avoid errors on null
     function parseDateWhen(dateStr, defaultVal) {
         if (!dateStr) return defaultVal;
         try {
-            // Converts "YYYY-MM-DD / H:MM AM/PM" to a valid date object
             return new Date(dateStr.replace(' / ', ' ')).getTime();
         } catch (e) {
             return defaultVal;
         }
     }
 
-    // Sorting Function
     function sortData(data, column, direction) {
         data.sort((a, b) => {
             let valA = a[column];
             let valB = b[column];
 
-            // Handle numbers that might be strings (for Dashboard)
             if (column === 'available' || column === 'occupied' || column === 'total') {
                 valA = parseFloat(valA) || 0;
                 valB = parseFloat(valB) || 0;
             }
 
-            // Handle different data types
             if (typeof valA === 'string') {
-                // Check for full timestamps (YYYY-MM-DD HH:MM:SS)
-                // This is used for 'EntryTime' in "Vehicle In" and 'ExitTime' in "History"
                 if (valA && valA.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) { 
                     valA = new Date(valA).getTime();
-                    valB = valB ? new Date(valB).getTime() : null; // Handle nulls
+                    valB = valB ? new Date(valB).getTime() : null;
                 } 
-                // Check for API date-time with slashes (YYYY-MM-DD / H:MM AM/PM)
                 else if (valA && valA.match(/^\d{4}-\d{2}-\d{2} \/ \d{1,2}:\d{2} [AP]M$/)) {
                     valA = parseDateWhen(valA, null); 
                     valB = parseDateWhen(valB, null);
                 }
-                // Normal string sort
                 else {
                     valA = (valA || "").toLowerCase();
                     valB = (valB || "").toLowerCase();
@@ -553,7 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 valB = valB || 0;
             }
 
-            // Handle nulls for sorting
             if (valA === null || valA === undefined) valA = direction === 'asc' ? Infinity : -Infinity;
             if (valB === null || valB === undefined) valB = direction === 'asc' ? Infinity : -Infinity;
 
@@ -568,32 +537,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Update Header Visuals
     function updateSortHeaders(tabId, { column, direction }) {
         const tab = document.getElementById(tabId);
         if (!tab) return;
-
-        // Remove old classes
         tab.querySelectorAll('th.sortable').forEach(th => {
             th.classList.remove('sort-asc', 'sort-desc');
         });
-
-        // Add new class
-        // Handle special case for EntryTime/EntryDate
         let selector = `th[data-sort="${column}"]`;
         if (column === 'EntryTime') {
-             selector = `th[data-sort="EntryTime"]`; // Target both headers
+             selector = `th[data-sort="EntryTime"]`;
         }
-        // Handle special case for ExitTime/ExitDateTime
         else if (column === 'ExitTime' || column === 'ExitDateTime') {
              selector = `th[data-sort="ExitTime"], th[data-sort="ExitDateTime"]`;
         }
-        // Handle special case for EntryTime/EntryDateTime in history
         else if (column === 'EntryTime' || column === 'EntryDateTime') {
             selector = `th[data-sort="EntryTime"], th[data-sort="EntryDateTime"]`;
         }
-
-
         tab.querySelectorAll(selector).forEach(th => {
              th.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
         });
@@ -601,14 +560,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ========================================================
-    // SEARCH, FILTER & DATA LOADING (This version is correct)
+    // SEARCH, FILTER & DATA LOADING
     // ========================================================
     async function performFilterAndSearch() {
         
         const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
 
         if (activeTab === 'dashboard') {
-            // 1. Fetch data if cache is empty
             if (dashboardTableData.length === 0) {
                 const data = await fetchAPI('getDashboardData');
                 if (!data || !data.table) {
@@ -617,68 +575,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 dashboardTableData = data.table; 
             }
-
-            // 2. Filter (Area Dropdown)
             const filterArea = document.getElementById('areaFilterDashboard').value;
             let filteredData = dashboardTableData
                 .filter(area => filterArea === "all" || area.AreaName === filterArea);
-            
-            // 3. Recalculate Card Totals based on filtered data
             const newCardTotals = filteredData.reduce((acc, area) => {
                 acc.occupied += parseFloat(area.occupied) || 0;
                 acc.available += parseFloat(area.available) || 0;
                 acc.total += parseFloat(area.total) || 0;
                 return acc;
             }, { occupied: 0, available: 0, total: 0 });
-
-            // 4. Sort
             const { column, direction } = sortState.dashboard;
             sortData(filteredData, column, direction);
-
-            // 5. Render
             renderDashboard({ cards: newCardTotals, table: filteredData });
         
         } else if (activeTab === 'slots') {
-            // 1. Fetch
             if (slotsData.length === 0) { 
                  const data = await fetchAPI('getAllSlots');
                  if (!data) {
-                    renderSlots([]); // Render empty state
+                    renderSlots([]);
                     return;
                  }
                  slotsData = data.slots;
             }
-            
-            // 2. Filter
             const filterArea = document.getElementById('areaFilterSlots').value;
             const filterStatus = document.getElementById('statusFilterSlots').value;
             const searchTerm = document.getElementById('searchSlots').value.toLowerCase();
-            
             let filteredData = slotsData
                 .filter(s => filterArea === "all" || s.AreaName.includes(filterArea))
                 .filter(s => filterStatus === "all" || s.Status === filterStatus)
                 .filter(s => !searchTerm || s.SlotName.toLowerCase().includes(searchTerm));
-            
-            // 3. Sort
             const { column, direction } = sortState.slots;
             sortData(filteredData, column, direction);
-            
-            // 4. Render (which includes pagination)
             renderSlots(filteredData);
 
         } else if (activeTab === 'vehicleIn') {
-            // 1. Fetch
             const data = await fetchAPI('getVehiclesIn');
             if (!data) {
-                renderVehicleIn([]); // Render empty state
+                renderVehicleIn([]);
                 return;
             }
             vehiclesInData = data.vehicles;
-
-            // 2. Filter
             const filterArea = document.getElementById('areaFilterVehicleIn').value;
             const searchTerm = document.getElementById('searchVehicleIn').value.toLowerCase();
-            
             let filteredData = vehiclesInData
                 .filter(s => filterArea === "all" || s.AreaName === filterArea) 
                 .filter(s => !searchTerm || 
@@ -686,27 +624,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     (s.PlateNumber && s.PlateNumber.toLowerCase().includes(searchTerm)) ||
                     (s.RoomNumber && s.RoomNumber.toLowerCase().includes(searchTerm))
                 );
-
-            // 3. Sort
             const { column, direction } = sortState.vehicleIn;
             sortData(filteredData, column, direction);
-
-            // 4. Render
             renderVehicleIn(filteredData);
 
         } else if (activeTab === 'history') {
-            // 1. Fetch
             const data = await fetchAPI('getHistory');
             if (!data) {
-                renderHistory([]); // Render empty state
+                renderHistory([]);
                 return;
             }
             historyData = data.history;
-
-            // 2. Filter
             const filterArea = document.getElementById('areaFilterHistory').value;
             const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
-
             let filteredData = historyData
                 .filter(v => filterArea === "all" || v.AreaName === filterArea) 
                 .filter(v => !searchTerm || 
@@ -714,33 +644,55 @@ document.addEventListener('DOMContentLoaded', () => {
                     (v.PlateNumber && v.PlateNumber.toLowerCase().includes(searchTerm)) ||
                     (v.RoomNumber && v.RoomNumber.toLowerCase().includes(searchTerm))
                 );
-            
-            // 3. Sort
             const { column, direction } = sortState.history;
             sortData(filteredData, column, direction);
-
-            // 4. Render
             renderHistory(filteredData);
         }
     }
 
     // ========================================================
-    // EVENT LISTENERS (SPECIFIC TO PARKING)
+    // REFRESH & LOAD DROPDOWNS (*** NEW ***)
     // ========================================================
-
+    
+    // This function loads the two dropdowns in the "Enter Vehicle" modal
     async function loadEnterVehicleDropdowns() {
         const typeSelect = document.getElementById('vehicleType');
         const categorySelect = document.getElementById('categorySelect');
+        const currentType = typeSelect.value; // Store current selection
+        
         typeSelect.innerHTML = '<option value="">Loading...</option>';
         categorySelect.innerHTML = '<option value="">Select vehicle type first...</option>';
+        
         const data = await fetchAPI('getVehicleTypes');
         if (data && data.types) {
             typeSelect.innerHTML = '<option value="">Select</option>';
             data.types.forEach(type => {
                 typeSelect.innerHTML += `<option value="${type.VehicleTypeID}">${type.TypeName}</option>`;
             });
+            typeSelect.value = currentType; // Re-select old value if still valid
         }
     }
+
+    // This function reloads ALL dropdowns and lists related to types/categories
+    async function refreshAllParkingDropdowns() {
+        // 1. Refresh "Enter Vehicle" modal dropdowns
+        await loadEnterVehicleDropdowns();
+        
+        // 2. Refresh "Manage Types" modal list
+        await loadVehicleTypesList();
+        
+        // 3. Refresh "Manage Categories" modal dropdown
+        await loadVehicleTypesDropdownForManager();
+        
+        // 4. Clear the categories list (it will reload on type select)
+        categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">Please select a vehicle type above.</p>';
+    }
+
+    // ========================================================
+    // EVENT LISTENERS (SPECIFIC TO PARKING)
+    // ========================================================
+
+    // Listener for the "Vehicle Type" dropdown in the "Enter Vehicle" modal
     document.getElementById('vehicleType').addEventListener('change', async (e) => {
         const vehicleTypeID = e.target.value;
         const categorySelect = document.getElementById('categorySelect');
@@ -763,30 +715,21 @@ document.addEventListener('DOMContentLoaded', () => {
         // Filter/Search Listeners
         document.querySelectorAll('.filterDropdown').forEach(el => {
             el.addEventListener('change', () => {
-                // Reset to page 1 and re-fetch/re-filter
                 currentPages.slots = 1;
                 currentPages.vehicleIn = 1;
                 currentPages.history = 1;
-                
-                slotsData = []; // Clear slot cache on filter change
-                
+                slotsData = [];
                 performFilterAndSearch();
             });
         });
 
         document.querySelectorAll('.searchInput').forEach(el => {
             el.addEventListener('input', () => {
-                // This performs a client-side filter *without* re-fetching
                 const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
-                
-                // Reset page to 1 when typing
                 currentPages.slots = 1;
                 currentPages.vehicleIn = 1;
                 currentPages.history = 1;
                 
-                if (activeTab === 'dashboard') {
-                   // Search removed
-                }
                 if (activeTab === 'slots') {
                     const filterArea = document.getElementById('areaFilterSlots').value;
                     const filterStatus = document.getElementById('statusFilterSlots').value;
@@ -833,12 +776,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const controlsRow = btn.closest('.controlsRow');
                 controlsRow.querySelectorAll('.filterDropdown').forEach(sel => sel.value = 'all');
                 controlsRow.querySelectorAll('.searchInput').forEach(inp => inp.value = '');
-                
-                // Clear all caches
                 slotsData = []; 
                 dashboardTableData = []; 
-
-                performFilterAndSearch(); // Re-fetch all
+                performFilterAndSearch();
                 showToast('Data refreshed!');
             });
         });
@@ -847,11 +787,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const downloadBtn = document.getElementById('downloadBtnHistory');
         if (downloadBtn) {
             downloadBtn.addEventListener('click', () => {
-                // 1. Get the current filter and search values
                 const filterArea = document.getElementById('areaFilterHistory').value;
                 const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
-
-                // 2. Apply the same filters as the render function
                 let filteredData = historyData
                     .filter(v => filterArea === "all" || v.AreaName === filterArea) 
                     .filter(v => !searchTerm || 
@@ -860,85 +797,53 @@ document.addEventListener('DOMContentLoaded', () => {
                         (v.RoomNumber && v.RoomNumber.toLowerCase().includes(searchTerm))
                     );
                 
-                // 3. Apply the current sort
                 const { column, direction } = sortState.history;
                 sortData(filteredData, column, direction);
 
-                // 4. Check if there's data
                 if (filteredData.length === 0) {
                     showToast('No data to download.', 'error');
                     return;
                 }
 
-                // 5. Generate the PDF
                 try {
                     const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF(); // Default is portrait, A4
-
+                    const doc = new jsPDF();
                     doc.setFontSize(18);
                     doc.text("Parking History Report", 14, 22);
                     doc.setFontSize(11);
                     doc.setTextColor(100);
                     doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
                     
-                    // Define columns for the table
                     const head = [[
-                        'Slot', 
-                        'Plate #', 
-                        'Room', 
-                        'Name', 
-                        'Vehicle Type', 
-                        'Category',
-                        'Parking Time',
-                        'Entry',
-                        'Exit'
+                        'Slot', 'Plate #', 'Room', 'Name', 
+                        'Vehicle Type', 'Category', 'Parking Time', 'Entry', 'Exit'
                     ]];
-
-                    // Map the filtered data to the row format
                     const body = filteredData.map(v => [
-                        v.SlotName,
-                        v.PlateNumber,
-                        v.RoomNumber,
-                        v.GuestName,
-                        v.VehicleType,
-                        v.VehicleCategory,
-                        v.ParkingTime,
-                        v.EntryDateTime,
-                        v.ExitDateTime
+                        v.SlotName, v.PlateNumber, v.RoomNumber, v.GuestName,
+                        v.VehicleType, v.VehicleCategory, v.ParkingTime,
+                        v.EntryDateTime, v.ExitDateTime
                     ]);
 
-                    // Use autoTable to create the table
                     doc.autoTable({
-                        head: head,
-                        body: body,
-                        startY: 35,
+                        head: head, body: body, startY: 35,
                         headStyles: { fillColor: [72, 12, 27] }, // #480c1b
                         styles: { fontSize: 8, cellPadding: 2 },
                         alternateRowStyles: { fillColor: [245, 245, 245] },
                         columnStyles: {
-                            0: { cellWidth: 15 }, // Slot
-                            1: { cellWidth: 20 }, // Plate
-                            2: { cellWidth: 12 }, // Room
-                            3: { cellWidth: 'auto' }, // Name
-                            4: { cellWidth: 'auto' }, // Type
-                            5: { cellWidth: 'auto' }, // Category
-                            6: { cellWidth: 20 }, // Parking Time
-                            7: { cellWidth: 30 }, // Entry
-                            8: { cellWidth: 30 }  // Exit
+                            0: { cellWidth: 15 }, 1: { cellWidth: 20 }, 2: { cellWidth: 12 },
+                            3: { cellWidth: 'auto' }, 4: { cellWidth: 'auto' }, 5: { cellWidth: 'auto' },
+                            6: { cellWidth: 20 }, 7: { cellWidth: 30 }, 8: { cellWidth: 30 }
                         }
                     });
-
-                    // 6. Save the file
                     doc.save('Parking-History-Report.pdf');
-
                 } catch (e) {
                     console.error("Error generating PDF:", e);
                     showToast('Error generating PDF. See console.', 'error');
                 }
             });
         }
-
-        // === Enter/Exit/Account Listeners... (no changes) ===
+        
+        // === Enter/Exit Vehicle Logic ===
         
         document.body.addEventListener('click', (e) => {
             const enterButton = e.target.closest('.btn-enter');
@@ -947,7 +852,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentSlotName = enterButton.dataset.slotName;
                 document.getElementById('slotNumberTitle').textContent = currentSlotName;
                 document.getElementById('enter-vehicle-form').reset();
-                loadEnterVehicleDropdowns();
+                loadEnterVehicleDropdowns(); // Load dropdowns for this modal
                 showModal(document.getElementById('enterVehicleModal'));
             }
         });
@@ -1033,104 +938,265 @@ document.addEventListener('DOMContentLoaded', () => {
                 currentSessionID = null;
             });
         }
-        
-        // --- This section is now part of setupUIListeners ---
-        
-        const accountForm = document.getElementById('account-details-form');
-        if (accountForm) {
-            accountForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                hideModal(document.getElementById('accountModal'));
-                showModal(document.getElementById('saveConfirmModal'));
-            });
-        }
+    }
+    
+    // ========================================================
+    // === NEW LISTENERS FOR MANAGEMENT MODALS ===
+    // ========================================================
+    
+    // --- 1. Manage Types Modal ---
+    openTypesModalBtn.addEventListener('click', () => {
+        showModal(manageTypesModal);
+        loadVehicleTypesList();
+    });
 
-        const btnConfirmSave = document.getElementById('btnConfirmSave');
-        if (btnConfirmSave) {
-            btnConfirmSave.addEventListener('click', async () => {
-                const form = document.getElementById('account-details-form');
-                const formData = new FormData(form);
-                formData.append('action', 'updateUser');
-                if (document.getElementById('password').value === '') {
-                    formData.set('Password', '************');
-                }
-                const result = await fetchAPI('updateUser', {
-                    method: 'POST',
-                    body: formData
-                });
-                hideModal(document.getElementById('saveConfirmModal'));
-                if (result && result.success) {
-                    // *** MODIFIED: Use the correct keys to update local data and sidebar ***
-                    // Update local user data
-                    userData.Name = formData.get('Fname'); // Form has 'Fname', save to 'Name'
-                    userData.Lname = formData.get('Lname');
-                    userData.Mname = formData.get('Mname');
-                    userData.EmailAddress = formData.get('EmailAddress');
-                    userData.Username = formData.get('Username');
-                    userData.Birthday = formData.get('Birthday');
-                    userData.ContactNumber = formData.get('ContactNumber');
-                    userData.Address = formData.get('Address');
-                    
-                    // Now, update the sidebar with the new name
-                    const sidebarName = document.querySelector('.profile-header h3');
-                    if (sidebarName) sidebarName.textContent = `${userData.Name}`; // Use the correct key
-                    
-                    showModal(document.getElementById('saveSuccessModal'));
-                    showToast(result.message || 'Account details updated!');
-                }
+    async function loadVehicleTypesList() {
+        typesListContainer.innerHTML = '<div class="spinner"></div>';
+        const data = await fetchAPI('getVehicleTypes');
+        if (!data || !data.types) {
+            typesListContainer.innerHTML = '<p>Error loading types.</p>';
+            return;
+        }
+        if (data.types.length === 0) {
+            typesListContainer.innerHTML = '<p style="text-align:center; color: #777;">No vehicle types found. Add one above.</p>';
+            return;
+        }
+        typesListContainer.innerHTML = data.types.map(type => `
+            <div class="category-list-item" data-id="${type.VehicleTypeID}" data-name="${type.TypeName}">
+                <span class="category-name">${escapeHTML(type.TypeName)}</span>
+                <div class="category-actions">
+                    <button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="btn-icon btn-delete-category" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    addNewTypeBtn.addEventListener('click', async () => {
+        const name = newTypeNameInput.value.trim();
+        if (!name) {
+            showToast('Please enter a type name.', 'error');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('TypeName', name);
+        
+        const result = await fetchAPI('addVehicleType', { method: 'POST', body: formData });
+        if (result && result.success) {
+            showToast(result.message);
+            newTypeNameInput.value = '';
+            refreshAllParkingDropdowns(); // This will also reload the list
+        }
+    });
+
+    typesListContainer.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.btn-edit-category');
+        const deleteBtn = e.target.closest('.btn-delete-category');
+        const item = e.target.closest('.category-list-item');
+        if (!item) return;
+
+        const id = item.dataset.id;
+        const name = item.dataset.name;
+        
+        if (editBtn) {
+            openEditNameModal('vehicleType', id, name);
+        }
+        
+        if (deleteBtn) {
+            if (!confirm(`Are you sure you want to delete "${name}"?\nThis cannot be undone.`)) {
+                return;
+            }
+            const formData = new FormData();
+            formData.append('TypeID', id);
+            const result = await fetchAPI('deleteVehicleType', { method: 'POST', body: formData });
+            if (result && result.success) {
+                showToast(result.message);
+                refreshAllParkingDropdowns();
+            }
+        }
+    });
+
+    // --- 2. Manage Categories Modal ---
+    openCategoriesModalBtn.addEventListener('click', () => {
+        showModal(manageCategoriesModal);
+        loadVehicleTypesDropdownForManager();
+        categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">Please select a vehicle type above.</p>';
+    });
+    
+    async function loadVehicleTypesDropdownForManager() {
+        categoryManagerTypeSelect.innerHTML = '<option value="">Loading...</option>';
+        const data = await fetchAPI('getVehicleTypes');
+        if (data && data.types) {
+            categoryManagerTypeSelect.innerHTML = '<option value="">Select a Vehicle Type</option>';
+            data.types.forEach(type => {
+                categoryManagerTypeSelect.innerHTML += `<option value="${type.VehicleTypeID}">${type.TypeName}</option>`;
             });
         }
     }
+    
+    categoryManagerTypeSelect.addEventListener('change', () => {
+        const typeID = categoryManagerTypeSelect.value;
+        if (!typeID) {
+            categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">Please select a vehicle type above.</p>';
+            return;
+        }
+        loadVehicleCategoriesList(typeID);
+    });
+
+    async function loadVehicleCategoriesList(typeID) {
+        categoriesListContainer.innerHTML = '<div class="spinner"></div>';
+        const data = await fetchAPI('getVehicleCategories', {}, `vehicleTypeID=${typeID}`);
+        if (!data || !data.categories) {
+            categoriesListContainer.innerHTML = '<p>Error loading categories.</p>';
+            return;
+        }
+        if (data.categories.length === 0) {
+            categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">No categories found for this type. Add one above.</p>';
+            return;
+        }
+        categoriesListContainer.innerHTML = data.categories.map(cat => `
+            <div class="category-list-item" data-id="${cat.VehicleCategoryID}" data-name="${cat.CategoryName}">
+                <span class="category-name">${escapeHTML(cat.CategoryName)}</span>
+                <div class="category-actions">
+                    <button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="btn-icon btn-delete-category" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    addNewCategoryBtn.addEventListener('click', async () => {
+        const typeID = categoryManagerTypeSelect.value;
+        const name = newCategoryNameInput.value.trim();
+        if (!typeID) {
+            showToast('Please select a vehicle type first.', 'error');
+            return;
+        }
+        if (!name) {
+            showToast('Please enter a category name.', 'error');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('VehicleTypeID', typeID);
+        formData.append('CategoryName', name);
+        
+        const result = await fetchAPI('addVehicleCategory', { method: 'POST', body: formData });
+        if (result && result.success) {
+            showToast(result.message);
+            newCategoryNameInput.value = '';
+            await loadVehicleCategoriesList(typeID); // Reload just this list
+            await refreshAllParkingDropdowns(); // Reload all other dropdowns
+        }
+    });
+
+    categoriesListContainer.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.btn-edit-category');
+        const deleteBtn = e.target.closest('.btn-delete-category');
+        const item = e.target.closest('.category-list-item');
+        if (!item) return;
+
+        const id = item.dataset.id;
+        const name = item.dataset.name;
+        
+        if (editBtn) {
+            openEditNameModal('vehicleCategory', id, name);
+        }
+        
+        if (deleteBtn) {
+            if (!confirm(`Are you sure you want to delete "${name}"?\nThis cannot be undone.`)) {
+                return;
+            }
+            const formData = new FormData();
+            formData.append('CategoryID', id);
+            const result = await fetchAPI('deleteVehicleCategory', { method: 'POST', body: formData });
+            if (result && result.success) {
+                showToast(result.message);
+                const typeID = categoryManagerTypeSelect.value;
+                await loadVehicleCategoriesList(typeID); // Reload just this list
+                await refreshAllParkingDropdowns(); // Reload all other dropdowns
+            }
+        }
+    });
+
+    // --- 3. Generic Edit Name Modal ---
+    function openEditNameModal(type, id, name) {
+        editTypeInput.value = type; // 'vehicleType' or 'vehicleCategory'
+        editIdInput.value = id;
+        editNameInput.value = name;
+        editNameTitle.textContent = `Edit ${type === 'vehicleType' ? 'Type' : 'Category'} Name`;
+        showModal(editNameModal);
+    }
+    
+    editNameForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = editIdInput.value;
+        const type = editTypeInput.value;
+        const name = editNameInput.value.trim();
+        
+        if (!name) {
+            showToast('Name cannot be empty.', 'error');
+            return;
+        }
+
+        let action = '';
+        const formData = new FormData();
+        
+        if (type === 'vehicleType') {
+            action = 'updateVehicleType';
+            formData.append('TypeID', id);
+            formData.append('TypeName', name);
+        } else if (type === 'vehicleCategory') {
+            action = 'updateVehicleCategory';
+            formData.append('CategoryID', id);
+            formData.append('CategoryName', name);
+        } else {
+            return; // Should not happen
+        }
+
+        const result = await fetchAPI(action, { method: 'POST', body: formData });
+        if (result && result.success) {
+            showToast(result.message);
+            hideModal(editNameModal);
+            refreshAllParkingDropdowns(); // Reload everything
+        }
+    });
+
 
     // ========================================================
-    // SORTING EVENT LISTENERS (This version is correct)
+    // SORTING EVENT LISTENERS
     // ========================================================
     function setupSortListeners() {
         document.querySelectorAll('th.sortable').forEach(th => {
             th.addEventListener('click', () => {
                 const column = th.dataset.sort;
                 const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
-                
-                if (!sortState[activeTab]) return; // Not a sortable tab
-
+                if (!sortState[activeTab]) return;
                 const currentSort = sortState[activeTab];
                 let direction = 'asc';
-
                 if (currentSort.column === column) {
                     direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
                 }
-                
                 sortState[activeTab] = { column, direction };
-
-                // Reset to page 1
                 currentPages.slots = 1;
                 currentPages.vehicleIn = 1;
                 currentPages.history = 1;
                 
-                // *** This function now re-filters and re-sorts all data ***
-                // It's faster than re-fetching from the API
-                
-                // Get the filtered data first, *then* sort it
                 const filterAndSortData = (tab) => {
                     let filteredData = [];
-                    let sortCol = sortState[tab].column;
-                    let sortDir = sortState[tab].direction;
-
                     if (tab === 'dashboard') {
                         const filterArea = document.getElementById('areaFilterDashboard').value;
                         filteredData = dashboardTableData
                             .filter(area => filterArea === "all" || area.AreaName === filterArea);
-                        
                         const newCardTotals = filteredData.reduce((acc, area) => {
                             acc.occupied += parseFloat(area.occupied) || 0;
                             acc.available += parseFloat(area.available) || 0;
                             acc.total += parseFloat(area.total) || 0;
                             return acc;
                         }, { occupied: 0, available: 0, total: 0 });
-                        
                         sortData(filteredData, column, direction);
                         renderDashboard({ cards: newCardTotals, table: filteredData });
-
                     } else if (tab === 'slots') {
                         const filterArea = document.getElementById('areaFilterSlots').value;
                         const filterStatus = document.getElementById('statusFilterSlots').value;
@@ -1141,7 +1207,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             .filter(s => !searchTerm || s.SlotName.toLowerCase().includes(searchTerm));
                         sortData(filteredData, column, direction);
                         renderSlots(filteredData);
-
                     } else if (tab === 'vehicleIn') {
                         const filterArea = document.getElementById('areaFilterVehicleIn').value;
                         const searchTerm = document.getElementById('searchVehicleIn').value.toLowerCase();
@@ -1154,7 +1219,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             );
                         sortData(filteredData, column, direction);
                         renderVehicleIn(filteredData);
-
                     } else if (tab === 'history') {
                         const filterArea = document.getElementById('areaFilterHistory').value;
                         const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
@@ -1169,10 +1233,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         renderHistory(filteredData);
                     }
                 };
-
                 filterAndSortData(activeTab);
             });
         });
+    }
+    
+    // ========================================================
+    // SANITIZATION (*** NEW ***)
+    // ========================================================
+    function sanitizeOnPaste(e) {
+        // Get pasted data
+        let paste = (e.clipboardData || window.clipboardData).getData('text');
+        // Strip invalid characters (allow letters, numbers, spaces, and basic punctuation)
+        let sanitized = paste.replace(/[^a-zA-Z0-9\s.,#-]/g, '');
+        
+        // This is a bit of a hack to insert the sanitized text
+        // We stop the default paste, then manually insert the sanitized text
+        e.preventDefault();
+        document.execCommand('insertText', false, sanitized);
     }
     
     // ========================================================
@@ -1190,19 +1268,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    function escapeHTML(str) {
+        if (typeof str !== 'string') return '';
+        return str.replace(/[&<>"']/g, function(m) {
+            return {
+                '&': '&amp;', '<': '&lt;', '>': '&gt;',
+                '"': '&quot;', "'": '&#39;'
+            }[m];
+        });
+    }
+    
     function initializeApp() {
         setupUIListeners();
         setupParkingListeners();
         setupSortListeners(); 
         
-        // *** MODIFIED: These lines are removed to prevent the "undefined" bug ***
-        // const sidebarName = document.querySelector('.profile-header h3');
-        // const sidebarRole = document.querySelector('.profile-header p');
-        // if (sidebarName) sidebarName.textContent = `${userData.Name}`; // This is now done by PHP
-        // if (sidebarRole) sidebarRole.textContent = `${userData.Accounttype}`; // This is now done by PHP
+        // Attach sanitization listener to all relevant inputs
+        document.querySelectorAll('.sanitize-on-paste').forEach(input => {
+            input.addEventListener('paste', sanitizeOnPaste);
+        });
 
         loadFilterDropdowns();
-
         performFilterAndSearch();
     }
     

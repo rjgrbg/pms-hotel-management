@@ -33,6 +33,20 @@ function renderHKTable(data = hkData) {
   });
 }
 
+// Helper function to get the right CSS class
+function getHkHistoryStatusClass(status) {
+    switch (status) {
+        case 'In Progress':
+            return 'in-progress';
+        case 'Completed':
+            return 'completed';
+        case 'Cancelled':
+            return 'cancelled';
+        default:
+            return '';
+    }
+}
+
 function renderHKHistTable(data = hkHistData) {
   const tbody = document.getElementById('hkHistTableBody');
   if (!tbody) return;
@@ -43,19 +57,24 @@ function renderHKHistTable(data = hkHistData) {
   if (paginatedData.length === 0) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
   } else {
-    tbody.innerHTML = paginatedData.map(row => `
-      <tr>
-        <td>${row.floor}</td>
-        <td>${row.room}</td>
-        <td>${row.issueType}</td>
-        <td>${row.date}</td>
-        <td>${row.requestedTime}</td>
-        <td>${row.completedTime}</td>
-        <td>${row.staff}</td>
-        <td><span class="statusBadge ${row.status === 'Completed' ? 'completed' : 'cancelled'}">${row.status}</span></td>
-        <td>${row.remarks || 'N/A'}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = paginatedData.map(row => {
+        // --- THIS IS THE FIX ---
+        const statusClass = getHkHistoryStatusClass(row.status);
+
+        return `
+          <tr>
+            <td>${row.floor}</td>
+            <td>${row.room}</td>
+            <td>${row.issueType}</td>
+            <td>${row.date}</td>
+            <td>${row.requestedTime}</td>
+            <td>${row.completedTime}</td>
+            <td>${row.staff}</td>
+            <td><span class="statusBadge ${statusClass}">${row.status}</span></td>
+            <td>${row.remarks || 'N/A'}</td>
+          </tr>
+        `;
+    }).join('');
   }
   
   const recordCount = document.getElementById('hkHistRecordCount');
@@ -65,6 +84,7 @@ function renderHKHistTable(data = hkHistData) {
     renderHKHistTable(data);
   });
 }
+
 
 // ===== HELPER FUNCTIONS (can be moved to utils or admin.js) =====
 // Ensure these helpers are defined, either here or in admin.utils.js

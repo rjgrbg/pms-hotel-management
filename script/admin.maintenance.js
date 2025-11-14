@@ -34,6 +34,20 @@ function renderMTRequestsTable(data = mtRequestsData) {
   });
 }
 
+// Helper function to get the right CSS class
+function getMtHistoryStatusClass(status) {
+    switch (status) {
+        case 'In Progress':
+            return 'in-progress'; 
+        case 'Completed':
+            return 'cleaned'; // You used 'cleaned' for maintenance, so we keep it
+        case 'Cancelled':
+            return 'cancelled';
+        default:
+            return ''; 
+    }
+}
+
 function renderMTHistTable(data = mtHistData) {
   const tbody = document.getElementById('mtHistTableBody');
   if (!tbody) return;
@@ -44,19 +58,24 @@ function renderMTHistTable(data = mtHistData) {
   if (paginatedData.length === 0) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
   } else {
-    tbody.innerHTML = paginatedData.map(row => `
-      <tr>
-        <td>${row.floor}</td>
-        <td>${row.room}</td>
-        <td>${row.issueType}</td>
-        <td>${row.date}</td>
-        <td>${row.requestedTime}</td>
-        <td>${row.completedTime}</td>
-        <td>${row.staff}</td>
-        <td><span class="statusBadge ${row.status === 'Completed' ? 'cleaned' : 'cancelled'}">${row.status}</span></td>
-        <td>${row.remarks || 'N/A'}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = paginatedData.map(row => {
+        // --- THIS IS THE FIX ---
+        const statusClass = getMtHistoryStatusClass(row.status);
+        
+        return `
+          <tr>
+            <td>${row.floor}</td>
+            <td>${row.room}</td>
+            <td>${row.issueType}</td>
+            <td>${row.date}</td>
+            <td>${row.requestedTime}</td>
+            <td>${row.completedTime}</td>
+            <td>${row.staff}</td>
+            <td><span class="statusBadge ${statusClass}">${row.status}</span></td>
+            <td>${row.remarks || 'N/A'}</td>
+          </tr>
+        `;
+    }).join('');
   }
   
   const recordCount = document.getElementById('mtHistRecordCount');

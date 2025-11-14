@@ -78,7 +78,145 @@ if (isset($_SESSION['UserID'])) {
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
 
-</head>
+  <style>
+    /* Style for the wrapper around category select and edit button */
+    .category-select-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .category-select-wrapper select {
+        flex-grow: 1; /* Select box takes available space */
+    }
+
+    /* Style for the new 'Edit' button */
+    .edit-category-btn {
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        background-color: #ffc107; /* Yellow background like mockup */
+        color: #212529; /* Dark text */
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+        flex-shrink: 0; /* Prevent button from shrinking */
+    }
+
+    .edit-category-btn:hover {
+        background-color: #e0a800;
+    }
+
+    .edit-category-btn .fa-pencil-alt {
+        margin-right: 5px;
+    }
+
+    /* Styles for the new "Manage Category" Modal */
+    .add-category-wrapper {
+        display: flex;
+        gap: 10px;
+    }
+
+    .add-category-wrapper input {
+        flex-grow: 1;
+        width: auto; /* <-- Add this line */
+    }
+
+    .add-category-wrapper .submit-btn {
+        flex-shrink: 0;
+        padding: 10px 15px;
+        line-height: 1.5; 
+        width: auto; /* <-- Add this line */
+    }
+    
+    .category-divider {
+        border: none;
+        border-top: 1px solid #eee;
+        margin: 20px 0;
+    }
+
+    .category-list-container {
+        max-height: 250px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        background: #fdfdfd;
+    }
+
+    .category-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .category-list-item:last-child {
+        border-bottom: none;
+    }
+
+    .category-list-item .category-name {
+        font-size: 15px;
+        color: #333;
+        font-weight: 500;
+    }
+
+    .category-actions .btn-icon {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        color: #555;
+        margin-left: 10px;
+        transition: color 0.2s ease;
+    }
+
+    .category-actions .btn-edit-category:hover {
+        color: #007bff; /* Blue */
+    }
+    
+    .category-actions .btn-delete-category:hover {
+        color: #dc3545; /* Red */
+    }
+
+    /* Footer for the category modal */
+    .modal-footer {
+        text-align: right; 
+        padding: 15px 30px;
+        border-top: 1px solid #eee;
+        margin-top: 15px;
+    }
+
+    /* Small loading spinner */
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    /* === CSS FIX FOR ORIENTATION === */
+    .form-group-vertical {
+        display: block; /* Override flex */
+    }
+
+    .form-group-vertical label {
+        display: block; /* Ensure label is block-level */
+        margin-bottom: 8px; /* Add spacing */
+    }
+
+  </style>
+  </head>
 
 <body>
   <header class="header">
@@ -101,9 +239,7 @@ if (isset($_SESSION['UserID'])) {
     </div>
 
     <nav class="profile-nav">
-        <a href="#" id="account-details-link">
-            <i class="fas fa-user-edit" style="margin-right: 10px;"></i> Account Details
-        </a>
+        
     </nav>
     
     <div class="profile-footer">
@@ -148,11 +284,7 @@ if (isset($_SESSION['UserID'])) {
         <div class="filterControls">
           <select class="filterDropdown" id="floorFilter">
             <option value="">Category</option>
-            <option value="Electrical">Electrical</option>
-            <option value="Cleaning Solution">Cleaning Solution</option>
-            <option value="Furniture & Fixtures">Furniture & Fixtures</option>
-            <option value="Room Amenities">Room Amenities</option>
-          </select>
+            </select>
 
           <select class="filterDropdown" id="roomFilter">
             <option value="">Status</option>
@@ -205,11 +337,7 @@ if (isset($_SESSION['UserID'])) {
         <div class="filterControls">
           <select class="filterDropdown" id="floorFilterHistory">
             <option value="">Category</option>
-            <option value="Electrical">Electrical</option>
-            <option value="Cleaning Solution">Cleaning Solution</option>
-            <option value="Furniture & Fixtures">Furniture & Fixtures</option>
-            <option value="Room Amenities">Room Amenities</option>
-          </select>
+            </select>
 
           <select class="filterDropdown" id="roomFilterHistory">
             <option value="">Status</option>
@@ -286,10 +414,15 @@ if (isset($_SESSION['UserID'])) {
                     </div>
                      <div class="form-group category-group">
                         <label for="item-category">Category</label>
-                        <select id="item-category" required>
-                            <option value="" disabled selected>Select a category</option>
+                        <div class="category-select-wrapper">
+                            <select id="item-category" required>
+                                <option value="" disabled selected>Select a category</option>
                             </select>
-                    </div>
+                            <button type="button" class="edit-category-btn" id="open-category-modal-btn">
+                                <i class="fas fa-pencil-alt"></i> Edit
+                            </button>
+                        </div>
+                         </div>
                 </div>
                 <div class="form-group"> <label for="item-description">Description</label>
                     <textarea id="item-description" rows="3"></textarea>
@@ -325,7 +458,7 @@ if (isset($_SESSION['UserID'])) {
 
 <div class="modal-overlay-success" id="success-modal">
     <div class="modal-content-success">
-        <img src="inventory.jpg" alt="Success Icon" class="modal-icon" style="display: block; margin: 0 auto 20px;">
+        <img src="assets/icons/successful-icon.png" alt="Success Icon" class="modal-icon" style="display: block; margin: 0 auto 20px; width: 80px; height: 80px;">
         <h3>Item Added Successfully</h3>
         <button type="button" class="btn btn-okay" id="success-okay-btn">OKAY</button>
     </div>
@@ -356,8 +489,10 @@ if (isset($_SESSION['UserID'])) {
                 
                 <div class="form-group category-group">
                     <label for="edit-item-category">Category</label>
-                    <select id="edit-item-category" required>
-                        </select>
+                    <div class="category-select-wrapper">
+                        <select id="edit-item-category" required>
+                           </select>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -401,8 +536,346 @@ if (isset($_SESSION['UserID'])) {
     </div>
 </div>
 
-  <script src="script/shared-data.js"></script>
+<div class="modal-overlay" id="manage-category-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-title">
+                <i class="fas fa-tags modal-icon-fa"></i>
+                <h2>Manage Categories</h2>
+            </div>
+            <button class="modal-close-btn" id="category-modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="new-category-name">Add New Category</label>
+                <div class="add-category-wrapper">
+                    <input type="text" id="new-category-name" placeholder="Enter new category name">
+                    <button type="button" class="submit-btn" id="add-new-category-btn">ADD</button>
+                </div>
+            </div>
+
+            <hr class="category-divider">
+
+            <div class="form-group form-group-vertical">
+                <label>Existing Categories</label>
+                <div class="category-list-container" id="category-list-container">
+                    <div class="spinner"></div> </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+             <button type="button" class="submit-btn btn-cancel-white" id="category-modal-done-btn">DONE</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="edit-category-name-modal">
+    <div class="modal-content" style="max-width: 400px;">
+         <div class="modal-header">
+            <div class="modal-title">
+                <i class="fas fa-pencil-alt modal-icon-fa"></i>
+                <h2>Edit Category</h2>
+            </div>
+            <button class="modal-close-btn" id="edit-category-name-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="edit-category-name-form">
+                <input type="hidden" id="edit-category-id-input">
+                <div class="form-group">
+                    <label for="edit-category-name-input">Category Name</label>
+                    <input type="text" id="edit-category-name-input" required>
+                </div>
+                <div class="edit-modal-buttons">
+                     <button type="button" class="submit-btn btn-cancel-white" id="edit-category-name-cancel-btn">CANCEL</button>
+                     <button type="submit" class="submit-btn">SAVE</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script src="script/shared-data.js"></script>
   <script src="script/inventory.js?v=1.9"></script>
-</body>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // --- Modal DOM Elements ---
+        const categoryModal = document.getElementById('manage-category-modal');
+        const openCategoryModalBtn = document.getElementById('open-category-modal-btn');
+        const closeCategoryModalBtn = document.getElementById('category-modal-close-btn');
+        const doneCategoryModalBtn = document.getElementById('category-modal-done-btn');
+        
+        const editCategoryNameModal = document.getElementById('edit-category-name-modal');
+        const editCategoryNameForm = document.getElementById('edit-category-name-form');
+        const editCategoryNameCloseBtn = document.getElementById('edit-category-name-close-btn');
+        const editCategoryNameCancelBtn = document.getElementById('edit-category-name-cancel-btn');
+        const editCategoryIdInput = document.getElementById('edit-category-id-input');
+        const editCategoryNameInput = document.getElementById('edit-category-name-input');
+
+        // --- Category List Elements ---
+        const categoryListContainer = document.getElementById('category-list-container');
+        const addNewCategoryBtn = document.getElementById('add-new-category-btn');
+        const newCategoryNameInput = document.getElementById('new-category-name');
+        
+        // --- Select Dropdowns to Update ---
+        // (Add all select elements that need to be refreshed)
+        const allCategoryDropdowns = [
+            document.getElementById('item-category'),
+            document.getElementById('edit-item-category'),
+            document.getElementById('floorFilter'),
+            document.getElementById('floorFilterHistory')
+        ];
+
+        // --- API Endpoint ---
+        const API_URL = 'inventory_actions.php';
+
+        // --- Open/Close Main Category Modal ---
+        openCategoryModalBtn.addEventListener('click', () => {
+            categoryModal.style.display = 'flex';
+            loadCategories();
+        });
+
+        closeCategoryModalBtn.addEventListener('click', () => {
+            categoryModal.style.display = 'none';
+        });
+
+        doneCategoryModalBtn.addEventListener('click', () => {
+            categoryModal.style.display = 'none';
+        });
+
+        // --- Open/Close Edit Category Name Modal ---
+        function openEditCategoryNameModal(id, name) {
+            editCategoryIdInput.value = id;
+            editCategoryNameInput.value = name;
+            editCategoryNameModal.style.display = 'flex';
+        }
+
+        function closeEditCategoryNameModal() {
+            editCategoryNameModal.style.display = 'none';
+        }
+        
+        editCategoryNameCloseBtn.addEventListener('click', closeEditCategoryNameModal);
+        editCategoryNameCancelBtn.addEventListener('click', closeEditCategoryNameModal);
+
+
+        // --- Load and Display Categories in the List ---
+        async function loadCategories() {
+            categoryListContainer.innerHTML = '<div class="spinner"></div>'; // Show loader
+            try {
+                const response = await fetch(`${API_URL}?action=get_categories`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const categories = await response.json();
+                
+                categoryListContainer.innerHTML = ''; // Clear loader
+                if (categories.length === 0) {
+                    categoryListContainer.innerHTML = '<p style="text-align:center; color: #777;">No categories found.</p>';
+                } else {
+                    categories.forEach(category => {
+                        const item = document.createElement('div');
+                        item.className = 'category-list-item';
+                        item.dataset.id = category.ItemCategoryID;
+                        item.innerHTML = `
+                            <span class="category-name">${escapeHTML(category.ItemCategoryName)}</span>
+                            <div class="category-actions">
+                                <button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                                <button class="btn-icon btn-delete-category" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        `;
+                        categoryListContainer.appendChild(item);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading categories:', error);
+                categoryListContainer.innerHTML = '<p style="text-align:center; color: red;">Failed to load categories.</p>';
+            }
+        }
+
+        // --- Refresh All Category Dropdowns (CORRECTED) ---
+        async function refreshCategoryDropdowns() {
+            try {
+                const response = await fetch(`${API_URL}?action=get_categories`);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const categories = await response.json();
+                
+                allCategoryDropdowns.forEach(dropdown => {
+                    if (!dropdown) return; // Skip if dropdown doesn't exist
+                    
+                    // Store current value if one is selected
+                    const currentValue = dropdown.value;
+                    
+                    // Clear all options except the placeholder
+                    while (dropdown.options.length > 1) {
+                        dropdown.remove(1);
+                    }
+
+                    // Check if this is a form dropdown or a filter dropdown
+                    const isFormDropdown = (dropdown.id === 'item-category' || dropdown.id === 'edit-item-category');
+                    
+                    // Add new options
+                    categories.forEach(category => {
+                        const option = document.createElement('option');
+                        
+                        if (isFormDropdown) {
+                            // Forms use ID as value (e.g., "1")
+                            option.value = category.ItemCategoryID;
+                        } else {
+                            // Filters use Name as value (e.g., "Electrical")
+                            option.value = category.ItemCategoryName;
+                        }
+                        
+                        option.textContent = escapeHTML(category.ItemCategoryName);
+                        dropdown.appendChild(option);
+                    });
+
+                    // Try to re-select the previous value
+                    dropdown.value = currentValue;
+                    // If the previous value was deleted, it will default to the placeholder
+                    if(dropdown.value !== currentValue) {
+                         // If it's one of the form dropdowns, reset to placeholder
+                        if (isFormDropdown) {
+                             dropdown.value = ""; 
+                        }
+                    }
+                });
+
+            } catch (error) {
+                 console.error('Error refreshing category dropdowns:', error);
+            }
+        }
+
+
+        // --- Add New Category ---
+        addNewCategoryBtn.addEventListener('click', async () => {
+            const newName = newCategoryNameInput.value.trim();
+            if (!newName) {
+                alert('Please enter a category name.');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('CategoryName', newName);
+
+                const response = await fetch(`${API_URL}?action=add_category`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+
+                if (result.success) {
+                    newCategoryNameInput.value = ''; // Clear input
+                    await loadCategories(); // Reload list in modal
+                    await refreshCategoryDropdowns(); // Reload all dropdowns on the page
+                } else {
+                    alert(result.message || 'Failed to add category.');
+                }
+            } catch (error) {
+                console.error('Error adding category:', error);
+                alert('An error occurred. Please try again.');
+            }
+        });
+
+        // --- Handle Edit/Delete Clicks (Event Delegation) ---
+        categoryListContainer.addEventListener('click', async (e) => {
+            const editBtn = e.target.closest('.btn-edit-category');
+            const deleteBtn = e.target.closest('.btn-delete-category');
+            const item = e.target.closest('.category-list-item');
+
+            if (!item) return; // Clicked in empty space
+
+            const categoryId = item.dataset.id;
+            const categoryName = item.querySelector('.category-name').textContent;
+            
+            // --- Handle Edit ---
+            if (editBtn) {
+                openEditCategoryNameModal(categoryId, categoryName);
+            }
+            
+            // --- Handle Delete ---
+            if (deleteBtn) {
+                if (!confirm(`Are you sure you want to delete the category "${categoryName}"?\nThis cannot be undone.`)) {
+                    return;
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('CategoryID', categoryId);
+
+                    const response = await fetch(`${API_URL}?action=delete_category`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        await loadCategories(); // Reload list in modal
+                        await refreshCategoryDropdowns(); // Reload all dropdowns
+                    } else {
+                        alert(result.message || 'Failed to delete category.');
+                    }
+                } catch (error) {
+                    console.error('Error deleting category:', error);
+                    alert('An error occurred. Please try again.');
+                }
+            }
+        });
+
+        // --- Handle Save Edit Form ---
+        editCategoryNameForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const categoryId = editCategoryIdInput.value;
+            const newName = editCategoryNameInput.value.trim();
+
+            if (!newName) {
+                alert('Please enter a category name.');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('CategoryID', categoryId);
+                formData.append('CategoryName', newName);
+
+                const response = await fetch(`${API_URL}?action=update_category`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    closeEditCategoryNameModal();
+                    await loadCategories();
+                    await refreshCategoryDropdowns();
+                } else {
+                    alert(result.message || 'Failed to update category.');
+                }
+            } catch (error) {
+                console.error('Error updating category:', error);
+                alert('An error occurred. Please try again.');
+            }
+        });
+
+        // --- Utility Function ---
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[m];
+            });
+        }
+        
+    });
+  </script>
+  </body>
 
 </html>
