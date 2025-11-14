@@ -5,7 +5,9 @@ session_start([
     'cookie_secure' => isset($_SERVER['HTTPS']),
     'use_strict_mode' => true
 ]);
-
+header('Cache-Control: no-cache, no-store, must-revalidate'); 
+header('Pragma: no-cache');
+header('Expires: 0');
 // This is the new part
 if (isset($_SESSION['UserID']) && isset($_SESSION['UserType'])) {
     // User is already logged in. Redirect them to their correct page.

@@ -1,1064 +1,1296 @@
-/*
- * ========================================================
- * DEFAULT DATA (SOURCE OF TRUTH)
- * ========================================================
- */
-const PARKING_DATA_KEY = 'celestiaParkingData';
-
-// Default data if localStorage is empty
-const defaultData = {
-    slots: [
-        // Area 1 (Mixed)
-        { slotNumber: '1A01', area: 1, allowedVehicle: '2-Wheel, 4-Wheel', status: 'occupied', parkedVehicle: { plate: 'AB123C', room: '101', name: 'Juan Dela Cruz', vehicleType: '4 wheeled', category: 'Sedan', enterTime: '6:30 PM', enterDate: '2025.10.25' } },
-        ...Array.from({ length: 22 }, (v, i) => ({
-            slotNumber: `1B${(i + 1).toString().padStart(2, '0')}`, area: 1, allowedVehicle: '4-Wheel', status: 'occupied', parkedVehicle: { plate: `RND${i}PLT`, room: '102', name: 'Random Guest', vehicleType: '4 wheeled', category: 'SUV', enterTime: '7:00 PM', enterDate: '2025.10.25' }
-        })),
-        // Area 1 (Available)
-        ...Array.from({ length: 17 }, (v, i) => ({
-            slotNumber: `1C${(i + 1).toString().padStart(2, '0')}`, area: 1, allowedVehicle: '2-Wheel', status: 'available', parkedVehicle: null
-        })),
-        // Area 2
-        { slotNumber: '2A01', area: 2, allowedVehicle: '2-Wheel, 4-Wheel', status: 'occupied', parkedVehicle: { plate: 'CD456E', room: '102', name: 'Maria Clara', vehicleType: '2 wheeled', category: 'Motorcycle', enterTime: '7:00 PM', enterDate: '2025.10.25' } },
-        ...Array.from({ length: 22 }, (v, i) => ({
-            slotNumber: `2B${(i + 1).toString().padStart(2, '0')}`, area: 2, allowedVehicle: '4-Wheel', status: 'occupied', parkedVehicle: { plate: `RND${i + 22}PLT`, room: '103', name: 'Another Guest', vehicleType: '4 wheeled', category: 'Sedan', enterTime: '8:00 PM', enterDate: '2025.10.25' }
-        })),
-        ...Array.from({ length: 17 }, (v, i) => ({
-            slotNumber: `2C${(i + 1).toString().padStart(2, '0')}`, area: 2, allowedVehicle: '2-Wheel', status: 'available', parkedVehicle: null
-        })),
-        // Area 3 (Full)
-        ...Array.from({ length: 40 }, (v, i) => ({
-            slotNumber: `3A${(i + 1).toString().padStart(2, '0')}`, area: 3, allowedVehicle: '4-Wheel', status: 'occupied', parkedVehicle: { plate: `FULL${i}PLT`, room: '201', name: 'Full Guest', vehicleType: '4 wheeled', category: 'Van', enterTime: '9:00 PM', enterDate: '2025.10.25' }
-        })),
-        // Area 4
-        ...Array.from({ length: 23 }, (v, i) => ({
-            slotNumber: `4A${(i + 1).toString().padStart(2, '0')}`, area: 4, allowedVehicle: '4-Wheel', status: 'occupied', parkedVehicle: { plate: `RND${i + 44}PLT`, room: '202', name: 'Guest Four', vehicleType: '4 wheeled', category: 'Pickup', enterTime: '10:00 PM', enterDate: '2025.10.25' }
-        })),
-        ...Array.from({ length: 17 }, (v, i) => ({
-            slotNumber: `4B${(i + 1).toString().padStart(2, '0')}`, area: 4, allowedVehicle: '4-Wheel', status: 'available', parkedVehicle: null
-        })),
-        // Area 5
-        ...Array.from({ length: 23 }, (v, i) => ({
-            slotNumber: `5A${(i + 1).toString().padStart(2, '0')}`, area: 5, allowedVehicle: '4-Wheel', status: 'occupied', parkedVehicle: { plate: `RND${i + 66}PLT`, room: '203', name: 'Guest Five', vehicleType: '4 wheeled', category: 'Sedan', enterTime: '11:00 PM', enterDate: '2025.10.25' }
-        })),
-        ...Array.from({ length: 17 }, (v, i) => ({
-            slotNumber: `5B${(i + 1).toString().padStart(2, '0')}`, area: 5, allowedVehicle: '4-Wheel', status: 'available', parkedVehicle: null
-        }))
-    ],
-    history: [],
-    user: {
-        id: "019284738475",
-        firstName: "Juan",
-        middleName: "Constant",
-        lastName: "Bagayan",
-        emailAddress: "Juan@housekeeper.com",
-        username: "Juana",
-        password: "123", // Simplified for testing
-        birthday: "2004-10-25",
-        contact: "09222222222",
-        shift: "Day",
-        address: "Block 1 Lot 2, Quezon City",
-        role: "Parking Management Head"
-    },
-    damage: [
-        { type: 'Burnt', date: '10/25/25', count: 2 }
-    ],
-    vehicleTypes: [
-        { name: '2 Wheeled' },
-        { name: '4 Wheeled' }
-    ],
-    vehicleCategories: [
-        { name: 'Sedan' },
-        { name: 'SUV' },
-        { name: 'Pickup' },
-        { name: 'Van' },
-        { name: 'Motorcycle' },
-        { name: 'Truck' }
-    ]
-};
-
-/*
- * ========================================================
- * MAIN APPLICATION OBJECT
- * Encapsulates all state and methods
- * ========================================================
- */
 document.addEventListener('DOMContentLoaded', () => {
+
+    // ========================================================
+    // API & DATA MANAGEMENT
+    // ========================================================
+    const API_URL = 'parking_api.php';
+
+    // Main App State
+    let slotsData = [];       // For 'Slots' tab
+    let vehiclesInData = [];  // For 'Vehicle In' tab
+    let historyData = [];     // For 'History' tab
+    let dashboardTableData = []; // Cache for dashboard table
     
-    const App = {
+    let userData = window.INJECTED_USER_DATA || { Fname: "Guest" };
+
+    // Pagination State
+    let currentPages = {
+        slots: 1,
+        vehicleIn: 1,
+        history: 1
+    };
+    const rowsPerPage = 10; 
+
+    // Sorting State
+    let sortState = {
+        dashboard: { column: 'AreaName', direction: 'asc' }, 
+        slots: { column: 'SlotName', direction: 'asc' },
+        vehicleIn: { column: 'EntryTime', direction: 'desc' },
+        history: { column: 'ExitTime', direction: 'desc' }
+    };
+
+    // Global variable to track which vehicle/slot is being actioned
+    let currentSlotID = null;
+    let currentSlotName = null;
+    let currentSessionID = null;
+    
+    // === NEW DOM Elements for Management Modals ===
+    const manageTypesModal = document.getElementById('manage-types-modal');
+    const openTypesModalBtn = document.getElementById('open-types-modal-btn');
+    const addNewTypeBtn = document.getElementById('add-new-type-btn');
+    const newTypeNameInput = document.getElementById('new-type-name');
+    const typesListContainer = document.getElementById('types-list-container');
+
+    const manageCategoriesModal = document.getElementById('manage-categories-modal');
+    const openCategoriesModalBtn = document.getElementById('open-categories-modal-btn');
+    const categoryManagerTypeSelect = document.getElementById('category-manager-type-select');
+    const addNewCategoryBtn = document.getElementById('add-new-category-btn');
+    const newCategoryNameInput = document.getElementById('new-category-name');
+    const categoriesListContainer = document.getElementById('categories-list-container');
+    
+    const editNameModal = document.getElementById('edit-name-modal');
+    const editNameForm = document.getElementById('edit-name-form');
+    const editNameTitle = document.getElementById('edit-name-title');
+    const editIdInput = document.getElementById('edit-id-input');
+    const editTypeInput = document.getElementById('edit-type-input');
+    const editNameInput = document.getElementById('edit-name-input');
+    
+
+    // ========================================================
+    // API HELPER
+    // ========================================================
+    async function fetchAPI(action, options = {}, queryParams = "") {
+        const url = `${API_URL}?action=${action}${queryParams ? '&' + queryParams : ''}`;
         
-        // ========================================================
-        // I. STATE & CONSTANTS
-        // All application data lives here
-        // ========================================================
+        try {
+            const response = await fetch(url, options);
 
-        state: {
-            slots: [],
-            history: [],
-            user: {},
-            damage: [],
-            vehicleTypes: [],
-            vehicleCategories: [],
-            currentPages: {
-                slots: 1,
-                vehicleIn: 1,
-                history: 1
-            },
-            activeSlotToExit: null,
-            activeTab: 'dashboard'
-        },
+            if (!response.ok) {
+                let errorMsg = `HTTP error! status: ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error || errorMsg;
+                } catch (e) { /* Ignore if response is not JSON */ }
+                throw new Error(errorMsg);
+            }
 
-        CONSTANTS: {
-            ROWS_PER_PAGE: 10
-        },
+            const data = await response.json();
+            
+            if (data.success === false) {
+                throw new Error(data.error || 'API returned an error');
+            }
+            
+            return data;
 
-        // ========================================================
-        // II. DOM ELEMENTS
-        // Cached elements for performance
-        // ========================================================
+        } catch (error) {
+            console.error('Fetch Error:', error);
+            showToast(error.message, 'error');
+            return null; // Return null on failure
+        }
+    }
+
+
+    // ========================================================
+    // TOAST NOTIFICATION
+    // ========================================================
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
         
-        elements: {},
-
-        /**
-         * Caches all frequently used DOM elements
-         */
-        cacheElements() {
-            this.elements.toastContainer = document.getElementById('toast-container');
-            this.elements.tabs = document.querySelectorAll('.tab');
-            this.elements.contentAreas = document.querySelectorAll('.content');
-            this.elements.areaSelect = document.getElementById('areaSelect');
-            this.elements.searchInput = document.querySelector('.search-box input');
-            this.elements.downloadIcon = document.getElementById('downloadIcon');
-            
-            // Enter Vehicle Modal
-            this.elements.enterVehicleForm = {
-                guestName: document.getElementById('guestName'),
-                plateNumber: document.getElementById('plateNumber'),
-                roomNumber: document.getElementById('roomNumber'),
-                vehicleType: document.getElementById('vehicleType'),
-                categorySelect: document.getElementById('categorySelect'),
-                slotNumberTitle: document.getElementById('slotNumberTitle'),
-                slotSelect: document.getElementById('slotSelect')
-            };
-
-            // Exit Vehicle Modal
-            this.elements.exitModalInfo = {
-                slotNumber: document.getElementById('exitSlotNumber'),
-                plate: document.getElementById('exitPlate'),
-                vehicle: document.getElementById('exitVehicle'),
-                dateTime: document.getElementById('exitDateTime')
-            };
-            
-            // Edit Category Modal
-            this.elements.editCategory = {
-                title: document.getElementById('editCategoryTitle'),
-                list: document.getElementById('editCategoryList'),
-                input: document.getElementById('newCategoryName'),
-                addButton: document.getElementById('btnAddCategoryItem')
-            };
-
-            // Damage Modal
-            this.elements.damageForm = {
-                type: document.getElementById('damageType'),
-                count: document.getElementById('damageCount')
-            };
-            this.elements.damagesListBody = document.getElementById('damagesListBody');
-
-            // Render Containers
-            this.elements.dashboardCards = document.querySelectorAll('.summary-cards .card .card-value');
-            this.elements.dashboardTableBody = document.querySelector('#dashboardContent table tbody');
-            this.elements.slotsTable = document.getElementById('slotsTable');
-            this.elements.vehicleInTable = document.getElementById('vehicleInTable');
-            this.elements.historyTable = document.getElementById('historyTable');
-
-            // Pagination Containers
-            this.elements.pagination = {
-                slots: document.getElementById('pagination-slots'),
-                vehicleIn: document.getElementById('pagination-vehicleIn'),
-                history: document.getElementById('pagination-history')
-            };
-        },
-
-        // ========================================================
-        // III. INITIALIZATION
-        // ========================================================
-
-        /**
-         * Initializes the application
-         */
-        init() {
-            this.cacheElements();
-            this.loadData();
-            this.setupEventListeners();
-            this.switchTab('dashboard'); // Start on dashboard
-        },
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
         
-        // ========================================================
-        // IV. DATA PERSISTENCE (localStorage)
-        // ========================================================
-
-        /**
-         * Saves the current application state to localStorage
-         */
-        saveData() {
-            const dataToSave = {
-                slots: this.state.slots,
-                history: this.state.history,
-                user: this.state.user,
-                damage: this.state.damage,
-                vehicleTypes: this.state.vehicleTypes,
-                vehicleCategories: this.state.vehicleCategories
-            };
-            localStorage.setItem(PARKING_DATA_KEY, JSON.stringify(dataToSave));
-        },
-
-        /**
-         * Loads state from localStorage or uses default data
-         */
-        loadData() {
-            const dataString = localStorage.getItem(PARKING_DATA_KEY);
-            const loadedData = dataString ? JSON.parse(dataString) : defaultData;
-
-            // Merge loaded data with defaults to ensure all keys exist
-            this.state.slots = loadedData.slots || defaultData.slots;
-            this.state.history = loadedData.history || defaultData.history;
-            this.state.user = loadedData.user || defaultData.user;
-            this.state.damage = loadedData.damage || defaultData.damage;
-            this.state.vehicleTypes = loadedData.vehicleTypes || defaultData.vehicleTypes;
-            this.state.vehicleCategories = loadedData.vehicleCategories || defaultData.vehicleCategories;
-        },
-
-        // ========================================================
-        // V. EVENT LISTENERS SETUP
-        // ========================================================
-
-        /**
-         * Attaches all event listeners for the application
-         */
-        setupEventListeners() {
-            // Tabs
-            this.elements.tabs.forEach(tab => {
-                tab.addEventListener('click', (e) => this.switchTab(e.target.dataset.tab));
-            });
-            
-            // Search and Filter
-            document.querySelector('.search-btn')?.addEventListener('click', () => this.render());
-            this.elements.searchInput?.addEventListener('keyup', () => this.render());
-            this.elements.areaSelect?.addEventListener('change', () => {
-                // Reset pagination on filter change
-                this.state.currentPages = { slots: 1, vehicleIn: 1, history: 1 };
-                this.render();
-            });
-
-            // Download
-            this.elements.downloadIcon?.addEventListener('click', () => this.openModal('downloadModal'));
-            document.getElementById('btnConfirmDownload')?.addEventListener('click', () => this.downloadFile());
-
-            // Modals and Forms
-            this.setupFormListeners();
-            this.setupModalListeners();
-            this.setupDynamicListeners(); // For buttons inside tables
-        },
-
-        /**
-         * Sets up listeners for forms
-         */
-        setupFormListeners() {
-            // Enter Vehicle
-            document.getElementById('btnSaveVehicle')?.addEventListener('click', () => this.showConfirmModal());
-            document.getElementById('btnConfirmEnter')?.addEventListener('click', () => this.confirmEnterVehicle());
-            
-            // Edit Category/Vehicle
-            document.getElementById('btnEditVehicleType')?.addEventListener('click', () => this.openEditCategory('vehicle'));
-            document.getElementById('btnEditCategoryIcon')?.addEventListener('click', () => this.openEditCategory('category'));
-            this.elements.editCategory.addButton?.addEventListener('click', () => this.addNewCategoryItem());
-
-            // Exit Vehicle
-            document.getElementById('btnConfirmExit')?.addEventListener('click', () => this.confirmExit());
-
-            // Damage Modal
-            document.getElementById('btnAddDamage')?.addEventListener('click', () => this.addDamageItem());
-        },
-
-        /**
-         * Sets up listeners for closing modals
-         */
-        setupModalListeners() {
-            // Close buttons (X) and explicit close buttons (e.g., "Cancel")
-            document.querySelectorAll('.modal-close, button[data-modal-id]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const modalId = e.target.dataset.modalId || e.target.closest('.modal-overlay')?.id;
-                    if (modalId) this.closeModal(modalId);
-                });
-            });
-
-            // Close modal when clicking overlay
-            document.querySelectorAll('.modal-overlay').forEach(overlay => {
-                overlay.addEventListener('click', (e) => {
-                    if (e.target === overlay) this.closeModal(overlay.id);
-                });
-            });
-        },
-
-        /**
-         * Sets up listeners for dynamically created elements (using event delegation)
-         */
-        setupDynamicListeners() {
-            document.body.addEventListener('click', e => {
-                // Enter Vehicle Button
-                const enterButton = e.target.closest('.btn-enter');
-                if (enterButton) {
-                    this.openEnterVehicleModal(enterButton.dataset.slotId);
-                    return;
-                }
-
-                // Exit Vehicle Button
-                const exitButton = e.target.closest('.exit-btn');
-                if (exitButton) {
-                    this.openExitModal(exitButton.dataset.slotId);
-                    return;
-                }
-                
-                // Edit/Delete Category Icons
-                const iconButton = e.target.closest('.list-icon');
-                if (iconButton) {
-                    const mode = this.elements.editCategory.addButton.dataset.mode;
-                    const name = iconButton.dataset.name;
-
-                    if (iconButton.alt === 'Delete') {
-                        if (confirm(`Are you sure you want to delete "${name}"?`)) {
-                            this.deleteCategoryItem(name, mode);
-                        }
-                    }
-                    
-                    if (iconButton.alt === 'Edit') {
-                        this.elements.editCategory.input.value = name;
-                        this.elements.editCategory.input.focus();
-                        this.showToast(`Now editing "${name}". Change the name and click "ADD" to save.`, 'info');
-                    }
-                }
-            });
-        },
-
-        // ========================================================
-        // VI. UI (TABS, MODALS, TOASTS)
-        // ========================================================
-
-        /**
-         * Shows a toast notification
-         * @param {string} message The message to display
-         * @param {'success' | 'error' | 'info'} type The type of toast
-         */
-        showToast(message, type = 'success') {
-            const container = this.elements.toastContainer;
-            if (!container) return;
-            
-            const toast = document.createElement('div');
-            toast.className = `toast ${type}`;
-            toast.textContent = message;
-            
-            container.appendChild(toast);
-            
-            setTimeout(() => toast.classList.add('show'), 10);
-            
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
             setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 400);
-            }, 3000);
-        },
-
-        /**
-         * Switches the active tab and triggers a re-render
-         * @param {string} tabId The ID of the tab to switch to
-         */
-        switchTab(tabId) {
-            this.state.activeTab = tabId;
-
-            // Update tab UI
-            this.elements.tabs.forEach(t => t.classList.remove('active'));
-            document.querySelector(`.tab[data-tab="${tabId}"]`)?.classList.add('active');
-            
-            // Update content UI
-            this.elements.contentAreas.forEach(c => c.classList.add('hidden'));
-            document.getElementById(tabId + 'Content')?.classList.remove('hidden');
-
-            // Clear search and reset pagination
-            this.elements.searchInput.value = '';
-            this.state.currentPages = { slots: 1, vehicleIn: 1, history: 1 };
-            
-            // Trigger a full re-render for the new tab
-            this.render();
-        },
-
-        openModal(id) {
-            document.getElementById(id)?.classList.add('active');
-        },
-
-        closeModal(id) {
-            document.getElementById(id)?.classList.remove('active');
-        },
-
-        // ========================================================
-        // VII. BUSINESS LOGIC
-        // ========================================================
-
-        /**
-         * Populates vehicle dropdowns in the "Enter Vehicle" modal
-         */
-        populateVehicleDropdowns() {
-            const { vehicleType, categorySelect } = this.elements.enterVehicleForm;
-            if (vehicleType) {
-                vehicleType.innerHTML = '<option value="">Select</option>' + 
-                    this.state.vehicleTypes.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
-            }
-            if (categorySelect) {
-                categorySelect.innerHTML = this.state.vehicleCategories.map(v => `<option value="${v.name}">${v.name}</option>`).join('');
-            }
-        },
-
-        openEnterVehicleModal(slotNumber) {
-            const slot = this.state.slots.find(s => s.slotNumber === slotNumber);
-            if (!slot) return;
-            
-            const form = this.elements.enterVehicleForm;
-            
-            // Reset form
-            form.guestName.value = '';
-            form.plateNumber.value = '';
-            form.roomNumber.value = '';
-            
-            this.populateVehicleDropdowns();
-            
-            // Set slot info
-            form.slotNumberTitle.textContent = slot.slotNumber;
-            form.slotSelect.innerHTML = `<option>${slot.slotNumber}</option>`;
-            
-            this.openModal('enterVehicleModal');
-        },
-        
-        showConfirmModal() {
-            const { guestName, plateNumber, vehicleType } = this.elements.enterVehicleForm;
-            if (!guestName.value || !plateNumber.value || !vehicleType.value) {
-                this.showToast('Please fill out Name, Plate #, and Vehicle.', 'error');
-                return;
-            }
-            this.closeModal('enterVehicleModal');
-            this.openModal('confirmModal');
-        },
-
-        /**
-         * Parks a new vehicle
-         */
-        confirmEnterVehicle() {
-            const form = this.elements.enterVehicleForm;
-            const slotNumber = form.slotNumberTitle.textContent;
-            
-            const newVehicle = {
-                name: form.guestName.value,
-                plate: form.plateNumber.value.toUpperCase(),
-                room: form.roomNumber.value,
-                vehicleType: form.vehicleType.value,
-                category: form.categorySelect.value,
-                enterTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                enterDate: new Date().toLocaleDateString('en-CA') // YYYY-MM-DD
-            };
-
-            const slot = this.state.slots.find(s => s.slotNumber === slotNumber);
-            if (slot) {
-                slot.status = 'occupied';
-                slot.parkedVehicle = newVehicle;
-            }
-
-            this.saveData();
-            
-            this.closeModal('confirmModal');
-            this.openModal('successModal');
-            this.showToast('Vehicle parked successfully!');
-
-            this.render(); // Re-render the UI
-        },
-        
-        openExitModal(slotNumber) {
-            const slot = this.state.slots.find(s => s.slotNumber === slotNumber);
-            if (!slot || !slot.parkedVehicle) return;
-
-            const vehicle = slot.parkedVehicle;
-            const info = this.elements.exitModalInfo;
-            
-            info.slotNumber.textContent = slot.slotNumber;
-            info.plate.textContent = vehicle.plate;
-            info.vehicle.textContent = vehicle.category;
-            info.dateTime.textContent = vehicle.enterDate + ' / ' + vehicle.enterTime;
-            
-            this.state.activeSlotToExit = slot.slotNumber;
-            
-            this.openModal('exitModal');
-        },
-
-        /**
-         * Exits a vehicle and moves it to history
-         */
-        confirmExit() {
-            const slotNumber = this.state.activeSlotToExit;
-            if (!slotNumber) return;
-
-            const slot = this.state.slots.find(s => s.slotNumber === slotNumber);
-            if (!slot || !slot.parkedVehicle) return;
-
-            const vehicleToLog = slot.parkedVehicle;
-            
-            // Calculate parking duration
-            let enterDateTime;
-            try {
-                // Fix for dates with dots (e.g., 2025.10.25)
-                const cleanDate = vehicleToLog.enterDate.replace(/\./g, '-');
-                enterDateTime = new Date(`${cleanDate} ${vehicleToLog.enterTime}`);
-                if (isNaN(enterDateTime.getTime())) {
-                    enterDateTime = new Date(cleanDate); // Fallback to date only
+                if (toast.parentNode) {
+                    toast.remove();
                 }
-            } catch (e) {
-                enterDateTime = new Date(); // Fallback to now
+            }, 400);
+        }, 3000);
+    }
+
+    // ========================================================
+    // UI (TABS, MODALS, SIDEBAR)
+    // ========================================================
+    const showModal = (modal) => {
+        if (modal) {
+            // Special handling for the main modal types
+            if (modal.classList.contains('modal-overlay') || 
+                modal.classList.contains('modal-overlay-confirm') || 
+                modal.classList.contains('modal-overlay-success')) {
+                modal.classList.add('show-modal');
+            } else if (modal.classList.contains('modalBackdrop')) {
+                // Handle the logout modal
+                modal.style.display = 'flex';
             }
-
-            const exitDateTime = new Date();
-            const durationMs = exitDateTime - (isNaN(enterDateTime.getTime()) ? exitDateTime : enterDateTime);
-            const durationHours = (durationMs / (1000 * 60 * 60)).toFixed(1);
-
-            const historyLog = {
-                ...vehicleToLog,
-                slotNumber: slot.slotNumber,
-                exitTime: exitDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                exitDate: exitDateTime.toLocaleDateString('en-CA'),
-                parkingTime: `${durationHours} hrs`
-            };
-
-            this.state.history.unshift(historyLog); 
-
-            // Free up the slot
-            slot.status = 'available';
-            slot.parkedVehicle = null;
-            this.state.activeSlotToExit = null;
-
-            this.saveData();
-            this.closeModal('exitModal');
-            this.showToast('Vehicle exited successfully!');
-            this.render(); // Re-render the UI
-        },
-        
-        /**
-         * Opens the modal to edit vehicle types or categories
-         * @param {'vehicle' | 'category'} mode
-         */
-        openEditCategory(mode) {
-            const { title, list, input, addButton } = this.elements.editCategory;
-            if (!title || !list || !input) return;
-
-            let dataList = (mode === 'vehicle') ? this.state.vehicleTypes : this.state.vehicleCategories;
-            
-            title.textContent = (mode === 'vehicle') ? 'Edit Vehicle' : 'Edit Category';
-            input.placeholder = (mode === 'vehicle') ? 'Enter new vehicle type' : 'Enter new category';
-            
-            list.innerHTML = ''; // Clear list
-            dataList.forEach(item => {
-                list.innerHTML += `
-                    <div class="category-list-item">
-                        <span>${item.name}</span>
-                        <div class="category-item-actions">
-                            <svg class="list-icon" data-name='${item.name}' alt="Edit" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#FFA237" viewBox="0 0 16 16">
-                                <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/>
-                            </svg>
-                            <svg class="list-icon" data-name='${item.name}' alt="Delete" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#FFA237" viewBox="0 0 16 16">
-                                <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                                <path d="M4 8a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7A.5.5 0 0 1 4 8z"/>
-                            </svg>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            // Store the mode on the button
-            if(addButton) addButton.dataset.mode = mode;
-            
-            this.openModal('editCategoryModal');
-        },
-
-        addNewCategoryItem() {
-            const { input, addButton } = this.elements.editCategory;
-            if (!addButton || !input) return;
-
-            const mode = addButton.dataset.mode;
-            const newName = input.value.trim();
-
-            if (!newName) {
-                this.showToast('Please enter a name.', 'error');
-                return;
+        }
+    };
+    
+    const hideModal = (modal) => {
+        if (modal) {
+            // Special handling for the main modal types
+            if (modal.classList.contains('modal-overlay') || 
+                modal.classList.contains('modal-overlay-confirm') || 
+                modal.classList.contains('modal-overlay-success')) {
+                modal.classList.remove('show-modal');
+            } else if (modal.classList.contains('modalBackdrop')) {
+                // Handle the logout modal
+                modal.style.display = 'none';
             }
+        }
+    };
+    
 
-            let dataList = (mode === 'vehicle') ? this.state.vehicleTypes : this.state.vehicleCategories;
-            let listName = (mode === 'vehicle') ? "Vehicle type" : "Category";
-
-            if (dataList.some(item => item.name.toLowerCase() === newName.toLowerCase())) {
-                this.showToast(`${newName} already exists.`, 'error');
-                return;
-            }
-            
-            dataList.push({ name: newName });
-            this.saveData();
-            
-            this.showToast(`${listName} "${newName}" added!`, 'success');
-            input.value = '';
-            
-            this.openEditCategory(mode); // Refresh modal list
-            this.populateVehicleDropdowns(); // Refresh enter vehicle modal
-        },
-        
-        deleteCategoryItem(nameToDelete, mode) {
-            let dataList = (mode === 'vehicle') ? this.state.vehicleTypes : this.state.vehicleCategories;
-            let listName = (mode === 'vehicle') ? "Vehicle type" : "Category";
-
-            const index = dataList.findIndex(item => item.name === nameToDelete);
-            if (index === -1) {
-                this.showToast('Item not found.', 'error');
-                return;
-            }
-
-            dataList.splice(index, 1);
-            this.saveData();
-            this.showToast(`${listName} "${nameToDelete}" deleted!`, 'success');
-            
-            this.openEditCategory(mode); // Refresh modal list
-            this.populateVehicleDropdowns(); // Refresh enter vehicle modal
-        },
-
-        addDamageItem() {
-            const { type, count } = this.elements.damageForm;
-            if (!type.value) {
-                this.showToast('Please enter damage type.', 'error');
-                return;
-            }
-            
-            const newDamage = {
-                type: type.value,
-                date: new Date().toLocaleDateString(),
-                count: parseInt(count.value) || 1
-            };
-            
-            this.state.damage.push(newDamage);
-            this.saveData();
-            
-            this.renderDamages(); // Update damage list
-            
-            type.value = '';
-            count.value = '1';
-            this.showToast('Damage item added!', 'success');
-        },
-
-        downloadFile() {
-            let csvContent = "Slot Number,Plate #,Room,Name,Vehicle Type,Category,Parking Time,Enter Time,Enter Date,Exit Time,Exit Date\n";
-            
-            this.state.history.forEach(vehicle => {
-                csvContent += `"${vehicle.slotNumber}","${vehicle.plate}","${vehicle.room}","${vehicle.name}","${vehicle.vehicleType}","${vehicle.category}","${vehicle.parkingTime}","${vehicle.enterTime}","${vehicle.enterDate}","${vehicle.exitTime}","${vehicle.exitDate}"\n`;
-            });
-            
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `parking_history_${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            
-            this.closeModal('downloadModal');
-            this.showToast('History downloaded successfully!');
-        },
-
-        // ========================================================
-        // VIII. RENDER FUNCTIONS
-        // ========================================================
-        
-        /**
-         * Main render function. Called on tab switch and after data changes.
-         */
-        render() {
-            const searchTerm = this.elements.searchInput.value.toLowerCase();
-            const filterValue = this.elements.areaSelect.value;
-            
-            this.updateAreaSelectOptions();
-            this.elements.downloadIcon.style.display = this.state.activeTab === 'history' ? 'block' : 'none';
-            if (this.elements.searchInput) {
-                this.elements.searchInput.placeholder = (this.state.activeTab === 'dashboard') ? "Search..." : "Search Slot, Plate#, Name...";
-            }
-
-            switch(this.state.activeTab) {
-                case 'dashboard':
-                    this.renderDashboard(filterValue);
-                    break;
-                case 'slots':
-                    this.renderSlots(filterValue, searchTerm);
-                    break;
-                case 'vehicleIn':
-                    this.renderVehicleIn(filterValue, searchTerm);
-                    break;
-                case 'history':
-                    this.renderHistory(filterValue, searchTerm);
-                    break;
-                case 'damages':
-                    this.renderDamages();
-                    break;
-            }
-        },
-
-        /**
-         * Updates the Area/Slot filter dropdown based on the active tab
-         */
-        updateAreaSelectOptions() {
-            const areaSelect = this.elements.areaSelect;
-            if (!areaSelect) return;
-
-            const tab = this.state.activeTab;
-            
-            if (tab === 'vehicleIn' || tab === 'history' || tab === 'slots') {
-                const uniqueSlotNumbers = [...new Set(this.state.slots.map(s => s.slotNumber))].sort();
-                let slotOptions = uniqueSlotNumbers.map(s => `<option value="${s}">${s}</option>`).join('');
-                areaSelect.innerHTML = `<option value="all">Slot Number</option>${slotOptions}`;
-            } else {
-                const uniqueAreas = [...new Set(this.state.slots.map(s => s.area))].sort((a,b) => a - b);
-                let areaOptions = uniqueAreas.map(a => `<option value="${a}">${a}</option>`).join('');
-                areaSelect.innerHTML = `<option value="all">Area</option>${areaOptions}`;
-            }
-        },
-        
-        renderEmptyState(container, icon, title, message) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon">${icon}</div>
-                    <h3>${title}</h3>
-                    <p>${message}</p>
-                </div>
-            `;
-        },
-
-        renderDashboard(filterValue) {
-            let filteredData = this.state.slots;
-            if (filterValue !== "all") {
-                filteredData = this.state.slots.filter(s => s.area == filterValue);
-            }
-            
-            // Render Summary Cards
-            const occupiedCount = filteredData.filter(s => s.status === 'occupied').length;
-            const availableCount = filteredData.filter(s => s.status === 'available').length;
-            const totalCount = filteredData.length;
-
-            const cards = this.elements.dashboardCards;
-            if (cards[0]) cards[0].textContent = occupiedCount;
-            if (cards[1]) cards[1].textContent = availableCount;
-            if (cards[2]) cards[2].textContent = totalCount;
-
-            // Render Table
-            const tbody = this.elements.dashboardTableBody;
-            if (!tbody) return;
-            tbody.innerHTML = '';
-            
-            const areaStats = {};
-            filteredData.forEach(slot => {
-                if (!areaStats[slot.area]) {
-                    areaStats[slot.area] = { area: slot.area, available: 0, occupied: 0, total: 0 };
-                }
-                areaStats[slot.area].total++;
-                if (slot.status === 'available') areaStats[slot.area].available++;
-                else areaStats[slot.area].occupied++;
-            });
-
-            Object.keys(areaStats).sort((a, b) => a - b).forEach(areaKey => {
-                const area = areaStats[areaKey];
-                const isFull = area.available === 0;
-                const row = document.createElement('tr');
-                if (isFull) row.classList.add('full-row'); 
+    function setupUIListeners() {
+        // --- Tab Navigation ---
+        const tabBtns = document.querySelectorAll('.tabBtn');
+        const tabContents = document.querySelectorAll('.tabContent');
+        tabBtns.forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.getAttribute('data-tab');
+                tabBtns.forEach((b) => b.classList.remove('active'));
+                tabContents.forEach((content) => content.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(`${tabName}-tab`).classList.add('active');
                 
-                row.innerHTML = `
-                    <td class="${isFull ? 'text-red' : ''}">${area.area}</td>
+                // Reset page number on tab switch
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                
+                // Re-fetch data for the new tab
+                performFilterAndSearch();
+            });
+        });
+
+        // --- Profile & Logout ---
+        const profileBtn = document.getElementById('profileBtn');
+        const sidebar = document.getElementById('profile-sidebar');
+        const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const logoutModal = document.getElementById('logoutModal');
+        const closeLogoutBtn = document.getElementById('closeLogoutBtn');
+        const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+        const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+
+        if (profileBtn && sidebar && sidebarCloseBtn) {
+            profileBtn.addEventListener('click', () => sidebar.classList.add('active'));
+            sidebarCloseBtn.addEventListener('click', () =>
+            sidebar.classList.remove('active')
+            );
+        }
+
+        if (logoutBtn)
+            logoutBtn.addEventListener('click', () => showModal(logoutModal));
+        if (closeLogoutBtn)
+            closeLogoutBtn.addEventListener('click', () => hideModal(logoutModal));
+        if (cancelLogoutBtn)
+            cancelLogoutBtn.addEventListener('click', () => hideModal(logoutModal));
+        
+        if (confirmLogoutBtn) {
+            confirmLogoutBtn.addEventListener('click', () => {
+                window.location.href = 'logout.php';
+            });
+        }
+        if (logoutModal) {
+            logoutModal.addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                hideModal(logoutModal);
+            }
+            });
+        }
+        
+        // --- Generic Modal Close Buttons ---
+        document.querySelectorAll('.modal-close-btn, .btn-okay, .btn-cancel, button[data-modal-id]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Check if it's a "cancel" button inside a specific form modal
+                if(e.target.id === 'edit-category-name-cancel-btn') {
+                     e.preventDefault(); // prevent form submission
+                }
+                const modal = e.target.closest('.modal-overlay, .modal-overlay-confirm, .modal-overlay-success, .modalBackdrop');
+                if (modal) hideModal(modal);
+            });
+        });
+        
+        // Close modal on overlay click
+        document.querySelectorAll('.modal-overlay, .modal-overlay-confirm, .modal-overlay-success').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    hideModal(overlay);
+                }
+            });
+        });
+    }
+
+    // ========================================================
+    // RENDER FUNCTIONS (FOR <table>)
+    // ========================================================
+    function renderEmptyState(tbody, colSpan, icon, title, message) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="${colSpan}" style="text-align: center; padding: 4rem 2rem;">
+                    <div class="empty-state">
+                        <div style="font-size: 4rem; margin-bottom: 1rem;">${icon}</div>
+                        <h3 style="font-family: 'Abril Fatface', serif; font-size: 1.5rem; color: #333; margin-bottom: 0.5rem;">${title}</h3>
+                        <p style="color: #999;">${message}</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+
+    function renderDashboard(data) {
+        const cards = document.querySelectorAll('.summary-cards .card .card-value');
+        if (data.cards) {
+            if (cards[0]) cards[0].textContent = data.cards.occupied || 0;
+            if (cards[1]) cards[1].textContent = data.cards.available || 0;
+            if (cards[2]) cards[2].textContent = data.cards.total || 0;
+        }
+
+        const tbody = document.getElementById('dashboardTableBody');
+        if (!tbody) return;
+        
+        if (!data.table || data.table.length === 0) {
+            renderEmptyState(tbody, 5, '📊', 'No Areas Found', 'Try adjusting your filter.');
+            return;
+        }
+
+        tbody.innerHTML = data.table.map(area => {
+            const isFull = area.status === 'Full';
+            return `
+                <tr class="${isFull ? 'full-row' : ''}">
+                    <td class="${isFull ? 'text-red' : ''}">${area.AreaName}</td>
                     <td class="${isFull ? 'text-red' : ''}">${isFull ? '-' : area.available}</td>
                     <td class="${isFull ? 'text-red' : ''}">${area.occupied}</td>
                     <td class="${isFull ? 'text-red' : ''}">${area.total}</td>
                     <td class="${isFull ? 'text-red' : ''} text-right">${isFull ? 'Full' : ''}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        },
-
-        renderSlots(filterValue, searchTerm) {
-            const container = this.elements.slotsTable;
-            if (!container) return;
-            
-            let filteredData = this.state.slots;
-            if (filterValue !== "all") filteredData = filteredData.filter(s => s.slotNumber === filterValue);
-            if (searchTerm) {
-                filteredData = filteredData.filter(s => 
-                    s.slotNumber.toLowerCase().includes(searchTerm) ||
-                    (s.parkedVehicle && s.parkedVehicle.name.toLowerCase().includes(searchTerm)) ||
-                    (s.parkedVehicle && s.parkedVehicle.plate.toLowerCase().includes(searchTerm))
-                );
-            }
-
-            container.innerHTML = '';
-            if (filteredData.length === 0) {
-                this.renderEmptyState(container, '🅿️', 'No Slots Found', 'Try adjusting your search or filter.');
-                this.setupPagination(0, this.elements.pagination.slots, 1);
-                return;
-            }
-            
-            const page = this.state.currentPages.slots;
-            const paginatedData = this.paginate(filteredData, page);
-            
-            paginatedData.forEach((slot) => {
-                container.innerHTML += `
-                    <div class="table-row grid-5">
-                        <div>${slot.area}</div>
-                        <div>${slot.slotNumber}</div>
-                        <div>${slot.allowedVehicle}</div>
-                        <div><span class="status-badge status-${slot.status}">${slot.status}</span></div>
-                        <div>
-                            ${slot.status === 'available' 
-                                ? `<button class="btn-enter" data-slot-id="${slot.slotNumber}">Enter Vehicle 🚗</button>`
-                                : `<button class="btn-enter-gray" disabled>Enter Vehicle 🚗</button>`
-                            }
-                        </div>
-                    </div>
-                `;
-            });
-
-            this.setupPagination(filteredData.length, this.elements.pagination.slots, page, 'slots');
-        },
-
-        renderVehicleIn(filterValue, searchTerm) {
-            const container = this.elements.vehicleInTable;
-            if (!container) return;
-
-            let filteredData = this.state.slots.filter(slot => slot.status === 'occupied');
-            if (filterValue !== "all") filteredData = filteredData.filter(s => s.slotNumber === filterValue);
-            if (searchTerm) {
-                filteredData = filteredData.filter(s => 
-                    s.slotNumber.toLowerCase().includes(searchTerm) ||
-                    (s.parkedVehicle && s.parkedVehicle.name.toLowerCase().includes(searchTerm)) ||
-                    (s.parkedVehicle && s.parkedVehicle.plate.toLowerCase().includes(searchTerm)) ||
-                    (s.parkedVehicle && s.parkedVehicle.room.toLowerCase().includes(searchTerm))
-                );
-            }
-            
-            container.innerHTML = '';
-            if (filteredData.length === 0) {
-                this.renderEmptyState(container, '🚗', 'No Vehicles Parked', 'Available slots can be seen in the "Slots" tab.');
-                this.setupPagination(0, this.elements.pagination.vehicleIn, 1);
-                return;
-            }
-
-            const page = this.state.currentPages.vehicleIn;
-            const paginatedData = this.paginate(filteredData, page);
-
-            paginatedData.forEach((slot) => {
-                const vehicle = slot.parkedVehicle;
-                container.innerHTML += `
-                    <div class="table-row grid-8">
-                        <div>${slot.slotNumber}</div>
-                        <div>${vehicle.plate}</div>
-                        <div>${vehicle.room}</div>
-                        <div>${vehicle.name}</div>
-                        <div>${vehicle.vehicleType}</div>
-                        <div>${vehicle.category}</div>
-                        <div>${vehicle.enterTime}</div>
-                        <div>${vehicle.enterDate}</div>
-                        <div>
-                            <button class="exit-btn" data-slot-id="${slot.slotNumber}">
-                                <img src="assets/icons/exit.png" alt="Exit Vehicle">
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-
-            this.setupPagination(filteredData.length, this.elements.pagination.vehicleIn, page, 'vehicleIn');
-        },
-
-        renderHistory(filterValue, searchTerm) {
-            const container = this.elements.historyTable;
-            if (!container) return;
-            
-            let filteredData = this.state.history;
-            if (filterValue !== "all") filteredData = filteredData.filter(v => v.slotNumber === filterValue);
-            if (searchTerm) {
-                filteredData = filteredData.filter(v => 
-                    v.slotNumber.toLowerCase().includes(searchTerm) ||
-                    v.name.toLowerCase().includes(searchTerm) ||
-                    v.plate.toLowerCase().includes(searchTerm) ||
-                    v.room.toLowerCase().includes(searchTerm)
-                );
-            }
-
-            container.innerHTML = '';
-            if (filteredData.length === 0) {
-                this.renderEmptyState(container, '📜', 'No History Found', 'Vehicles that exit will appear here.');
-                this.setupPagination(0, this.elements.pagination.history, 1);
-                return;
-            }
-            
-            const page = this.state.currentPages.history;
-            const paginatedData = this.paginate(filteredData, page);
-
-            paginatedData.forEach((vehicle) => {
-                container.innerHTML += `
-                    <div class="table-row grid-9">
-                        <div>${vehicle.slotNumber}</div>
-                        <div>${vehicle.plate}</div>
-                        <div>${vehicle.room}</div>
-                        <div>${vehicle.name}</div>
-                        <div>${vehicle.vehicleType}</div>
-                        <div>${vehicle.category}</div>
-                        <div>${vehicle.parkingTime}</div>
-                        <div>${vehicle.enterTime} / ${vehicle.exitTime}</div>
-                        <div>${vehicle.enterDate} / ${vehicle.exitDate}</div>
-                    </div>
-                `;
-            });
-            
-            this.setupPagination(filteredData.length, this.elements.pagination.history, page, 'history');
-        },
-
-        renderDamages() {
-            const tbody = this.elements.damagesListBody;
-            if (!tbody) return;
-            
-            tbody.innerHTML = this.state.damage.map(damage => `
-                <tr>
-                    <td>${damage.type}</td>
-                    <td>${damage.date}</td>
-                    <td>${damage.count}</td>
                 </tr>
-            `).join('');
-        },
+            `;
+        }).join('');
+        updateSortHeaders('dashboard-tab', sortState.dashboard);
+    }
 
-        // ========================================================
-        // IX. PAGINATION
-        // ========================================================
+    function renderSlots(filteredData) {
+        const tbody = document.getElementById('slotsTableBody');
+        if (!tbody) return;
+        
+        const page = currentPages.slots;
+        const totalItems = filteredData.length;
+        setupPagination(totalItems, 'pagination-slots', page);
 
-        /**
-         * Slices an array for the current page
-         * @param {Array} items The full array
-         * @param {number} page The current page number
-         * @returns {Array} The items for the current page
-         */
-        paginate(items, page) {
-            const startIndex = (page - 1) * this.CONSTANTS.ROWS_PER_PAGE;
-            const endIndex = startIndex + this.CONSTANTS.ROWS_PER_PAGE;
-            return items.slice(startIndex, endIndex);
-        },
+        if (totalItems === 0) {
+            renderEmptyState(tbody, 5, '🅿️', 'No Slots Found', 'Try adjusting your search or filter.');
+            return;
+        }
+        
+        const startIndex = (page - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+        
+        tbody.innerHTML = paginatedData.map((slot) => {
+            return `
+                <tr>
+                    <td>${slot.AreaName}</td>
+                    <td>${slot.SlotName}</td>
+                    <td>${slot.AllowedVehicle}</td>
+                    <td>
+                        <span class="status-badge status-${slot.Status}">
+                            ${slot.Status === 'available' ? 'Available' : 'Occupied'}
+                        </span>
+                    </td>
+                    <td>
+                        ${slot.Status === 'available' 
+                            ? `<button class="btn-enter" data-slot-id="${slot.SlotID}" data-slot-name="${slot.SlotName}">Enter Vehicle</button>`
+                            : `<button class="btn-enter-gray" disabled>Enter Vehicle</button>`
+                        }
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        updateSortHeaders('slots-tab', sortState.slots);
+    }
 
-        /**
-         * Renders pagination controls
-         * @param {number} totalItems Total number of items
-         * @param {HTMLElement} container The container element for pagination
-         * @param {number} currentPage The active page
-         * @param {'slots' | 'vehicleIn' | 'history'} pageKey The key in `state.currentPages`
-         */
-        setupPagination(totalItems, container, currentPage, pageKey) {
-            if (!container) return;
-            container.innerHTML = '';
-            const totalPages = Math.ceil(totalItems / this.CONSTANTS.ROWS_PER_PAGE);
+    function renderVehicleIn(filteredData) {
+        const tbody = document.getElementById('vehicleInTableBody');
+        if (!tbody) return;
+
+        const page = currentPages.vehicleIn;
+        const totalItems = filteredData.length;
+        setupPagination(totalItems, 'pagination-vehicleIn', page);
+
+        if (totalItems === 0) {
+            renderEmptyState(tbody, 9, '🚗', 'No Vehicles Parked', 'Available slots can be seen in the "Slots" tab.');
+            return;
+        }
+
+        const startIndex = (page - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
+        tbody.innerHTML = paginatedData.map((vehicle) => {
+            return `
+                <tr>
+                    <td>${vehicle.SlotName}</td>
+                    <td>${vehicle.PlateNumber}</td>
+                    <td>${vehicle.RoomNumber}</td>
+                    <td>${vehicle.GuestName}</td>
+                    <td>${vehicle.VehicleType}</td>
+                    <td>${vehicle.VehicleCategory}</td>
+                    <td>${vehicle.EnterTime}</td>
+                    <td>${vehicle.EnterDate}</td>
+                    <td>
+                        <button class="exit-btn" data-slot-id="${vehicle.SlotID}" data-session-id="${vehicle.SessionID}">
+                            <img src="assets/images/parking.png" alt="Exit Vehicle" style="width: 24px; height: 24px;">
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        updateSortHeaders('vehicleIn-tab', sortState.vehicleIn);
+    }
+
+    function renderHistory(filteredData) {
+        const tbody = document.getElementById('historyTableBody');
+        if (!tbody) return;
+        
+        const page = currentPages.history;
+        const totalItems = filteredData.length;
+        setupPagination(totalItems, 'pagination-history', page);
+
+        if (totalItems === 0) {
+            renderEmptyState(tbody, 9, '📜', 'No History Found', 'Vehicles that exit will appear here.');
+            return;
+        }
+
+        const startIndex = (page - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
+        tbody.innerHTML = paginatedData.map((vehicle) => {
+            return `
+                <tr>
+                    <td>${vehicle.SlotName}</td>
+                    <td>${vehicle.PlateNumber}</td>
+                    <td>${vehicle.RoomNumber}</td>
+                    <td>${vehicle.GuestName}</td>
+                    <td>${vehicle.VehicleType}</td>
+                    <td>${vehicle.VehicleCategory}</td>
+                    <td>${vehicle.ParkingTime}</td>
+                    <td>${vehicle.EntryDateTime}</td>
+                    <td>${vehicle.ExitDateTime}</td>
+                </tr>
+            `;
+        }).join('');
+        updateSortHeaders('history-tab', sortState.history);
+    }
+
+    // ========================================================
+    // PAGINATION LOGIC
+    // ========================================================
+    function setupPagination(totalItems, containerId, currentPage) {
+        const paginationContainer = document.getElementById(containerId);
+        if (!paginationContainer) return;
+
+        paginationContainer.innerHTML = '';
+        const totalPages = Math.ceil(totalItems / rowsPerPage);
+
+        const recordsInfo = document.createElement('span');
+        recordsInfo.className = 'paginationInfo';
+        let start, end;
+        if (totalItems === 0) {
+            start = 0; end = 0;
+        } else {
+            start = (currentPage - 1) * rowsPerPage + 1;
+            end = Math.min(start + rowsPerPage - 1, totalItems);
+        }
+        recordsInfo.textContent = `Displaying ${start}-${end} of ${totalItems} Records`;
+        paginationContainer.appendChild(recordsInfo);
+        
+        if (totalPages <= 1) return;
+
+        const controlsDiv = document.createElement('div');
+        controlsDiv.className = 'paginationControls';
+
+        const prevButton = document.createElement('button');
+        prevButton.className = 'paginationBtn';
+        prevButton.innerHTML = '&lt;';
+        prevButton.disabled = currentPage === 1;
+        prevButton.addEventListener('click', () => {
+            if (containerId.includes('slots')) currentPages.slots--;
+            if (containerId.includes('vehicleIn')) currentPages.vehicleIn--;
+            if (containerId.includes('history')) currentPages.history--;
+            performFilterAndSearch();
+        });
+        controlsDiv.appendChild(prevButton);
+
+        const pageNumbers = [];
+        if (totalPages <= 7) {
+            for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+        } else {
+            pageNumbers.push(1);
+            if (currentPage > 3) pageNumbers.push('...');
+            let start = Math.max(2, currentPage - 1);
+            let end = Math.min(totalPages - 1, currentPage + 1);
+            if (currentPage <= 2) end = 3;
+            if (currentPage >= totalPages - 1) start = totalPages - 2;
+            for (let i = start; i <= end; i++) pageNumbers.push(i);
+            if (currentPage < totalPages - 2) pageNumbers.push('...');
+            pageNumbers.push(totalPages);
+        }
+
+        pageNumbers.forEach(num => {
+            if (num === '...') {
+                const span = document.createElement('span');
+                span.className = 'paginationDots';
+                span.textContent = '...';
+                controlsDiv.appendChild(span);
+            } else {
+                const button = document.createElement('button');
+                button.className = 'paginationBtn';
+                button.textContent = num;
+                if (num === currentPage) button.classList.add('active');
+                button.addEventListener('click', () => {
+                    if (containerId.includes('slots')) currentPages.slots = num;
+                    if (containerId.includes('vehicleIn')) currentPages.vehicleIn = num;
+                    if (containerId.includes('history')) currentPages.history = num;
+                    performFilterAndSearch();
+                });
+                controlsDiv.appendChild(button);
+            }
+        });
+
+        const nextButton = document.createElement('button');
+        nextButton.className = 'paginationBtn';
+        nextButton.innerHTML = '&gt;';
+        nextButton.disabled = currentPage === totalPages;
+        nextButton.addEventListener('click', () => {
+            if (containerId.includes('slots')) currentPages.slots++;
+            if (containerId.includes('vehicleIn')) currentPages.vehicleIn++;
+            if (containerId.includes('history')) currentPages.history++;
+            performFilterAndSearch();
+        });
+        controlsDiv.appendChild(nextButton);
+        paginationContainer.appendChild(controlsDiv);
+    }
+
+    // ========================================================
+    // SORTING & PARSING LOGIC
+    // ========================================================
+    function parseDateWhen(dateStr, defaultVal) {
+        if (!dateStr) return defaultVal;
+        try {
+            return new Date(dateStr.replace(' / ', ' ')).getTime();
+        } catch (e) {
+            return defaultVal;
+        }
+    }
+
+    function sortData(data, column, direction) {
+        data.sort((a, b) => {
+            let valA = a[column];
+            let valB = b[column];
+
+            if (column === 'available' || column === 'occupied' || column === 'total') {
+                valA = parseFloat(valA) || 0;
+                valB = parseFloat(valB) || 0;
+            }
+
+            if (typeof valA === 'string') {
+                if (valA && valA.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) { 
+                    valA = new Date(valA).getTime();
+                    valB = valB ? new Date(valB).getTime() : null;
+                } 
+                else if (valA && valA.match(/^\d{4}-\d{2}-\d{2} \/ \d{1,2}:\d{2} [AP]M$/)) {
+                    valA = parseDateWhen(valA, null); 
+                    valB = parseDateWhen(valB, null);
+                }
+                else {
+                    valA = (valA || "").toLowerCase();
+                    valB = (valB || "").toLowerCase();
+                }
+            }
             
-            if (totalPages <= 1) return;
+            if (typeof valA === 'number') {
+                valA = valA || 0;
+                valB = valB || 0;
+            }
 
-            const start = (currentPage - 1) * this.CONSTANTS.ROWS_PER_PAGE + 1;
-            const end = Math.min(start + this.CONSTANTS.ROWS_PER_PAGE - 1, totalItems);
-            
-            let html = `<span>Displaying ${start}-${end} of ${totalItems} Records</span>`;
-            html += `<div class="pagination-controls">`;
+            if (valA === null || valA === undefined) valA = direction === 'asc' ? Infinity : -Infinity;
+            if (valB === null || valB === undefined) valB = direction === 'asc' ? Infinity : -Infinity;
 
-            // Previous Button
-            html += `<button ${currentPage === 1 ? 'disabled' : ''} data-page="${currentPage - 1}">&lt;</button>`;
+            let comparison = 0;
+            if (valA > valB) {
+                comparison = 1;
+            } else if (valA < valB) {
+                comparison = -1;
+            }
 
-            // Page Numbers
-            const pageNumbers = this.getPaginationNumbers(currentPage, totalPages);
-            pageNumbers.forEach(num => {
-                if (num === '...') {
-                    html += `<span>...</span>`;
-                } else {
-                    html += `<button class="${num === currentPage ? 'active' : ''}" data-page="${num}">${num}</button>`;
+            return direction === 'asc' ? comparison : -comparison;
+        });
+    }
+
+    function updateSortHeaders(tabId, { column, direction }) {
+        const tab = document.getElementById(tabId);
+        if (!tab) return;
+        tab.querySelectorAll('th.sortable').forEach(th => {
+            th.classList.remove('sort-asc', 'sort-desc');
+        });
+        let selector = `th[data-sort="${column}"]`;
+        if (column === 'EntryTime') {
+             selector = `th[data-sort="EntryTime"]`;
+        }
+        else if (column === 'ExitTime' || column === 'ExitDateTime') {
+             selector = `th[data-sort="ExitTime"], th[data-sort="ExitDateTime"]`;
+        }
+        else if (column === 'EntryTime' || column === 'EntryDateTime') {
+            selector = `th[data-sort="EntryTime"], th[data-sort="EntryDateTime"]`;
+        }
+        tab.querySelectorAll(selector).forEach(th => {
+             th.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+        });
+    }
+
+
+    // ========================================================
+    // SEARCH, FILTER & DATA LOADING
+    // ========================================================
+    async function performFilterAndSearch() {
+        
+        const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
+
+        if (activeTab === 'dashboard') {
+            if (dashboardTableData.length === 0) {
+                const data = await fetchAPI('getDashboardData');
+                if (!data || !data.table) {
+                     renderDashboard({ cards: {}, table: [] });
+                     return;
+                }
+                dashboardTableData = data.table; 
+            }
+            const filterArea = document.getElementById('areaFilterDashboard').value;
+            let filteredData = dashboardTableData
+                .filter(area => filterArea === "all" || area.AreaName === filterArea);
+            const newCardTotals = filteredData.reduce((acc, area) => {
+                acc.occupied += parseFloat(area.occupied) || 0;
+                acc.available += parseFloat(area.available) || 0;
+                acc.total += parseFloat(area.total) || 0;
+                return acc;
+            }, { occupied: 0, available: 0, total: 0 });
+            const { column, direction } = sortState.dashboard;
+            sortData(filteredData, column, direction);
+            renderDashboard({ cards: newCardTotals, table: filteredData });
+        
+        } else if (activeTab === 'slots') {
+            if (slotsData.length === 0) { 
+                 const data = await fetchAPI('getAllSlots');
+                 if (!data) {
+                    renderSlots([]);
+                    return;
+                 }
+                 slotsData = data.slots;
+            }
+            const filterArea = document.getElementById('areaFilterSlots').value;
+            const filterStatus = document.getElementById('statusFilterSlots').value;
+            const searchTerm = document.getElementById('searchSlots').value.toLowerCase();
+            let filteredData = slotsData
+                .filter(s => filterArea === "all" || s.AreaName.includes(filterArea))
+                .filter(s => filterStatus === "all" || s.Status === filterStatus)
+                .filter(s => !searchTerm || s.SlotName.toLowerCase().includes(searchTerm));
+            const { column, direction } = sortState.slots;
+            sortData(filteredData, column, direction);
+            renderSlots(filteredData);
+
+        } else if (activeTab === 'vehicleIn') {
+            const data = await fetchAPI('getVehiclesIn');
+            if (!data) {
+                renderVehicleIn([]);
+                return;
+            }
+            vehiclesInData = data.vehicles;
+            const filterArea = document.getElementById('areaFilterVehicleIn').value;
+            const searchTerm = document.getElementById('searchVehicleIn').value.toLowerCase();
+            let filteredData = vehiclesInData
+                .filter(s => filterArea === "all" || s.AreaName === filterArea) 
+                .filter(s => !searchTerm || 
+                    (s.GuestName && s.GuestName.toLowerCase().includes(searchTerm)) ||
+                    (s.PlateNumber && s.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                    (s.RoomNumber && s.RoomNumber.toLowerCase().includes(searchTerm))
+                );
+            const { column, direction } = sortState.vehicleIn;
+            sortData(filteredData, column, direction);
+            renderVehicleIn(filteredData);
+
+        } else if (activeTab === 'history') {
+            const data = await fetchAPI('getHistory');
+            if (!data) {
+                renderHistory([]);
+                return;
+            }
+            historyData = data.history;
+            const filterArea = document.getElementById('areaFilterHistory').value;
+            const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
+            let filteredData = historyData
+                .filter(v => filterArea === "all" || v.AreaName === filterArea) 
+                .filter(v => !searchTerm || 
+                    (v.GuestName && v.GuestName.toLowerCase().includes(searchTerm)) ||
+                    (v.PlateNumber && v.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                    (v.RoomNumber && v.RoomNumber.toLowerCase().includes(searchTerm))
+                );
+            const { column, direction } = sortState.history;
+            sortData(filteredData, column, direction);
+            renderHistory(filteredData);
+        }
+    }
+
+    // ========================================================
+    // REFRESH & LOAD DROPDOWNS (*** NEW ***)
+    // ========================================================
+    
+    // This function loads the two dropdowns in the "Enter Vehicle" modal
+    async function loadEnterVehicleDropdowns() {
+        const typeSelect = document.getElementById('vehicleType');
+        const categorySelect = document.getElementById('categorySelect');
+        const currentType = typeSelect.value; // Store current selection
+        
+        typeSelect.innerHTML = '<option value="">Loading...</option>';
+        categorySelect.innerHTML = '<option value="">Select vehicle type first...</option>';
+        
+        const data = await fetchAPI('getVehicleTypes');
+        if (data && data.types) {
+            typeSelect.innerHTML = '<option value="">Select</option>';
+            data.types.forEach(type => {
+                typeSelect.innerHTML += `<option value="${type.VehicleTypeID}">${type.TypeName}</option>`;
+            });
+            typeSelect.value = currentType; // Re-select old value if still valid
+        }
+    }
+
+    // This function reloads ALL dropdowns and lists related to types/categories
+    async function refreshAllParkingDropdowns() {
+        // 1. Refresh "Enter Vehicle" modal dropdowns
+        await loadEnterVehicleDropdowns();
+        
+        // 2. Refresh "Manage Types" modal list
+        await loadVehicleTypesList();
+        
+        // 3. Refresh "Manage Categories" modal dropdown
+        await loadVehicleTypesDropdownForManager();
+        
+        // 4. Clear the categories list (it will reload on type select)
+        categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">Please select a vehicle type above.</p>';
+    }
+
+    // ========================================================
+    // EVENT LISTENERS (SPECIFIC TO PARKING)
+    // ========================================================
+
+    // Listener for the "Vehicle Type" dropdown in the "Enter Vehicle" modal
+    document.getElementById('vehicleType').addEventListener('change', async (e) => {
+        const vehicleTypeID = e.target.value;
+        const categorySelect = document.getElementById('categorySelect');
+        if (!vehicleTypeID) {
+            categorySelect.innerHTML = '<option value="">Select vehicle type first...</option>';
+            return;
+        }
+        categorySelect.innerHTML = '<option value="">Loading...</option>';
+        const data = await fetchAPI('getVehicleCategories', {}, `vehicleTypeID=${vehicleTypeID}`);
+        if (data && data.categories) {
+            categorySelect.innerHTML = '<option value="">Select</option>';
+            data.categories.forEach(cat => {
+                categorySelect.innerHTML += `<option value="${cat.VehicleCategoryID}">${cat.CategoryName}</option>`;
+            });
+        }
+    });
+
+
+    function setupParkingListeners() {
+        // Filter/Search Listeners
+        document.querySelectorAll('.filterDropdown').forEach(el => {
+            el.addEventListener('change', () => {
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                slotsData = [];
+                performFilterAndSearch();
+            });
+        });
+
+        document.querySelectorAll('.searchInput').forEach(el => {
+            el.addEventListener('input', () => {
+                const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                
+                if (activeTab === 'slots') {
+                    const filterArea = document.getElementById('areaFilterSlots').value;
+                    const filterStatus = document.getElementById('statusFilterSlots').value;
+                    const searchTerm = document.getElementById('searchSlots').value.toLowerCase();
+                    let filtered = slotsData
+                        .filter(s => filterArea === "all" || s.AreaName.includes(filterArea))
+                        .filter(s => filterStatus === "all" || s.Status === filterStatus)
+                        .filter(s => !searchTerm || s.SlotName.toLowerCase().includes(searchTerm));
+                    sortData(filtered, sortState.slots.column, sortState.slots.direction);
+                    renderSlots(filtered);
+                }
+                if (activeTab === 'vehicleIn') {
+                    const filterArea = document.getElementById('areaFilterVehicleIn').value;
+                    const searchTerm = document.getElementById('searchVehicleIn').value.toLowerCase();
+                    let filtered = vehiclesInData
+                        .filter(s => filterArea === "all" || s.AreaName === filterArea)
+                        .filter(s => !searchTerm || 
+                            (s.GuestName && s.GuestName.toLowerCase().includes(searchTerm)) ||
+                            (s.PlateNumber && s.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                            (s.RoomNumber && s.RoomNumber.toLowerCase().includes(searchTerm))
+                        );
+                    sortData(filtered, sortState.vehicleIn.column, sortState.vehicleIn.direction);
+                    renderVehicleIn(filtered);
+                }
+                 if (activeTab === 'history') {
+                    const filterArea = document.getElementById('areaFilterHistory').value;
+                    const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
+                    let filtered = historyData
+                        .filter(v => filterArea === "all" || v.AreaName === filterArea) 
+                        .filter(v => !searchTerm || 
+                            (v.GuestName && v.GuestName.toLowerCase().includes(searchTerm)) ||
+                            (v.PlateNumber && v.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                            (v.RoomNumber && v.RoomNumber.toLowerCase().includes(searchTerm))
+                        );
+                    sortData(filtered, sortState.history.column, sortState.history.direction);
+                    renderHistory(filtered);
+                 }
+            });
+        });
+        
+        // Refresh Buttons
+        document.querySelectorAll('.refreshBtn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const controlsRow = btn.closest('.controlsRow');
+                controlsRow.querySelectorAll('.filterDropdown').forEach(sel => sel.value = 'all');
+                controlsRow.querySelectorAll('.searchInput').forEach(inp => inp.value = '');
+                slotsData = []; 
+                dashboardTableData = []; 
+                performFilterAndSearch();
+                showToast('Data refreshed!');
+            });
+        });
+
+        // Download History Button
+        const downloadBtn = document.getElementById('downloadBtnHistory');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => {
+                const filterArea = document.getElementById('areaFilterHistory').value;
+                const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
+                let filteredData = historyData
+                    .filter(v => filterArea === "all" || v.AreaName === filterArea) 
+                    .filter(v => !searchTerm || 
+                        (v.GuestName && v.GuestName.toLowerCase().includes(searchTerm)) ||
+                        (v.PlateNumber && v.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                        (v.RoomNumber && v.RoomNumber.toLowerCase().includes(searchTerm))
+                    );
+                
+                const { column, direction } = sortState.history;
+                sortData(filteredData, column, direction);
+
+                if (filteredData.length === 0) {
+                    showToast('No data to download.', 'error');
+                    return;
+                }
+
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    doc.setFontSize(18);
+                    doc.text("Parking History Report", 14, 22);
+                    doc.setFontSize(11);
+                    doc.setTextColor(100);
+                    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+                    
+                    const head = [[
+                        'Slot', 'Plate #', 'Room', 'Name', 
+                        'Vehicle Type', 'Category', 'Parking Time', 'Entry', 'Exit'
+                    ]];
+                    const body = filteredData.map(v => [
+                        v.SlotName, v.PlateNumber, v.RoomNumber, v.GuestName,
+                        v.VehicleType, v.VehicleCategory, v.ParkingTime,
+                        v.EntryDateTime, v.ExitDateTime
+                    ]);
+
+                    doc.autoTable({
+                        head: head, body: body, startY: 35,
+                        headStyles: { fillColor: [72, 12, 27] }, // #480c1b
+                        styles: { fontSize: 8, cellPadding: 2 },
+                        alternateRowStyles: { fillColor: [245, 245, 245] },
+                        columnStyles: {
+                            0: { cellWidth: 15 }, 1: { cellWidth: 20 }, 2: { cellWidth: 12 },
+                            3: { cellWidth: 'auto' }, 4: { cellWidth: 'auto' }, 5: { cellWidth: 'auto' },
+                            6: { cellWidth: 20 }, 7: { cellWidth: 30 }, 8: { cellWidth: 30 }
+                        }
+                    });
+                    doc.save('Parking-History-Report.pdf');
+                } catch (e) {
+                    console.error("Error generating PDF:", e);
+                    showToast('Error generating PDF. See console.', 'error');
                 }
             });
-
-            // Next Button
-            html += `<button ${currentPage === totalPages ? 'disabled' : ''} data-page="${currentPage + 1}">&gt;</button>`;
-            html += `</div>`;
-            container.innerHTML = html;
-
-            // Add event listeners to the new buttons
-            container.querySelectorAll('.pagination-controls button').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    this.state.currentPages[pageKey] = parseInt(e.currentTarget.dataset.page);
-                    this.render();
-                });
-            });
-        },
+        }
         
-        /**
-         * Helper to generate smart pagination numbers (e.g., 1 ... 4 5 6 ... 10)
-         */
-        getPaginationNumbers(currentPage, totalPages) {
-            if (totalPages <= 7) {
-                return Array.from({ length: totalPages }, (_, i) => i + 1);
+        // === Enter/Exit Vehicle Logic ===
+        
+        document.body.addEventListener('click', (e) => {
+            const enterButton = e.target.closest('.btn-enter');
+            if (enterButton) {
+                currentSlotID = enterButton.dataset.slotId;
+                currentSlotName = enterButton.dataset.slotName;
+                document.getElementById('slotNumberTitle').textContent = currentSlotName;
+                document.getElementById('enter-vehicle-form').reset();
+                loadEnterVehicleDropdowns(); // Load dropdowns for this modal
+                showModal(document.getElementById('enterVehicleModal'));
             }
-            if (currentPage <= 3) {
-                return [1, 2, 3, 4, '...', totalPages];
-            }
-            if (currentPage >= totalPages - 2) {
-                return [1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
-            }
-            return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+        });
+        
+        const enterVehicleForm = document.getElementById('enter-vehicle-form');
+        if (enterVehicleForm) {
+            enterVehicleForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!document.getElementById('guestName').value || !document.getElementById('plateNumber').value || !document.getElementById('vehicleType').value || !document.getElementById('categorySelect').value) {
+                    showToast('Please fill out all required fields.', 'error');
+                    return;
+                }
+                hideModal(document.getElementById('enterVehicleModal'));
+                showModal(document.getElementById('confirmModal'));
+            });
         }
-    };
+        
+        const btnConfirmEnter = document.getElementById('btnConfirmEnter');
+        if (btnConfirmEnter) {
+            btnConfirmEnter.addEventListener('click', async () => {
+                
+                const formData = new FormData();
+                formData.append('action', 'enterVehicle');
+                formData.append('slotID', currentSlotID);
+                formData.append('plateNumber', document.getElementById('plateNumber').value.toUpperCase());
+                formData.append('guestName', document.getElementById('guestName').value);
+                formData.append('roomNumber', document.getElementById('roomNumber').value);
+                formData.append('vehicleTypeID', document.getElementById('vehicleType').value);
+                formData.append('vehicleCategoryID', document.getElementById('categorySelect').value);
 
-    // Start the application
-    App.init();
+                const result = await fetchAPI('enterVehicle', {
+                    method: 'POST',
+                    body: formData
+                });
+                hideModal(document.getElementById('confirmModal'));
+                if (result && result.success) {
+                    showModal(document.getElementById('successModal'));
+                    showToast(result.message || 'Vehicle parked successfully!');
+                    slotsData = []; // Clear cache
+                    dashboardTableData = []; // Clear cache
+                    performFilterAndSearch();
+                }
+                currentSlotID = null;
+                currentSlotName = null;
+            });
+        }
 
-    // Make App global for debugging (optional)
-    // window.App = App;
+        document.body.addEventListener('click', (e) => {
+            const exitButton = e.target.closest('.exit-btn');
+            if (exitButton) {
+                currentSlotID = exitButton.dataset.slotId;
+                currentSessionID = exitButton.dataset.sessionId;
+                const vehicle = vehiclesInData.find(v => v.SessionID === currentSessionID);
+                if (!vehicle) return; 
+                document.getElementById('exitSlotNumber').textContent = vehicle.SlotName;
+                document.getElementById('exitPlate').textContent = vehicle.PlateNumber;
+                document.getElementById('exitVehicle').textContent = vehicle.VehicleCategory;
+                document.getElementById('exitDateTime').textContent = vehicle.EnterDate + ' / ' + vehicle.EnterTime;
+                showModal(document.getElementById('exitModal'));
+            }
+        });
+
+        const btnConfirmExit = document.getElementById('btnConfirmExit');
+        if (btnConfirmExit) {
+            btnConfirmExit.addEventListener('click', async () => {
+                if (!currentSlotID || !currentSessionID) return;
+                const formData = new FormData();
+                formData.append('action', 'exitVehicle');
+                formData.append('sessionID', currentSessionID);
+                formData.append('slotID', currentSlotID);
+                const result = await fetchAPI('exitVehicle', {
+                    method: 'POST',
+                    body: formData
+                });
+                hideModal(document.getElementById('exitModal'));
+                if (result && result.success) {
+                    showToast(result.message || 'Vehicle exited successfully!');
+                    slotsData = []; // Clear cache
+                    dashboardTableData = []; // Clear cache
+                    performFilterAndSearch();
+                }
+                currentSlotID = null;
+                currentSessionID = null;
+            });
+        }
+    }
+    
+    // ========================================================
+    // === NEW LISTENERS FOR MANAGEMENT MODALS ===
+    // ========================================================
+    
+    // --- 1. Manage Types Modal ---
+    openTypesModalBtn.addEventListener('click', () => {
+        showModal(manageTypesModal);
+        loadVehicleTypesList();
+    });
+
+    async function loadVehicleTypesList() {
+        typesListContainer.innerHTML = '<div class="spinner"></div>';
+        const data = await fetchAPI('getVehicleTypes');
+        if (!data || !data.types) {
+            typesListContainer.innerHTML = '<p>Error loading types.</p>';
+            return;
+        }
+        if (data.types.length === 0) {
+            typesListContainer.innerHTML = '<p style="text-align:center; color: #777;">No vehicle types found. Add one above.</p>';
+            return;
+        }
+        typesListContainer.innerHTML = data.types.map(type => `
+            <div class="category-list-item" data-id="${type.VehicleTypeID}" data-name="${type.TypeName}">
+                <span class="category-name">${escapeHTML(type.TypeName)}</span>
+                <div class="category-actions">
+                    <button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="btn-icon btn-delete-category" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    addNewTypeBtn.addEventListener('click', async () => {
+        const name = newTypeNameInput.value.trim();
+        if (!name) {
+            showToast('Please enter a type name.', 'error');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('TypeName', name);
+        
+        const result = await fetchAPI('addVehicleType', { method: 'POST', body: formData });
+        if (result && result.success) {
+            showToast(result.message);
+            newTypeNameInput.value = '';
+            refreshAllParkingDropdowns(); // This will also reload the list
+        }
+    });
+
+    typesListContainer.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.btn-edit-category');
+        const deleteBtn = e.target.closest('.btn-delete-category');
+        const item = e.target.closest('.category-list-item');
+        if (!item) return;
+
+        const id = item.dataset.id;
+        const name = item.dataset.name;
+        
+        if (editBtn) {
+            openEditNameModal('vehicleType', id, name);
+        }
+        
+        if (deleteBtn) {
+            if (!confirm(`Are you sure you want to delete "${name}"?\nThis cannot be undone.`)) {
+                return;
+            }
+            const formData = new FormData();
+            formData.append('TypeID', id);
+            const result = await fetchAPI('deleteVehicleType', { method: 'POST', body: formData });
+            if (result && result.success) {
+                showToast(result.message);
+                refreshAllParkingDropdowns();
+            }
+        }
+    });
+
+    // --- 2. Manage Categories Modal ---
+    openCategoriesModalBtn.addEventListener('click', () => {
+        showModal(manageCategoriesModal);
+        loadVehicleTypesDropdownForManager();
+        categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">Please select a vehicle type above.</p>';
+    });
+    
+    async function loadVehicleTypesDropdownForManager() {
+        categoryManagerTypeSelect.innerHTML = '<option value="">Loading...</option>';
+        const data = await fetchAPI('getVehicleTypes');
+        if (data && data.types) {
+            categoryManagerTypeSelect.innerHTML = '<option value="">Select a Vehicle Type</option>';
+            data.types.forEach(type => {
+                categoryManagerTypeSelect.innerHTML += `<option value="${type.VehicleTypeID}">${type.TypeName}</option>`;
+            });
+        }
+    }
+    
+    categoryManagerTypeSelect.addEventListener('change', () => {
+        const typeID = categoryManagerTypeSelect.value;
+        if (!typeID) {
+            categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">Please select a vehicle type above.</p>';
+            return;
+        }
+        loadVehicleCategoriesList(typeID);
+    });
+
+    async function loadVehicleCategoriesList(typeID) {
+        categoriesListContainer.innerHTML = '<div class="spinner"></div>';
+        const data = await fetchAPI('getVehicleCategories', {}, `vehicleTypeID=${typeID}`);
+        if (!data || !data.categories) {
+            categoriesListContainer.innerHTML = '<p>Error loading categories.</p>';
+            return;
+        }
+        if (data.categories.length === 0) {
+            categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">No categories found for this type. Add one above.</p>';
+            return;
+        }
+        categoriesListContainer.innerHTML = data.categories.map(cat => `
+            <div class="category-list-item" data-id="${cat.VehicleCategoryID}" data-name="${cat.CategoryName}">
+                <span class="category-name">${escapeHTML(cat.CategoryName)}</span>
+                <div class="category-actions">
+                    <button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="btn-icon btn-delete-category" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    addNewCategoryBtn.addEventListener('click', async () => {
+        const typeID = categoryManagerTypeSelect.value;
+        const name = newCategoryNameInput.value.trim();
+        if (!typeID) {
+            showToast('Please select a vehicle type first.', 'error');
+            return;
+        }
+        if (!name) {
+            showToast('Please enter a category name.', 'error');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('VehicleTypeID', typeID);
+        formData.append('CategoryName', name);
+        
+        const result = await fetchAPI('addVehicleCategory', { method: 'POST', body: formData });
+        if (result && result.success) {
+            showToast(result.message);
+            newCategoryNameInput.value = '';
+            await loadVehicleCategoriesList(typeID); // Reload just this list
+            await refreshAllParkingDropdowns(); // Reload all other dropdowns
+        }
+    });
+
+    categoriesListContainer.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.btn-edit-category');
+        const deleteBtn = e.target.closest('.btn-delete-category');
+        const item = e.target.closest('.category-list-item');
+        if (!item) return;
+
+        const id = item.dataset.id;
+        const name = item.dataset.name;
+        
+        if (editBtn) {
+            openEditNameModal('vehicleCategory', id, name);
+        }
+        
+        if (deleteBtn) {
+            if (!confirm(`Are you sure you want to delete "${name}"?\nThis cannot be undone.`)) {
+                return;
+            }
+            const formData = new FormData();
+            formData.append('CategoryID', id);
+            const result = await fetchAPI('deleteVehicleCategory', { method: 'POST', body: formData });
+            if (result && result.success) {
+                showToast(result.message);
+                const typeID = categoryManagerTypeSelect.value;
+                await loadVehicleCategoriesList(typeID); // Reload just this list
+                await refreshAllParkingDropdowns(); // Reload all other dropdowns
+            }
+        }
+    });
+
+    // --- 3. Generic Edit Name Modal ---
+    function openEditNameModal(type, id, name) {
+        editTypeInput.value = type; // 'vehicleType' or 'vehicleCategory'
+        editIdInput.value = id;
+        editNameInput.value = name;
+        editNameTitle.textContent = `Edit ${type === 'vehicleType' ? 'Type' : 'Category'} Name`;
+        showModal(editNameModal);
+    }
+    
+    editNameForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = editIdInput.value;
+        const type = editTypeInput.value;
+        const name = editNameInput.value.trim();
+        
+        if (!name) {
+            showToast('Name cannot be empty.', 'error');
+            return;
+        }
+
+        let action = '';
+        const formData = new FormData();
+        
+        if (type === 'vehicleType') {
+            action = 'updateVehicleType';
+            formData.append('TypeID', id);
+            formData.append('TypeName', name);
+        } else if (type === 'vehicleCategory') {
+            action = 'updateVehicleCategory';
+            formData.append('CategoryID', id);
+            formData.append('CategoryName', name);
+        } else {
+            return; // Should not happen
+        }
+
+        const result = await fetchAPI(action, { method: 'POST', body: formData });
+        if (result && result.success) {
+            showToast(result.message);
+            hideModal(editNameModal);
+            refreshAllParkingDropdowns(); // Reload everything
+        }
+    });
+
+
+    // ========================================================
+    // SORTING EVENT LISTENERS
+    // ========================================================
+    function setupSortListeners() {
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const column = th.dataset.sort;
+                const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
+                if (!sortState[activeTab]) return;
+                const currentSort = sortState[activeTab];
+                let direction = 'asc';
+                if (currentSort.column === column) {
+                    direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                }
+                sortState[activeTab] = { column, direction };
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                
+                const filterAndSortData = (tab) => {
+                    let filteredData = [];
+                    if (tab === 'dashboard') {
+                        const filterArea = document.getElementById('areaFilterDashboard').value;
+                        filteredData = dashboardTableData
+                            .filter(area => filterArea === "all" || area.AreaName === filterArea);
+                        const newCardTotals = filteredData.reduce((acc, area) => {
+                            acc.occupied += parseFloat(area.occupied) || 0;
+                            acc.available += parseFloat(area.available) || 0;
+                            acc.total += parseFloat(area.total) || 0;
+                            return acc;
+                        }, { occupied: 0, available: 0, total: 0 });
+                        sortData(filteredData, column, direction);
+                        renderDashboard({ cards: newCardTotals, table: filteredData });
+                    } else if (tab === 'slots') {
+                        const filterArea = document.getElementById('areaFilterSlots').value;
+                        const filterStatus = document.getElementById('statusFilterSlots').value;
+                        const searchTerm = document.getElementById('searchSlots').value.toLowerCase();
+                        filteredData = slotsData
+                            .filter(s => filterArea === "all" || s.AreaName.includes(filterArea))
+                            .filter(s => filterStatus === "all" || s.Status === filterStatus)
+                            .filter(s => !searchTerm || s.SlotName.toLowerCase().includes(searchTerm));
+                        sortData(filteredData, column, direction);
+                        renderSlots(filteredData);
+                    } else if (tab === 'vehicleIn') {
+                        const filterArea = document.getElementById('areaFilterVehicleIn').value;
+                        const searchTerm = document.getElementById('searchVehicleIn').value.toLowerCase();
+                        filteredData = vehiclesInData
+                            .filter(s => filterArea === "all" || s.AreaName === filterArea)
+                            .filter(s => !searchTerm || 
+                                (s.GuestName && s.GuestName.toLowerCase().includes(searchTerm)) ||
+                                (s.PlateNumber && s.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                                (s.RoomNumber && s.RoomNumber.toLowerCase().includes(searchTerm))
+                            );
+                        sortData(filteredData, column, direction);
+                        renderVehicleIn(filteredData);
+                    } else if (tab === 'history') {
+                        const filterArea = document.getElementById('areaFilterHistory').value;
+                        const searchTerm = document.getElementById('searchHistory').value.toLowerCase();
+                        filteredData = historyData
+                            .filter(v => filterArea === "all" || v.AreaName === filterArea) 
+                            .filter(v => !searchTerm || 
+                                (v.GuestName && v.GuestName.toLowerCase().includes(searchTerm)) ||
+                                (v.PlateNumber && v.PlateNumber.toLowerCase().includes(searchTerm)) ||
+                                (v.RoomNumber && v.RoomNumber.toLowerCase().includes(searchTerm))
+                            );
+                        sortData(filteredData, column, direction);
+                        renderHistory(filteredData);
+                    }
+                };
+                filterAndSortData(activeTab);
+            });
+        });
+    }
+    
+    // ========================================================
+    // SANITIZATION (*** NEW ***)
+    // ========================================================
+    function sanitizeOnPaste(e) {
+        // Get pasted data
+        let paste = (e.clipboardData || window.clipboardData).getData('text');
+        // Strip invalid characters (allow letters, numbers, spaces, and basic punctuation)
+        let sanitized = paste.replace(/[^a-zA-Z0-9\s.,#-]/g, '');
+        
+        // This is a bit of a hack to insert the sanitized text
+        // We stop the default paste, then manually insert the sanitized text
+        e.preventDefault();
+        document.execCommand('insertText', false, sanitized);
+    }
+    
+    // ========================================================
+    // INITIALIZE ON PAGE LOAD
+    // ========================================================
+    
+    async function loadFilterDropdowns() {
+        const data = await fetchAPI('getParkingAreas');
+        if (data && data.areas) {
+            const areaFilterOptions = data.areas.map(a => `<option value="${a.AreaName}">${a.AreaName}</option>`).join('');
+            const allAreaFilters = document.querySelectorAll('.filterDropdown[id^="areaFilter"]');
+            allAreaFilters.forEach(select => {
+                select.innerHTML = `<option value="all">All Areas</option>${areaFilterOptions}`;
+            });
+        }
+    }
+    
+    function escapeHTML(str) {
+        if (typeof str !== 'string') return '';
+        return str.replace(/[&<>"']/g, function(m) {
+            return {
+                '&': '&amp;', '<': '&lt;', '>': '&gt;',
+                '"': '&quot;', "'": '&#39;'
+            }[m];
+        });
+    }
+    
+    function initializeApp() {
+        setupUIListeners();
+        setupParkingListeners();
+        setupSortListeners(); 
+        
+        // Attach sanitization listener to all relevant inputs
+        document.querySelectorAll('.sanitize-on-paste').forEach(input => {
+            input.addEventListener('paste', sanitizeOnPaste);
+        });
+
+        loadFilterDropdowns();
+        performFilterAndSearch();
+    }
+    
+    initializeApp();
 });
-
-// ===== PROFILE & LOGOUT =====
-// This part of your code was already well-structured and is CORRECT.
-const profileBtn = document.getElementById('profileBtn');
-const sidebar = document.getElementById('profile-sidebar');
-const closeBtn = document.getElementById('sidebar-close-btn');
-
-if(profileBtn && sidebar && closeBtn) {
-    profileBtn.addEventListener('click', () => sidebar.classList.add('active'));
-    closeBtn.addEventListener('click', () => sidebar.classList.remove('active'));
-}
-
-const logoutBtn = document.getElementById('logoutBtn');
-const logoutModal = document.getElementById('logoutModal');
-const closeLogoutBtn = document.getElementById('closeLogoutBtn');
-const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
-const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
-
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => logoutModal.style.display = 'flex');
-}
-if (closeLogoutBtn) {
-    closeLogoutBtn.addEventListener('click', () => logoutModal.style.display = 'none');
-}
-if (cancelLogoutBtn) {
-    cancelLogoutBtn.addEventListener('click', () => logoutModal.style.display = 'none');
-}
-if (confirmLogoutBtn) {
-    confirmLogoutBtn.addEventListener('click', () => {
-        window.location.href = 'logout.php';
-    });
-}
-if (logoutModal) {
-    logoutModal.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) {
-            logoutModal.style.display = 'none';
-        }
-    });
-}

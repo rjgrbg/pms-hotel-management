@@ -1,58 +1,84 @@
-
 <?php
 // Set headers for JSON response
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, must-revalidate');
 
 // 1. Include DB connection and ensure user is logged in
+session_start(); // <-- Make sure session is started before accessing $_SESSION
 require_once('db_connection.php'); 
 
-if (!isset($_SESSION['UserID']) || $_SESSION['UserType'] !== 'admin') {
+// Define allowed roles
+$allowedRoles = ['admin', 'maintenance_manager', 'housekeeping_manager'];
+
+if (!isset($_SESSION['UserID']) || !in_array($_SESSION['UserType'], $allowedRoles)) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     exit();
 }
 
+// Get single database connection
+$conn = get_db_connection('pms');
+
+// Check connection
+if ($conn === null) {
+    http_response_code(500);
+    error_log("Database connection error in room_actions.php");
+    echo json_encode(['success' => false, 'message' => 'Database connection error.']);
+    exit();
+}
+
 $user_id = $_SESSION['UserID'];
 $request_method = $_SERVER['REQUEST_METHOD'];
-$action = $_GET['action'] ?? $_POST['action'] ?? '';
 $response = ['success' => false, 'message' => 'Invalid action or request method.'];
+$action = '';
 
-// Function to sanitize input
-function sanitize_input($conn, $data) {
-    if (is_array($data)) {
-        return array_map(function($item) use ($conn) {
-            return $conn->real_escape_string($item);
-        }, $data);
+// Handle JSON payload for POST/PUT
+$data = [];
+if ($request_method === 'POST' || $request_method === 'PUT') {
+    $data = json_decode(file_get_contents('php://input'), true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        $data = []; // Not valid JSON, fall back to POST
     }
-    return $conn->real_escape_string($data);
 }
+
+// Determine action from GET, POST, or JSON body
+// --- REFINEMENT: Added trim() ---
+$action = trim($_GET['action'] ?? $_POST['action'] ?? $data['action'] ?? '');
+
 
 // ====================================================================
 // --- FETCH ROOMS (READ) ---
 // ====================================================================
 if ($request_method === 'GET' && $action === 'fetch_rooms') {
+    
+    // This query has no user input, so it's already safe.
     $sql = "SELECT 
-                RoomID, 
-                FloorNumber, 
-                RoomNumber, 
-                RoomType,
-                GuestCapacity,
-                Rate,
-                RoomStatus
-            FROM room
-            ORDER BY RoomNumber ASC";
+                r.room_id, 
+                r.floor_num, 
+                r.room_num, 
+                r.room_type,
+                r.capacity,
+                r.price,
+                IFNULL(rs.RoomStatus, 'Available') AS RoomStatus
+            FROM 
+                pms_rooms r
+            LEFT JOIN 
+                pms_room_status rs ON r.room_num = rs.RoomNumber
+            WHERE
+                r.is_archived = 0
+            ORDER BY 
+                r.room_num ASC";
 
     if ($result = $conn->query($sql)) {
         $rooms = [];
         while ($row = $result->fetch_assoc()) {
             $rooms[] = [
-                'RoomID' => $row['RoomID'],
-                'Floor' => $row['FloorNumber'],
-                'Room' => $row['RoomNumber'],
-                'Type' => $row['RoomType'],
-                'NoGuests' => $row['GuestCapacity'],
-                'Rate' => $row['Rate'], // Store as raw number for easy editing
+                'RoomID' => $row['room_id'], 
+                'Floor' => $row['floor_num'],
+                'Room' => $row['room_num'],
+                'Type' => $row['room_type'],
+                'NoGuests' => $row['capacity'],
+                'Rate' => $row['price'],
                 'Status' => $row['RoomStatus'],
             ];
         }
@@ -60,122 +86,189 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
         $response['data'] = $rooms;
         $response['totalRecords'] = count($rooms);
     } else {
-        $response['message'] = "Error fetching rooms: " . $conn->error;
-        error_log("Room fetch error: " . $conn->error);
+        $response['message'] = "Error fetching rooms: ". $conn->error;
+        error_log("Room fetch error: ". $conn->error);
     }
 
 // ====================================================================
-// --- ADD ROOM (CREATE) ---
+// --- SET ROOM STATUS (from maintenance.js) ---
 // ====================================================================
-} elseif ($request_method === 'POST' && $action === 'add_room') {
-    // Sanitize and validate inputs
-    $floor = sanitize_input($conn, $_POST['roomFloor'] ?? '');
-    $number = sanitize_input($conn, $_POST['roomNumber'] ?? '');
-    $type = sanitize_input($conn, $_POST['roomType'] ?? '');
-    $guests = sanitize_input($conn, $_POST['roomGuests'] ?? '');
-    $rate = sanitize_input($conn, $_POST['roomRate'] ?? '');
-    $status = sanitize_input($conn, $_POST['roomStatus'] ?? '');
+} elseif ($request_method === 'POST' && $action === 'update_status') {
     
-    if (empty($floor) || empty($number) || empty($type) || empty($guests) || empty($rate) || empty($status)) {
-        $response['message'] = 'Missing required fields.';
+    // --- REFINEMENT: Replaced real_escape_string with trim() ---
+    $number = trim($data['room_number'] ?? '');
+    $status = trim($data['new_status'] ?? '');
+
+    if (empty($number) || empty($status)) {
+        $response['message'] = 'Missing Room Number or New Status from JSON body.';
     } else {
-        $sql = "INSERT INTO room (UserID, RoomNumber, RoomType, GuestCapacity, Rate, RoomStatus, FloorNumber) VALUES (?, ?, ?, ?, ?, ?, ?)";
         
-        // Use 'd' for DECIMAL (Rate)
+        // Security Check: Prevent setting to 'Available' if active tasks exist
+        if ($status === 'Available') {
+            // 1. Get room_id from pms_rooms
+            // Using prepared statements, so no escaping is needed on $number
+            $stmt_room = $conn->prepare("SELECT room_id FROM pms_rooms WHERE room_num = ?");
+            $stmt_room->bind_param("s", $number); // Use "s" for string since it was trimmed
+            $stmt_room->execute();
+            $room_result = $stmt_room->get_result();
+            
+            if ($room_row = $room_result->fetch_assoc()) {
+                $roomId = $room_row['room_id'];
+                
+                // 2. Check for active maintenance tasks
+                $stmt_check = $conn->prepare("SELECT COUNT(*) as active_tasks FROM pms_maintenance_requests WHERE RoomID = ? AND Status IN ('Pending', 'In Progress')");
+                $stmt_check->bind_param("i", $roomId); // $roomId is from our DB, safe
+                $stmt_check->execute();
+                $task_result = $stmt_check->get_result()->fetch_assoc();
+                
+                if ($task_result && $task_result['active_tasks'] > 0) {
+                    $response['success'] = false;
+                    $response['message'] = "Cannot set status to 'Available' because an active maintenance task (Pending or In Progress) exists for this room.";
+                    
+                    $stmt_room->close();
+                    $stmt_check->close();
+                    $conn->close();
+                    echo json_encode($response);
+                    exit();
+                }
+                $stmt_check->close();
+            }
+            $stmt_room->close();
+        }
+
+        // Use INSERT...ON DUPLICATE KEY UPDATE
+        $sql = "INSERT INTO pms_room_status (RoomNumber, RoomStatus, UserID) 
+                VALUES (?, ?, ?) 
+                ON DUPLICATE KEY UPDATE RoomStatus = ?, UserID = ?";
+        
         if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param("isssdsi", $user_id, $number, $type, $guests, $rate, $status, $floor);
+            // Pass the trimmed $number and $status directly
+            $stmt->bind_param("ssisi", $number, $status, $user_id, $status, $user_id);
             
             if ($stmt->execute()) {
                 $response['success'] = true;
-                $response['message'] = 'Room added successfully!';
+                $response['message'] = 'Room status updated successfully!';
             } else {
-                if ($conn->errno == 1062) {
-                    $response['message'] = 'Error: Room number ' . $number . ' already exists.';
-                } else {
-                    $response['message'] = 'Failed to add room: ' . $stmt->error;
-                    error_log("Add room error: " . $stmt->error);
-                }
+                $response['message'] = 'Failed to set room status: '. $stmt->error;
+                error_log("Set room status error (update_status): ". $stmt->error);
             }
             $stmt->close();
         } else {
             $response['message'] = 'Database preparation error.';
-            error_log("Add room preparation error: " . $conn->error);
+            error_log("Set room status prep error (update_status): ". $conn->error);
         }
     }
 
 // ====================================================================
-// --- EDIT ROOM (UPDATE) ---
+// --- SET ROOM STATUS (from admin.js) ---
 // ====================================================================
-} elseif ($request_method === 'POST' && $action === 'edit_room') {
-    $room_id = sanitize_input($conn, $_POST['roomID'] ?? '');
-    $floor = sanitize_input($conn, $_POST['roomFloor'] ?? '');
-    $number = sanitize_input($conn, $_POST['roomNumber'] ?? '');
-    $type = sanitize_input($conn, $_POST['roomType'] ?? '');
-    $guests = sanitize_input($conn, $_POST['roomGuests'] ?? '');
-    $rate = sanitize_input($conn, $_POST['roomRate'] ?? '');
-    $status = sanitize_input($conn, $_POST['roomStatus'] ?? '');
-
-
-    if (empty($room_id) || empty($floor) || empty($number) || empty($type) || empty($guests) || empty($rate) || empty($status)) {
-        $response['message'] = 'Missing required fields.';
+} elseif ($request_method === 'POST' && $action === 'edit_room') { 
+    
+    // --- REFINEMENT: Replaced real_escape_string with trim() ---
+    $number = trim($_POST['roomNumber'] ?? '');
+    $status = trim($_POST['roomStatus'] ?? '');
+    
+    if (empty($number) || empty($status)) {
+        $response['message'] = 'Missing Room Number or Status from POST data.';
     } else {
-        // Updated UserID to the currently logged-in admin (good practice)
-        $sql = "UPDATE room SET RoomNumber = ?, RoomType = ?, GuestCapacity = ?, Rate = ?, RoomStatus = ?, FloorNumber = ?, UserID = ? WHERE RoomID = ?";
+
+        // Security Check: (This logic is identical to 'update_status')
+        if ($status === 'Available') { 
+            $stmt_room = $conn->prepare("SELECT room_id FROM pms_rooms WHERE room_num = ?");
+            $stmt_room->bind_param("s", $number); // Use "s" for string
+            $stmt_room->execute();
+            $room_result = $stmt_room->get_result();
+            
+            if ($room_row = $room_result->fetch_assoc()) {
+                $roomId = $room_row['room_id'];
+                
+                $stmt_check = $conn->prepare("SELECT COUNT(*) as active_tasks FROM pms_maintenance_requests WHERE RoomID = ? AND Status IN ('Pending', 'In Progress')");
+                $stmt_check->bind_param("i", $roomId);
+                $stmt_check->execute();
+                $task_result = $stmt_check->get_result()->fetch_assoc();
+                
+                if ($task_result && $task_result['active_tasks'] > 0) {
+                    $response['success'] = false;
+                    $response['message'] = "Cannot set status to 'Available' because an active maintenance task (Pending or In Progress) exists for this room.";
+                    
+                    $stmt_room->close();
+                    $stmt_check->close();
+                    $conn->close();
+                    echo json_encode($response);
+                    exit();
+                }
+                $stmt_check->close();
+            }
+            $stmt_room->close();
+        }
+
+        // Use INSERT...ON DUPLICATE KEY UPDATE
+        $sql = "INSERT INTO pms_room_status (RoomNumber, RoomStatus, UserID) 
+                VALUES (?, ?, ?) 
+                ON DUPLICATE KEY UPDATE RoomStatus = ?, UserID = ?";
         
         if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param("issdsiii", $number, $type, $guests, $rate, $status, $floor, $user_id, $room_id);
+            // Pass the trimmed $number and $status directly
+            $stmt->bind_param("ssisi", $number, $status, $user_id, $status, $user_id);
             
             if ($stmt->execute()) {
-                if ($stmt->affected_rows > 0) {
-                    $response['success'] = true;
-                    $response['message'] = 'Room updated successfully!';
-                } else {
-                    $response['message'] = 'Room not found or no changes were made.';
-                }
+                $response['success'] = true;
+                $response['message'] = 'Room status updated successfully!';
             } else {
-                 if ($conn->errno == 1062) {
-                    $response['message'] = 'Error: Room number ' . $number . ' already exists.';
-                } else {
-                    $response['message'] = 'Failed to update room: ' . $stmt->error;
-                    error_log("Edit room error: " . $stmt->error);
-                }
+                $response['message'] = 'Failed to set room status: '. $stmt->error;
+                error_log("Set room status error (edit_room): ". $stmt->error);
             }
             $stmt->close();
         } else {
             $response['message'] = 'Database preparation error.';
-            error_log("Edit room preparation error: " . $conn->error);
+            error_log("Set room status preparation error (edit_room): ". $conn->error);
         }
     }
 
 // ====================================================================
-// --- DELETE ROOM (DELETE) ---
+// --- DELETE ROOM STATUS (DELETE) ---
 // ====================================================================
 } elseif ($request_method === 'POST' && $action === 'delete_room') {
-    $room_id = sanitize_input($conn, $_POST['roomID'] ?? '');
+    
+    // --- REFINEMENT: Replaced real_escape_string with trim() ---
+    $room_id = trim($_POST['roomID'] ?? '');
 
     if (empty($room_id)) {
         $response['message'] = 'Missing Room ID.';
     } else {
-        $sql = "DELETE FROM room WHERE RoomID = ?";
-        
-        if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param("i", $room_id);
-            
-            if ($stmt->execute()) {
-                if ($stmt->affected_rows > 0) {
-                    $response['success'] = true;
-                    $response['message'] = 'Room deleted successfully.';
-                } else {
-                    $response['message'] = 'Room not found.';
-                }
-            } else {
-                $response['message'] = 'Failed to delete room: ' . $stmt->error;
-                error_log("Delete room error: " . $stmt->error);
+        // 1. Find the room_num from pms_rooms using the room_id
+        $roomNumber = null;
+        $stmt_find = $conn->prepare("SELECT room_num FROM pms_rooms WHERE room_id = ?");
+        $stmt_find->bind_param("s", $room_id); // Use "s" for string
+        if ($stmt_find->execute()) {
+            $result = $stmt_find->get_result();
+            if ($row = $result->fetch_assoc()) {
+                $roomNumber = $row['room_num'];
             }
-            $stmt->close();
+        }
+        $stmt_find->close();
+
+        if ($roomNumber) {
+            // 2. Delete the status entry from pms_room_status
+            $sql = "DELETE FROM pms_room_status WHERE RoomNumber = ?";
+            
+            if ($stmt = $conn->prepare($sql)) {
+                $stmt->bind_param("s", $roomNumber); // $roomNumber is from DB, safe
+                
+                if ($stmt->execute()) {
+                    $response['success'] = true;
+                    $response['message'] = 'Room status reset successfully (removed from status table).';
+                } else {
+                    $response['message'] = 'Failed to delete room status: '. $stmt->error;
+                    error_log("Delete room status error: ". $stmt->error);
+                }
+                $stmt->close();
+            } else {
+                $response['message'] = 'Database preparation error.';
+                error_log("Delete room status prep error: ". $conn->error);
+            }
         } else {
-            $response['message'] = 'Database preparation error.';
-            error_log("Delete room preparation error: " . $conn->error);
+            $response['message'] = 'Room not found.';
         }
     }
 }

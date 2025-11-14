@@ -360,9 +360,20 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
-.statusBadge.dirty { background-color: #ff6b35; }
-.statusBadge.request { background-color: #c9302c; }
-.statusBadge.cleaned { background-color: #5cb85c; }
+.statusBadge.in-stock {
+    background-color: #5cb85c; /* Green */
+    color: #fff;
+}
+
+.statusBadge.low-stock {
+    background-color: #ffc107; /* Yellow/Gold */
+    color: #333; /* Dark text for readability on yellow */
+}
+
+.statusBadge.out-of-stock {
+    background-color: #c9302c; /* Red */
+    color: #fff;
+}
 
 .assignBtn {
   background-color: #480c1b;
@@ -1064,7 +1075,7 @@ tbody tr:hover {
 }
 
 .confirm-buttons .btn-cancel {
-    background-color: #FFA237; /* Gold/Orange */
+    background-color: #FFF2E0; /* Gold/Orange */
     color: #352C24; /* Dark Brown */
 }
 .confirm-buttons .btn-cancel:hover {
@@ -1257,4 +1268,144 @@ tbody tr:hover {
 }
 .delete-btn:hover {
     background-color: #e74c3c; /* Lighter red */
+}
+/* === STYLES FOR EDIT MODAL BUTTONS === */
+.edit-modal-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.edit-modal-buttons .submit-btn {
+    flex: 1; /* Make buttons share space */
+    margin-top: 0;
+}
+
+/* Specific style for the new white cancel button in EDIT modal */
+.edit-modal-buttons .btn-cancel-white {
+    background-color: #fff;
+    color: #333;
+    border: 1px solid #ccc;
+}
+.edit-modal-buttons .btn-cancel-white:hover {
+    background-color: #f0f0f0;
+}
+
+
+/* === STYLES FOR DELETE MODAL === */
+
+/* Style for the new 'X' close button */
+#delete-confirm-modal-content {
+    position: relative; /* Needed for the close button */
+}
+#delete-confirm-modal-content .modal-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 30px;
+    color: #FFF2E0; /* Off-white color from modal */
+    opacity: 0.7;
+}
+#delete-confirm-modal-content .modal-close-btn:hover {
+    opacity: 1;
+}
+
+/* Style for the warning icon */
+#delete-confirm-modal .modal-icon {
+    display: block; 
+    margin: 0 auto 20px;
+    height: 50px;
+    width: 50px;
+}
+
+/* Style for the white 'CANCEL' button in DELETE modal */
+#delete-confirm-modal .btn-delete-cancel {
+    background-color: #fff;
+    color: #333;
+    border: 1px solid #ccc;
+}
+#delete-confirm-modal .btn-delete-cancel:hover {
+    background-color: #f0f0f0;
+}
+/* Style for the main delete button */
+#delete-confirm-modal .btn-delete-confirm {
+    background-color: #c9302c; /* Red */
+    color: #fff;
+}
+#delete-confirm-modal .btn-delete-confirm:hover {
+    background-color: #e74c3c; /* Lighter red */
+}
+.paginationControls {
+  display: flex;
+  gap: 4px;
+}
+
+.paginationControls button {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 6px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.paginationControls button:hover {
+  border-color: #ffb400;
+  color: #ffb400;
+}
+
+.paginationControls button.active {
+  background-color: #ffb400;
+  border-color: #ffb400;
+  color: #fff;
+  font-weight: bold;
+}
+
+.paginationControls button:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+  border-color: #eee;
+}
+
+.paginationControls span.dots {
+  padding: 6px 4px;
+  color: #999;
+}
+
+.modal-body .form-row.form-row-align-bottom {
+  align-items: flex-end; /* Aligns the form groups to the bottom */
+  gap: 15px; /* Adds spacing between the two columns */
+}
+
+.modal-body .form-row-align-bottom .form-group {
+  flex: 1; /* Makes both columns take equal space */
+}
+
+/* * This new class styles the <span> to look exactly 
+ * like a regular, non-editable text input.
+ */
+.form-group-static span {
+  display: block;
+  width: 100%;
+  box-sizing: border-box; 
+  padding: 10px 12px;
+  font-size: 1rem;
+  font-weight: 400; /* Match normal input text */
+  color: #555; /* Match normal input text */
+  background-color: #fff; /* Match 'Add Stock' background */
+  border: 1px solid #ddd; /* Match 'Add Stock' border */
+  border-radius: 6px;
+  min-height: 42.5px; /* Match input height */
+}
+
+
+/* ==== MODIFICATION: Added Column Alignment Rules ==== */
+.requestsTable th[data-sort="DateofStockIn"],
+.requestsTable #requestsTableBody td:nth-child(7) {
+    text-align: center;
+}
+
+.requestsTable th:nth-child(8) { /* Action Header */
+     text-align: center;
 }
