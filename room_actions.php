@@ -4,6 +4,7 @@ header('Content-Type: application/json');
 header('Cache-Control: no-cache, must-revalidate');
 
 // 1. Include DB connection and ensure user is logged in
+session_start(); // <-- Make sure session is started before accessing $_SESSION
 require_once('db_connection.php'); 
 
 // Define allowed roles
@@ -41,15 +42,16 @@ if ($request_method === 'POST' || $request_method === 'PUT') {
 }
 
 // Determine action from GET, POST, or JSON body
-$action = $_GET['action'] ?? $_POST['action'] ?? $data['action'] ?? '';
+// --- REFINEMENT: Added trim() ---
+$action = trim($_GET['action'] ?? $_POST['action'] ?? $data['action'] ?? '');
 
 
 // ====================================================================
 // --- FETCH ROOMS (READ) ---
-// Fetches details from pms_rooms, joins Status from room_status
 // ====================================================================
 if ($request_method === 'GET' && $action === 'fetch_rooms') {
     
+    // This query has no user input, so it's already safe.
     $sql = "SELECT 
                 r.room_id, 
                 r.floor_num, 
@@ -90,12 +92,12 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
 
 // ====================================================================
 // --- SET ROOM STATUS (from maintenance.js) ---
-// This handles 'update_status' calls from maintenance.js (JSON)
 // ====================================================================
 } elseif ($request_method === 'POST' && $action === 'update_status') {
     
-    $number = $conn->real_escape_string($data['room_number'] ?? '');
-    $status = $conn->real_escape_string($data['new_status'] ?? '');
+    // --- REFINEMENT: Replaced real_escape_string with trim() ---
+    $number = trim($data['room_number'] ?? '');
+    $status = trim($data['new_status'] ?? '');
 
     if (empty($number) || empty($status)) {
         $response['message'] = 'Missing Room Number or New Status from JSON body.';
@@ -104,8 +106,9 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
         // Security Check: Prevent setting to 'Available' if active tasks exist
         if ($status === 'Available') {
             // 1. Get room_id from pms_rooms
+            // Using prepared statements, so no escaping is needed on $number
             $stmt_room = $conn->prepare("SELECT room_id FROM pms_rooms WHERE room_num = ?");
-            $stmt_room->bind_param("i", $number);
+            $stmt_room->bind_param("s", $number); // Use "s" for string since it was trimmed
             $stmt_room->execute();
             $room_result = $stmt_room->get_result();
             
@@ -114,7 +117,7 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
                 
                 // 2. Check for active maintenance tasks
                 $stmt_check = $conn->prepare("SELECT COUNT(*) as active_tasks FROM pms_maintenance_requests WHERE RoomID = ? AND Status IN ('Pending', 'In Progress')");
-                $stmt_check->bind_param("i", $roomId);
+                $stmt_check->bind_param("i", $roomId); // $roomId is from our DB, safe
                 $stmt_check->execute();
                 $task_result = $stmt_check->get_result()->fetch_assoc();
                 
@@ -139,7 +142,8 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
                 ON DUPLICATE KEY UPDATE RoomStatus = ?, UserID = ?";
         
         if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param("isisi", $number, $status, $user_id, $status, $user_id);
+            // Pass the trimmed $number and $status directly
+            $stmt->bind_param("ssisi", $number, $status, $user_id, $status, $user_id);
             
             if ($stmt->execute()) {
                 $response['success'] = true;
@@ -157,21 +161,21 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
 
 // ====================================================================
 // --- SET ROOM STATUS (from admin.js) ---
-// This handles 'edit_room' calls from admin.js (Form Data)
 // ====================================================================
 } elseif ($request_method === 'POST' && $action === 'edit_room') { 
     
-    $number = $conn->real_escape_string($_POST['roomNumber'] ?? '');
-    $status = $conn->real_escape_string($_POST['roomStatus'] ?? '');
+    // --- REFINEMENT: Replaced real_escape_string with trim() ---
+    $number = trim($_POST['roomNumber'] ?? '');
+    $status = trim($_POST['roomStatus'] ?? '');
     
     if (empty($number) || empty($status)) {
         $response['message'] = 'Missing Room Number or Status from POST data.';
     } else {
 
-        // Security Check: Prevent setting to 'Available' if active tasks exist
+        // Security Check: (This logic is identical to 'update_status')
         if ($status === 'Available') { 
             $stmt_room = $conn->prepare("SELECT room_id FROM pms_rooms WHERE room_num = ?");
-            $stmt_room->bind_param("i", $number);
+            $stmt_room->bind_param("s", $number); // Use "s" for string
             $stmt_room->execute();
             $room_result = $stmt_room->get_result();
             
@@ -204,7 +208,8 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
                 ON DUPLICATE KEY UPDATE RoomStatus = ?, UserID = ?";
         
         if ($stmt = $conn->prepare($sql)) {
-            $stmt->bind_param("isisi", $number, $status, $user_id, $status, $user_id);
+            // Pass the trimmed $number and $status directly
+            $stmt->bind_param("ssisi", $number, $status, $user_id, $status, $user_id);
             
             if ($stmt->execute()) {
                 $response['success'] = true;
@@ -222,11 +227,11 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
 
 // ====================================================================
 // --- DELETE ROOM STATUS (DELETE) ---
-// This removes the status from pms_room_status, reverting it to 'Available'
 // ====================================================================
 } elseif ($request_method === 'POST' && $action === 'delete_room') {
     
-    $room_id = $conn->real_escape_string($_POST['roomID'] ?? '');
+    // --- REFINEMENT: Replaced real_escape_string with trim() ---
+    $room_id = trim($_POST['roomID'] ?? '');
 
     if (empty($room_id)) {
         $response['message'] = 'Missing Room ID.';
@@ -234,7 +239,7 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
         // 1. Find the room_num from pms_rooms using the room_id
         $roomNumber = null;
         $stmt_find = $conn->prepare("SELECT room_num FROM pms_rooms WHERE room_id = ?");
-        $stmt_find->bind_param("i", $room_id);
+        $stmt_find->bind_param("s", $room_id); // Use "s" for string
         if ($stmt_find->execute()) {
             $result = $stmt_find->get_result();
             if ($row = $result->fetch_assoc()) {
@@ -248,7 +253,7 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
             $sql = "DELETE FROM pms_room_status WHERE RoomNumber = ?";
             
             if ($stmt = $conn->prepare($sql)) {
-                $stmt->bind_param("i", $roomNumber);
+                $stmt->bind_param("s", $roomNumber); // $roomNumber is from DB, safe
                 
                 if ($stmt->execute()) {
                     $response['success'] = true;

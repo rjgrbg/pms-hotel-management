@@ -35,12 +35,15 @@ try {
 $response = ['success' => false, 'message' => 'Invalid request method.', 'redirect' => null];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    
+    // --- STRIPPING INPUTS ---
     $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $password = trim($_POST['password'] ?? ''); // <-- REFINEMENT: Added trim()
     
     if (empty($username) || empty($password)) {
         $response['message'] = "Both username and password are required.";
     } else {
+        // --- SECURE SQL (Prepared Statement) ---
         $sql = "SELECT UserID, Password, AccountType FROM pms_users WHERE Username = ?";
 
         if ($stmt = $conn->prepare($sql)) {
@@ -48,19 +51,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($stmt->execute()) {
                 
-                // ******** THE FIX (Part 1) ********
                 // Get the result as an object
                 $result = $stmt->get_result();
                 $user = $result->fetch_assoc();
                 
                 // We MUST close the first statement *immediately* after fetching
-                // This prevents the database lock.
+                // This prevents database lock errors before the next query.
                 $stmt->close();
-                // **********************************
 
+                // --- SECURE PASSWORD CHECK ---
                 if ($user && password_verify($password, $user['Password'])) {
                     // SUCCESSFUL LOGIN
-                    session_regenerate_id(true);
+                    session_regenerate_id(true); // Prevents session fixation
 
                     // Use the $user array we already fetched
                     $_SESSION['UserID'] = $user['UserID'];
@@ -90,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $response['success'] = true;
                     $response['message'] = 'Login successful.';
-                    $response['redirect'] = 'inventory_log.php';
+                    $response['redirect'] = 'inventory_log.php'; // Redirect target
 
                     if ($log_error !== null) {
                         $response['log_error'] = $log_error;
@@ -114,7 +116,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 } else {
+    // Not a POST request
     http_response_code(405);
+    $response['message'] = 'Invalid request method. Only POST is allowed.';
 }
 
 $conn->close();

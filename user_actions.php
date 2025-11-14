@@ -37,14 +37,18 @@ function send_json_response($success, $message, $data = null) {
     if ($data !== null) {
         $response['data'] = $data;
     }
+    // --- SANITIZE (Not Needed) ---
+    // This function sends JSON. It is inherently safe from XSS.
+    // The client-side JS is responsible for sanitizing data if it renders to HTML.
     echo json_encode($response);
     exit;
 }
 
-$action = $_POST['action'] ?? $_GET['action'] ?? null;
-error_log("user_actions.php called with action: " . ($action ?? 'NULL'));
+// --- STRIP ---
+$action = trim($_POST['action'] ?? $_GET['action'] ?? ''); // <-- REFINEMENT: Added trim() and default ''
+error_log("user_actions.php called with action: " . ($action ?: 'NULL'));
 
-if (!$action) {
+if (empty($action)) { // Use empty() to check for ''
     send_json_response(false, 'No action specified.');
 }
 
@@ -61,6 +65,7 @@ switch ($action) {
             send_json_response(false, 'Database connection error.');
         }
         
+        // --- SECURE (No User Input) ---
         $sql = "SELECT UserID, EmployeeID, Fname, Lname, Mname, Birthday, AccountType, Username, EmailAddress, Shift, Address, ContactNumber FROM pms_users ORDER BY Lname, Fname";
         $result = $pms_conn->query($sql);
 
@@ -80,6 +85,7 @@ switch ($action) {
             send_json_response(false, 'Unauthorized access.');
         }
         
+        // --- STRIP ---
         $employee_code = trim($_POST['employeeCode'] ?? '');
         
         if (empty($employee_code)) {
@@ -91,7 +97,7 @@ switch ($action) {
             send_json_response(false, 'Database connection error.');
         }
 
-        // Check if user already exists in pms_users
+        // --- SECURE (Prepared Statements) ---
         $stmt_check = $pms_conn->prepare("SELECT UserID FROM pms_users WHERE EmployeeID = ?");
         $stmt_check->bind_param("s", $employee_code);
         $stmt_check->execute();
@@ -102,7 +108,7 @@ switch ($action) {
         }
         $stmt_check->close();
 
-        // Fetch employee from employees table with position info
+        // --- SECURE (Prepared Statements) ---
         $sql_employee = "SELECT 
                 e.employee_code,
                 e.first_name,
@@ -129,7 +135,7 @@ switch ($action) {
         
         if ($employee = $result_emp->fetch_assoc()) {
             
-            // Check if position is allowed
+            // ... (rest of the logic is safe, variables are from DB) ...
             $position_name = $employee['position_name'];
             
             if (!isset($position_to_account_type[$position_name])) {
@@ -138,11 +144,9 @@ switch ($action) {
             }
             
             $accountType = $position_to_account_type[$position_name];
-            
-            // Generate username: lastname.employeecode (lowercase)
             $username = strtolower($employee['last_name'] . '.' . $employee_code);
             
-            // Check if username already exists
+            // --- SECURE (Prepared Statements) ---
             $stmt_check_user = $pms_conn->prepare("SELECT UserID FROM pms_users WHERE Username = ?");
             $stmt_check_user->bind_param("s", $username);
             $stmt_check_user->execute();
@@ -153,14 +157,11 @@ switch ($action) {
             }
             $stmt_check_user->close();
 
-            // Generate temporary password
             $temp_password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
-            
-            // Generate activation token
             $token = bin2hex(random_bytes(32));
             $token_expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
-            // Insert new user
+            // --- SECURE (Prepared Statements) ---
             $sql_insert = "INSERT INTO pms_users 
                             (EmployeeID, Fname, Lname, Mname, Birthday, AccountType, Username, Password, 
                              EmailAddress, Shift, Address, ContactNumber, ActivationToken, TokenExpiry) 
@@ -185,7 +186,7 @@ switch ($action) {
             );
 
             if ($stmt_insert->execute()) {
-                // Send activation email
+                // --- PHPMailer (Safe) ---
                 $mail = new PHPMailer(true);
                 $activation_link = BASE_URL . "activate.php?token=" . $token;
 
@@ -236,8 +237,9 @@ switch ($action) {
             send_json_response(false, 'PMS Database connection error.');
         }
 
+        // --- STRIP & VALIDATE ---
         $userID = filter_var($_POST['userID'] ?? null, FILTER_VALIDATE_INT);
-        $password = trim($_POST['password'] ?? '');
+        $password = trim($_POST['password'] ?? ''); // Admin is setting password, trim is OK.
 
         if ($userID === false) {
              send_json_response(false, 'Invalid User ID.');
@@ -249,6 +251,7 @@ switch ($action) {
 
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         
+        // --- SECURE (Prepared Statements) ---
         $sql_update = "UPDATE pms_users SET Password = ? WHERE UserID = ?";
         $stmt_update = $pms_conn->prepare($sql_update);
         $stmt_update->bind_param("si", $hashed_password, $userID);
@@ -277,6 +280,7 @@ switch ($action) {
             send_json_response(false, 'PMS Database connection error.');
         }
 
+        // --- VALIDATE ---
         $userID = filter_var($_POST['userID'] ?? null, FILTER_VALIDATE_INT);
 
         if ($userID === false) {
@@ -287,6 +291,7 @@ switch ($action) {
              send_json_response(false, 'You cannot delete your own account.');
         }
 
+        // --- SECURE (Prepared Statements) ---
         $stmt_delete = $pms_conn->prepare("DELETE FROM pms_users WHERE UserID = ?");
         $stmt_delete->bind_param("i", $userID);
 
@@ -318,6 +323,7 @@ switch ($action) {
             send_json_response(false, 'PMS Database connection error.');
         }
 
+        // --- SECURE (No User Input) ---
         $sql = "SELECT
                     ul.LogID,
                     ul.ActionType,

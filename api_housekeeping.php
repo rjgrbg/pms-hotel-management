@@ -34,6 +34,7 @@ $mail->Port       = 465;
 // *** Logging Function ***
 function logHousekeepingAction($conn, $taskId, $roomId, $userId, $action, $details) {
     try {
+        // This is perfect, already uses prepared statements.
         $stmt = $conn->prepare(
             "INSERT INTO pms_housekeeping_logs (TaskID, RoomID, UserID, Action, Details) 
              VALUES (?, ?, ?, ?, ?)"
@@ -55,7 +56,8 @@ if (!$data || !isset($data['action'])) {
     exit;
 }
 
-$action = $data['action'];
+// --- REFINEMENT: Added trim() ---
+$action = trim($data['action'] ?? '');
 $managerUserId = $_SESSION['UserID']; // Get manager's ID for logging
 
 // Get single database connection
@@ -73,16 +75,21 @@ switch ($action) {
         try {
             $conn->begin_transaction();
             
-            $roomId = $data['roomId'];
-            $staffId = $data['staffId'];
-            $taskTypes = $data['taskTypes'] ?? 'Not Specified';
+            // --- REFINEMENT: Added trim() to all inputs ---
+            $roomId = trim($data['roomId'] ?? '');
+            $staffId = trim($data['staffId'] ?? '');
+            $taskTypes = trim($data['taskTypes'] ?? 'Not Specified');
+
+            if (empty($roomId) || empty($staffId)) {
+                throw new Exception("Room ID and Staff ID are required.");
+            }
 
             // 1. Check if an active task *already* exists for this room
             $stmt_check = $conn->prepare(
                 "SELECT TaskID FROM pms_housekeeping_tasks 
                  WHERE RoomID = ? AND Status IN ('Pending', 'In Progress')"
             );
-            $stmt_check->bind_param("i", $roomId);
+            $stmt_check->bind_param("i", $roomId); // Bound as integer, safe
             $stmt_check->execute();
             $result_check = $stmt_check->get_result();
             
@@ -96,6 +103,7 @@ switch ($action) {
                  (RoomID, UserID, AssignedUserID, TaskType, Status, DateRequested) 
                  VALUES (?, ?, ?, ?, 'Pending', NOW())"
             );
+            // Bind parameters (safe)
             $stmt_insert->bind_param("iiis", $roomId, $managerUserId, $staffId, $taskTypes);
             
             if (!$stmt_insert->execute()) {
@@ -108,7 +116,7 @@ switch ($action) {
             $stmt_status = $conn->prepare(
                 "UPDATE pms_users SET AvailabilityStatus = 'Assigned' WHERE UserID = ?"
             );
-            $stmt_status->bind_param("i", $staffId);
+            $stmt_status->bind_param("i", $staffId); // Bound as integer, safe
             $stmt_status->execute();
 
             // 4. Get staff + room info for email (UPDATED FOR SINGLE DB)
@@ -123,7 +131,7 @@ switch ($action) {
                 WHERE 
                     u.UserID = ? AND r.room_id = ?"
             );
-            $stmt_info->bind_param("ii", $staffId, $roomId);
+            $stmt_info->bind_param("ii", $staffId, $roomId); // Bound as integers, safe
             $stmt_info->execute();
             $info = $stmt_info->get_result()->fetch_assoc();
 
@@ -134,7 +142,7 @@ switch ($action) {
             $staffName = $info['Fname'] . ' ' . $info['Lname'];
             $staffEmail = $info['EmailAddress'];
 
-            // 5. Send email
+            // 5. Send email (Variables are from DB or system, safe)
             $mail->setFrom(GMAIL_EMAIL, EMAIL_FROM_NAME);
             $mail->addAddress($staffEmail, $staffName);
             $mail->Subject = 'New Housekeeping Task Assigned: Room ' . $info['RoomNumber'];
@@ -150,7 +158,7 @@ switch ($action) {
             ";
             $mail->send();
 
-            // 6. Log the action
+            // 6. Log the action (Passes to helper function, which is also safe)
             logHousekeepingAction($conn, $taskId, $roomId, $managerUserId, 'ASSIGNED', "Task assigned to staff $staffName (ID: $staffId) by manager (ID: $managerUserId). Tasks: $taskTypes");
             
             $conn->commit();
@@ -176,8 +184,9 @@ switch ($action) {
         try {
             $conn->begin_transaction();
 
-            $taskId = $data['taskId'] ?? null;
-            if (!$taskId) {
+            // --- REFINEMENT: Added trim() and empty() check ---
+            $taskId = trim($data['taskId'] ?? null);
+            if (empty($taskId)) {
                 throw new Exception("Task ID is required.");
             }
 
@@ -185,7 +194,7 @@ switch ($action) {
             $stmt_info = $conn->prepare(
                 "SELECT RoomID, AssignedUserID, Status FROM pms_housekeeping_tasks WHERE TaskID = ?"
             );
-            $stmt_info->bind_param("i", $taskId);
+            $stmt_info->bind_param("i", $taskId); // Bound as integer, safe
             $stmt_info->execute();
             $info = $stmt_info->get_result()->fetch_assoc();
 
@@ -206,7 +215,7 @@ switch ($action) {
                  SET Status = 'Cancelled', Remarks = 'Cancelled by Manager' 
                  WHERE TaskID = ?"
             );
-            $stmt_update->bind_param("i", $taskId);
+            $stmt_update->bind_param("i", $taskId); // Bound as integer, safe
             $stmt_update->execute();
 
             // 3. If a staff member was assigned, update their status back to 'Available'
@@ -214,6 +223,7 @@ switch ($action) {
                 $stmt_staff = $conn->prepare(
                     "UPDATE pms_users SET AvailabilityStatus = 'Available' WHERE UserID = ?"
                 );
+                // $staffId is from the DB, safe
                 $stmt_staff->bind_param("i", $staffId);
                 $stmt_staff->execute();
             }
