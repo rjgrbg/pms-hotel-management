@@ -135,7 +135,6 @@ function renderRoomsTable(data) {
           <td>${row.Room}</td>
           <td>${row.Type}</td>
           <td>${row.NoGuests}</td>
-          <td>$${parseFloat(row.Rate).toFixed(2)}</td>
           <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
           
         </tr>

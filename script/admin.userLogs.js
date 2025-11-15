@@ -48,11 +48,9 @@ function renderUserLogsTable(data) {
       return `
         <tr>
           <td>${row.LogID}</td>
-          <td>${row.UserID}</td>
           <td>${row.Lname}</td>
           <td>${row.Fname}</td>
           <td>${row.Mname}</td>
-          <td>${row.AccountType}</td>
           <td>${roleName}</td>
           <td>${row.Shift}</td>
           <td>${row.Username}</td>
@@ -125,13 +123,12 @@ function initUserLogsFilters() {
       });
 
       // 3. Define PDF headers and body
-      const headers = ['Log ID', 'User ID', 'Full Name', 'Role', 'Shift', 'Username', 'Action', 'Timestamp'];
+      const headers = ['Log ID', 'Full Name', 'Role', 'Shift', 'Username', 'Action', 'Timestamp'];
       const body = filteredData.map(row => {
           const fullName = `${row.Lname}, ${row.Fname}${row.Mname ? ' ' + row.Mname.charAt(0) + '.' : ''}`;
           const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
           return [
               row.LogID,
-              row.UserID,
               fullName,
               roleName,
               row.Shift,
@@ -149,4 +146,61 @@ function initUserLogsFilters() {
           body
       );
     });
+    /**
+ * Generic helper function to generate a PDF report using jsPDF and autoTable.
+ * @param {string} title - The main title of the report.
+ * @param {string} filename - The filename for the downloaded PDF.
+ * @param {string[]} headers - An array of header strings.
+ * @param {Array<Array<string>>} body - An array of data rows.
+ */
+function generatePdfReport(title, filename, headers, body) {
+    
+    // 1. Check if there is data to download
+    if (body.length === 0) {
+        // Assumes you have a showToast function like in your other scripts
+        showToast('No data to download.', 'error');
+        return;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        // Use landscape orientation for many columns
+        const doc = new jsPDF({ orientation: 'landscape' });
+
+        // 2. Add Title and Timestamp
+        doc.setFontSize(18);
+        doc.text(title, 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+
+        // 3. Create the table
+        doc.autoTable({
+            head: [headers], // jsPDF-autoTable expects head to be an array of arrays
+            body: body,
+            startY: 35,
+            headStyles: { fillColor: [72, 12, 27] }, // Using your maroon color
+            styles: { fontSize: 8, cellPadding: 2 },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            // Set column widths for your 8 columns (landscape)
+            columnStyles: {
+                0: { cellWidth: 15 }, // Log ID
+                1: { cellWidth: 40 }, // Full Name
+                2: { cellWidth: 30 }, // Role
+                3: { cellWidth: 20 }, // Shift
+                4: { cellWidth: 30 }, // Username
+                5: { cellWidth: 20 }, // Action
+                6: { cellWidth: 40 }  // Timestamp
+            }
+        });
+
+        // 4. Save the file
+        doc.save(filename);
+
+    } catch (e) {
+        console.error("Error generating PDF:", e);
+        // Assumes you have a showToast function
+        showToast('Error generating PDF. See console.', 'error');
+    }
+}
 }

@@ -66,29 +66,7 @@ if (isset($_SESSION['UserID'])) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-     <?php
-  // ======================================================
-  // === PHP Logic Orchestration (REQUIRED FILES) ===
-  // ======================================================
-
-  // 1. Load the database configuration and connection ($conn is now available)
-  require_once('db_connection.php');
-
-  // 2. Load the user data function
-  require_once('User.php');
-
-  // 3. Execute the function to get dynamic data
-  $userData = getUserData($conn);
-
-  // Set the variables used in the HTML, applying security (htmlspecialchars)
-  $Fname = htmlspecialchars($userData['Name']);
-  $Accounttype = htmlspecialchars($userData['Accounttype']); // Using Accounttype to match your error
-  // Close the DB connection (optional, but good practice)
-  $conn->close();
-
-  ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Celestia Hotel - Parking Management</title>
@@ -389,6 +367,9 @@ if (isset($_SESSION['UserID'])) {
                     <button class="refreshBtn" id="refreshBtnVehicleIn">
                         <img src="assets/icons/refresh-icon.png" alt="Refresh" />
                     </button>
+                    <button class="downloadBtn" id="downloadBtnActive">
+                        <img src="assets/icons/download-icon.png" alt="Download" />
+                    </button>
                 </div>
             </div>
             <div class="tableWrapper">
@@ -485,8 +466,10 @@ if (isset($_SESSION['UserID'])) {
                 </div>
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="roomNumber">Room</label>
-                        <input type="text" id="roomNumber" class="sanitize-on-paste">
+                        <label for="roomNumber">Rooms</label>
+                        <select id="roomNumber" required>
+                                    <option value="">Loading...</option>
+                                </select>
                     </div>
                         <div class="form-group">
                             <label for="vehicleType">Vehicle Type</label>

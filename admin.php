@@ -7,76 +7,78 @@ require_login(['admin']);
 
 // --- Fetch User Data from Database ---
 include('db_connection.php'); // Ensure DB connection is included
-header('Cache-Control: no-cache, no-store, must-revalidate'); 
+header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');
 $formattedName = 'Admin'; // Default name
 $Accounttype = 'Administrator'; // Default type
 
 if (isset($_SESSION['UserID'])) {
-    $userId = $_SESSION['UserID'];
-    $sql = "SELECT Fname, Mname, Lname, AccountType FROM pms_users WHERE UserID = ?"; 
-    
-    if ($stmt = $conn->prepare($sql)) {
-        $stmt->bind_param("i", $userId);
-        if ($stmt->execute()) {
-            $result = $stmt->get_result();
-            if ($user = $result->fetch_assoc()) {
-                // Fetch names and sanitize for display
-                $Lname = htmlspecialchars($user['Lname'] ?? 'Admin');
-                $Fname = htmlspecialchars($user['Fname'] ?? '');
-                $Mname = htmlspecialchars($user['Mname'] ?? '');
-                $Accounttype = htmlspecialchars($user['AccountType'] ?? 'Administrator'); // Fetch AccountType as well
+  $userId = $_SESSION['UserID'];
+  $sql = "SELECT Fname, Mname, Lname, AccountType FROM pms_users WHERE UserID = ?";
 
-                // Format the name: Fname M. Lname
-                $formattedName = $Fname; // Start with Fname
-                if (!empty($Mname)) {
-                    $formattedName .= ' ' . strtoupper(substr($Mname, 0, 1)) . '.'; // Add M.
-                }
-                if (!empty($Lname)) {
-                     if(!empty(trim($formattedName))) { // Add space only if Fname or Mname was present
-                        $formattedName .= ' ' . $Lname; // Add Lname
-                     } else {
-                        $formattedName = $Lname; // Only Lname is available
-                     }
-                }
-                
-                if (empty(trim($formattedName))) {
-                    $formattedName = 'Admin'; // Fallback to default
-                }
-            } else {
-                 error_log("No user found with UserID: " . $userId);
-            }
-        } else {
-            error_log("Error executing user query: " . $stmt->error);
+  if ($stmt = $conn->prepare($sql)) {
+    $stmt->bind_param("i", $userId);
+    if ($stmt->execute()) {
+      $result = $stmt->get_result();
+      if ($user = $result->fetch_assoc()) {
+        // Fetch names and sanitize for display
+        $Lname = htmlspecialchars($user['Lname'] ?? 'Admin');
+        $Fname = htmlspecialchars($user['Fname'] ?? '');
+        $Mname = htmlspecialchars($user['Mname'] ?? '');
+        $Accounttype = htmlspecialchars($user['AccountType'] ?? 'Administrator'); // Fetch AccountType as well
+
+        // Format the name: Fname M. Lname
+        $formattedName = $Fname; // Start with Fname
+        if (!empty($Mname)) {
+          $formattedName .= ' ' . strtoupper(substr($Mname, 0, 1)) . '.'; // Add M.
         }
-        $stmt->close();
+        if (!empty($Lname)) {
+          if (!empty(trim($formattedName))) { // Add space only if Fname or Mname was present
+            $formattedName .= ' ' . $Lname; // Add Lname
+          } else {
+            $formattedName = $Lname; // Only Lname is available
+          }
+        }
+
+        if (empty(trim($formattedName))) {
+          $formattedName = 'Admin'; // Fallback to default
+        }
+      } else {
+        error_log("No user found with UserID: " . $userId);
+      }
     } else {
-         error_log("Error preparing user query: " . $conn->error);
+      error_log("Error executing user query: " . $stmt->error);
     }
-    // DO NOT CLOSE $conn HERE, we need it for other queries
+    $stmt->close();
+  } else {
+    error_log("Error preparing user query: " . $conn->error);
+  }
+  // DO NOT CLOSE $conn HERE, we need it for other queries
 } else {
-     error_log("UserID not found in session for admin.php");
+  error_log("UserID not found in session for admin.php");
 }
 // --- End Fetch User Data ---
 
 // ===== HELPER FUNCTIONS FOR DATE FORMATTING =====
-function formatDbDateForDisplay($date) {
-    if (!$date) return 'N/A';
-    try {
-        return date('m.d.Y', strtotime($date));
-    } catch (Exception $e) {
-        return 'N/A';
-    }
+function formatDbDateForDisplay($date)
+{
+  if (!$date) return 'N/A';
+  try {
+    return date('m.d.Y', strtotime($date));
+  } catch (Exception $e) {
+    return 'N/A';
+  }
 }
 
-function formatDbDateTimeForDisplay($datetime) {
-    if (!$datetime) return 'Never';
-    try {
-        return date('g:iA/m.d.Y', strtotime($datetime));
-    } catch (Exception $e) {
-        return 'Never';
-    }
+function formatDbDateTimeForDisplay($datetime)
+{
+  if (!$datetime) return 'Never';
+  try {
+    return date('g:iA/m.d.Y', strtotime($datetime));
+  } catch (Exception $e) {
+    return 'Never';
+  }
 }
 // ===== END OF HELPER FUNCTIONS =====
 
@@ -129,37 +131,37 @@ $sql_hk_rooms = "SELECT
                 r.floor_num, r.room_num ASC";
 
 if ($result_hk_rooms = $conn->query($sql_hk_rooms)) {
-    while ($row = $result_hk_rooms->fetch_assoc()) {
-        $requestDate = 'N/A';
-        $requestTime = 'N/A';
-        if (in_array($row['RoomStatus'], ['Needs Cleaning', 'Pending', 'In Progress']) && $row['TaskRequestDate']) {
-            $requestDate = formatDbDateForDisplay($row['TaskRequestDate']);
-            $requestTime = date('g:i A', strtotime($row['TaskRequestDate']));
-        }
-        $staffName = 'Not Assigned';
-        if (!empty($row['Fname'])) {
-            $staffName = trim(
-                htmlspecialchars($row['Fname']) .
-                (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
-                ' ' .
-                htmlspecialchars($row['Lname'])
-            );
-        }
-        $hkRoomsStatus[] = [
-            'id' => $row['RoomID'],
-            'taskId' => $row['TaskID'],
-            'floor' => $row['FloorNumber'],
-            'room' => $row['RoomNumber'],
-            'lastClean' => formatDbDateTimeForDisplay($row['LastClean']),
-            'date' => $requestDate,
-            'requestTime' => $requestTime,
-            'status' => $row['RoomStatus'],
-            'staff' => $staffName
-        ];
+  while ($row = $result_hk_rooms->fetch_assoc()) {
+    $requestDate = 'N/A';
+    $requestTime = 'N/A';
+    if (in_array($row['RoomStatus'], ['Needs Cleaning', 'Pending', 'In Progress']) && $row['TaskRequestDate']) {
+      $requestDate = formatDbDateForDisplay($row['TaskRequestDate']);
+      $requestTime = date('g:i A', strtotime($row['TaskRequestDate']));
     }
-    $result_hk_rooms->free();
+    $staffName = 'Not Assigned';
+    if (!empty($row['Fname'])) {
+      $staffName = trim(
+        htmlspecialchars($row['Fname']) .
+          (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+          ' ' .
+          htmlspecialchars($row['Lname'])
+      );
+    }
+    $hkRoomsStatus[] = [
+      'id' => $row['RoomID'],
+      'taskId' => $row['TaskID'],
+      'floor' => $row['FloorNumber'],
+      'room' => $row['RoomNumber'],
+      'lastClean' => formatDbDateTimeForDisplay($row['LastClean']),
+      'date' => $requestDate,
+      'requestTime' => $requestTime,
+      'status' => $row['RoomStatus'],
+      'staff' => $staffName
+    ];
+  }
+  $result_hk_rooms->free();
 } else {
-    error_log("Admin Error fetching HK room statuses: " . $conn->error);
+  error_log("Admin Error fetching HK room statuses: " . $conn->error);
 }
 
 // ===== 5. Fetch Housekeeping History Data =====
@@ -196,32 +198,32 @@ $sql_hk_history = "SELECT
                     ht.DateRequested DESC";
 
 if ($result_hk_history = $conn->query($sql_hk_history)) {
-    while ($row = $result_hk_history->fetch_assoc()) {
-        $staffName = 'N/A';
-        if ($row['Fname']) {
-            $staffName = trim(
-                htmlspecialchars($row['Fname']) .
-                (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
-                ' ' .
-                htmlspecialchars($row['Lname'])
-            );
-        }
-        $hkHistoryData[] = [
-            'id' => $row['TaskID'],
-            'floor' => $row['FloorNumber'],
-            'room' => $row['RoomNumber'],
-            'issueType' => $row['TaskType'],
-            'date' => formatDbDateForDisplay($row['DateRequested']),
-            'requestedTime' => date('g:i A', strtotime($row['DateRequested'])),
-            'completedTime' => $row['DateCompleted'] ? date('g:i A', strtotime($row['DateCompleted'])) : 'N/A',
-            'staff' => $staffName,
-            'status' => $row['Status'],
-            'remarks' => $row['Remarks']
-        ];
+  while ($row = $result_hk_history->fetch_assoc()) {
+    $staffName = 'N/A';
+    if ($row['Fname']) {
+      $staffName = trim(
+        htmlspecialchars($row['Fname']) .
+          (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+          ' ' .
+          htmlspecialchars($row['Lname'])
+      );
     }
-    $result_hk_history->free();
+    $hkHistoryData[] = [
+      'id' => $row['TaskID'],
+      'floor' => $row['FloorNumber'],
+      'room' => $row['RoomNumber'],
+      'issueType' => $row['TaskType'],
+      'date' => formatDbDateForDisplay($row['DateRequested']),
+      'requestedTime' => date('g:i A', strtotime($row['DateRequested'])),
+      'completedTime' => $row['DateCompleted'] ? date('g:i A', strtotime($row['DateCompleted'])) : 'N/A',
+      'staff' => $staffName,
+      'status' => $row['Status'],
+      'remarks' => $row['Remarks']
+    ];
+  }
+  $result_hk_history->free();
 } else {
-    error_log("Admin Error fetching HK history: " . $conn->error);
+  error_log("Admin Error fetching HK history: " . $conn->error);
 }
 
 
@@ -273,37 +275,37 @@ $sql_mt_rooms = "SELECT
                 r.floor_num, r.room_num ASC";
 
 if ($result_mt_rooms = $conn->query($sql_mt_rooms)) {
-    while ($row = $result_mt_rooms->fetch_assoc()) {
-        $requestDate = 'N/A';
-        $requestTime = 'N/A';
-        if (in_array($row['RoomStatus'], ['Needs Maintenance', 'Pending', 'In Progress']) && $row['MaintenanceRequestDate']) {
-            $requestDate = formatDbDateForDisplay($row['MaintenanceRequestDate']);
-            $requestTime = date('g:i A', strtotime($row['MaintenanceRequestDate']));
-        }
-        $staffName = 'Not Assigned';
-        if (!empty($row['Fname'])) {
-            $staffName = trim(
-                htmlspecialchars($row['Fname']) .
-                (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
-                ' ' .
-                htmlspecialchars($row['Lname'])
-            );
-        }
-        $mtRoomsStatus[] = [
-            'id' => $row['RoomID'],
-            'requestId' => $row['RequestID'],
-            'floor' => $row['FloorNumber'],
-            'room' => $row['RoomNumber'],
-            'lastMaintenance' => formatDbDateTimeForDisplay($row['LastMaintenance']),
-            'date' => $requestDate,
-            'requestTime' => $requestTime,
-            'status' => $row['RoomStatus'],
-            'staff' => $staffName
-        ];
+  while ($row = $result_mt_rooms->fetch_assoc()) {
+    $requestDate = 'N/A';
+    $requestTime = 'N/A';
+    if (in_array($row['RoomStatus'], ['Needs Maintenance', 'Pending', 'In Progress']) && $row['MaintenanceRequestDate']) {
+      $requestDate = formatDbDateForDisplay($row['MaintenanceRequestDate']);
+      $requestTime = date('g:i A', strtotime($row['MaintenanceRequestDate']));
     }
-    $result_mt_rooms->free();
+    $staffName = 'Not Assigned';
+    if (!empty($row['Fname'])) {
+      $staffName = trim(
+        htmlspecialchars($row['Fname']) .
+          (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+          ' ' .
+          htmlspecialchars($row['Lname'])
+      );
+    }
+    $mtRoomsStatus[] = [
+      'id' => $row['RoomID'],
+      'requestId' => $row['RequestID'],
+      'floor' => $row['FloorNumber'],
+      'room' => $row['RoomNumber'],
+      'lastMaintenance' => formatDbDateTimeForDisplay($row['LastMaintenance']),
+      'date' => $requestDate,
+      'requestTime' => $requestTime,
+      'status' => $row['RoomStatus'],
+      'staff' => $staffName
+    ];
+  }
+  $result_mt_rooms->free();
 } else {
-    error_log("Admin Error fetching MT room statuses: " . $conn->error);
+  error_log("Admin Error fetching MT room statuses: " . $conn->error);
 }
 
 // 7. Fetch Maintenance History Data
@@ -340,32 +342,32 @@ $sql_mt_history = "SELECT
                     mr.DateRequested DESC";
 
 if ($result_mt_history = $conn->query($sql_mt_history)) {
-    while ($row = $result_mt_history->fetch_assoc()) {
-        $staffName = 'N/A';
-        if ($row['Fname']) {
-            $staffName = trim(
-                htmlspecialchars($row['Fname']) .
-                (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
-                ' ' .
-                htmlspecialchars($row['Lname'])
-            );
-        }
-        $mtHistoryData[] = [
-            'id' => $row['RequestID'],
-            'floor' => $row['FloorNumber'],
-            'room' => $row['RoomNumber'],
-            'issueType' => $row['IssueType'],
-            'date' => formatDbDateForDisplay($row['DateRequested']),
-            'requestedTime' => date('g:i A', strtotime($row['DateRequested'])),
-            'completedTime' => $row['DateCompleted'] ? date('g:i A', strtotime($row['DateCompleted'])) : 'N/A',
-            'staff' => $staffName,
-            'status' => $row['Status'],
-            'remarks' => $row['Remarks']
-        ];
+  while ($row = $result_mt_history->fetch_assoc()) {
+    $staffName = 'N/A';
+    if ($row['Fname']) {
+      $staffName = trim(
+        htmlspecialchars($row['Fname']) .
+          (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+          ' ' .
+          htmlspecialchars($row['Lname'])
+      );
     }
-    $result_mt_history->free();
+    $mtHistoryData[] = [
+      'id' => $row['RequestID'],
+      'floor' => $row['FloorNumber'],
+      'room' => $row['RoomNumber'],
+      'issueType' => $row['IssueType'],
+      'date' => formatDbDateForDisplay($row['DateRequested']),
+      'requestedTime' => date('g:i A', strtotime($row['DateRequested'])),
+      'completedTime' => $row['DateCompleted'] ? date('g:i A', strtotime($row['DateCompleted'])) : 'N/A',
+      'staff' => $staffName,
+      'status' => $row['Status'],
+      'remarks' => $row['Remarks']
+    ];
+  }
+  $result_mt_history->free();
 } else {
-    error_log("Admin Error fetching MT history: " . $conn->error);
+  error_log("Admin Error fetching MT history: " . $conn->error);
 }
 
 
@@ -374,15 +376,17 @@ $conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Celestia Hotel - Admin Dashboard</title>
   <link rel="stylesheet" href="css/admin.css">
-  
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script> 
-  </head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+</head>
+
 <body>
   <header class="header">
     <div class="headerLeft">
@@ -398,8 +402,10 @@ $conn->close();
           <div class="profileAvatar">
             <img src="assets/icons/profile-icon.png" alt="Profile" />
           </div>
-          <h3 class="profileName"><?php echo $formattedName; // Use the name fetched from DB ?></h3>
-          <p class="profileRole"><?php echo ucfirst($Accounttype); // Use AccountType fetched from DB ?></p>
+          <h3 class="profileName"><?php echo $formattedName; // Use the name fetched from DB 
+                                  ?></h3>
+          <p class="profileRole"><?php echo ucfirst($Accounttype); // Use AccountType fetched from DB 
+                                  ?></p>
         </div>
 
         <nav class="sidebarNav">
@@ -440,13 +446,13 @@ $conn->close();
                 Rooms
               </a>
             </li>
-             <li>
-              <a href="#manage-users" class="navLink" data-page="manage-users"> 
+            <li>
+              <a href="#manage-users" class="navLink" data-page="manage-users">
                 <img src="assets/icons/users-icon.png" alt="Manage Users" class="navIcon" />
                 Manage Users
               </a>
             </li>
-             </ul>
+          </ul>
         </nav>
 
         <button class="logoutBtn" id="logoutBtn">Logout</button>
@@ -559,9 +565,25 @@ $conn->close();
             <div class="filterControls">
               <select class="filterDropdown" id="floorFilter">
                 <option value="">Floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
               </select>
               <select class="filterDropdown" id="roomFilter">
                 <option value="">Room</option>
+
+                <option value="101">101</option>
+                <option value="102">102</option>
+                <option value="103">103</option>
+                <option value="104">104</option>
+                <option value="105">105</option>
+                <option value="201">201</option>
+                <option value="202">202</option>
+                <option value="203">203</option>
+                <option value="204">204</option>
+                <option value="205">205</option>
               </select>
               <div class="searchBox">
                 <input type="text" placeholder="Search Room Number..." class="searchInput" id="hkSearchInput" />
@@ -592,14 +614,14 @@ $conn->close();
                 </tr>
               </thead>
               <tbody id="hkTableBody">
-                 </tbody>
+              </tbody>
             </table>
           </div>
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="hkRecordCount">0</span></span>
             <div class="paginationControls" id="hk-requests-tab-pagination">
-              </div>
+            </div>
           </div>
         </div>
 
@@ -608,9 +630,24 @@ $conn->close();
             <div class="filterControls">
               <select class="filterDropdown" id="floorFilterHkHist">
                 <option value="">Floor</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
               </select>
               <select class="filterDropdown" id="roomFilterHkHist">
                 <option value="">Room</option>
+                <option value="101">101</option>
+                <option value="102">102</option>
+                <option value="103">103</option>
+                <option value="104">104</option>
+                <option value="105">105</option>
+                <option value="201">201</option>
+                <option value="202">202</option>
+                <option value="203">203</option>
+                <option value="204">204</option>
+                <option value="205">205</option>
               </select>
               <input type="date" class="filterDropdown" id="dateFilterHkHist" style="width: 150px; padding: 8px 14px;">
               <div class="searchBox">
@@ -644,14 +681,14 @@ $conn->close();
                 </tr>
               </thead>
               <tbody id="hkHistTableBody">
-                 </tbody>
+              </tbody>
             </table>
           </div>
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="hkHistRecordCount">0</span></span>
             <div class="paginationControls" id="hk-history-tab-pagination">
-               </div>
+            </div>
           </div>
         </div>
       </div>
@@ -673,9 +710,24 @@ $conn->close();
             <div class="filterControls">
               <select class="filterDropdown" id="mtFloorFilter">
                 <option value="">Floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
               </select>
               <select class="filterDropdown" id="mtRoomFilter">
                 <option value="">Room</option>
+                <option value="101">101</option>
+                <option value="102">102</option>
+                <option value="103">103</option>
+                <option value="104">104</option>
+                <option value="105">105</option>
+                <option value="201">201</option>
+                <option value="202">202</option>
+                <option value="203">203</option>
+                <option value="204">204</option>
+                <option value="205">205</option>
               </select>
               <div class="searchBox">
                 <input type="text" placeholder="Search Room Number..." class="searchInput" id="mtSearchInput" />
@@ -706,14 +758,14 @@ $conn->close();
                 </tr>
               </thead>
               <tbody id="mtRequestsTableBody">
-                 </tbody>
+              </tbody>
             </table>
           </div>
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="mtRequestsRecordCount">0</span></span>
             <div class="paginationControls" id="mt-requests-tab-pagination">
-              </div>
+            </div>
           </div>
         </div>
 
@@ -722,9 +774,24 @@ $conn->close();
             <div class="filterControls">
               <select class="filterDropdown" id="mtFloorFilterHist">
                 <option value="">Floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
               </select>
               <select class="filterDropdown" id="mtRoomFilterHist">
                 <option value="">Room</option>
+                <option value="101">101</option>
+                <option value="102">102</option>
+                <option value="103">103</option>
+                <option value="104">104</option>
+                <option value="105">105</option>
+                <option value="201">201</option>
+                <option value="202">202</option>
+                <option value="203">203</option>
+                <option value="204">204</option>
+                <option value="205">205</option>
               </select>
               <input type="date" class="filterDropdown" id="dateFilterMtHist" style="width: 150px; padding: 8px 14px;">
               <div class="searchBox">
@@ -758,14 +825,14 @@ $conn->close();
                 </tr>
               </thead>
               <tbody id="mtHistTableBody">
-                </tbody>
+              </tbody>
             </table>
           </div>
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="mtHistRecordCount">0</span></span>
             <div class="paginationControls" id="mt-history-tab-pagination">
-              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -777,7 +844,7 @@ $conn->close();
           <div class="filterControls">
             <select class="filterDropdown" id="parkingAreaFilter">
               <option value="all">All Areas</option>
-              </select>
+            </select>
             <div class="searchBox">
               <input type="text" placeholder="Search Plate, Name, Room..." class="searchInput" id="parkingHistorySearchInput" />
               <button class="searchBtn">
@@ -809,142 +876,142 @@ $conn->close();
               </tr>
             </thead>
             <tbody id="parkingHistoryTableBody">
-              </tbody>
+            </tbody>
           </table>
         </div>
 
         <div class="pagination" id="parking-page-pagination">
           <span class="paginationInfo">Display Records <span id="parkingHistoryRecordCount">0</span></span>
           <div class="paginationControls">
-             </div>
+          </div>
         </div>
       </div>
 
       <div class="page" id="inventory-page">
-  <h1 class="pageTitle">INVENTORY</h1>
+        <h1 class="pageTitle">INVENTORY</h1>
 
-  <div class="tabNavigation">
-    <button class="tabBtn active" data-inv-tab="inv-items">
-      Items
-    </button>
-    <button class="tabBtn" data-inv-tab="inv-history">
-      History
-    </button>
-  </div>
-
-  <div class="tabContent active" id="inv-items-tab">
-    <div class="controlsRow">
-      <div class="filterControls">
-        <select class="filterDropdown" id="inventoryCategoryFilter">
-          <option value="">Category</option>
-          <option value="Cleaning solution">Cleaning solution</option>
-          <option value="Electrical">Electrical</option>
-          <option value="Bathroom Supplies">Bathroom Supplies</option>
-          <option value="Linens">Linens</option>
-          <option value="Cleaning Equipment">Cleaning Equipment</option>
-        </select>
-        <select class="filterDropdown" id="inventoryStatusFilter">
-          <option value="">Status</option>
-          <option value="in-stock">In Stock</option>
-          <option value="low-stock">Low Stock</option>
-          <option value="out-of-stock">Out of Stock</option>
-        </select>
-        <div class="searchBox">
-          <input type="text" placeholder="Search" class="searchInput" id="inventorySearchInput" />
-          <button class="searchBtn">
-            <img src="assets/icons/search-icon.png" alt="Search" />
+        <div class="tabNavigation">
+          <button class="tabBtn active" data-inv-tab="inv-items">
+            Items
+          </button>
+          <button class="tabBtn" data-inv-tab="inv-history">
+            History
           </button>
         </div>
-        <button class="refreshBtn" id="inventoryRefreshBtn">
-          <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-        </button>
-        <button class="downloadBtn" id="inventoryDownloadBtn">
-          <img src="assets/icons/download-icon.png" alt="Download" />
-        </button>
-      </div>
-    </div>
 
-    <div class="tableWrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Quantity</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Stock In Date</th>
-          </tr>
-        </thead>
-        <tbody id="inventoryTableBody"></tbody>
-      </table>
-    </div>
+        <div class="tabContent active" id="inv-items-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="inventoryCategoryFilter">
+                 <option value="">Category</option>
 
-    <div class="pagination" id="inv-items-tab-pagination">
-      <span class="paginationInfo">Display Records <span id="inventoryRecordCount">0</span></span>
-      <div class="paginationControls"></div>
-    </div>
-  </div>
+                <option value="Cleaning Solution">Cleaning Solution</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Furniture & Fixtures">Furniture & Fixtures</option>
+                <option value="Room Amenities">Room Amenities</option>
+              </select>
+              <select class="filterDropdown" id="inventoryStatusFilter">
+                <option value="">Status</option>
+                <option value="in-stock">In Stock</option>
+                <option value="low-stock">Low Stock</option>
+                <option value="out-of-stock">Out of Stock</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="inventorySearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="inventoryRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="inventoryDownloadBtn">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
+            </div>
+          </div>
 
-  <div class="tabContent" id="inv-history-tab">
-    <div class="controlsRow">
-      <div class="filterControls">
-        <select class="filterDropdown" id="invHistCategoryFilter">
-          <option value="">Category</option>
-          <option value="Cleaning solution">Cleaning solution</option>
-          <option value="Electrical">Electrical</option>
-          <option value="Bathroom Supplies">Bathroom Supplies</option>
-          <option value="Linens">Linens</option>
-          <option value="Cleaning Equipment">Cleaning Equipment</option>
-        </select>
-        <select class="filterDropdown" id="invHistActionFilter">
-          <option value="">Action</option>
-          <option value="Initial Stock In">Initial Stock In</option>
-          <option value="Stock Added">Stock Added</option>
-          <option value="Item Issued">Item Issued</option>
-        </select>
-        <div class="searchBox">
-          <input type="text" placeholder="Search" class="searchInput" id="invHistSearchInput" />
-          <button class="searchBtn">
-            <img src="assets/icons/search-icon.png" alt="Search" />
-          </button>
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Quantity</th>
+                  <th>Description</th>
+                  <th>Status</th>
+                  <th>Stock In Date</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="pagination" id="inv-items-tab-pagination">
+            <span class="paginationInfo">Display Records <span id="inventoryRecordCount">0</span></span>
+            <div class="paginationControls"></div>
+          </div>
         </div>
-        <button class="refreshBtn" id="invHistRefreshBtn">
-          <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-        </button>
-        <button class="downloadBtn" id="invHistDownloadBtn">
-          <img src="assets/icons/download-icon.png" alt="Download" />
-        </button>
+
+        <div class="tabContent" id="inv-history-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="invHistCategoryFilter">
+                <option value="">Category</option>
+
+                <option value="Cleaning Solution">Cleaning Solution</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Furniture & Fixtures">Furniture & Fixtures</option>
+                <option value="Room Amenities">Room Amenities</option>
+              </select>
+              <select class="filterDropdown" id="invHistActionFilter">
+                <option value="">Action</option>
+                <option value="Initial Stock In">Initial Stock In</option>
+                <option value="Stock Added">Stock Added</option>
+                <option value="Item Issued">Item Issued</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="invHistSearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="invHistRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="invHistDownloadBtn">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
+            </div>
+          </div>
+
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Log ID</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Old Qty</th>
+                  <th>Change</th>
+                  <th>New Qty</th>
+                  <th>Status</th>
+                  <th>Stock In</th>
+                  <th>Performed By</th>
+                </tr>
+              </thead>
+              <tbody id="invHistTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="pagination" id="inv-history-tab-pagination">
+            <span class="paginationInfo">Display Records <span id="invHistRecordCount">0</span></span>
+            <div class="paginationControls"></div>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="tableWrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Log ID</th>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Old Qty</th>
-            <th>Change</th>
-            <th>New Qty</th>
-            <th>Status</th>
-            <th>Stock In</th>
-            <th>Performed By</th>
-          </tr>
-        </thead>
-        <tbody id="invHistTableBody"></tbody>
-      </table>
-    </div>
-
-    <div class="pagination" id="inv-history-tab-pagination">
-      <span class="paginationInfo">Display Records <span id="invHistRecordCount">0</span></span>
-      <div class="paginationControls"></div>
-    </div>
-  </div>
-</div>
-      
       <div class="page" id="rooms-page">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
           <h1 class="pageTitle" style="margin-bottom: 0;">ROOMS</h1>
@@ -954,10 +1021,10 @@ $conn->close();
           <div class="filterControls">
             <select class="filterDropdown" id="roomsFloorFilter">
               <option value="">Floor</option>
-              </select>
+            </select>
             <select class="filterDropdown" id="roomsRoomFilter">
               <option value="">Room</option>
-              </select>
+            </select>
             <select class="filterDropdown" id="roomsTypeFilter">
               <option value="">Room Type</option>
               <option value="Standard Room">Standard Room</option>
@@ -983,7 +1050,7 @@ $conn->close();
             <button class="downloadBtn" id="roomsDownloadBtn">
               <img src="assets/icons/download-icon.png" alt="Download" />
             </button>
-            </div>
+          </div>
         </div>
 
         <div class="tableWrapper">
@@ -994,20 +1061,19 @@ $conn->close();
                 <th>Room</th>
                 <th>Type</th>
                 <th>No. Guests</th>
-                <th>Rate</th>
                 <th>Status</th>
-              
+
               </tr>
             </thead>
             <tbody id="roomsTableBody">
-              </tbody>
+            </tbody>
           </table>
         </div>
 
         <div class="pagination" id="rooms-page-pagination">
           <span class="paginationInfo">Display Records <span id="roomsRecordCount">0</span></span>
           <div class="paginationControls">
-            </div>
+          </div>
         </div>
       </div>
 
@@ -1123,11 +1189,9 @@ $conn->close();
               <thead>
                 <tr>
                   <th>Log ID</th>
-                  <th>User ID</th>
                   <th>Last Name</th>
                   <th>First Name</th>
                   <th>Middle Name</th>
-                  <th>Account Type</th>
                   <th>Role</th>
                   <th>Shift</th>
                   <th>Username</th>
@@ -1149,12 +1213,12 @@ $conn->close();
     </main>
   </div>
 
- <div class="modalBackdrop" id="roomModal" style="display: none;">
+  <div class="modalBackdrop" id="roomModal" style="display: none;">
     <div class="roomModal">
       <button class="closeBtn" id="closeRoomModalBtn">&times;</button>
       <h2 id="roomModalTitle">Edit Room Status</h2>
       <div id="roomFormMessage" class="formMessage" style="display:none;"></div>
-      
+
       <form id="roomForm">
         <div class="formGrid">
           <div class="formGroup">
@@ -1170,7 +1234,7 @@ $conn->close();
             <input type="text" id="roomNumber" name="roomNumber" required placeholder="e.g., 101" readonly />
           </div>
         </div>
-        
+
         <div class="formGroup">
           <label for="roomType">Room Type</label>
           <select id="roomType" name="roomType" required disabled>
@@ -1179,18 +1243,18 @@ $conn->close();
             <option value="Penthouse Suite">Penthouse Suite</option>
           </select>
         </div>
-        
+
         <div class="formGroup">
           <label for="roomGuests">Guest Capacity</label>
           <input type="text" id="roomGuests" name="roomGuests" readonly disabled />
         </div>
-        
+
         <div class="formGroup">
           <label for="roomRate">Rate (per night)</label>
           <input type="number" id="roomRate" name="roomRate" required step="0.01" placeholder="e.g., 120.00" disabled />
         </div>
-        
-     <div class="formGroup">
+
+        <div class="formGroup">
           <label for="roomStatus">Status *</label>
           <select id="roomStatus" name="roomStatus" required>
             <option value="">Select Status</option>
@@ -1199,7 +1263,7 @@ $conn->close();
             <option value="Needs Maintenance">Needs Maintenance</option>
           </select>
         </div>
-        
+
         <div class="modalButtons">
           <button type="button" class="modalBtn cancelBtn" id="cancelRoomBtn">CANCEL</button>
           <button type="submit" class="modalBtn confirmBtn" id="saveRoomBtn">SAVE STATUS</button>
@@ -1224,93 +1288,93 @@ $conn->close();
   </div>
 
   <div class="modalBackdrop" id="userModal" style="display: none;">
-  <div class="addUserModal">
-    <button class="closeBtn" id="closeUserModalBtn">&times;</button>
-    <h2 id="userModalTitle">Add User from Employee</h2>
-    <div id="userFormMessage" class="formMessage" style="display:none;"></div>
-    
-    <form id="employeeCodeForm" style="display: block;">
-      <div class="formGroup">
-        <label for="employeeCodeInput">Employee Code *</label>
-        <input type="text" id="employeeCodeInput" name="employeeCode" required 
-               placeholder="e.g., EMP-0001" 
-               style="font-size: 16px; padding: 12px;" />
-        <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">
-          Enter the Employee Code from the employees table. Only employees with these positions can be added:<br>
-          <strong>Administrator, Housekeeping Manager, House Keeping Staff, Maintenance Manager, Maintenance Staff, Inventory Manager, Parking Manager</strong>
-        </small>
-      </div>
-      
-      <div class="modalButtons">
-        <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeCodeBtn">CANCEL</button>
-        <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn">ADD EMPLOYEE</button>
-      </div>
-    </form>
+    <div class="addUserModal">
+      <button class="closeBtn" id="closeUserModalBtn">&times;</button>
+      <h2 id="userModalTitle">Add User from Employee</h2>
+      <div id="userFormMessage" class="formMessage" style="display:none;"></div>
 
-    <div id="userDetailsDisplay" style="display: none;">
-      <input type="hidden" id="editUserId" name="userID">
-      
-      <div class="userProfileSection">
-        <div class="profileAvatar">
-          <img src="assets/icons/profile-icon.png" alt="Profile" />
-        </div>
-        <h3 id="displayFullName" class="editUserName">User Full Name</h3>
-        <p class="editUserEmployeeId">Employee Code: <span id="displayEmployeeCode">------</span></p>
-      </div>
-      
-      <div class="infoGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
-        <div>
-          <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Email</label>
-          <div id="displayEmail" style="font-size: 14px; font-weight: 500;">-</div>
-        </div>
-        <div>
-          <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Account Type</label>
-          <div id="displayAccountType" style="font-size: 14px; font-weight: 500;">-</div>
-        </div>
-        <div>
-          <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Shift</label>
-          <div id="displayShift" style="font-size: 14px; font-weight: 500;">-</div>
-        </div>
-        <div>
-          <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Username</label>
-          <div id="displayUsername" style="font-size: 14px; font-weight: 500;">-</div>
-        </div>
-      </div>
-      
-      <form id="passwordChangeForm">
+      <form id="employeeCodeForm" style="display: block;">
         <div class="formGroup">
-          <label for="newPassword">New Password *</label>
-          <input type="password" id="newPassword" name="password" required 
-                 placeholder="Enter new password" 
-                 style="border: 2px solid #4CAF50;" />
+          <label for="employeeCodeInput">Employee Code *</label>
+          <input type="text" id="employeeCodeInput" name="employeeCode" required
+            placeholder="e.g., EMP-0001"
+            style="font-size: 16px; padding: 12px;" />
           <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">
-            All other user information is read-only and comes from the employees table.
+            Enter the Employee Code from the employees table. Only employees with these positions can be added:<br>
+            <strong>Administrator, Housekeeping Manager, House Keeping Staff, Maintenance Manager, Maintenance Staff, Inventory Manager, Parking Manager</strong>
           </small>
         </div>
-        
+
         <div class="modalButtons">
-          <button type="button" class="modalBtn cancelBtn" id="cancelPasswordChangeBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="savePasswordBtn">UPDATE PASSWORD</button>
+          <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeCodeBtn">CANCEL</button>
+          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn">ADD EMPLOYEE</button>
         </div>
       </form>
-    </div>
-  </div>
-</div>
 
-<div class="modalBackdrop" id="deleteUserModal" style="display: none;">
-  <div class="logoutModal">
-    <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
-    <div class="modalIcon">
-      <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
-    </div>
-    <h2>Delete User</h2>
-    <p id="deleteUserText">Are you sure you want to delete this user?</p>
-    <div class="modalButtons">
-      <button class="modalBtn cancelBtn" id="cancelDeleteUserBtn">CANCEL</button>
-      <button class="modalBtn confirmBtn" id="confirmDeleteUserBtn">DELETE</button>
+      <div id="userDetailsDisplay" style="display: none;">
+        <input type="hidden" id="editUserId" name="userID">
+
+        <div class="userProfileSection">
+          <div class="profileAvatar">
+            <img src="assets/icons/profile-icon.png" alt="Profile" />
+          </div>
+          <h3 id="displayFullName" class="editUserName">User Full Name</h3>
+          <p class="editUserEmployeeId">Employee Code: <span id="displayEmployeeCode">------</span></p>
+        </div>
+
+        <div class="infoGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+          <div>
+            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Email</label>
+            <div id="displayEmail" style="font-size: 14px; font-weight: 500;">-</div>
+          </div>
+          <div>
+            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Account Type</label>
+            <div id="displayAccountType" style="font-size: 14px; font-weight: 500;">-</div>
+          </div>
+          <div>
+            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Shift</label>
+            <div id="displayShift" style="font-size: 14px; font-weight: 500;">-</div>
+          </div>
+          <div>
+            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Username</label>
+            <div id="displayUsername" style="font-size: 14px; font-weight: 500;">-</div>
+          </div>
+        </div>
+
+        <form id="passwordChangeForm">
+          <div class="formGroup">
+            <label for="newPassword">New Password *</label>
+            <input type="password" id="newPassword" name="password" required
+              placeholder="Enter new password"
+              style="border: 2px solid #4CAF50;" />
+            <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">
+              All other user information is read-only and comes from the employees table.
+            </small>
+          </div>
+
+          <div class="modalButtons">
+            <button type="button" class="modalBtn cancelBtn" id="cancelPasswordChangeBtn">CANCEL</button>
+            <button type="submit" class="modalBtn confirmBtn" id="savePasswordBtn">UPDATE PASSWORD</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
-</div>
+
+  <div class="modalBackdrop" id="deleteUserModal" style="display: none;">
+    <div class="logoutModal">
+      <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
+      <div class="modalIcon">
+        <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
+      </div>
+      <h2>Delete User</h2>
+      <p id="deleteUserText">Are you sure you want to delete this user?</p>
+      <div class="modalButtons">
+        <button class="modalBtn cancelBtn" id="cancelDeleteUserBtn">CANCEL</button>
+        <button class="modalBtn confirmBtn" id="confirmDeleteUserBtn">DELETE</button>
+      </div>
+    </div>
+  </div>
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeLogoutBtn">&times;</button>
@@ -1326,27 +1390,28 @@ $conn->close();
     </div>
   </div>
 
-<script>
+  <script>
     // Pass PHP data to JavaScript
     const initialHkRequestsData = <?php echo json_encode($hkRoomsStatus ?? []); ?>;
     const initialHkHistoryData = <?php echo json_encode($hkHistoryData ?? []); ?>;
     const initialMtRequestsData = <?php echo json_encode($mtRoomsStatus ?? []); ?>;
     const initialMtHistoryData = <?php echo json_encode($mtHistoryData ?? []); ?>;
-</script>
+  </script>
 
-<script src="script/shared-data.js"></script>
-<script src="script/admin.config.js"></script>
-<script src="script/admin.utils.js"></script>
-<script src="script/admin.pagination.js"></script>
-<script src="script/admin.dashboard.js"></script>
-<script src="script/admin.ui.js"></script>
-<script src="script/admin.rooms.js"></script>
-<script src="script/admin.users.js"></script>
-<script src="script/admin.userLogs.js"></script>
-<script src="script/admin.housekeeping.js"></script>
-<script src="script/admin.maintenance.js"></script>
-<script src="script/admin.parking.js"></script>
-<script src="script/admin.inventory.js"></script>
-<script src="script/admin.js"></script>
+  <script src="script/shared-data.js"></script>
+  <script src="script/admin.config.js"></script>
+  <script src="script/admin.utils.js"></script>
+  <script src="script/admin.pagination.js"></script>
+  <script src="script/admin.dashboard.js"></script>
+  <script src="script/admin.ui.js"></script>
+  <script src="script/admin.rooms.js"></script>
+  <script src="script/admin.users.js"></script>
+  <script src="script/admin.userLogs.js"></script>
+  <script src="script/admin.housekeeping.js"></script>
+  <script src="script/admin.maintenance.js"></script>
+  <script src="script/admin.parking.js"></script>
+  <script src="script/admin.inventory.js"></script>
+  <script src="script/admin.js"></script>
 </body>
+
 </html>

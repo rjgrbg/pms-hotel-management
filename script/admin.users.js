@@ -300,9 +300,9 @@ function initUserFilters() {
     });
 
     // === MODIFIED FOR PDF DOWNLOAD ===
-    document.getElementById('usersDownloadBtn')?.addEventListener('click', () => {
+    document.getElementById('usersDownloadBtns')?.addEventListener('click', () => {
       // 1. Get filter values
-      const search = document.getElementById('usersSearchInput').value.toLowerCase();
+      const search = document.getElementById('usersSearchInputs').value.toLowerCase();
       const role = document.getElementById('usersRoleFilter').value;
       const shift = document.getElementById('usersShiftFilter').value;
 
@@ -315,17 +315,17 @@ function initUserFilters() {
       });
 
       // 3. Define PDF headers and body
-      const headers = ['Username', 'Full Name', 'Role', 'Email', 'Shift', 'Employee Code'];
+      const headers = ['Employee Code', 'Username', 'Full Name', 'Role', 'Email', 'Shift'];
       const body = filteredData.map(row => {
           const fullName = `${row.Lname}, ${row.Fname}${row.Mname ? ' ' + row.Mname.charAt(0) + '.' : ''}`;
           const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
           return [
+              row.EmployeeID,
               row.Username,
               fullName,
               roleName,
               row.EmailAddress,
-              row.Shift,
-              row.EmployeeID
+              row.Shift
           ];
       });
 
@@ -337,4 +337,59 @@ function initUserFilters() {
           body
       );
     });
+    /**
+ * Generic helper function to generate a PDF report using jsPDF and autoTable.
+ * @param {string} title - The main title of the report.
+ * @param {string} filename - The filename for the downloaded PDF.
+ * @param {string[]} headers - An array of header strings.
+ * @param {Array<Array<string>>} body - An array of data rows.
+ */
+function generatePdfReport(title, filename, headers, body) {
+    
+    // 1. Check if there is data to download
+    if (body.length === 0) {
+        // Using alert() as a fallback. If you have showToast(), use that.
+        alert('No data to download.');
+        return;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        // Use 'portrait' (default) as 6 columns will fit
+        const doc = new jsPDF(); 
+
+        // 2. Add Title and Timestamp
+        doc.setFontSize(18);
+        doc.text(title, 14, 22);
+        doc.setFontSize(11);
+        doc.setTextColor(100);
+        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+
+        // 3. Create the table
+        doc.autoTable({
+            head: [headers], // jsPDF-autoTable expects head to be an array of arrays
+            body: body,
+            startY: 35,
+            headStyles: { fillColor: [72, 12, 27] }, // Using your maroon color
+            styles: { fontSize: 8, cellPadding: 2 },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
+            // Set column widths for your 6 columns
+            columnStyles: {
+                0: { cellWidth: 20 }, // Username
+                1: { cellWidth: 30 }, // Full Name
+                2: { cellWidth: 40 }, // Role
+                3: { cellWidth: 30 }, // Email
+                4: { cellWidth: 40 }, // Shift
+                5: { cellWidth: 20 }  // Employee Code
+            }
+        });
+
+        // 4. Save the file
+        doc.save(filename);
+
+    } catch (e) {
+        console.error("Error generating PDF:", e);
+        alert('Error generating PDF. See console.');
+    }
+}
 }
