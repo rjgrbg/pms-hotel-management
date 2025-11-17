@@ -120,14 +120,14 @@ if (isset($_SESSION['UserID'])) {
 
     .add-category-wrapper input {
         flex-grow: 1;
-        width: auto; /* <-- Add this line */
+        width: auto; 
     }
 
     .add-category-wrapper .submit-btn {
         flex-shrink: 0;
         padding: 10px 15px;
         line-height: 1.5; 
-        width: auto; /* <-- Add this line */
+        width: auto; 
     }
     
     .category-divider {
@@ -213,6 +213,31 @@ if (isset($_SESSION['UserID'])) {
     .form-group-vertical label {
         display: block; /* Ensure label is block-level */
         margin-bottom: 8px; /* Add spacing */
+    }
+
+    /* ========================================= */
+    /* === FIX FOR CLOSE BUTTON POSITIONING === */
+    /* ========================================= */
+    #category-delete-confirm-modal .modal-content-confirm {
+        position: relative; /* Essential for absolute positioning of the close button */
+    }
+
+    #category-delete-confirm-modal .modal-close-btn {
+        position: absolute !important; /* Force position */
+        top: 15px;
+        right: 15px;
+        background: none;
+        border: none;
+        font-size: 28px;
+        color: #555; /* Default color, make sure it contrasts with background */
+        cursor: pointer;
+        padding: 0;
+        margin: 0;
+        z-index: 10; /* Ensure it's on top */
+    }
+
+    #category-delete-confirm-modal .modal-close-btn:hover {
+        color: #dc3545; /* Red on hover */
     }
 
   </style>
@@ -412,7 +437,7 @@ if (isset($_SESSION['UserID'])) {
                         <label for="item-name">Name</label>
                         <input type="text" id="item-name" required>
                     </div>
-                     <div class="form-group category-group">
+                      <div class="form-group category-group">
                         <label for="item-category">Category</label>
                         <div class="category-select-wrapper">
                             <select id="item-category" required>
@@ -422,7 +447,7 @@ if (isset($_SESSION['UserID'])) {
                                 <i class="fas fa-pencil-alt"></i> Edit
                             </button>
                         </div>
-                         </div>
+                          </div>
                 </div>
                 <div class="form-group"> <label for="item-description">Description</label>
                     <textarea id="item-description" rows="3"></textarea>
@@ -519,6 +544,7 @@ if (isset($_SESSION['UserID'])) {
         </div>
     </div>
 </div>
+
 <div class="modal-overlay" id="delete-confirm-modal">
     <div class="modal-content-confirm" style="max-width: 480px;" id="delete-confirm-modal-content">
         <button class="modal-close-btn" id="delete-modal-close-btn">&times;</button>
@@ -592,13 +618,41 @@ if (isset($_SESSION['UserID'])) {
         </div>
     </div>
 </div>
-<script src="script/shared-data.js"></script>
-  <script src="script/inventory.js?v=1.9"></script>
 
-  <script>
+<div class="modal-overlay-success" id="category-message-modal">
+    <div class="modal-content-success">
+        <div id="category-message-icon-container">
+             <img src="assets/icons/successful-icon.png" alt="Icon" class="modal-icon" style="display: block; margin: 0 auto 20px; width: 80px; height: 80px;">
+        </div>
+        <h3 id="category-message-text">Message goes here</h3>
+        <button type="button" class="btn btn-okay" id="category-message-okay-btn">OKAY</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="category-delete-confirm-modal">
+    <div class="modal-content-confirm" style="max-width: 480px;">
+        <button class="modal-close-btn" id="cat-del-close-btn">&times;</button>
+        
+        <img src="assets/icons/warning-icon.png" alt="Warning" class="modal-icon" style="height: 50px; width: 50px; margin: 0 auto 20px;">
+        
+        <h3>Delete Category?</h3>
+        <p id="cat-del-confirm-text">
+            Are you sure you want to delete this category?
+        </p>
+        <div class="confirm-buttons">
+            <button type="button" class="btn btn-delete-cancel" id="cat-del-cancel-btn">CANCEL</button>
+            <button type="button" class="btn btn-delete-confirm" id="cat-del-confirm-btn">YES, DELETE</button>
+        </div>
+    </div>
+</div>
+
+<script src="script/shared-data.js"></script>
+<script src="script/inventory.js?v=1.9"></script>
+
+<script>
     document.addEventListener('DOMContentLoaded', () => {
         
-        // --- Modal DOM Elements ---
+        // --- 1. Modal DOM Elements (Existing) ---
         const categoryModal = document.getElementById('manage-category-modal');
         const openCategoryModalBtn = document.getElementById('open-category-modal-btn');
         const closeCategoryModalBtn = document.getElementById('category-modal-close-btn');
@@ -611,13 +665,27 @@ if (isset($_SESSION['UserID'])) {
         const editCategoryIdInput = document.getElementById('edit-category-id-input');
         const editCategoryNameInput = document.getElementById('edit-category-name-input');
 
-        // --- Category List Elements ---
+        // --- 2. NEW Modal DOM Elements (Replacements for Alert/Confirm) ---
+        const categoryMessageModal = document.getElementById('category-message-modal');
+        const categoryMessageText = document.getElementById('category-message-text');
+        const categoryMessageIconContainer = document.getElementById('category-message-icon-container');
+        const categoryMessageOkayBtn = document.getElementById('category-message-okay-btn');
+
+        const categoryDeleteModal = document.getElementById('category-delete-confirm-modal');
+        const catDelConfirmText = document.getElementById('cat-del-confirm-text');
+        const catDelCloseBtn = document.getElementById('cat-del-close-btn');
+        const catDelCancelBtn = document.getElementById('cat-del-cancel-btn');
+        const catDelConfirmBtn = document.getElementById('cat-del-confirm-btn');
+
+        // --- 3. Category List & Inputs ---
         const categoryListContainer = document.getElementById('category-list-container');
         const addNewCategoryBtn = document.getElementById('add-new-category-btn');
         const newCategoryNameInput = document.getElementById('new-category-name');
+
+        // --- 4. State Variables ---
+        let categoryIdToDelete = null; // Stores ID when trash icon is clicked
         
         // --- Select Dropdowns to Update ---
-        // (Add all select elements that need to be refreshed)
         const allCategoryDropdowns = [
             document.getElementById('item-category'),
             document.getElementById('edit-item-category'),
@@ -625,8 +693,53 @@ if (isset($_SESSION['UserID'])) {
             document.getElementById('floorFilterHistory')
         ];
 
-        // --- API Endpoint ---
         const API_URL = 'inventory_actions.php';
+
+        // ============================================================
+        // === HELPER FUNCTIONS FOR NEW MODALS
+        // ============================================================
+
+        // Show a Success or Error Message Modal instead of alert()
+        function showCategoryMessage(message, type = 'success') {
+            categoryMessageText.textContent = message;
+            
+            if (type === 'error') {
+                // Use a warning/error icon
+                categoryMessageIconContainer.innerHTML = '<img src="assets/icons/warning-icon.png" alt="Error" class="modal-icon" style="display: block; margin: 0 auto 20px; width: 60px; height: 60px;">';
+            } else {
+                // Use success icon
+                categoryMessageIconContainer.innerHTML = '<img src="assets/icons/successful-icon.png" alt="Success" class="modal-icon" style="display: block; margin: 0 auto 20px; width: 80px; height: 80px;">';
+            }
+            
+            categoryMessageModal.classList.add('show-modal'); 
+            categoryMessageModal.style.display = 'flex'; 
+        }
+
+        function closeCategoryMessage() {
+            categoryMessageModal.classList.remove('show-modal');
+            categoryMessageModal.style.display = 'none';
+        }
+
+        categoryMessageOkayBtn.addEventListener('click', closeCategoryMessage);
+
+        // Show Delete Confirmation Modal
+        function showCategoryDeleteModal(id, name) {
+            categoryIdToDelete = id;
+            catDelConfirmText.textContent = `Are you sure you want to delete the category "${name}"? This cannot be undone.`;
+            categoryDeleteModal.style.display = 'flex';
+        }
+
+        function closeCategoryDeleteModal() {
+            categoryIdToDelete = null;
+            categoryDeleteModal.style.display = 'none';
+        }
+
+        catDelCloseBtn.addEventListener('click', closeCategoryDeleteModal);
+        catDelCancelBtn.addEventListener('click', closeCategoryDeleteModal);
+
+        // ============================================================
+        // === CORE LOGIC
+        // ============================================================
 
         // --- Open/Close Main Category Modal ---
         openCategoryModalBtn.addEventListener('click', () => {
@@ -656,17 +769,16 @@ if (isset($_SESSION['UserID'])) {
         editCategoryNameCloseBtn.addEventListener('click', closeEditCategoryNameModal);
         editCategoryNameCancelBtn.addEventListener('click', closeEditCategoryNameModal);
 
-
-        // --- Load and Display Categories in the List ---
+        // --- Load Categories ---
         async function loadCategories() {
-            categoryListContainer.innerHTML = '<div class="spinner"></div>'; // Show loader
+            categoryListContainer.innerHTML = '<div class="spinner"></div>';
             try {
                 const response = await fetch(`${API_URL}?action=get_categories`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 
                 const categories = await response.json();
                 
-                categoryListContainer.innerHTML = ''; // Clear loader
+                categoryListContainer.innerHTML = '';
                 if (categories.length === 0) {
                     categoryListContainer.innerHTML = '<p style="text-align:center; color: #777;">No categories found.</p>';
                 } else {
@@ -690,7 +802,7 @@ if (isset($_SESSION['UserID'])) {
             }
         }
 
-        // --- Refresh All Category Dropdowns (CORRECTED) ---
+        // --- Refresh Dropdowns ---
         async function refreshCategoryDropdowns() {
             try {
                 const response = await fetch(`${API_URL}?action=get_categories`);
@@ -699,57 +811,38 @@ if (isset($_SESSION['UserID'])) {
                 const categories = await response.json();
                 
                 allCategoryDropdowns.forEach(dropdown => {
-                    if (!dropdown) return; // Skip if dropdown doesn't exist
-                    
-                    // Store current value if one is selected
+                    if (!dropdown) return;
                     const currentValue = dropdown.value;
-                    
-                    // Clear all options except the placeholder
-                    while (dropdown.options.length > 1) {
-                        dropdown.remove(1);
-                    }
+                    while (dropdown.options.length > 1) { dropdown.remove(1); }
 
-                    // Check if this is a form dropdown or a filter dropdown
                     const isFormDropdown = (dropdown.id === 'item-category' || dropdown.id === 'edit-item-category');
                     
-                    // Add new options
                     categories.forEach(category => {
                         const option = document.createElement('option');
-                        
                         if (isFormDropdown) {
-                            // Forms use ID as value (e.g., "1")
                             option.value = category.ItemCategoryID;
                         } else {
-                            // Filters use Name as value (e.g., "Electrical")
                             option.value = category.ItemCategoryName;
                         }
-                        
                         option.textContent = escapeHTML(category.ItemCategoryName);
                         dropdown.appendChild(option);
                     });
 
-                    // Try to re-select the previous value
                     dropdown.value = currentValue;
-                    // If the previous value was deleted, it will default to the placeholder
-                    if(dropdown.value !== currentValue) {
-                         // If it's one of the form dropdowns, reset to placeholder
-                        if (isFormDropdown) {
-                             dropdown.value = ""; 
-                        }
+                    if(dropdown.value !== currentValue && isFormDropdown) {
+                         dropdown.value = ""; 
                     }
                 });
-
             } catch (error) {
                  console.error('Error refreshing category dropdowns:', error);
             }
         }
 
-
-        // --- Add New Category ---
+        // --- ADD Category Logic ---
         addNewCategoryBtn.addEventListener('click', async () => {
             const newName = newCategoryNameInput.value.trim();
             if (!newName) {
-                alert('Please enter a category name.');
+                showCategoryMessage('Please enter a category name.', 'error');
                 return;
             }
 
@@ -765,65 +858,75 @@ if (isset($_SESSION['UserID'])) {
                 const result = await response.json();
 
                 if (result.success) {
-                    newCategoryNameInput.value = ''; // Clear input
-                    await loadCategories(); // Reload list in modal
-                    await refreshCategoryDropdowns(); // Reload all dropdowns on the page
+                    newCategoryNameInput.value = ''; 
+                    await loadCategories();
+                    await refreshCategoryDropdowns();
+                    // Optional: Show success message or just silent update
+                    // showCategoryMessage('Category added successfully!', 'success');
                 } else {
-                    alert(result.message || 'Failed to add category.');
+                    showCategoryMessage(result.message || 'Failed to add category.', 'error');
                 }
             } catch (error) {
                 console.error('Error adding category:', error);
-                alert('An error occurred. Please try again.');
+                showCategoryMessage('An error occurred. Please try again.', 'error');
             }
         });
 
-        // --- Handle Edit/Delete Clicks (Event Delegation) ---
-        categoryListContainer.addEventListener('click', async (e) => {
+        // --- DELETE Category Logic (Event Delegation) ---
+        categoryListContainer.addEventListener('click', (e) => {
             const editBtn = e.target.closest('.btn-edit-category');
             const deleteBtn = e.target.closest('.btn-delete-category');
             const item = e.target.closest('.category-list-item');
 
-            if (!item) return; // Clicked in empty space
+            if (!item) return; 
 
             const categoryId = item.dataset.id;
             const categoryName = item.querySelector('.category-name').textContent;
             
-            // --- Handle Edit ---
+            // Handle Edit Click
             if (editBtn) {
                 openEditCategoryNameModal(categoryId, categoryName);
             }
             
-            // --- Handle Delete ---
+            // Handle Delete Click (Opens Modal instead of Confirm)
             if (deleteBtn) {
-                if (!confirm(`Are you sure you want to delete the category "${categoryName}"?\nThis cannot be undone.`)) {
-                    return;
-                }
-
-                try {
-                    const formData = new FormData();
-                    formData.append('CategoryID', categoryId);
-
-                    const response = await fetch(`${API_URL}?action=delete_category`, {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        await loadCategories(); // Reload list in modal
-                        await refreshCategoryDropdowns(); // Reload all dropdowns
-                    } else {
-                        alert(result.message || 'Failed to delete category.');
-                    }
-                } catch (error) {
-                    console.error('Error deleting category:', error);
-                    alert('An error occurred. Please try again.');
-                }
+                showCategoryDeleteModal(categoryId, categoryName);
             }
         });
 
-        // --- Handle Save Edit Form ---
+        // --- ACTUAL DELETE EXECUTION (When "Yes" is clicked in new modal) ---
+        catDelConfirmBtn.addEventListener('click', async () => {
+            if (!categoryIdToDelete) return;
+
+            try {
+                const formData = new FormData();
+                formData.append('CategoryID', categoryIdToDelete);
+
+                const response = await fetch(`${API_URL}?action=delete_category`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                // Close delete modal
+                closeCategoryDeleteModal();
+
+                if (result.success) {
+                    await loadCategories();
+                    await refreshCategoryDropdowns();
+                    showCategoryMessage('Category deleted successfully.', 'success');
+                } else {
+                    showCategoryMessage(result.message || 'Failed to delete category.', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting category:', error);
+                closeCategoryDeleteModal();
+                showCategoryMessage('An error occurred. Please try again.', 'error');
+            }
+        });
+
+        // --- UPDATE Category Logic ---
         editCategoryNameForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -831,7 +934,7 @@ if (isset($_SESSION['UserID'])) {
             const newName = editCategoryNameInput.value.trim();
 
             if (!newName) {
-                alert('Please enter a category name.');
+                showCategoryMessage('Please enter a category name.', 'error');
                 return;
             }
 
@@ -851,12 +954,13 @@ if (isset($_SESSION['UserID'])) {
                     closeEditCategoryNameModal();
                     await loadCategories();
                     await refreshCategoryDropdowns();
+                    showCategoryMessage('Category updated successfully.', 'success');
                 } else {
-                    alert(result.message || 'Failed to update category.');
+                    showCategoryMessage(result.message || 'Failed to update category.', 'error');
                 }
             } catch (error) {
                 console.error('Error updating category:', error);
-                alert('An error occurred. Please try again.');
+                showCategoryMessage('An error occurred. Please try again.', 'error');
             }
         });
 
@@ -864,18 +968,11 @@ if (isset($_SESSION['UserID'])) {
         function escapeHTML(str) {
             if (typeof str !== 'string') return '';
             return str.replace(/[&<>"']/g, function(m) {
-                return {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#39;'
-                }[m];
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
             });
         }
         
     });
-  </script>
-  </body>
-
+</script>
+</body>
 </html>
