@@ -1,38 +1,127 @@
-// ===== USER LOGS FUNCTIONS =====
+/**
+ * USER LOGS MODULE JAVASCRIPT
+ * Features: Filters, Toast Notification, Landscape PDF Export
+ * Fix: Uses .onclick/.onchange to prevent multiple listeners
+ */
+
+// ==========================================
+// 1. GLOBAL HELPERS (Toast & PDF)
+// ==========================================
+
+// --- INJECT TOAST CSS ---
+const logsToastStyle = document.createElement("style");
+logsToastStyle.textContent = `
+    .toast-success {
+        position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white;
+        padding: 12px 24px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        z-index: 99999; font-family: 'Segoe UI', sans-serif; font-size: 14px;
+        opacity: 0; transform: translateY(-20px); transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: none;
+    }
+    .toast-visible { opacity: 1; transform: translateY(0); }
+`;
+document.head.appendChild(logsToastStyle);
+
+// --- SHOW TOAST FUNCTION ---
+function showLogsToast(message) {
+    const existingToast = document.querySelector('.toast-success');
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-success';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('toast-visible'));
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// --- LANDSCAPE PDF GENERATOR ---
+function downloadLogsPDF(headers, data, title, filename) {
+    if (!window.jspdf) {
+        alert("PDF Library not loaded. Please check your script tags.");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
+
+    // Header Title
+    doc.setFontSize(18);
+    doc.setTextColor(72, 12, 27); // Custom Color #480c1b
+    doc.text(title, 14, 20);
+    
+    // Date
+    doc.setFontSize(11);
+    doc.setTextColor(100); 
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    // Table Generation
+    doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 35,
+        theme: 'grid',
+        styles: { 
+            fontSize: 9, 
+            cellPadding: 3, 
+            overflow: 'linebreak', 
+            textColor: 50 
+        },
+        headStyles: { 
+            fillColor: '#480c1b', // Custom Header Background
+            textColor: '#ffffff', // White Text
+            fontStyle: 'bold', 
+            halign: 'center' 
+        },
+        // Action Column Bold
+        columnStyles: {
+            5: { fontStyle: 'bold' }
+        }
+    });
+
+    doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+// ==========================================
+// 2. DATA FETCHING & RENDERING
+// ==========================================
+
 async function fetchAndRenderUserLogs() {
     if (!logsTableBody) return;
-    console.log('Fetching user logs from database...');
     logsTableBody.innerHTML = '<tr><td colspan="12">Loading user logs...</td></tr>';
     
-    // Call the new PHP action
     const result = await apiCall('fetch_user_logs', {}, 'GET', 'user_actions.php');
     
     if (result.success && result.data && result.data.length > 0) {
-        userLogsDataList = result.data; // Update global var with REAL data
-        console.log('User logs data loaded:', userLogsDataList);
+        userLogsDataList = result.data; 
         
         paginationState.userLogs.currentPage = 1;
         renderUserLogsTable(userLogsDataList);
+        
         const recordCount = document.getElementById('logsRecordCount');
         if (recordCount) recordCount.textContent = userLogsDataList.length;
 
     } else if (result.success) {
-        userLogsDataList = []; // Clear any mock data
+        userLogsDataList = []; 
         logsTableBody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 40px; color: #999;">No logs found.</td></tr>';
-        const recordCount = document.getElementById('logsRecordCount');
-        if (recordCount) recordCount.textContent = 0;
+        document.getElementById('logsRecordCount').textContent = 0;
         renderPaginationControls('user-logs-tab', 0, 1, () => {});
     } else {
         logsTableBody.innerHTML = `<tr><td colspan="12" style="text-align: center; padding: 40px; color: #c33;">Failed to load logs: ${result.message || 'Unknown error'}</td></tr>`;
-        const recordCount = document.getElementById('logsRecordCount');
-        if (recordCount) recordCount.textContent = 0;
+        document.getElementById('logsRecordCount').textContent = 0;
         renderPaginationControls('user-logs-tab', 0, 1, () => {});
     }
+    
+    // Re-initialize filters to ensure they work with new data
+    initUserLogsFilters();
 }
 
 function renderUserLogsTable(data) {
   if (!logsTableBody) return;
-  console.log('Rendering user logs table with data:', data);
   const tbody = logsTableBody;
   const state = paginationState.userLogs;
   const totalPages = getTotalPages(data.length, state.itemsPerPage);
@@ -50,7 +139,7 @@ function renderUserLogsTable(data) {
           <td>${row.LogID}</td>
           <td>${row.Lname}</td>
           <td>${row.Fname}</td>
-          <td>${row.Mname}</td>
+          <td>${row.Mname || ''}</td>
           <td>${roleName}</td>
           <td>${row.Shift}</td>
           <td>${row.Username}</td>
@@ -70,137 +159,95 @@ function renderUserLogsTable(data) {
   });
 }
 
-// ===== USER LOGS FILTERS =====
+// ==========================================
+// 3. FILTERS & EVENTS (FIXED)
+// ==========================================
+
 function initUserLogsFilters() {
-    document.getElementById('logsSearchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const filtered = userLogsDataList.filter(row => 
-        (row.Username && row.Username.toLowerCase().includes(search)) ||
-        (row.Fname && row.Fname.toLowerCase().includes(search)) ||
-        (row.Lname && row.Lname.toLowerCase().includes(search)) ||
-        (row.EmailAddress && row.EmailAddress.toLowerCase().includes(search)) ||
-        (row.UserID && row.UserID.toString().includes(search))
-      );
-      paginationState.userLogs.currentPage = 1;
-      renderUserLogsTable(filtered);
-    });
+    const searchInput = document.getElementById('logsSearchInput');
+    const roleFilter = document.getElementById('logsRoleFilter');
+    const shiftFilter = document.getElementById('logsShiftFilter');
+    const refreshBtn = document.getElementById('logsRefreshBtn');
+    const downloadBtn = document.getElementById('logsDownloadBtn');
 
-    document.getElementById('logsRoleFilter')?.addEventListener('change', (e) => {
-      const role = e.target.value;
-      const filtered = role ? userLogsDataList.filter(row => row.AccountType === role) : userLogsDataList;
-      paginationState.userLogs.currentPage = 1;
-      renderUserLogsTable(filtered);
-    });
+    // --- Central Filter Function ---
+    function applyFilters() {
+        const search = searchInput.value.toLowerCase();
+        const role = roleFilter.value;
+        const shift = shiftFilter.value;
 
-    document.getElementById('logsShiftFilter')?.addEventListener('change', (e) => {
-      const shift = e.target.value;
-      const filtered = shift ? userLogsDataList.filter(row => row.Shift === shift) : userLogsDataList;
-      paginationState.userLogs.currentPage = 1;
-      renderUserLogsTable(filtered);
-    });
+        const filtered = userLogsDataList.filter(row => {
+            // Search Check (checks multiple fields)
+            const matchesSearch = !search || (
+                (row.Username && row.Username.toLowerCase().includes(search)) ||
+                (row.Fname && row.Fname.toLowerCase().includes(search)) ||
+                (row.Lname && row.Lname.toLowerCase().includes(search)) ||
+                (row.EmailAddress && row.EmailAddress.toLowerCase().includes(search)) ||
+                (row.UserID && row.UserID.toString().includes(search))
+            );
+            
+            // Dropdown Checks
+            const matchesRole = !role || row.AccountType === role;
+            const matchesShift = !shift || row.Shift === shift;
 
-    document.getElementById('logsRefreshBtn')?.addEventListener('click', () => {
-      document.getElementById('logsSearchInput').value = '';
-      document.getElementById('logsRoleFilter').value = '';
-      document.getElementById('logsShiftFilter').value = '';
-      
-      fetchAndRenderUserLogs(); // This will now re-fetch from the database
-    });
-
-    // === MODIFIED FOR PDF DOWNLOAD ===
-    document.getElementById('logsDownloadBtn')?.addEventListener('click', () => {
-      // 1. Get filter values
-      const search = document.getElementById('logsSearchInput').value.toLowerCase();
-      const role = document.getElementById('logsRoleFilter').value;
-      const shift = document.getElementById('logsShiftFilter').value;
-
-      // 2. Filter data
-      const filteredData = userLogsDataList.filter(row => {
-          const searchMatch = !search || (row.Username && row.Username.toLowerCase().includes(search)) || (row.Fname && row.Fname.toLowerCase().includes(search)) || (row.Lname && row.Lname.toLowerCase().includes(search)) || (row.EmailAddress && row.EmailAddress.toLowerCase().includes(search)) || (row.UserID && row.UserID.toString().includes(search));
-          const roleMatch = !role || row.AccountType === role;
-          const shiftMatch = !shift || row.Shift === shift;
-          return searchMatch && roleMatch && shiftMatch;
-      });
-
-      // 3. Define PDF headers and body
-      const headers = ['Log ID', 'Full Name', 'Role', 'Shift', 'Username', 'Action', 'Timestamp'];
-      const body = filteredData.map(row => {
-          const fullName = `${row.Lname}, ${row.Fname}${row.Mname ? ' ' + row.Mname.charAt(0) + '.' : ''}`;
-          const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
-          return [
-              row.LogID,
-              fullName,
-              roleName,
-              row.Shift,
-              row.Username,
-              row.ActionType,
-              row.Timestamp
-          ];
-      });
-
-      // 4. Call helper
-      generatePdfReport(
-          'User Logs Report',
-          `user-logs-${new Date().toISOString().split('T')[0]}.pdf`,
-          headers,
-          body
-      );
-    });
-    /**
- * Generic helper function to generate a PDF report using jsPDF and autoTable.
- * @param {string} title - The main title of the report.
- * @param {string} filename - The filename for the downloaded PDF.
- * @param {string[]} headers - An array of header strings.
- * @param {Array<Array<string>>} body - An array of data rows.
- */
-function generatePdfReport(title, filename, headers, body) {
-    
-    // 1. Check if there is data to download
-    if (body.length === 0) {
-        // Assumes you have a showToast function like in your other scripts
-        showToast('No data to download.', 'error');
-        return;
-    }
-
-    try {
-        const { jsPDF } = window.jspdf;
-        // Use landscape orientation for many columns
-        const doc = new jsPDF({ orientation: 'landscape' });
-
-        // 2. Add Title and Timestamp
-        doc.setFontSize(18);
-        doc.text(title, 14, 22);
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
-
-        // 3. Create the table
-        doc.autoTable({
-            head: [headers], // jsPDF-autoTable expects head to be an array of arrays
-            body: body,
-            startY: 35,
-            headStyles: { fillColor: [72, 12, 27] }, // Using your maroon color
-            styles: { fontSize: 8, cellPadding: 2 },
-            alternateRowStyles: { fillColor: [245, 245, 245] },
-            // Set column widths for your 8 columns (landscape)
-            columnStyles: {
-                0: { cellWidth: 15 }, // Log ID
-                1: { cellWidth: 40 }, // Full Name
-                2: { cellWidth: 30 }, // Role
-                3: { cellWidth: 20 }, // Shift
-                4: { cellWidth: 30 }, // Username
-                5: { cellWidth: 20 }, // Action
-                6: { cellWidth: 40 }  // Timestamp
-            }
+            return matchesSearch && matchesRole && matchesShift;
         });
 
-        // 4. Save the file
-        doc.save(filename);
+        paginationState.userLogs.currentPage = 1;
+        renderUserLogsTable(filtered);
+        return filtered; // Return for PDF
+    }
 
-    } catch (e) {
-        console.error("Error generating PDF:", e);
-        // Assumes you have a showToast function
-        showToast('Error generating PDF. See console.', 'error');
+    // --- Use .oninput/.onchange to prevent duplicate listeners ---
+    if (searchInput) searchInput.oninput = applyFilters;
+    if (roleFilter) roleFilter.onchange = applyFilters;
+    if (shiftFilter) shiftFilter.onchange = applyFilters;
+
+    // --- Refresh Button ---
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            if(searchInput) searchInput.value = '';
+            if(roleFilter) roleFilter.value = '';
+            if(shiftFilter) shiftFilter.value = '';
+            
+            fetchAndRenderUserLogs();
+            showLogsToast("User Logs refreshed successfully!");
+        };
+    }
+
+    // --- Download Button (Landscape PDF) ---
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            const filteredData = applyFilters();
+            
+            if (filteredData.length === 0) {
+                alert("No data to download");
+                return;
+            }
+
+            const headers = ['Log ID', 'Full Name', 'Role', 'Shift', 'Username', 'Action', 'Timestamp'];
+            const body = filteredData.map(row => {
+                const fullName = `${row.Lname}, ${row.Fname}`;
+                const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
+                return [
+                    row.LogID,
+                    fullName,
+                    roleName,
+                    row.Shift,
+                    row.Username,
+                    row.ActionType,
+                    row.Timestamp
+                ];
+            });
+
+            downloadLogsPDF(headers, body, 'User Logs Report', 'user_logs');
+        };
     }
 }
-}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    if(document.getElementById('user-logs-page')) {
+        fetchAndRenderUserLogs();
+    }
+});

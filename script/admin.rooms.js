@@ -1,6 +1,7 @@
 /**
  * ROOMS MODULE JAVASCRIPT
  * Features: Fetching, Dynamic Filters, Modal Logic, Toast, Landscape PDF
+ * Fix: Uses .onclick/.onchange to prevent multiple PDF downloads
  */
 
 // ==========================================
@@ -233,8 +234,6 @@ function renderRoomsTable(data) {
         ).join(' ');
       }
 
-      // Note: Edit Button logic assumed to be handled via event delegation or inline onclick if needed.
-      // Added generic 'edit-btn' class for potential listeners.
       return `
         <tr data-room-data='${JSON.stringify(row)}' onclick="handleEditClick(event)" style="cursor: pointer;">
           <td>${row.Floor}</td>
@@ -344,7 +343,7 @@ async function handleRoomFormSubmit(e) {
 }
 
 // ==========================================
-// 6. FILTERS & EVENTS (FIXED)
+// 6. FILTERS & EVENTS (FIXED: Uses onclick/onchange)
 // ==========================================
 
 function initRoomFilters() {

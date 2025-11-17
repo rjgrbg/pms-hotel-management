@@ -1,123 +1,182 @@
-// ===== USER MANAGEMENT FUNCTIONS (Employee Code Lookup) =====
+/**
+ * USER MANAGEMENT MODULE
+ * Fix: Removed duplicate 'usersData' declaration to prevent SyntaxError
+ */
+
+// ==========================================
+// 1. GLOBAL HELPERS (Toast & PDF)
+// ==========================================
+
+// Only inject style if it doesn't exist yet
+if (!document.getElementById('user-toast-style')) {
+    const userStyle = document.createElement("style");
+    userStyle.id = 'user-toast-style';
+    userStyle.textContent = `
+        .toast-success {
+            position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white;
+            padding: 12px 24px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+            z-index: 99999; font-family: 'Segoe UI', sans-serif; font-size: 14px;
+            opacity: 0; transform: translateY(-20px); transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none;
+        }
+        .toast-visible { opacity: 1; transform: translateY(0); }
+    `;
+    document.head.appendChild(userStyle);
+}
+
+function showUserToast(message) {
+    const existingToast = document.querySelector('.toast-success');
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-success';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('toast-visible'));
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function downloadUsersPDF(headers, data, title, filename) {
+    if (!window.jspdf) {
+        alert("PDF Library not loaded.");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4');
+
+    doc.setFontSize(18);
+    doc.setTextColor(72, 12, 27);
+    doc.text(title, 14, 20);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100); 
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 35,
+        theme: 'grid',
+        styles: { fontSize: 10, cellPadding: 3, textColor: 50 },
+        headStyles: { fillColor: '#480c1b', textColor: '#ffffff', fontStyle: 'bold', halign: 'center' }
+    });
+
+    doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+// ==========================================
+// 2. DATA FETCHING & RENDER
+// ==========================================
+
+// NOTE: 'usersData' variable is already declared at the top of admin.js
+// We do NOT declare it again here.
 
 async function fetchAndRenderUsers() {
-    const usersTableBody = document.getElementById('usersTableBody');
-    if (!usersTableBody) return;
-        
-    console.log('Fetching users...');
-    usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Loading users...</td></tr>';
-        
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Loading users...</td></tr>';
+    
     try {
         const result = await apiCall('fetch_users', {}, 'GET', 'user_actions.php');
-        console.log('User fetch result:', result);
-                
+        
         if (result.success && result.data && result.data.length > 0) {
-            usersData = result.data;
-            console.log('Users data loaded:', usersData);
-            updateDashboardFromUsers(usersData);
-                        
+            usersData = result.data; // Update the global variable
+            
+            if (typeof updateDashboardFromUsers === 'function') {
+                updateDashboardFromUsers(usersData);
+            }
+            
             paginationState.users.currentPage = 1;
             renderUsersTable(usersData);
-            const recordCount = document.getElementById('usersRecordCount');
-            if (recordCount) recordCount.textContent = usersData.length;
-        } else if (result.success && (!result.data || result.data.length === 0)) {
-            usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No users found.</td></tr>';
-            const recordCount = document.getElementById('usersRecordCount');
-            if (recordCount) recordCount.textContent = 0;
-            updateDashboardFromUsers([]); 
-            renderPaginationControls('user-management-tab', 0, 1, () => {});
+            
+            const count = document.getElementById('usersRecordCount');
+            if (count) count.textContent = usersData.length;
+
         } else {
-            usersTableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 40px; color: #c33;">Failed to load users: ${result.message || 'Unknown error'}</td></tr>`;
-            const recordCount = document.getElementById('usersRecordCount');
-            if (recordCount) recordCount.textContent = 0;
-            updateDashboardFromUsers([]);
+            usersData = [];
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No users found.</td></tr>';
+            const count = document.getElementById('usersRecordCount');
+            if (count) count.textContent = 0;
+            if (typeof updateDashboardFromUsers === 'function') updateDashboardFromUsers([]);
             renderPaginationControls('user-management-tab', 0, 1, () => {});
         }
     } catch (error) {
         console.error('Error fetching users:', error);
-        usersTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #c33;">Network error. Please refresh the page.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #c33;">Network error.</td></tr>';
     }
 }
 
 function renderUsersTable(data) {
-  if (!usersTableBody) return;
-  console.log('Rendering users table with data:', data);
-  const tbody = usersTableBody;
-  const state = paginationState.users;
-  const totalPages = getTotalPages(data.length, state.itemsPerPage);
-  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
-  
-  if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-  } else {
-    tbody.innerHTML = paginatedData.map(row => {
-      const fullName = `${row.Lname}, ${row.Fname}${row.Mname ? ' ' + row.Mname.charAt(0) + '.' : ''}`;
-      const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
 
-      return `
-        <tr>
-          <td>${row.Username}</td>
-          <td>${fullName}</td>
-          <td><span class="statusBadge ${row.AccountType}">${roleName}</span></td>
-          <td>${row.EmailAddress}</td>
-          <td>${row.Shift}</td>
-          <td>
-            <div class="actionButtons">
-              <button class="actionBtn editUserBtn" data-user-data='${JSON.stringify(row).replace(/'/g, "&apos;")}'>
-                <img src="assets/icons/edit-icon.png" alt="Edit" />
-              </button>
-              <button class="actionBtn deleteUserBtn" data-user-id="${row.UserID}" data-username="${row.Username}">
-                <img src="assets/icons/delete-icon.png" alt="Delete" />
-              </button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
+    const state = paginationState.users;
+    const totalPages = getTotalPages(data.length, state.itemsPerPage);
+    const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
 
-    tbody.querySelectorAll('.editUserBtn').forEach(btn => {
-        btn.addEventListener('click', handleEditUserClick);
+    if (paginatedData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+    } else {
+        tbody.innerHTML = paginatedData.map(row => {
+            const fullName = `${row.Lname}, ${row.Fname}`;
+            const roleName = (typeof ACCOUNT_TYPE_MAP !== 'undefined' ? ACCOUNT_TYPE_MAP[row.AccountType] : row.AccountType) || row.AccountType;
+
+            return `
+                <tr>
+                    <td>${row.Username}</td>
+                    <td>${fullName}</td>
+                    <td><span class="statusBadge ${row.AccountType}">${roleName}</span></td>
+                    <td>${row.EmailAddress}</td>
+                    <td>${row.Shift}</td>
+                    <td>
+                        <div class="actionButtons">
+                            <button class="actionBtn editUserBtn" onclick='handleEditUserClick(${JSON.stringify(row).replace(/'/g, "&apos;")})'>
+                                <img src="assets/icons/edit-icon.png" alt="Edit" />
+                            </button>
+                            <button class="actionBtn deleteUserBtn" onclick="handleDeleteUserClick('${row.UserID}', '${row.Username}')">
+                                <img src="assets/icons/delete-icon.png" alt="Delete" />
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    const count = document.getElementById('usersRecordCount');
+    if (count) count.textContent = data.length;
+    
+    renderPaginationControls('user-management-tab', totalPages, state.currentPage, (page) => {
+        state.currentPage = page;
+        renderUsersTable(data);
     });
-    tbody.querySelectorAll('.deleteUserBtn').forEach(btn => {
-        btn.addEventListener('click', handleDeleteUserClick);
-    });
-  }
-  
-  const recordCount = document.getElementById('usersRecordCount');
-  if (recordCount) recordCount.textContent = data.length;
-  renderPaginationControls('user-management-tab', totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderUsersTable(data);
-  });
 }
 
-// ===== USER MODAL HANDLERS =====
+// ==========================================
+// 3. MODAL HANDLERS
+// ==========================================
+
 function handleAddUserClick() {
-    hideFormMessage(true);
-    userModalTitle.textContent = 'Add User from Employee';
-    
-    // Show employee code form
-    employeeCodeForm.style.display = 'block';
-    userDetailsDisplay.style.display = 'none';
-    
-    // Reset form
-    employeeCodeForm.reset();
-    
-    userModal.style.display = 'flex';
+    if(typeof hideFormMessage === 'function') hideFormMessage(true);
+    document.getElementById('userModalTitle').textContent = 'Add User from Employee';
+    document.getElementById('employeeCodeForm').style.display = 'block';
+    document.getElementById('userDetailsDisplay').style.display = 'none';
+    document.getElementById('employeeCodeForm').reset();
+    document.getElementById('userModal').style.display = 'flex';
 }
 
 async function handleEmployeeCodeSubmit(e) {
     e.preventDefault();
-    hideFormMessage(true);
+    if(typeof hideFormMessage === 'function') hideFormMessage(true);
     
     const employeeCode = document.getElementById('employeeCodeInput').value.trim();
-    
-    if (!employeeCode) {
-        showFormMessage('Please enter an Employee Code.', 'error', true);
-        return;
-    }
-    
-    console.log('Looking up employee:', employeeCode);
+    if (!employeeCode) return typeof showFormMessage === 'function' && showFormMessage('Enter Employee Code', 'error', true);
     
     const lookupBtn = document.getElementById('lookupEmployeeBtn');
     const originalText = lookupBtn.textContent;
@@ -126,69 +185,51 @@ async function handleEmployeeCodeSubmit(e) {
     
     try {
         const result = await apiCall('add_user_from_employee', { employeeCode: employeeCode }, 'POST', 'user_actions.php');
-        console.log('Add user result:', result);
-        
         if (result.success) {
-            showFormMessage(result.message || 'User added successfully!', 'success', true);
-            employeeCodeForm.reset();
+            if(typeof showFormMessage === 'function') showFormMessage('User added!', 'success', true);
+            document.getElementById('employeeCodeForm').reset();
             await fetchAndRenderUsers();
-            
             setTimeout(() => {
                 document.getElementById('userModal').style.display = 'none';
-                hideFormMessage(true);
-            }, 2000);
+                if(typeof hideFormMessage === 'function') hideFormMessage(true);
+            }, 1500);
         } else {
-            showFormMessage(result.message || 'Failed to add user.', 'error', true);
+            if(typeof showFormMessage === 'function') showFormMessage(result.message || 'Failed.', 'error', true);
         }
     } catch (error) {
-        console.error('Error adding user:', error);
-        showFormMessage('An unexpected error occurred. Please try again.', 'error', true);
+        if(typeof showFormMessage === 'function') showFormMessage('Error occurred.', 'error', true);
     } finally {
         lookupBtn.disabled = false;
         lookupBtn.textContent = originalText;
     }
 }
 
-function handleEditUserClick(event) {
-    hideFormMessage(true);
-    const user = JSON.parse(event.currentTarget.dataset.userData);
+function handleEditUserClick(user) {
+    if(typeof hideFormMessage === 'function') hideFormMessage(true);
+    document.getElementById('userModalTitle').textContent = 'Change Password: ' + user.Username;
+    document.getElementById('employeeCodeForm').style.display = 'none';
+    document.getElementById('userDetailsDisplay').style.display = 'block';
     
-    userModalTitle.textContent = 'Change Password: ' + user.Username;
-    
-    // Hide employee code form, show details
-    employeeCodeForm.style.display = 'none';
-    userDetailsDisplay.style.display = 'block';
-    
-    // Fill in user data (read-only display)
     document.getElementById('displayEmployeeCode').textContent = user.EmployeeID || 'N/A';
-    document.getElementById('displayFullName').textContent = `${user.Lname}, ${user.Fname}${user.Mname ? ' ' + user.Mname.charAt(0) + '.' : ''}`;
+    document.getElementById('displayFullName').textContent = `${user.Lname}, ${user.Fname}`;
     document.getElementById('displayEmail').textContent = user.EmailAddress;
-    document.getElementById('displayAccountType').textContent = ACCOUNT_TYPE_MAP[user.AccountType] || user.AccountType;
+    document.getElementById('displayAccountType').textContent = user.AccountType;
     document.getElementById('displayShift').textContent = user.Shift;
     document.getElementById('displayUsername').textContent = user.Username;
     
-    // Set hidden user ID
     document.getElementById('editUserId').value = user.UserID;
-    
-    // Clear password field
     document.getElementById('newPassword').value = '';
-    
-    userModal.style.display = 'flex';
+    document.getElementById('userModal').style.display = 'flex';
 }
 
 async function handlePasswordChangeSubmit(e) {
     e.preventDefault();
-    hideFormMessage(true);
+    if(typeof hideFormMessage === 'function') hideFormMessage(true);
     
     const userID = document.getElementById('editUserId').value;
     const password = document.getElementById('newPassword').value.trim();
     
-    if (!password) {
-        showFormMessage('Please enter a new password.', 'error', true);
-        return;
-    }
-    
-    console.log('Updating password for user:', userID);
+    if (!password) return typeof showFormMessage === 'function' && showFormMessage('Enter new password', 'error', true);
     
     const saveBtn = document.getElementById('savePasswordBtn');
     const originalText = saveBtn.textContent;
@@ -196,200 +237,135 @@ async function handlePasswordChangeSubmit(e) {
     saveBtn.textContent = 'UPDATING...';
     
     try {
-        const result = await apiCall('edit_user', { 
-            userID: userID, 
-            password: password 
-        }, 'POST', 'user_actions.php');
-        
-        console.log('Password update result:', result);
-        
+        const result = await apiCall('edit_user', { userID: userID, password: password }, 'POST', 'user_actions.php');
         if (result.success) {
-            showFormMessage('Password updated successfully!', 'success', true);
-            await fetchAndRenderUsers();
-            
+            if(typeof showFormMessage === 'function') showFormMessage('Password updated!', 'success', true);
             setTimeout(() => {
                 document.getElementById('userModal').style.display = 'none';
-                hideFormMessage(true);
-            }, 2000);
+                if(typeof hideFormMessage === 'function') hideFormMessage(true);
+            }, 1500);
         } else {
-            showFormMessage(result.message || 'Failed to update password.', 'error', true);
+            if(typeof showFormMessage === 'function') showFormMessage(result.message || 'Failed.', 'error', true);
         }
     } catch (error) {
-        console.error('Error updating password:', error);
-        showFormMessage('An unexpected error occurred. Please try again.', 'error', true);
+        if(typeof showFormMessage === 'function') showFormMessage('Error occurred.', 'error', true);
     } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = originalText;
     }
 }
 
-// ===== DELETE USER HANDLERS =====
-window.userToDeleteID = null;
-
-function handleDeleteUserClick(event) {
-    window.userToDeleteID = event.currentTarget.dataset.userId;
-    const username = event.currentTarget.dataset.username;
-    document.getElementById('deleteUserText').textContent = `Are you sure you want to delete user "${username}"? This action cannot be undone.`;
+let userToDeleteID = null;
+function handleDeleteUserClick(userId, username) {
+    userToDeleteID = userId;
+    document.getElementById('deleteUserText').textContent = `Delete user "${username}"?`;
     document.getElementById('deleteUserModal').style.display = 'flex';
 }
 
 async function confirmUserDelete() {
-    const userToDeleteID = window.userToDeleteID;
     if (!userToDeleteID) return;
-    
-    const confirmBtn = document.getElementById('confirmDeleteUserBtn');
-    const originalText = confirmBtn.textContent;
-    confirmBtn.disabled = true;
-    confirmBtn.textContent = 'DELETING...';
+    const btn = document.getElementById('confirmDeleteUserBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'DELETING...';
     
     try {
-        const data = { userID: userToDeleteID };
-        const result = await apiCall('delete_user', data, 'POST', 'user_actions.php');
-        
+        const result = await apiCall('delete_user', { userID: userToDeleteID }, 'POST', 'user_actions.php');
         if (result.success) {
             document.getElementById('deleteUserModal').style.display = 'none';
             await fetchAndRenderUsers();
-            alert('User deleted successfully!');
+            showUserToast('User deleted successfully!');
         } else {
-            alert(result.message || 'Failed to delete user');
+            alert(result.message || 'Failed.');
         }
-    } catch (error) {
-        console.error('Error deleting user:', error);
-        alert('An unexpected error occurred. Please try again.');
-    } finally {
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = originalText;
-        window.userToDeleteID = null;
+    } catch (error) { alert('Error occurred.'); } 
+    finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        userToDeleteID = null;
     }
 }
 
-// ===== USER FILTERS =====
+// ==========================================
+// 5. FILTERS & INITIALIZATION
+// ==========================================
+
 function initUserFilters() {
-    document.getElementById('usersSearchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const filtered = usersData.filter(row => 
-        row.Username.toLowerCase().includes(search) ||
-        row.Fname.toLowerCase().includes(search) ||
-        row.Lname.toLowerCase().includes(search) ||
-        row.EmailAddress.toLowerCase().includes(search)
-      );
-      paginationState.users.currentPage = 1;
-      renderUsersTable(filtered);
-    });
+    const searchInput = document.getElementById('usersSearchInput');
+    const roleFilter = document.getElementById('usersRoleFilter');
+    const shiftFilter = document.getElementById('usersShiftFilter');
+    const refreshBtn = document.getElementById('usersRefreshBtn');
+    const downloadBtn = document.getElementById('usersDownloadBtn');
 
-    document.getElementById('usersRoleFilter')?.addEventListener('change', (e) => {
-      const role = e.target.value;
-      const filtered = role ? usersData.filter(row => row.AccountType === role) : usersData;
-      paginationState.users.currentPage = 1;
-      renderUsersTable(filtered);
-    });
+    function applyFilters() {
+        const search = searchInput.value.toLowerCase();
+        const role = roleFilter.value;
+        const shift = shiftFilter.value;
 
-    document.getElementById('usersShiftFilter')?.addEventListener('change', (e) => {
-      const shift = e.target.value;
-      const filtered = shift ? usersData.filter(row => row.Shift === shift) : usersData;
-      paginationState.users.currentPage = 1;
-      renderUsersTable(filtered);
-    });
-
-    document.getElementById('usersRefreshBtn')?.addEventListener('click', async () => {
-      document.getElementById('usersSearchInput').value = '';
-      document.getElementById('usersRoleFilter').value = '';
-      document.getElementById('usersShiftFilter').value = '';
-      
-      await fetchAndRenderUsers();
-    });
-
-    // === MODIFIED FOR PDF DOWNLOAD ===
-    document.getElementById('usersDownloadBtns')?.addEventListener('click', () => {
-      // 1. Get filter values
-      const search = document.getElementById('usersSearchInputs').value.toLowerCase();
-      const role = document.getElementById('usersRoleFilter').value;
-      const shift = document.getElementById('usersShiftFilter').value;
-
-      // 2. Filter data
-      const filteredData = usersData.filter(row => {
-          const searchMatch = !search || row.Username.toLowerCase().includes(search) || row.Fname.toLowerCase().includes(search) || row.Lname.toLowerCase().includes(search) || row.EmailAddress.toLowerCase().includes(search);
-          const roleMatch = !role || row.AccountType === role;
-          const shiftMatch = !shift || row.Shift === shift;
-          return searchMatch && roleMatch && shiftMatch;
-      });
-
-      // 3. Define PDF headers and body
-      const headers = ['Employee Code', 'Username', 'Full Name', 'Role', 'Email', 'Shift'];
-      const body = filteredData.map(row => {
-          const fullName = `${row.Lname}, ${row.Fname}${row.Mname ? ' ' + row.Mname.charAt(0) + '.' : ''}`;
-          const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
-          return [
-              row.EmployeeID,
-              row.Username,
-              fullName,
-              roleName,
-              row.EmailAddress,
-              row.Shift
-          ];
-      });
-
-      // 4. Call helper
-      generatePdfReport(
-          'User Management Report',
-          `users-${new Date().toISOString().split('T')[0]}.pdf`,
-          headers,
-          body
-      );
-    });
-    /**
- * Generic helper function to generate a PDF report using jsPDF and autoTable.
- * @param {string} title - The main title of the report.
- * @param {string} filename - The filename for the downloaded PDF.
- * @param {string[]} headers - An array of header strings.
- * @param {Array<Array<string>>} body - An array of data rows.
- */
-function generatePdfReport(title, filename, headers, body) {
-    
-    // 1. Check if there is data to download
-    if (body.length === 0) {
-        // Using alert() as a fallback. If you have showToast(), use that.
-        alert('No data to download.');
-        return;
-    }
-
-    try {
-        const { jsPDF } = window.jspdf;
-        // Use 'portrait' (default) as 6 columns will fit
-        const doc = new jsPDF(); 
-
-        // 2. Add Title and Timestamp
-        doc.setFontSize(18);
-        doc.text(title, 14, 22);
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
-
-        // 3. Create the table
-        doc.autoTable({
-            head: [headers], // jsPDF-autoTable expects head to be an array of arrays
-            body: body,
-            startY: 35,
-            headStyles: { fillColor: [72, 12, 27] }, // Using your maroon color
-            styles: { fontSize: 8, cellPadding: 2 },
-            alternateRowStyles: { fillColor: [245, 245, 245] },
-            // Set column widths for your 6 columns
-            columnStyles: {
-                0: { cellWidth: 20 }, // Username
-                1: { cellWidth: 30 }, // Full Name
-                2: { cellWidth: 40 }, // Role
-                3: { cellWidth: 30 }, // Email
-                4: { cellWidth: 40 }, // Shift
-                5: { cellWidth: 20 }  // Employee Code
-            }
+        const filtered = usersData.filter(row => {
+            const matchS = !search || [row.Username, row.Fname, row.Lname, row.EmailAddress].some(val => val?.toLowerCase().includes(search));
+            const matchR = !role || row.AccountType === role;
+            const matchSh = !shift || row.Shift === shift;
+            return matchS && matchR && matchSh;
         });
 
-        // 4. Save the file
-        doc.save(filename);
-
-    } catch (e) {
-        console.error("Error generating PDF:", e);
-        alert('Error generating PDF. See console.');
+        paginationState.users.currentPage = 1;
+        renderUsersTable(filtered);
+        return filtered;
     }
+
+    if (searchInput) searchInput.oninput = applyFilters;
+    if (roleFilter) roleFilter.onchange = applyFilters;
+    if (shiftFilter) shiftFilter.onchange = applyFilters;
+
+    if (refreshBtn) {
+        refreshBtn.onclick = async () => {
+            searchInput.value = '';
+            roleFilter.value = '';
+            shiftFilter.value = '';
+            await fetchAndRenderUsers();
+            showUserToast("User list refreshed!");
+        };
+    }
+
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            const data = applyFilters();
+            if (data.length === 0) return alert("No data.");
+            const headers = ['Username', 'Name', 'Role', 'Email', 'Shift', 'Emp Code'];
+            const rows = data.map(r => [r.Username, `${r.Lname}, ${r.Fname}`, r.AccountType, r.EmailAddress, r.Shift, r.EmployeeID || '']);
+            downloadUsersPDF(headers, rows, 'User Management Report', 'users_report');
+        };
+    }
+
+    // Bind Modal Events directly to prevent duplicates
+    const addBtn = document.getElementById('addUserBtn');
+    if(addBtn) addBtn.onclick = handleAddUserClick;
+
+    const empForm = document.getElementById('employeeCodeForm');
+    if(empForm) empForm.onsubmit = handleEmployeeCodeSubmit;
+
+    const passForm = document.getElementById('passwordChangeForm');
+    if(passForm) passForm.onsubmit = handlePasswordChangeSubmit;
+
+    const delBtn = document.getElementById('confirmDeleteUserBtn');
+    if(delBtn) delBtn.onclick = confirmUserDelete;
+
+    // Close Buttons
+    ['closeUserModalBtn', 'cancelEmployeeCodeBtn', 'cancelPasswordChangeBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.onclick = () => document.getElementById('userModal').style.display = 'none';
+    });
+    
+    ['closeDeleteUserModalBtn', 'cancelDeleteUserBtn'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.onclick = () => document.getElementById('deleteUserModal').style.display = 'none';
+    });
 }
-}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if(document.getElementById('manage-users-page')) {
+        fetchAndRenderUsers();
+        initUserFilters();
+    }
+});
