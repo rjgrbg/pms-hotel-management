@@ -3,42 +3,60 @@ let currentRequestsData = [];
 let currentStaffData = [];
 let currentHistoryData = [];
 let allRooms = [];
-// REMOVED Hotel Asset variables
 
 let filteredRequests = [];
 let filteredStaff = [];
-let filteredHistory = []; // This will be used by maintenance.history.js
-// REMOVED filteredHotelAssets
+let filteredHistory = [];
 
 let selectedStaffId = null;
-let currentRoomId = null; // Used for both assigning and editing room status
-// *** ADDED: For confirmation modal ***
+let currentRoomId = null;
 let confirmCallback = null; 
-let selectedIssueTypes = ''; // For the new assign staff workflow
+let selectedIssueTypes = ''; 
 
 // Pagination State
 const paginationState = {
   requests: { currentPage: 1, itemsPerPage: 10 },
-  history: { currentPage: 1, itemsPerPage: 10 } // Set to 10 per page
-  // REMOVED hotelAssets
+  history: { currentPage: 1, itemsPerPage: 10 }
 };
+
+// --- INJECT TOAST CSS ---
+const maintToastStyle = document.createElement("style");
+maintToastStyle.textContent = `
+    .toast-success {
+        position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white;
+        padding: 12px 24px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        z-index: 99999; font-family: 'Segoe UI', sans-serif; font-size: 14px;
+        opacity: 0; transform: translateY(-20px); transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: none;
+    }
+    .toast-visible { opacity: 1; transform: translateY(0); }
+`;
+document.head.appendChild(maintToastStyle);
+
+// --- SHOW TOAST FUNCTION ---
+function showMaintenanceToast(message) {
+    const existingToast = document.querySelector('.toast-success');
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-success';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('toast-visible'));
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM Loaded - Initializing...');
-  // Use the new variable names passed from PHP
   currentRequestsData = typeof initialRequestsData !== 'undefined' ? [...initialRequestsData] : [];
   currentStaffData = typeof availableStaffData !== 'undefined' ? [...availableStaffData] : [];
   currentHistoryData = typeof initialHistoryData !== 'undefined' ? [...initialHistoryData] : [];
   allRooms = typeof allRoomsData !== 'undefined' ? [...allRoomsData] : [];
-  // REMOVED Hotel Asset data loading
-
-  console.log('Initial Data:', {
-    requests: currentRequestsData.length,
-    staff: currentStaffData.length,
-    history: currentHistoryData.length, 
-    rooms: allRooms.length
-  });
 
   loadRequestFiltersFromSession(); 
 
@@ -81,7 +99,7 @@ function setupEventListeners() {
         saveRequestFiltersToSession(); 
     });
     document.getElementById('refreshBtn')?.addEventListener('click', resetRequestFilters);
-    document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsPDF); // Now downloads PDF
+    document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsPDF);
 
     // --- History Filters & Actions ---
     document.getElementById('floorFilterHistory')?.addEventListener('change', () => {
@@ -94,41 +112,27 @@ function setupEventListeners() {
     document.getElementById('historyRefreshBtn')?.addEventListener('click', resetHistoryFilters); 
     document.getElementById('historyDownloadBtn')?.addEventListener('click', downloadHistoryPDF); 
 
-    // --- REMOVED Hotel Assets Filters & Actions ---
-    
-    // --- REMOVED Add/Edit Hotel Asset Modal ---
-
-    // --- MODIFIED: Issue Type Modal (Assign Staff Step 1) ---
+    // --- Issue Type Modal ---
     document.getElementById('closeIssueTypeModalBtn')?.addEventListener('click', hideIssueTypeModal);
     document.getElementById('cancelIssueTypeBtn')?.addEventListener('click', hideIssueTypeModal);
     document.getElementById('issueTypeForm')?.addEventListener('submit', handleIssueTypeSubmit);
 
-    // --- NEW: "Select All" logic for Issue Type Modal ---
+    // --- Select All Logic ---
     const selectAllCheckbox = document.getElementById('issue_select_all');
-    const issueTypeForm = document.getElementById('issueTypeForm');
-    const issueCheckboxes = issueTypeForm?.querySelectorAll('input[type="checkbox"][name="issueType[]"]');
+    const issueCheckboxes = document.getElementById('issueTypeForm')?.querySelectorAll('input[type="checkbox"][name="issueType[]"]');
 
     selectAllCheckbox?.addEventListener('change', () => {
-        issueCheckboxes?.forEach(cb => {
-            cb.checked = selectAllCheckbox.checked;
-        });
+        issueCheckboxes?.forEach(cb => { cb.checked = selectAllCheckbox.checked; });
     });
 
     issueCheckboxes?.forEach(cb => {
         cb.addEventListener('change', () => {
-            // If any box is unchecked, uncheck "Select All"
-            if (!cb.checked) {
-                selectAllCheckbox.checked = false;
-            }
-            // Check if all boxes are checked
-            else if (Array.from(issueCheckboxes).every(box => box.checked)) {
-                selectAllCheckbox.checked = true;
-            }
+            if (!cb.checked) { selectAllCheckbox.checked = false; }
+            else if (Array.from(issueCheckboxes).every(box => box.checked)) { selectAllCheckbox.checked = true; }
         });
     });
-    // --- END of "Select All" logic ---
 
-    // --- Staff Modal (Assign Staff Step 2) ---
+    // --- Staff Modal ---
     document.getElementById('closeStaffModalBtn')?.addEventListener('click', hideStaffModal);
     document.getElementById('cancelStaffBtn')?.addEventListener('click', hideStaffModal);
     document.getElementById('staffModalSearchInput')?.addEventListener('input', filterStaffInModal);
@@ -137,7 +141,7 @@ function setupEventListeners() {
       if (e.target === e.currentTarget) hideStaffModal();
     });
 
-    // --- NEW: Edit Room Status Modal ---
+    // --- Edit Room Status Modal ---
     document.getElementById('closeEditRoomStatusBtn')?.addEventListener('click', hideEditRoomStatusModal);
     document.getElementById('cancelEditRoomStatusBtn')?.addEventListener('click', hideEditRoomStatusModal);
     document.getElementById('editRoomStatusForm')?.addEventListener('submit', handleEditRoomStatusSubmit);
@@ -146,26 +150,21 @@ function setupEventListeners() {
     document.getElementById('closeSuccessBtn')?.addEventListener('click', hideSuccessModal);
     document.getElementById('okaySuccessBtn')?.addEventListener('click', hideSuccessModal);
 
-    // --- *** ADDED: Confirmation Modal listeners (for Cancel button) *** ---
+    // --- Confirmation Modal ---
     const confirmActionBtn = document.getElementById('confirmActionBtn');
     const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
     const confirmModal = document.getElementById('confirmModal');
 
     confirmActionBtn?.addEventListener('click', () => {
-        if (typeof confirmCallback === 'function') {
-            confirmCallback();
-        }
+        if (typeof confirmCallback === 'function') confirmCallback();
         hideConfirmModal();
     });
     cancelConfirmBtn?.addEventListener('click', hideConfirmModal);
     confirmModal?.addEventListener('click', (e) => {
         if (e.target === e.currentTarget) hideConfirmModal();
     });
-    // --- END: Confirmation Modal listeners ---
     
-    // --- REMOVED Delete Modal (for Hotel Assets) ---
-
-    // --- Profile Sidebar & Logout ---
+    // --- Profile & Logout ---
     const profileBtn = document.getElementById('profileBtn');
     const sidebar = document.getElementById('profile-sidebar');
     const closeSidebarBtn = document.getElementById('sidebar-close-btn');
@@ -218,8 +217,6 @@ function populateHistoryFilters() {
     updateHistoryRoomFilterOptions();
 }
 
-// REMOVED populateHotelAssetsFilters()
-
 function updateRoomFilterOptions() {
     const floor = document.getElementById('floorFilter')?.value;
     const roomFilter = document.getElementById('roomFilter');
@@ -268,7 +265,6 @@ function updateHistoryRoomFilterOptions() {
     roomFilter.value = currentRoom;
 }
 
-
 // =============================================
 // ===== ISSUE TYPE MODAL FUNCTIONS ====
 // =============================================
@@ -306,7 +302,7 @@ function handleIssueTypeSubmit(e) {
   }
   
   const values = Array.from(selectedCheckboxes).map(cb => cb.value);
-  selectedIssueTypes = values.join(', '); // Store in the global variable
+  selectedIssueTypes = values.join(', '); 
   
   hideIssueTypeModal();
   
@@ -318,16 +314,13 @@ function handleIssueTypeSubmit(e) {
 }
 
 // =======================================================
-// ===== CONFIRMATION MODAL FUNCTIONS (FOR CANCEL) =====
+// ===== CONFIRMATION MODAL FUNCTIONS =====
 // =======================================================
 
 function showConfirmModal(title, text, onConfirm) {
     document.getElementById('confirmModalTitle').textContent = title;
     document.getElementById('confirmModalText').textContent = text;
-    
-    // Store the confirm callback globally (as defined in listener setup)
     confirmCallback = onConfirm; 
-    
     const modal = document.getElementById('confirmModal');
     if (modal) modal.style.display = 'flex';
 }
@@ -338,12 +331,10 @@ function hideConfirmModal() {
     confirmCallback = null;
 }
 
-
 // =======================================================
-// ===== REQUESTS TAB FUNCTIONS (MOVED FROM requests.js) =====
+// ===== REQUESTS TAB FUNCTIONS =====
 // =======================================================
 
-// ===== RENDER REQUESTS TABLE =====
 function renderRequestsTable() {
   const tbody = document.getElementById('requestsTableBody');
   const recordCountEl = document.getElementById('requestsRecordCount');
@@ -359,27 +350,22 @@ function renderRequestsTable() {
   const paginatedData = paginateData(filteredRequests, state.currentPage, state.itemsPerPage);
 
   if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No rooms found.</td></tr>'; // Colspan is 8
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No rooms found.</td></tr>'; 
   } else {
     tbody.innerHTML = paginatedData.map(req => {
         const statusClass = req.status.toLowerCase().replace(/ /g, '-');
-        const statusDisplay = req.status;
-
         let assignButton;
-        const status = req.status;
-
+        
         if (req.staff !== 'Not Assigned') {
             assignButton = `<button class="assignBtn assigned" disabled>${req.staff}</button>`;
-        } else if (['Needs Maintenance'].includes(status)) { 
+        } else if (['Needs Maintenance'].includes(req.status)) { 
             assignButton = `<button class="assignBtn assign-staff-btn" data-room-id="${req.id}" data-room-number="${req.room}">Assign Staff</button>`;
         } else {
             assignButton = `<button class="assignBtn" data-room-id="${req.id}" disabled>Not Required</button>`;
         }
         
-        // *** MODIFIED: Add Cancel button logic ***
         let cancelButton = ''; 
         if (req.status === 'Pending') {
-            // Use the RequestID for cancellation
             cancelButton = `<button class="actionIconBtn cancel-request-btn" title="Cancel Request" data-request-id="${req.requestId}">
                                 <i class="fas fa-times"></i>
                             </button>`;
@@ -392,7 +378,7 @@ function renderRequestsTable() {
             <td>${req.date ?? 'N/A'}</td>
             <td>${req.requestTime ?? 'N/A'}</td>
             <td>${req.lastMaintenance ?? 'N/A'}</td>
-            <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
+            <td><span class="statusBadge ${statusClass}">${req.status}</span></td>
             <td>${assignButton}</td>
             <td class="action-cell">
                 <button class="actionIconBtn edit-room-status-btn" title="Edit Room Status">
@@ -404,8 +390,7 @@ function renderRequestsTable() {
         `;
     }).join('');
 
-    // Use event delegation for the buttons
-    tbody.removeEventListener('click', handleRequestsTableClick); // Prevent duplicate listeners
+    tbody.removeEventListener('click', handleRequestsTableClick); 
     tbody.addEventListener('click', handleRequestsTableClick);
   }
 
@@ -416,18 +401,15 @@ function renderRequestsTable() {
   });
 }
 
-// --- Event handler for ALL clicks on Requests table body ---
 function handleRequestsTableClick(e) {
     // Assign Staff Button
     const assignBtn = e.target.closest('.assign-staff-btn');
     if (assignBtn && !assignBtn.disabled) {
         const row = assignBtn.closest('tr');
-        currentRoomId = row.dataset.roomId; // Set global ID
-        const roomNumber = row.dataset.roomNumber; // Get room number
-        
+        currentRoomId = row.dataset.roomId; 
+        const roomNumber = row.dataset.roomNumber; 
         document.getElementById('issueTypeForm').reset();
         selectedIssueTypes = '';
-        
         showIssueTypeModal(currentRoomId, roomNumber);
         return;
     }
@@ -454,31 +436,26 @@ function handleRequestsTableClick(e) {
         return;
     }
     
-    // *** ADDED: Cancel Request Button logic ***
+    // Cancel Request Button
     const cancelBtn = e.target.closest('.cancel-request-btn');
     if (cancelBtn) {
         const requestId = cancelBtn.dataset.requestId;
-        // Use the new confirmation modal
         showConfirmModal(
             'Cancel Maintenance Request?',
             'Are you sure you want to cancel this request? This action cannot be undone.',
-            () => {
-                // This callback function is executed when user clicks "YES, CONFIRM"
-                handleCancelRequest(requestId);
-            }
+            () => { handleCancelRequest(requestId); }
         );
         return;
     }
 }
 
-// --- Handle Final Staff Assignment ---
 async function handleStaffAssign() {
     if (!selectedStaffId || !currentRoomId) {
         alert("Error: Staff or Room ID is missing.");
         return;
     }
     if (!selectedIssueTypes) {
-        alert("Error: Maintenance issue type was not selected. Please restart the assignment.");
+        alert("Error: Maintenance issue type was not selected.");
         return;
     }
 
@@ -488,35 +465,25 @@ async function handleStaffAssign() {
 
     try {
         const payload = {
-            action: 'assign_task', // Matches 'assign_task' case
+            action: 'assign_task', 
             roomId: currentRoomId,
             staffId: selectedStaffId,
-            issueTypes: selectedIssueTypes // Matches 'issueTypes' key (plural)
+            issueTypes: selectedIssueTypes 
         };
         
-        // This assumes handleApiCall is defined in maintenance.utils.js
         const result = await handleApiCall(payload.action, payload);
 
         if (result.status === 'success') { 
             const roomInRequests = currentRequestsData.find(room => room.id == currentRoomId);
             if (roomInRequests) {
-                roomInRequests.status = 'Pending'; // Set status to pending
-                roomInRequests.staff = result.staffName; // Get staff name from response
-            }
-            
-            const staffInList = currentStaffData.find(staff => staff.id == selectedStaffId);
-            if (staffInList) {
-                staffInList.availability = 'Assigned';
+                roomInRequests.status = 'Pending'; 
+                roomInRequests.staff = result.staffName; 
             }
             
             hideStaffModal();
-            // *** SYNTAX ERROR FIXED: Changed .message to result.message ***
             showSuccessModal(result.message || 'Task Assigned Successfully!');
             
-            // Reload data from server to get all new info (like new RequestID)
-            setTimeout(() => {
-                 window.location.reload();
-            }, 1500); // Reload after 1.5s
+            setTimeout(() => { window.location.reload(); }, 1500); 
             
         } else {
             alert("Failed to assign task: " + (result.message || 'Unknown error'));
@@ -532,7 +499,6 @@ async function handleStaffAssign() {
     }
 }
 
-// --- Handle Edit Room Status Submission ---
 async function handleEditRoomStatusSubmit(e) {
     e.preventDefault();
     const roomId = document.getElementById('editRoomStatusRoomId').value;
@@ -540,85 +506,45 @@ async function handleEditRoomStatusSubmit(e) {
     const roomNumber = document.getElementById('editRoomStatusRoomNumber').textContent;
     const submitBtn = document.getElementById('submitEditRoomStatusBtn');
 
-    if (!roomId || !newStatus || !roomNumber) {
-        alert("Error: Missing room data.");
-        return;
-    }
+    if (!roomId || !newStatus || !roomNumber) { alert("Error: Missing room data."); return; }
     submitBtn.disabled = true;
 
     try {
-        const payload = {
-            action: 'update_status',
-            room_number: roomNumber,
-            new_status: newStatus
-        };
-
-        // This API call goes to 'room_actions.php'
+        const payload = { action: 'update_status', room_number: roomNumber, new_status: newStatus };
         const response = await fetch('room_actions.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify(payload)
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Server error (HTTP ${response.status}): ${text}`);
-        }
-
+        if (!response.ok) { throw new Error(`Server error (HTTP ${response.status})`); }
         const result = await response.json();
 
         if (result.success) { 
             hideEditRoomStatusModal();
             showSuccessModal(result.message || 'Room status updated!');
-            
-            // Update local data
-            const roomInRequests = currentRequestsData.find(room => room.id == roomId);
-            if (roomInRequests) {
-                roomInRequests.status = newStatus;
-                if (newStatus === 'Available') {
-                    roomInRequests.staff = 'Not Assigned';
-                    roomInRequests.date = 'N/A';
-                    roomInRequests.requestTime = 'N/A';
-                }
-            }
-            applyRequestFiltersAndRender(); // Re-render table
+            setTimeout(() => { window.location.reload(); }, 1500);
         } else {
             alert('Failed to update status: ' + result.message);
         }
-
     } catch (error) {
-        console.error('Error updating room status:', error);
         alert('An error occurred: ' + error.message);
     } finally {
         submitBtn.disabled = false;
     }
 }
 
-// *** ADDED: handleCancelRequest function ***
 async function handleCancelRequest(requestId) {
-    if (!requestId) {
-        alert('Error: Request ID is missing.');
-        return;
-    }
+    if (!requestId) { alert('Error: Request ID is missing.'); return; }
 
     try {
-        const payload = {
-            action: 'cancel_task',
-            requestId: requestId
-        };
-
-        // Assumes handleApiCall is defined in maintenance.utils.js and points to api_maintenance.php
+        const payload = { action: 'cancel_task', requestId: requestId };
         const result = await handleApiCall(payload.action, payload);
 
         if (result.status === 'success') {
             hideConfirmModal();
             showSuccessModal(result.message || 'Request cancelled successfully!');
-            
-            // Reload data from server to reflect all changes (staff status, room status, etc.)
-            setTimeout(() => {
-                 window.location.reload();
-            }, 1500); // Reload after 1.5s
-
+            setTimeout(() => { window.location.reload(); }, 1500); 
         } else {
             hideConfirmModal();
             alert('Failed to cancel request: ' + (result.message || 'Unknown error'));
@@ -629,63 +555,40 @@ async function handleCancelRequest(requestId) {
     }
 }
 
-
 // ===== REQUESTS FILTERING LOGIC =====
 
-// --- Functions to save/load filters to session storage ---
 function saveRequestFiltersToSession() {
-  const floor = document.getElementById('floorFilter')?.value || '';
-  const room = document.getElementById('roomFilter')?.value || '';
-  const search = document.getElementById('searchInput')?.value || '';
-  
-  sessionStorage.setItem('requests_floorFilter', floor);
-  sessionStorage.setItem('requests_roomFilter', room);
-  sessionStorage.setItem('requests_searchInput', search);
+  sessionStorage.setItem('requests_floorFilter', document.getElementById('floorFilter')?.value || '');
+  sessionStorage.setItem('requests_roomFilter', document.getElementById('roomFilter')?.value || '');
+  sessionStorage.setItem('requests_searchInput', document.getElementById('searchInput')?.value || '');
 }
 
 function loadRequestFiltersFromSession() {
   const floor = sessionStorage.getItem('requests_floorFilter');
   const search = sessionStorage.getItem('requests_searchInput');
-
-  if (floor) {
-    document.getElementById('floorFilter').value = floor;
-  }
-  if (search) {
-    document.getElementById('searchInput').value = search;
-  }
+  if (floor) document.getElementById('floorFilter').value = floor;
+  if (search) document.getElementById('searchInput').value = search;
 }
 
-// --- applyRequestFiltersAndRender ---
 function applyRequestFiltersAndRender() {
-  // 1. Get filter values *before* updating room options
   const floor = document.getElementById('floorFilter')?.value || '';
-  
-  // *** FIX: Get the room from the dropdown's *current value*, not session storage ***
   const room = document.getElementById('roomFilter')?.value || ''; 
-  
   const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
 
-  // 2. Populate rooms. This will also set the value from session storage *if* it's the initial load.
-  // On change, this will just repopulate the list based on the floor.
   updateRoomFilterOptions(); 
-  // After repopulating, we must re-set the room value we just captured
-  document.getElementById('roomFilter').value = room;
+  document.getElementById('roomFilter').value = room; // Restore value after repopulating
 
-  // 3. Filter data
   filteredRequests = currentRequestsData.filter(req => {
     const matchFloor = !floor || (req.floor && req.floor.toString() === floor);
-    // *** Use the 'room' variable which now holds the correct current value ***
     const matchRoom = !room || (req.room && req.room.toString() === room); 
     const matchSearch = !search || (req.room && req.room.toString().includes(search));
     return matchFloor && matchRoom && matchSearch;
   });
 
-  // 4. Render
   paginationState.requests.currentPage = 1;
   renderRequestsTable();
 }
 
-// --- resetRequestFilters ---
 function resetRequestFilters() {
     document.getElementById('floorFilter').value = '';
     document.getElementById('roomFilter').value = '';
@@ -695,8 +598,20 @@ function resetRequestFilters() {
     sessionStorage.removeItem('requests_roomFilter');
     sessionStorage.removeItem('requests_searchInput');
 
-    updateRoomFilterOptions(); // Must update rooms after clearing filters
+    updateRoomFilterOptions(); 
     applyRequestFiltersAndRender();
+    showMaintenanceToast("Maintenance Requests Refreshed!");
+}
+
+function resetHistoryFilters() {
+    document.getElementById('floorFilterHistory').value = '';
+    document.getElementById('roomFilterHistory').value = '';
+    document.getElementById('dateFilterHistory').value = '';
+    document.getElementById('historySearchInput').value = '';
+    
+    updateHistoryRoomFilterOptions();
+    applyHistoryFiltersAndRender();
+    showMaintenanceToast("Maintenance History Refreshed!");
 }
 
 // ===== REQUESTS PDF DOWNLOAD =====
@@ -706,43 +621,104 @@ function downloadRequestsPDF() {
         return;
     }
     
+    if (!window.jspdf) { alert("PDF Library not loaded."); return; }
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
 
-    // Define the headers
-    const headers = [
-        ['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff In Charge']
-    ];
+    doc.setFontSize(18);
+    doc.setTextColor(72, 12, 27); // #480c1b
+    doc.text("Maintenance Requests Report", 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
-    // Map the filtered data
+    const headers = [['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff In Charge']];
     const bodyData = filteredRequests.map(req => [
-        req.floor ?? 'N/A',
-        req.room ?? 'N/A',
-        req.date ?? 'N/A',
-        req.requestTime ?? 'N/A',
-        req.lastMaintenance ?? 'N/A',
-        req.status ?? 'N/A',
-        req.staff ?? 'N/A'
+        req.floor ?? 'N/A', req.room ?? 'N/A', req.date ?? 'N/A',
+        req.requestTime ?? 'N/A', req.lastMaintenance ?? 'N/A',
+        req.status ?? 'N/A', req.staff ?? 'N/A'
     ]);
 
-    // Add a title
-    doc.setFontSize(18);
-    doc.text("Maintenance Requests Report", 14, 22);
-
-    // Add the table
     doc.autoTable({
-        startY: 30,
-        head: headers,
-        body: bodyData,
-        theme: 'striped',
-        headStyles: { fillColor: [41, 128, 185] }, // Blue header
-        styles: { fontSize: 8 },
-        columnStyles: {
-            4: { cellWidth: 30 }, // Last Maintenance
-            6: { cellWidth: 30 }  // Staff In Charge
-        }
+        startY: 35, head: headers, body: bodyData, theme: 'grid',
+        headStyles: { fillColor: '#480c1b', textColor: '#ffffff', fontStyle: 'bold', halign: 'center' },
+        styles: { fontSize: 10, cellPadding: 3 },
+        columnStyles: { 4: { cellWidth: 35 }, 6: { cellWidth: 35 } }
     });
 
-    // Save the PDF
     doc.save('maintenance-requests.pdf');
+}
+
+// ===== HISTORY PDF DOWNLOAD (Added) =====
+function downloadHistoryPDF() {
+    if (filteredHistory.length === 0) {
+        alert("No history data to export based on current filters.");
+        return;
+    }
+    
+    if (!window.jspdf) { alert("PDF Library not loaded."); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); 
+
+    doc.setFontSize(18);
+    doc.setTextColor(72, 12, 27); 
+    doc.text("Maintenance History Report", 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    // Assuming filteredHistory has fields like: floor, room, issueType, date, requestedTime, completedTime, staff, status, remarks
+    const headers = [['Floor', 'Room', 'Issue Type', 'Date', 'Req Time', 'Comp Time', 'Staff', 'Status', 'Remarks']];
+    const bodyData = filteredHistory.map(hist => [
+        hist.floor, hist.room, hist.issueType, hist.date,
+        hist.requestedTime, hist.completedTime, hist.staff,
+        hist.status, hist.remarks
+    ]);
+
+    doc.autoTable({
+        startY: 35, head: headers, body: bodyData, theme: 'grid',
+        headStyles: { fillColor: '#480c1b', textColor: '#ffffff', fontStyle: 'bold', halign: 'center' },
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: { 8: { cellWidth: 50 } } // Remarks wider
+    });
+
+    doc.save('maintenance-history.pdf');
+}
+
+// ===== Helper for History Filters (Assumed required) =====
+function applyHistoryFiltersAndRender() {
+    const floor = document.getElementById('floorFilterHistory')?.value;
+    const room = document.getElementById('roomFilterHistory')?.value;
+    const date = document.getElementById('dateFilterHistory')?.value;
+    const search = document.getElementById('historySearchInput')?.value.toLowerCase();
+
+    // Convert date input (YYYY-MM-DD) to match data format if needed (e.g., MM.DD.YYYY)
+    // This logic depends on your specific date format in currentHistoryData
+    let formattedDate = '';
+    if(date) {
+        const [y, m, d] = date.split('-');
+        formattedDate = `${m}.${d}.${y}`; // Example format
+    }
+
+    filteredHistory = currentHistoryData.filter(h => {
+        const matchFloor = !floor || h.floor.toString() === floor;
+        const matchRoom = !room || h.room.toString() === room;
+        const matchDate = !date || h.date === formattedDate;
+        const matchSearch = !search || 
+                            (h.room && h.room.toString().includes(search)) || 
+                            (h.staff && h.staff.toLowerCase().includes(search)) ||
+                            (h.issueType && h.issueType.toLowerCase().includes(search));
+        return matchFloor && matchRoom && matchDate && matchSearch;
+    });
+
+    paginationState.history.currentPage = 1;
+    // Assumes renderMTHistTable is defined elsewhere or you rename it here
+    if(typeof renderMTHistTable === 'function') {
+        renderMTHistTable(filteredHistory);
+    } else {
+        // If you need the render function here, let me know
+        console.log("renderMTHistTable not found in this file, make sure it is loaded.");
+    }
 }

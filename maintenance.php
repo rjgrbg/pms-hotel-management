@@ -250,35 +250,6 @@ $conn->close();
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     
-    <style>
-        /* This style block is new and required */
-
-        /* By default, hide the error message paragraph */
-        #editRoomStatusModal .modalSubtext.error-message {
-            display: none;
-            color: #d9534f; /* Red color for error */
-            font-weight: 500;
-            margin-bottom: 25px;
-        }
-
-        /* When the modal has the 'error-view' class... */
-        
-        /* 1. HIDE the normal form elements */
-        #editRoomStatusModal.error-view #editRoomStatusForm .formRow,
-        #editRoomStatusModal.error-view #submitEditRoomStatusBtn {
-            display: none;
-        }
-
-        /* 2. HIDE the normal subtext */
-        #editRoomStatusModal.error-view .modalSubtext.normal-message {
-            display: none;
-        }
-
-        /* 3. SHOW the error message */
-        #editRoomStatusModal.error-view .modalSubtext.error-message {
-            display: block;
-        }
-    </style>
     </head>
 <body>
     <header class="header">

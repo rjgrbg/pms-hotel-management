@@ -1230,3 +1230,170 @@ tbody tr:hover {
   border-color: #f5c6cb;
   color: #721c24;
 }
+
+/* ====================================================== */
+/* NEW: THEMED MODAL STYLES (Dark Red & Gold) */
+/* ====================================================== */
+
+/* Custom Modal Styling for Maintenance Theme */
+
+/* Target Issue Type and Staff Selection Modals specifically */
+#issueTypeModal .addItemModal,
+#staffModal .staffSelectionModal {
+    background-color: rgb(72, 12, 27); /* Dark Red Background */
+    color: white; /* Default text color white */
+    border-radius: 8px; /* Keep rounded corners */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); /* Add some shadow for depth */
+}
+
+/* Headings (h2) */
+#issueTypeModal h2,
+#staffModal h2 {
+    color: rgb(212, 175, 120) !important; /* Gold Color */
+    font-weight: bold;
+}
+
+/* Subtext/Paragraphs */
+#issueTypeModal .modalSubtext,
+#staffModal .modalSubtext {
+    color: white !important; /* Ensure subtext is white */
+}
+
+/* Modal Close Button (X) */
+#issueTypeModal .closeBtn,
+#staffModal .closeBtn {
+    color: white;
+    opacity: 0.8;
+}
+#issueTypeModal .closeBtn:hover,
+#staffModal .closeBtn:hover {
+    opacity: 1;
+}
+
+/* --- Issue Type Modal Specifics --- */
+
+/* Labels for checkboxes */
+#issueTypeModal label {
+    color: white !important;
+}
+
+/* Icon Header (the list icon) */
+#issueTypeModal .modalIconHeader i {
+    color: rgb(212, 175, 120) !important; /* Make the icon Gold too */
+}
+
+
+/* --- Staff Modal Specifics --- */
+
+/* Search Box Styling to fit dark theme */
+#staffModal .searchBox {
+    background-color: rgba(255, 255, 255, 0.1); /* Semi-transparent white */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+#staffModal .searchBox input {
+    color: white;
+}
+#staffModal .searchBox input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+#staffModal .searchBtn img {
+    filter: brightness(0) invert(1); /* Turn search icon white */
+}
+
+/* --- Staff List Item Styling --- */
+
+/* 1. DEFAULT STATE (Not Selected) */
+#staffModal .staff-item {
+    background-color: rgba(255, 255, 255, 0.1) !important; /* Semi-transparent white */
+    color: white !important;
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border */
+    transition: all 0.2s ease;
+}
+
+#staffModal .staff-name {
+    color: white !important;
+    font-weight: bold;
+}
+
+#staffModal .staff-role {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* 2. HOVER STATE */
+#staffModal .staff-item:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    cursor: pointer;
+}
+
+/* 3. SELECTED STATE (Turns Gold) */
+#staffModal .staff-item.selected {
+    background-color: rgb(212, 175, 120) !important; /* Gold Background */
+    border-color: rgb(212, 175, 120) !important;
+}
+
+/* Change text color to Dark Red when selected so it's readable on Gold */
+#staffModal .staff-item.selected .staff-name,
+#staffModal .staff-item.selected .staff-role {
+    color: rgb(72, 12, 27) !important;
+}
+
+/* --- Buttons --- */
+
+/* Cancel Button */
+#issueTypeModal .cancelBtn,
+#staffModal .cancelBtn {
+    background-color: #e0e0e0; /* Keep light grey for contrast */
+    color: #333;
+    border: none;
+}
+#issueTypeModal .cancelBtn:hover,
+#staffModal .cancelBtn:hover {
+    background-color: #d0d0d0;
+}
+
+/* Action Buttons (Next/Assign) */
+#issueTypeModal .confirmBtn,
+#staffModal .confirmBtn {
+    background-color: rgb(212, 175, 120) !important; /* Gold Background */
+    color: rgb(72, 12, 27) !important; /* Dark Red Text */
+    font-weight: bold;
+    border: none;
+}
+#issueTypeModal .confirmBtn:hover,
+#staffModal .confirmBtn:hover {
+    background-color: rgb(192, 155, 100) !important; /* Slightly darker gold on hover */
+}
+#issueTypeModal .confirmBtn:disabled,
+#staffModal .confirmBtn:disabled {
+    background-color: #cccccc !important;
+    color: #666666 !important;
+    cursor: not-allowed;
+}
+/* --- Custom Scrollbar for Staff List (Gold & Dark Red Theme) --- */
+
+/* The Scrollbar Container */
+#staffList::-webkit-scrollbar {
+    width: 8px;
+}
+
+/* The Track (Background) */
+#staffList::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2); /* Dark transparent track */
+    border-radius: 4px;
+}
+
+/* The Handle (Scrollbar itself) */
+#staffList::-webkit-scrollbar-thumb {
+    background: rgb(212, 175, 120); /* Gold color */
+    border-radius: 4px;
+}
+
+/* Handle on Hover */
+#staffList::-webkit-scrollbar-thumb:hover {
+    background: rgb(192, 155, 100); /* Slightly darker gold */
+}
+
+/* --- Ensure the List Container Text is White --- */
+#staffList {
+    color: white; 
+}
