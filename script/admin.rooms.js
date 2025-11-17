@@ -1,4 +1,94 @@
-// ===== ROOM FUNCTIONS =====
+/**
+ * ROOMS MODULE JAVASCRIPT
+ * Features: Fetching, Dynamic Filters, Modal Logic, Toast, Landscape PDF
+ */
+
+// ==========================================
+// 1. GLOBAL HELPERS (Toast & PDF)
+// ==========================================
+
+// --- INJECT TOAST CSS ---
+const roomToastStyle = document.createElement("style");
+roomToastStyle.textContent = `
+    .toast-success {
+        position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white;
+        padding: 12px 24px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        z-index: 99999; font-family: 'Segoe UI', sans-serif; font-size: 14px;
+        opacity: 0; transform: translateY(-20px); transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: none;
+    }
+    .toast-visible { opacity: 1; transform: translateY(0); }
+`;
+document.head.appendChild(roomToastStyle);
+
+// --- SHOW TOAST FUNCTION ---
+function showRoomToast(message) {
+    const existingToast = document.querySelector('.toast-success');
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-success';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('toast-visible'));
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// --- LANDSCAPE PDF GENERATOR ---
+function downloadRoomsPDF(headers, data, title, filename) {
+    if (!window.jspdf) {
+        alert("PDF Library not loaded. Please check your script tags.");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
+
+    // Header Title
+    doc.setFontSize(18);
+    doc.setTextColor(72, 12, 27); // Custom Color #480c1b
+    doc.text(title, 14, 20);
+    
+    // Date
+    doc.setFontSize(11);
+    doc.setTextColor(100); 
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    // Table Generation
+    doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 35,
+        theme: 'grid',
+        styles: { 
+            fontSize: 10, 
+            cellPadding: 3, 
+            overflow: 'linebreak', 
+            textColor: 50 
+        },
+        headStyles: { 
+            fillColor: '#480c1b', // Custom Header Background
+            textColor: '#ffffff', // White Text
+            fontStyle: 'bold', 
+            halign: 'center' 
+        },
+        // Status column bold
+        columnStyles: {
+            5: { fontStyle: 'bold' }
+        }
+    });
+
+    doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+// ==========================================
+// 2. DATA FETCHING & POPULATION
+// ==========================================
+
 async function fetchAndRenderRooms() {
     if (!roomsTableBody) return;
     roomsTableBody.innerHTML = '<tr><td colspan="7">Loading rooms...</td></tr>';
@@ -13,27 +103,32 @@ async function fetchAndRenderRooms() {
         
         paginationState.rooms.currentPage = 1;
         renderRoomsTable(roomData);
+        
         const recordCount = document.getElementById('roomsRecordCount');
         if (recordCount) recordCount.textContent = roomData.length;
 
     } else if (result.success && result.data.length === 0) {
          roomsTableBody.innerHTML = '<tr><td colspan="7">No rooms found.</td></tr>';
-         const recordCount = document.getElementById('roomsRecordCount');
-         if (recordCount) recordCount.textContent = 0;
+         document.getElementById('roomsRecordCount').textContent = 0;
          populateDynamicFilters([]); 
          updateDashboardFromRooms([]); 
          renderPaginationControls('rooms-page', 0, 1, () => {});
     } else {
          roomsTableBody.innerHTML = `<tr><td colspan="7">Failed to load data: ${result.message}</td></tr>`;
-         const recordCount = document.getElementById('roomsRecordCount');
-         if (recordCount) recordCount.textContent = 0;
+         document.getElementById('roomsRecordCount').textContent = 0;
          updateDashboardFromRooms([]);
          renderPaginationControls('rooms-page', 0, 1, () => {});
     }
+    
+    // Re-init filters to attach events to new data
+    initRoomFilters();
 }
 
 function populateDynamicFilters(data) {
     if (!roomsFloorFilter || !roomsRoomFilter) return;
+
+    // Save current selection to restore if possible
+    const currentFloor = roomsFloorFilter.value;
 
     const floors = [...new Set(data.map(room => room.Floor))].sort((a, b) => a - b);
     
@@ -45,7 +140,11 @@ function populateDynamicFilters(data) {
         roomsFloorFilter.appendChild(option);
     });
 
-    updateRoomFilterOptions(data);
+    if (floors.includes(parseInt(currentFloor))) {
+        roomsFloorFilter.value = currentFloor;
+    }
+
+    updateRoomFilterOptions(data, roomsFloorFilter.value);
 }
 
 function updateRoomFilterOptions(data, selectedFloor = '') {
@@ -75,6 +174,10 @@ function updateRoomFilterOptions(data, selectedFloor = '') {
     }
 }
 
+// ==========================================
+// 3. FORM HELPERS
+// ==========================================
+
 function updateGuestCapacity() {
     const selectedType = roomTypeInput.value;
     roomGuestsInput.value = ROOM_CAPACITY_MAP[selectedType] || '';
@@ -85,9 +188,7 @@ function enforceFloorPrefix() {
     let room = roomNumberInput.value;
 
     if (!floor) {
-        if (room.length > 0) {
-             roomNumberInput.value = '';
-        }
+        if (room.length > 0) roomNumberInput.value = '';
         return;
     }
 
@@ -103,6 +204,10 @@ function enforceFloorPrefix() {
         roomNumberInput.value = roomNumberInput.value.substring(0, 3);
     }
 }
+
+// ==========================================
+// 4. RENDER TABLE
+// ==========================================
 
 function renderRoomsTable(data) {
   if (!roomsTableBody) return;
@@ -128,19 +233,18 @@ function renderRoomsTable(data) {
         ).join(' ');
       }
 
-      // === MODIFICATION: REMOVED DELETE BUTTON ===
+      // Note: Edit Button logic assumed to be handled via event delegation or inline onclick if needed.
+      // Added generic 'edit-btn' class for potential listeners.
       return `
-        <tr>
+        <tr data-room-data='${JSON.stringify(row)}' onclick="handleEditClick(event)" style="cursor: pointer;">
           <td>${row.Floor}</td>
           <td>${row.Room}</td>
           <td>${row.Type}</td>
           <td>${row.NoGuests}</td>
           <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
-          
         </tr>
       `;
     }).join('');
- 
   }
   
   const recordCount = document.getElementById('roomsRecordCount');
@@ -151,15 +255,21 @@ function renderRoomsTable(data) {
   });
 }
 
-// ===== ROOM MODAL HANDLERS =====
+// ==========================================
+// 5. MODAL HANDLERS
+// ==========================================
+
 function handleEditClick(event) {
     hideFormMessage();
-    const room = JSON.parse(event.currentTarget.dataset.roomData);
+    // Ensure we get the TR even if a child element is clicked
+    const tr = event.currentTarget;
+    const room = JSON.parse(tr.dataset.roomData);
     
     roomModalTitle.textContent = 'Edit Room ' + room.Room;
     document.getElementById('saveRoomBtn').textContent = 'SAVE STATUS';
     
-   roomFloorInput.innerHTML = `<option value="${room.Floor}">${room.Floor}</option>`;
+    // Populate form
+    roomFloorInput.innerHTML = `<option value="${room.Floor}">${room.Floor}</option>`;
     roomFloorInput.value = room.Floor;
     
     roomNumberInput.value = room.Room;
@@ -168,6 +278,7 @@ function handleEditClick(event) {
     roomGuestsInput.value = room.NoGuests;
     roomRateInput.value = parseFloat(room.Rate).toFixed(2);
     
+    // Status Logic
     const currentStatus = room.Status;
     const settableStatuses = ["Available", "Needs Cleaning", "Needs Maintenance"];
 
@@ -232,122 +343,99 @@ async function handleRoomFormSubmit(e) {
     }
 }
 
-// ===== DELETE ROOM HANDLERS =====
-// These functions are no longer called but are safe to leave.
-// You can remove them if you want to clean up the file.
-let roomToDeleteID = null;
+// ==========================================
+// 6. FILTERS & EVENTS (FIXED)
+// ==========================================
 
-function handleDeleteClick(event) {
-    roomToDeleteID = event.currentTarget.dataset.roomId;
-    const roomNumber = event.currentTarget.dataset.roomNumber;
-    document.getElementById('deleteRoomText').textContent = `Are you sure you want to delete Room ${roomNumber}? This action cannot be undone.`;
-    deleteRoomModal.style.display = 'flex';
-}
+function initRoomFilters() {
+    const searchInput = document.getElementById('roomsSearchInput');
+    const floorFilter = document.getElementById('roomsFloorFilter');
+    const roomFilter = document.getElementById('roomsRoomFilter');
+    const typeFilter = document.getElementById('roomsTypeFilter');
+    const statusFilter = document.getElementById('roomsStatusFilter');
+    const refreshBtn = document.getElementById('roomsRefreshBtn');
+    const downloadBtn = document.getElementById('roomsDownloadBtn');
 
-async function confirmRoomDelete() {
-    if (!roomToDeleteID) return;
+    // --- Central Filter Function ---
+    function applyFilters() {
+        const search = searchInput.value.toLowerCase();
+        const floor = floorFilter.value;
+        const room = roomFilter.value;
+        const type = typeFilter.value;
+        const status = statusFilter.value;
 
-    const data = { roomID: roomToDeleteID };
-    const result = await apiCall('delete_room', data, 'POST', 'room_actions.php');
+        const filtered = roomData.filter(row => {
+            const searchMatch = !search || row.Type.toLowerCase().includes(search) || row.Room.toString().includes(search) || row.Status.toLowerCase().includes(search);
+            const floorMatch = !floor || row.Floor.toString() === floor;
+            const roomMatch = !room || row.Room.toString() === room;
+            const typeMatch = !type || row.Type === type;
+            const statusMatch = !status || row.Status === status;
+            return searchMatch && floorMatch && roomMatch && typeMatch && statusMatch;
+        });
 
-    if (result.success) {
-        deleteRoomModal.style.display = 'none';
-        await fetchAndRenderRooms();
-    } else {
-        alert(result.message);
+        paginationState.rooms.currentPage = 1;
+        renderRoomsTable(filtered);
+        return filtered; // Return for PDF
+    }
+
+    // --- Use .onchange/.oninput to prevent duplicate listeners ---
+    if (searchInput) searchInput.oninput = applyFilters;
+    
+    if (floorFilter) {
+        floorFilter.onchange = (e) => {
+            // Update room dropdown based on floor selection
+            updateRoomFilterOptions(roomData, e.target.value);
+            applyFilters();
+        };
+    }
+    
+    if (roomFilter) roomFilter.onchange = applyFilters;
+    if (typeFilter) typeFilter.onchange = applyFilters;
+    if (statusFilter) statusFilter.onchange = applyFilters;
+
+    // --- Refresh Button ---
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            if(searchInput) searchInput.value = '';
+            if(floorFilter) floorFilter.value = '';
+            if(roomFilter) roomFilter.value = '';
+            if(typeFilter) typeFilter.value = '';
+            if(statusFilter) statusFilter.value = '';
+            
+            fetchAndRenderRooms();
+            showRoomToast("Rooms refreshed successfully!");
+        };
+    }
+
+    // --- Download Button (Landscape PDF) ---
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            // Get current filtered data
+            const filteredData = applyFilters();
+            
+            if (filteredData.length === 0) {
+                alert("No data to download");
+                return;
+            }
+
+            const headers = ['Floor', 'Room', 'Type', 'No. Guests', 'Rate', 'Status'];
+            const body = filteredData.map(row => [
+                row.Floor,
+                row.Room,
+                row.Type,
+                row.NoGuests,
+                `$${parseFloat(row.Rate).toFixed(2)}`,
+                row.Status
+            ]);
+
+            downloadRoomsPDF(headers, body, 'Rooms Report', 'rooms_report');
+        };
     }
 }
 
-// ===== ROOMS FILTERS =====
-function initRoomFilters() {
-    document.getElementById('roomsSearchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const filtered = roomData.filter(row => 
-        row.Type.toLowerCase().includes(search) ||
-        row.Room.toString().includes(search) ||
-        row.Status.toLowerCase().includes(search)
-      );
-      paginationState.rooms.currentPage = 1;
-      renderRoomsTable(filtered);
-    });
-
-    roomsFloorFilter?.addEventListener('change', (e) => {
-        const floor = e.target.value;
-        updateRoomFilterOptions(roomData, floor);
-        const filtered = floor ? roomData.filter(row => row.Floor.toString() === floor) : roomData;
-        paginationState.rooms.currentPage = 1;
-        renderRoomsTable(filtered);
-    });
-
-    roomsRoomFilter?.addEventListener('change', (e) => {
-      const room = e.target.value;
-      const floor = roomsFloorFilter.value;
-      let dataToFilter = floor ? roomData.filter(row => row.Floor.toString() === floor) : roomData;
-      const filtered = room ? dataToFilter.filter(row => row.Room.toString() === room) : dataToFilter;
-      paginationState.rooms.currentPage = 1;
-      renderRoomsTable(filtered);
-    });
-
-    document.getElementById('roomsTypeFilter')?.addEventListener('change', (e) => {
-      const type = e.target.value;
-      const filtered = type ? roomData.filter(row => row.Type === type) : roomData;
-      paginationState.rooms.currentPage = 1;
-      renderRoomsTable(filtered);
-    });
-
-    document.getElementById('roomsStatusFilter')?.addEventListener('change', (e) => {
-      const status = e.target.value;
-      const filtered = status ? roomData.filter(row => row.Status === status) : roomData;
-      paginationState.rooms.currentPage = 1;
-      renderRoomsTable(filtered);
-    });
-
-    document.getElementById('roomsRefreshBtn')?.addEventListener('click', () => {
-      document.getElementById('roomsSearchInput').value = '';
-      document.getElementById('roomsFloorFilter').value = '';
-      document.getElementById('roomsRoomFilter').value = '';
-      document.getElementById('roomsTypeFilter').value = '';
-      document.getElementById('roomsStatusFilter').value = '';
-      fetchAndRenderRooms();
-    });
-
-    // === MODIFIED FOR PDF DOWNLOAD ===
-    document.getElementById('roomsDownloadBtn')?.addEventListener('click', () => {
-      // 1. Get filter values
-      const search = document.getElementById('roomsSearchInput').value.toLowerCase();
-      const floor = document.getElementById('roomsFloorFilter').value;
-      const room = document.getElementById('roomsRoomFilter').value;
-      const type = document.getElementById('roomsTypeFilter').value;
-      const status = document.getElementById('roomsStatusFilter').value;
-
-      // 2. Filter data
-      const filteredData = roomData.filter(row => {
-          const searchMatch = !search || row.Type.toLowerCase().includes(search) || row.Room.toString().includes(search) || row.Status.toLowerCase().includes(search);
-          const floorMatch = !floor || row.Floor.toString() === floor;
-          const roomMatch = !room || row.Room.toString() === room;
-          const typeMatch = !type || row.Type === type;
-          const statusMatch = !status || row.Status === status;
-          return searchMatch && floorMatch && roomMatch && typeMatch && statusMatch;
-      });
-
-      // 3. Define PDF headers and body
-      const headers = ['Floor', 'Room', 'Type', 'No. Guests', 'Rate', 'Status'];
-      const body = filteredData.map(row => [
-          row.Floor,
-          row.Room,
-          row.Type,
-          row.NoGuests,
-          `$${parseFloat(row.Rate).toFixed(2)}`,
-          row.Status
-      ]);
-
-      // 4. Call helper
-      generatePdfReport(
-          'Rooms Report',
-          `rooms-${new Date().toISOString().split('T')[0]}.pdf`,
-          headers,
-          body,
-          'portrait' // This table is narrow, portrait is better
-      );
-    });
-}
+// Initialize on load
+document.addEventListener('DOMContentLoaded', () => {
+    if(document.getElementById('rooms-page')) {
+        fetchAndRenderRooms();
+    }
+});

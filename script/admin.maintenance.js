@@ -86,146 +86,334 @@ function renderMTHistTable(data = mtHistData) {
   });
 }
 
-// ===== MAINTENANCE (REQUESTS) FILTERS =====
-function initMTRequestFilters() {
-    document.getElementById('mtSearchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const filtered = mtRequestsData.filter(row => 
-        row.room.toLowerCase().includes(search) ||
-        (row.staff && row.staff.toLowerCase().includes(search))
-      );
-      paginationState.maintenance.currentPage = 1;
-      renderMTRequestsTable(filtered);
+/**
+ * MAINTENANCE MODULE JAVASCRIPT
+ * Features: DB Filters, Dependent Dropdowns, Landscape PDF Export, Green Toast
+ */
+
+// ==========================================
+// 1. GLOBAL STATE & HELPERS
+// ==========================================
+
+// Store raw room data for local filtering
+let globalMTRoomList = []; 
+
+// --- Toast Notification Helper ---
+function showMTToast(message) {
+    const existingToast = document.querySelector('.toast-success');
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-success';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add('toast-visible');
     });
 
-    document.getElementById('mtFloorFilter')?.addEventListener('change', (e) => {
-      const floor = e.target.value;
-      const filtered = floor ? mtRequestsData.filter(row => row.floor.toString() === floor) : mtRequestsData;
-      paginationState.maintenance.currentPage = 1;
-      renderMTRequestsTable(filtered);
-    });
-
-    document.getElementById('mtRoomFilter')?.addEventListener('change', (e) => {
-      const room = e.target.value;
-      const filtered = room ? mtRequestsData.filter(row => row.room.toString() === room) : mtRequestsData;
-      paginationState.maintenance.currentPage = 1;
-      renderMTRequestsTable(filtered);
-    });
-
-    document.getElementById('mtRefreshBtn')?.addEventListener('click', () => {
-      document.getElementById('mtSearchInput').value = '';
-      document.getElementById('mtFloorFilter').value = '';
-      document.getElementById('mtRoomFilter').value = '';
-      
-      // Reset data from the initial PHP-loaded array
-      mtRequestsData = [...(initialMtRequestsData || [])];
-      paginationState.maintenance.currentPage = 1;
-      renderMTRequestsTable(mtRequestsData);
-    });
-
-    document.getElementById('mtDownloadBtn')?.addEventListener('click', () => {
-      const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff In Charge'];
-      const csvContent = [
-        headers.join(','),
-        ...mtRequestsData.map(row => [
-            row.floor, 
-            row.room, 
-            row.date, 
-            row.requestTime, 
-            row.lastMaintenance, 
-            formatStatus(row.status), 
-            row.staff
-        ].join(','))
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `maintenance-requests-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    });
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
-// ===== MAINTENANCE HISTORY FILTERS =====
-function initMTHistoryFilters() {
-    document.getElementById('mtHistSearchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const filtered = mtHistData.filter(row => 
-        row.room.toLowerCase().includes(search) ||
-        (row.staff && row.staff.toLowerCase().includes(search)) ||
-        row.issueType.toLowerCase().includes(search)
-      );
-      paginationState.maintenanceHistory.currentPage = 1;
-      renderMTHistTable(filtered);
-    });
+// --- Fetch Data Helper ---
+async function fetchMTFilters() {
+    try {
+        // Reuse the same PHP file since Rooms/Floors are likely the same
+        const response = await fetch('fetch_filters.php'); 
+        const data = await response.json();
 
-    document.getElementById('mtFloorFilterHist')?.addEventListener('change', (e) => {
-      const floor = e.target.value;
-      const filtered = floor ? mtHistData.filter(row => row.floor.toString() === floor) : mtHistData;
-      paginationState.maintenanceHistory.currentPage = 1;
-      renderMTHistTable(filtered);
-    });
+        if (data.floors && data.rooms) {
+            globalMTRoomList = data.rooms; 
 
-    document.getElementById('mtRoomFilterHist')?.addEventListener('change', (e) => {
-      const room = e.target.value;
-      const filtered = room ? mtHistData.filter(row => row.room.toString() === room) : mtHistData;
-      paginationState.maintenanceHistory.currentPage = 1;
-      renderMTHistTable(filtered);
+            // Populate Request Tab Dropdowns
+            populateMTSelect('mtFloorFilter', data.floors, 'Floor');
+            populateMTSelect('mtRoomFilter', data.rooms, 'Room');
+
+            // Populate History Tab Dropdowns
+            populateMTSelect('mtFloorFilterHist', data.floors, 'Floor');
+            populateMTSelect('mtRoomFilterHist', data.rooms, 'Room');
+        }
+    } catch (error) {
+        console.error('Error loading Maintenance filters:', error);
+    }
+}
+
+// --- Populate Select Helper ---
+function populateMTSelect(elementId, data, defaultText) {
+    const select = document.getElementById(elementId);
+    if (!select) return;
+
+    const currentVal = select.value;
+    select.innerHTML = `<option value="">${defaultText}</option>`;
+
+    data.forEach(item => {
+        const option = document.createElement('option');
+        if (typeof item === 'object') {
+            option.value = item.room_num; 
+            option.textContent = `Room ${item.room_num}`;
+            option.dataset.floor = item.floor_num; 
+        } else {
+            option.value = item;
+            option.textContent = `Floor ${item}`;
+        }
+        select.appendChild(option);
     });
     
-    document.getElementById('dateFilterMtHist')?.addEventListener('change', (e) => {
-        const date = e.target.value; // Format: YYYY-MM-DD
-        if (!date) {
-            renderMTHistTable(mtHistData); // Reset if date is cleared
-            return;
+    if (currentVal) select.value = currentVal;
+}
+
+// --- PDF Generator Helper (Landscape) ---
+function downloadMTPDF(headers, data, title, filename) {
+    if (!window.jspdf) {
+        alert("PDF Library not loaded. Please check your <script> tags.");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
+
+    // Header
+    doc.setFontSize(18);
+    doc.setTextColor(72, 12, 27); // #480c1b
+    doc.text(title, 14, 20);
+    
+    // Date
+    doc.setFontSize(11);
+    doc.setTextColor(100); 
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    // Table
+    doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 35,
+        theme: 'grid',
+        styles: { 
+            fontSize: 10,
+            cellPadding: 3,
+            overflow: 'linebreak',
+            textColor: 50
+        },
+        headStyles: { 
+            fillColor: '#480c1b', // Custom Color
+            textColor: '#ffffff', 
+            fontStyle: 'bold',
+            halign: 'center'
+        },
+        columnStyles: {
+            0: { cellWidth: 'auto' }, // Floor
+            1: { cellWidth: 'auto' }, // Room
+            // Status usually at index 5 or 7 depending on table
         }
+    });
+
+    doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+// ==========================================
+// 2. REQUESTS TAB LOGIC
+// ==========================================
+
+function initMTRequestFilters() {
+    fetchMTFilters(); // Load DB Data
+
+    const searchInput = document.getElementById('mtSearchInput');
+    const floorSelect = document.getElementById('mtFloorFilter');
+    const roomSelect = document.getElementById('mtRoomFilter');
+    const refreshBtn = document.getElementById('mtRefreshBtn');
+    const downloadBtn = document.getElementById('mtDownloadBtn');
+
+    // --- Central Filter Function ---
+    function applyMTRequestFilters() {
+        const searchValue = searchInput.value.toLowerCase();
+        const selectedFloor = floorSelect.value;
+        const selectedRoom = roomSelect.value;
+
+        const filtered = mtRequestsData.filter(row => {
+            const matchesSearch = row.room.toLowerCase().includes(searchValue) ||
+                                  (row.staff && row.staff.toLowerCase().includes(searchValue));
+            const matchesFloor = selectedFloor === "" || row.floor.toString() === selectedFloor;
+            const matchesRoom = selectedRoom === "" || row.room.toString() === selectedRoom;
+
+            return matchesSearch && matchesFloor && matchesRoom;
+        });
+
+        paginationState.maintenance.currentPage = 1;
+        renderMTRequestsTable(filtered);
         
-        // Convert YYYY-MM-DD to MM.DD.YYYY to match our data format
-        const [y, m, d] = date.split('-');
-        const formattedDate = `${m}.${d}.${y}`;
-        
-        const filtered = mtHistData.filter(row => row.date === formattedDate);
+        if(document.getElementById('mtRequestsRecordCount')) {
+            document.getElementById('mtRequestsRecordCount').innerText = filtered.length;
+        }
+    }
+
+    // --- Dependent Dropdown (Floor -> Room) ---
+    if (floorSelect) {
+        floorSelect.onchange = (e) => {
+            const selectedFloor = e.target.value;
+            roomSelect.value = ""; 
+
+            if (selectedFloor === "") {
+                populateMTSelect('mtRoomFilter', globalMTRoomList, 'Room');
+            } else {
+                const filteredRooms = globalMTRoomList.filter(r => r.floor_num == selectedFloor);
+                populateMTSelect('mtRoomFilter', filteredRooms, 'Room');
+            }
+            applyMTRequestFilters();
+        };
+    }
+
+    // --- Inputs ---
+    if (searchInput) searchInput.oninput = applyMTRequestFilters;
+    if (roomSelect) roomSelect.onchange = applyMTRequestFilters;
+
+    // --- Refresh ---
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            searchInput.value = '';
+            floorSelect.value = '';
+            roomSelect.value = ''; 
+            populateMTSelect('mtRoomFilter', globalMTRoomList, 'Room');
+            
+            // Reset to initial PHP data
+            mtRequestsData = [...(initialMtRequestsData || [])];
+            applyMTRequestFilters();
+            showMTToast("Maintenance Requests refreshed!");
+        };
+    }
+
+    // --- Download PDF ---
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            const headers = ['Floor', 'Room', 'Date', 'Req Time', 'Last Maint', 'Status', 'Staff'];
+            const tableData = mtRequestsData.map(row => [
+                row.floor, 
+                row.room, 
+                row.date, 
+                row.requestTime, 
+                row.lastMaintenance, 
+                typeof formatStatus === 'function' ? formatStatus(row.status) : row.status, 
+                row.staff
+            ]);
+            
+            downloadMTPDF(headers, tableData, "Maintenance Requests", "maintenance_requests");
+        };
+    }
+}
+
+// ==========================================
+// 3. HISTORY TAB LOGIC
+// ==========================================
+
+function initMTHistoryFilters() {
+    const searchInput = document.getElementById('mtHistSearchInput');
+    const floorSelect = document.getElementById('mtFloorFilterHist');
+    const roomSelect = document.getElementById('mtRoomFilterHist');
+    const dateInput = document.getElementById('dateFilterMtHist');
+    const refreshBtn = document.getElementById('mtHistRefreshBtn');
+    const downloadBtn = document.getElementById('mtHistDownloadBtn');
+
+    // --- Central Filter Function ---
+    function applyMTHistoryFilters() {
+        const searchValue = searchInput.value.toLowerCase();
+        const selectedFloor = floorSelect.value;
+        const selectedRoom = roomSelect.value;
+        const selectedDate = dateInput.value; 
+
+        const filtered = mtHistData.filter(row => {
+            const matchesSearch = row.room.toLowerCase().includes(searchValue) ||
+                                  (row.staff && row.staff.toLowerCase().includes(searchValue)) ||
+                                  row.issueType.toLowerCase().includes(searchValue);
+            
+            const matchesFloor = selectedFloor === "" || row.floor.toString() === selectedFloor;
+            const matchesRoom = selectedRoom === "" || row.room.toString() === selectedRoom;
+            
+            let matchesDate = true;
+            if (selectedDate) {
+                // Convert YYYY-MM-DD to MM.DD.YYYY
+                const [y, m, d] = selectedDate.split('-');
+                const formattedInput = `${m}.${d}.${y}`; 
+                matchesDate = row.date === formattedInput;
+            }
+
+            return matchesSearch && matchesFloor && matchesRoom && matchesDate;
+        });
+
         paginationState.maintenanceHistory.currentPage = 1;
         renderMTHistTable(filtered);
-    });
 
-    document.getElementById('mtHistRefreshBtn')?.addEventListener('click', () => {
-      document.getElementById('mtHistSearchInput').value = '';
-      document.getElementById('mtFloorFilterHist').value = '';
-      document.getElementById('mtRoomFilterHist').value = '';
-      document.getElementById('dateFilterMtHist').value = '';
-      
-      // Reset data from the initial PHP-loaded array
-      mtHistData = [...(initialMtHistoryData || [])];
-      paginationState.maintenanceHistory.currentPage = 1;
-      renderMTHistTable(mtHistData);
-    });
+        if(document.getElementById('mtHistRecordCount')) {
+            document.getElementById('mtHistRecordCount').innerText = filtered.length;
+        }
+    }
 
-    document.getElementById('mtHistDownloadBtn')?.addEventListener('click', () => {
-      const headers = ['Floor', 'Room', 'Type', 'Date', 'Requested Time', 'Completed Time', 'Staff In Charge', 'Status', 'Remarks'];
-      const csvContent = [
-        headers.join(','),
-        ...mtHistData.map(row => [
-          row.floor,
-          row.room,
-          `"${row.issueType.replace(/"/g, '""')}"`, // Handle commas in issueType
-          row.date,
-          row.requestedTime,
-          row.completedTime,
-          row.staff,
-          row.status,
-          `"${(row.remarks || '').replace(/"/g, '""')}"` // Handle commas in remarks
-        ].join(','))
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `maintenance-history-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    });
+    // --- Dependent Dropdown ---
+    if (floorSelect) {
+        floorSelect.onchange = (e) => {
+            const selectedFloor = e.target.value;
+            roomSelect.value = ""; 
+
+            if (selectedFloor === "") {
+                populateMTSelect('mtRoomFilterHist', globalMTRoomList, 'Room');
+            } else {
+                const filteredRooms = globalMTRoomList.filter(r => r.floor_num == selectedFloor);
+                populateMTSelect('mtRoomFilterHist', filteredRooms, 'Room');
+            }
+            applyMTHistoryFilters();
+        };
+    }
+
+    // --- Inputs ---
+    if (searchInput) searchInput.oninput = applyMTHistoryFilters;
+    if (roomSelect) roomSelect.onchange = applyMTHistoryFilters;
+    if (dateInput) dateInput.onchange = applyMTHistoryFilters;
+
+    // --- Refresh ---
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            searchInput.value = '';
+            floorSelect.value = '';
+            roomSelect.value = '';
+            dateInput.value = '';
+            populateMTSelect('mtRoomFilterHist', globalMTRoomList, 'Room');
+            
+            mtHistData = [...(initialMtHistoryData || [])];
+            applyMTHistoryFilters();
+            showMTToast("Maintenance History refreshed!");
+        };
+    }
+
+    // --- Download PDF ---
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            const headers = ['Floor', 'Room', 'Type', 'Date', 'Req Time', 'Comp Time', 'Staff', 'Status', 'Remarks'];
+            const tableData = mtHistData.map(row => [
+                row.floor,
+                row.room,
+                row.issueType,
+                row.date,
+                row.requestedTime,
+                row.completedTime,
+                row.staff,
+                row.status,
+                row.remarks || ''
+            ]);
+            
+            downloadMTPDF(headers, tableData, "Maintenance History Logs", "maintenance_history");
+        };
+    }
 }
+
+// ==========================================
+// 4. INITIALIZATION
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Only run if we are on the maintenance page
+    if(document.getElementById('maintenance-page')) {
+        initMTRequestFilters();
+        initMTHistoryFilters();
+    }
+});

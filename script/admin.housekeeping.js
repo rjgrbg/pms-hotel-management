@@ -108,148 +108,338 @@ if (typeof formatStatus !== 'function') {
     }
 }
 
+/**
+ * HOUSEKEEPING MODULE JAVASCRIPT
+ * Features: DB Filters, Dependent Dropdowns, PDF Export, Toast Notifications
+ * Fix: Uses .onclick to prevent multiple downloads
+ * Style: Landscape PDF, Custom Header Color (#480c1b), Auto-fit columns
+ */
 
-// ===== HOUSEKEEPING (REQUESTS) FILTERS =====
-function initHKRequestFilters() {
-    document.getElementById('hkSearchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const filtered = hkData.filter(row => 
-        row.room.toLowerCase().includes(search) ||
-        (row.staff && row.staff.toLowerCase().includes(search))
-      );
-      paginationState.housekeeping.currentPage = 1;
-      renderHKTable(filtered);
+// ==========================================
+// 1. GLOBAL STATE & UTILITIES
+// ==========================================
+
+let globalRoomList = []; // Store raw data for local filtering
+
+// Helper: Toast Notification
+function showRefreshToast(message) {
+    const existingToast = document.querySelector('.toast-success');
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-success';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add('toast-visible');
     });
 
-    document.getElementById('floorFilter')?.addEventListener('change', (e) => {
-      const floor = e.target.value;
-      const filtered = floor ? hkData.filter(row => row.floor.toString() === floor) : hkData;
-      paginationState.housekeeping.currentPage = 1;
-      renderHKTable(filtered);
-    });
-
-    document.getElementById('roomFilter')?.addEventListener('change', (e) => {
-      const room = e.target.value;
-      const filtered = room ? hkData.filter(row => row.room.toString() === room) : hkData;
-      paginationState.housekeeping.currentPage = 1;
-      renderHKTable(filtered);
-    });
-
-    document.getElementById('hkRefreshBtn')?.addEventListener('click', () => {
-      document.getElementById('hkSearchInput').value = '';
-      document.getElementById('floorFilter').value = '';
-      document.getElementById('roomFilter').value = '';
-      
-      // Reset data from the initial PHP-loaded array
-      hkData = [...(initialHkRequestsData || [])];
-      paginationState.housekeeping.currentPage = 1;
-      renderHKTable(hkData);
-    });
-
-    document.getElementById('hkDownloadBtn')?.addEventListener('click', () => {
-      // Updated headers to match the table
-      const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Clean', 'Status', 'Staff In Charge'];
-      const csvContent = [
-        headers.join(','),
-        ...hkData.map(row => [
-          row.floor, 
-          row.room, 
-          row.date, 
-          row.requestTime, 
-          row.lastClean, 
-          formatStatus(row.status), 
-          row.staff
-        ].join(','))
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `housekeeping-requests-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    });
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
 }
 
-// ===== HOUSEKEEPING HISTORY FILTERS =====
-function initHKHistoryFilters() {
-    document.getElementById('hkHistSearchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const filtered = hkHistData.filter(row => 
-        row.room.toLowerCase().includes(search) ||
-        (row.staff && row.staff.toLowerCase().includes(search)) ||
-        row.issueType.toLowerCase().includes(search)
-      );
-      paginationState.housekeepingHistory.currentPage = 1;
-      renderHKHistTable(filtered);
-    });
+// Helper: Fetch Data
+async function fetchAndPopulateFilters() {
+    try {
+        const response = await fetch('fetch_filters.php'); 
+        const data = await response.json();
 
-    document.getElementById('floorFilterHkHist')?.addEventListener('change', (e) => {
-      const floor = e.target.value;
-      const filtered = floor ? hkHistData.filter(row => row.floor.toString() === floor) : hkHistData;
-      paginationState.housekeepingHistory.currentPage = 1;
-      renderHKHistTable(filtered);
-    });
+        if (data.floors && data.rooms) {
+            globalRoomList = data.rooms; 
 
-    document.getElementById('roomFilterHkHist')?.addEventListener('change', (e) => {
-      const room = e.target.value;
-      const filtered = room ? hkHistData.filter(row => row.room.toString() === room) : hkHistData;
-      paginationState.housekeepingHistory.currentPage = 1;
-      renderHKHistTable(filtered);
+            // Populate Request Tab
+            populateSelect('hkfloorFilter', data.floors, 'Floor');
+            populateSelect('hkroomFilter', data.rooms, 'Room');
+
+            // Populate History Tab
+            populateSelect('floorFilterHkHist', data.floors, 'Floor');
+            populateSelect('roomFilterHkHist', data.rooms, 'Room');
+        }
+    } catch (error) {
+        console.error('Error loading DB filters:', error);
+    }
+}
+
+// Helper: Populate Dropdowns
+function populateSelect(elementId, data, defaultText) {
+    const select = document.getElementById(elementId);
+    if (!select) return;
+
+    const currentVal = select.value; 
+
+    select.innerHTML = `<option value="">${defaultText}</option>`;
+
+    data.forEach(item => {
+        const option = document.createElement('option');
+        if (typeof item === 'object') {
+            option.value = item.room_num; 
+            option.textContent = `Room ${item.room_num}`;
+            option.dataset.floor = item.floor_num; 
+        } else {
+            option.value = item;
+            option.textContent = `Floor ${item}`;
+        }
+        select.appendChild(option);
     });
     
-    document.getElementById('dateFilterHkHist')?.addEventListener('change', (e) => {
-        const date = e.target.value; // Format: YYYY-MM-DD
-        if (!date) {
-            renderHKHistTable(hkHistData); // Reset if date is cleared
-            return;
+    if (currentVal) select.value = currentVal;
+}
+
+// Helper: Generate PDF (LANDSCAPE & FIT DATA)
+function downloadPDF(headers, data, title, filename) {
+    if (!window.jspdf) {
+        alert("PDF Library not loaded. Please check your <script> tags.");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    // 'l' means Landscape, 'mm' means millimeters, 'a4' is paper size
+    const doc = new jsPDF('l', 'mm', 'a4');
+
+    // Header Title
+    doc.setFontSize(18);
+    doc.setTextColor(72, 12, 27); // #480c1b
+    doc.text(title, 14, 20);
+    
+    // Date
+    doc.setFontSize(11);
+    doc.setTextColor(100); 
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    // Table Generation
+    doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 35,
+        theme: 'grid',
+        // Styles to ensure data fits
+        styles: { 
+            fontSize: 10,           // Slightly smaller font to fit more columns
+            cellPadding: 3,         // Adequate padding
+            overflow: 'linebreak',  // Wrap long text instead of cutting it off
+            textColor: 50
+        },
+        // Header Styles (Your Custom Colors)
+        headStyles: { 
+            fillColor: '#480c1b', 
+            textColor: '#ffffff', 
+            fontStyle: 'bold',
+            halign: 'center'        // Center align headers
+        },
+        // Specific column tweaks (optional, ensures Room column isn't too wide)
+        columnStyles: {
+            0: { cellWidth: 'auto' }, // Floor
+            1: { cellWidth: 'auto' }, // Room
+            // Status column usually benefits from being bold
+            5: { fontStyle: 'bold' }
+        },
+        margin: { top: 35 }
+    });
+
+    doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+// ==========================================
+// 2. REQUESTS TAB LOGIC
+// ==========================================
+
+function initHKRequestFilters() {
+    fetchAndPopulateFilters(); 
+
+    const searchInput = document.getElementById('hkSearchInput');
+    const floorSelect = document.getElementById('hkfloorFilter');
+    const roomSelect = document.getElementById('hkroomFilter');
+    const refreshBtn = document.getElementById('hkRefreshBtn');
+    const downloadBtn = document.getElementById('hkDownloadBtn');
+
+    // --- Filter Function ---
+    function applyHKRequestFilters() {
+        const searchValue = searchInput.value.toLowerCase();
+        const selectedFloor = floorSelect.value;
+        const selectedRoom = roomSelect.value;
+
+        const filtered = hkData.filter(row => {
+            const matchesSearch = row.room.toLowerCase().includes(searchValue) ||
+                                  (row.staff && row.staff.toLowerCase().includes(searchValue));
+            const matchesFloor = selectedFloor === "" || row.floor.toString() === selectedFloor;
+            const matchesRoom = selectedRoom === "" || row.room.toString() === selectedRoom;
+
+            return matchesSearch && matchesFloor && matchesRoom;
+        });
+
+        paginationState.housekeeping.currentPage = 1;
+        renderHKTable(filtered);
+        
+        if(document.getElementById('hkRecordCount')) {
+            document.getElementById('hkRecordCount').innerText = filtered.length;
         }
-        
-        // Convert YYYY-MM-DD to MM.DD.YYYY to match our data format
-        const [y, m, d] = date.split('-');
-        const formattedDate = `${m}.${d}.${y}`;
-        
-        const filtered = hkHistData.filter(row => row.date === formattedDate);
+    }
+
+    // --- Dependent Dropdown ---
+    if (floorSelect) {
+        floorSelect.onchange = (e) => {
+            const selectedFloor = e.target.value;
+            roomSelect.value = ""; 
+
+            if (selectedFloor === "") {
+                populateSelect('hkroomFilter', globalRoomList, 'Room');
+            } else {
+                const filteredRooms = globalRoomList.filter(r => r.floor_num == selectedFloor);
+                populateSelect('hkroomFilter', filteredRooms, 'Room');
+            }
+            applyHKRequestFilters();
+        };
+    }
+
+    // --- Inputs ---
+    if (searchInput) searchInput.oninput = applyHKRequestFilters;
+    if (roomSelect) roomSelect.onchange = applyHKRequestFilters;
+
+    // --- Refresh Button ---
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            searchInput.value = '';
+            floorSelect.value = '';
+            roomSelect.value = ''; 
+            populateSelect('hkroomFilter', globalRoomList, 'Room');
+            
+            hkData = [...(initialHkRequestsData || [])];
+            applyHKRequestFilters();
+            showRefreshToast("Requests refreshed successfully!");
+        };
+    }
+
+    // --- Download Button ---
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            const headers = ['Floor', 'Room', 'Date', 'Req Time', 'Last Clean', 'Status', 'Staff'];
+            const tableData = hkData.map(row => [
+                row.floor, 
+                row.room, 
+                row.date, 
+                row.requestTime, 
+                row.lastClean, 
+                typeof formatStatus === 'function' ? formatStatus(row.status) : row.status, 
+                row.staff
+            ]);
+            
+            downloadPDF(headers, tableData, "Housekeeping Requests", "housekeeping_requests");
+        };
+    }
+}
+
+// ==========================================
+// 3. HISTORY TAB LOGIC
+// ==========================================
+
+function initHKHistoryFilters() {
+    const searchInput = document.getElementById('hkHistSearchInput');
+    const floorSelect = document.getElementById('floorFilterHkHist');
+    const roomSelect = document.getElementById('roomFilterHkHist');
+    const dateInput = document.getElementById('dateFilterHkHist');
+    const refreshBtn = document.getElementById('hkHistRefreshBtn');
+    const downloadBtn = document.getElementById('hkHistDownloadBtn');
+
+    // --- Filter Function ---
+    function applyHKHistoryFilters() {
+        const searchValue = searchInput.value.toLowerCase();
+        const selectedFloor = floorSelect.value;
+        const selectedRoom = roomSelect.value;
+        const selectedDate = dateInput.value; 
+
+        const filtered = hkHistData.filter(row => {
+            const matchesSearch = row.room.toLowerCase().includes(searchValue) ||
+                                  (row.staff && row.staff.toLowerCase().includes(searchValue)) ||
+                                  row.issueType.toLowerCase().includes(searchValue);
+            const matchesFloor = selectedFloor === "" || row.floor.toString() === selectedFloor;
+            const matchesRoom = selectedRoom === "" || row.room.toString() === selectedRoom;
+            
+            let matchesDate = true;
+            if (selectedDate) {
+                const [y, m, d] = selectedDate.split('-');
+                const formattedInput = `${m}.${d}.${y}`; 
+                matchesDate = row.date === formattedInput;
+            }
+
+            return matchesSearch && matchesFloor && matchesRoom && matchesDate;
+        });
+
         paginationState.housekeepingHistory.currentPage = 1;
         renderHKHistTable(filtered);
-    });
 
-    document.getElementById('hkHistRefreshBtn')?.addEventListener('click', () => {
-      document.getElementById('hkHistSearchInput').value = '';
-      document.getElementById('floorFilterHkHist').value = '';
-      document.getElementById('roomFilterHkHist').value = '';
-      document.getElementById('dateFilterHkHist').value = '';
-      
-      // Reset data from the initial PHP-loaded array
-      hkHistData = [...(initialHkHistoryData || [])];
-      paginationState.housekeepingHistory.currentPage = 1;
-      renderHKHistTable(hkHistData);
-    });
+        if(document.getElementById('hkHistRecordCount')) {
+            document.getElementById('hkHistRecordCount').innerText = filtered.length;
+        }
+    }
 
-    document.getElementById('hkHistDownloadBtn')?.addEventListener('click', () => {
-      const headers = ['Floor', 'Room', 'Task', 'Date', 'Requested Time', 'Completed Time', 'Staff In Charge', 'Status', 'Remarks'];
-      const csvContent = [
-        headers.join(','),
-        ...hkHistData.map(row => [
-          row.floor,
-          row.room,
-          `"${row.issueType.replace(/"/g, '""')}"`, // Handle commas in issueType
-          row.date,
-          row.requestedTime,
-          row.completedTime,
-          row.staff,
-          row.status,
-          `"${(row.remarks || '').replace(/"/g, '""')}"` // Handle commas in remarks
-        ].join(','))
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `housekeeping-history-${new Date().toISOString().split('T')[0]}.csv`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    });
+    // --- Dependent Dropdown ---
+    if (floorSelect) {
+        floorSelect.onchange = (e) => {
+            const selectedFloor = e.target.value;
+            roomSelect.value = ""; 
+
+            if (selectedFloor === "") {
+                populateSelect('roomFilterHkHist', globalRoomList, 'Room');
+            } else {
+                const filteredRooms = globalRoomList.filter(r => r.floor_num == selectedFloor);
+                populateSelect('roomFilterHkHist', filteredRooms, 'Room');
+            }
+            applyHKHistoryFilters();
+        };
+    }
+
+    // --- Inputs ---
+    if (searchInput) searchInput.oninput = applyHKHistoryFilters;
+    if (roomSelect) roomSelect.onchange = applyHKHistoryFilters;
+    if (dateInput) dateInput.onchange = applyHKHistoryFilters;
+
+    // --- Refresh Button ---
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            searchInput.value = '';
+            floorSelect.value = '';
+            roomSelect.value = '';
+            dateInput.value = '';
+            populateSelect('roomFilterHkHist', globalRoomList, 'Room');
+            
+            hkHistData = [...(initialHkHistoryData || [])];
+            applyHKHistoryFilters();
+            showRefreshToast("History refreshed successfully!");
+        };
+    }
+
+    // --- Download Button ---
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            // Expanded headers for History to utilize Landscape mode
+            const headers = ['Floor', 'Room', 'Task', 'Date', 'Req Time', 'Comp Time', 'Staff', 'Status', 'Remarks'];
+            const tableData = hkHistData.map(row => [
+                row.floor,
+                row.room,
+                row.issueType,
+                row.date,
+                row.requestedTime,
+                row.completedTime,
+                row.staff,
+                row.status,
+                row.remarks || '' // Now including remarks since we have space!
+            ]);
+            
+            downloadPDF(headers, tableData, "Housekeeping History Logs", "housekeeping_history");
+        };
+    }
 }
+
+// ==========================================
+// 4. INITIALIZATION
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    if(document.getElementById('housekeeping-page')) {
+        initHKRequestFilters();
+        initHKHistoryFilters();
+    }
+});

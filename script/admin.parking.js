@@ -1,30 +1,112 @@
-// ===== PARKING HISTORY FUNCTIONS =====
+/**
+ * PARKING HISTORY MODULE
+ * Fix: Prevents multiple downloads by using .onclick instead of addEventListener
+ */
 
-// === NEW FUNCTION ===
+// ==========================================
+// 1. GLOBAL HELPERS (Toast & PDF)
+// ==========================================
+
+// --- INJECT TOAST CSS ---
+const parkingToastStyle = document.createElement("style");
+parkingToastStyle.textContent = `
+    .toast-success {
+        position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white;
+        padding: 12px 24px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        z-index: 99999; font-family: 'Segoe UI', sans-serif; font-size: 14px;
+        opacity: 0; transform: translateY(-20px); transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: none;
+    }
+    .toast-visible { opacity: 1; transform: translateY(0); }
+`;
+document.head.appendChild(parkingToastStyle);
+
+// --- SHOW TOAST FUNCTION ---
+function showParkingToast(message) {
+    const existingToast = document.querySelector('.toast-success');
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-success';
+    toast.innerText = message;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('toast-visible'));
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// --- LANDSCAPE PDF GENERATOR ---
+function downloadParkingPDF(headers, data, title, filename) {
+    if (!window.jspdf) {
+        alert("PDF Library not loaded. Please check your script tags.");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
+
+    // Header Title
+    doc.setFontSize(18);
+    doc.setTextColor(72, 12, 27); // Custom Color #480c1b
+    doc.text(title, 14, 20);
+    
+    // Date
+    doc.setFontSize(11);
+    doc.setTextColor(100); 
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    // Table Generation
+    doc.autoTable({
+        head: [headers],
+        body: data,
+        startY: 35,
+        theme: 'grid',
+        styles: { 
+            fontSize: 9,
+            cellPadding: 3, 
+            overflow: 'linebreak', 
+            textColor: 50 
+        },
+        headStyles: { 
+            fillColor: '#480c1b', 
+            textColor: '#ffffff', 
+            fontStyle: 'bold', 
+            halign: 'center' 
+        },
+        columnStyles: {
+            7: { cellWidth: 35 }, // Entry Time
+            8: { cellWidth: 35 }  // Exit Time
+        }
+    });
+
+    doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
+}
+
+// ==========================================
+// 2. DATA FETCHING FUNCTIONS
+// ==========================================
+
 async function fetchAndRenderParkingDashboard() {
-    // This function specifically fetches data for the dashboard cards.
-    // It calls 'getDashboardData' from the parking_api.php
     const result = await apiCall('getDashboardData', {}, 'GET', 'parking_api.php');
     
     if (result && result.success && result.cards) {
-        // Use the corrected indexes from admin.dashboard.js
         updateStatCard(6, result.cards.total || 0);
         updateStatCard(7, result.cards.occupied || 0);
         updateStatCard(8, result.cards.available || 0);
     } else {
-        // On error or failure, set dashboard cards to 0
-        updateStatCard(6, 0);
-        updateStatCard(7, 0);
-        updateStatCard(8, 0);
-        console.error("Failed to load parking dashboard data:", result ? result.error : "Unknown error");
+        updateStatCard(6, 0); updateStatCard(7, 0); updateStatCard(8, 0);
     }
 }
-// === END NEW FUNCTION ===
-
 
 async function loadParkingAreaFilters() {
     const areaFilter = document.getElementById('parkingAreaFilter');
     if (!areaFilter) return;
+
+    // Save current selection before resetting
+    const currentVal = areaFilter.value;
 
     areaFilter.innerHTML = '<option value="all">All Areas</option>';
     
@@ -37,9 +119,10 @@ async function loadParkingAreaFilters() {
             option.textContent = area.AreaName;
             areaFilter.appendChild(option);
         });
-    } else {
-        console.warn("Could not load parking area filters.");
     }
+    
+    // Restore selection if possible
+    if (currentVal) areaFilter.value = currentVal;
 }
 
 async function fetchAndRenderParkingHistory() {
@@ -62,15 +145,20 @@ async function fetchAndRenderParkingHistory() {
         renderPaginationControls('parking-page', 0, 1, () => {});
     } else {
         tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 20px; color: #c33;">Failed to load data: ${result.error || 'Unknown error'}</td></tr>`;
-        const recordCount = document.getElementById('parkingHistoryRecordCount');
-        if (recordCount) recordCount.textContent = 0;
-        renderPaginationControls('parking-page', 0, 1, () => {});
     }
+    
+    // Re-init filters after data load to ensure logic is fresh
+    initParkingFilters();
 }
+
+// ==========================================
+// 3. RENDER TABLE
+// ==========================================
 
 function renderParkingHistoryTable(data) {
   const tbody = document.getElementById('parkingHistoryTableBody');
   if (!tbody) return;
+  
   const state = paginationState.parkingHistory;
   const totalPages = getTotalPages(data.length, state.itemsPerPage);
   const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
@@ -101,102 +189,97 @@ function renderParkingHistoryTable(data) {
   });
 }
 
-// ===== PARKING HISTORY FILTERS =====
+// ==========================================
+// 4. FILTERS & EVENTS (FIXED)
+// ==========================================
+
 function initParkingFilters() {
-    document.getElementById('parkingHistorySearchInput')?.addEventListener('input', (e) => {
-      const search = e.target.value.toLowerCase();
-      const filtered = parkingHistoryDataList.filter(row => 
-        (row.PlateNumber && row.PlateNumber.toLowerCase().includes(search)) ||
-        (row.GuestName && row.GuestName.toLowerCase().includes(search)) ||
-        (row.RoomNumber && row.RoomNumber.toLowerCase().includes(search)) ||
-        (row.SlotName && row.SlotName.toLowerCase().includes(search))
-      );
-      paginationState.parkingHistory.currentPage = 1;
-      renderParkingHistoryTable(filtered);
-    });
+    // Load Areas for dropdown
+    loadParkingAreaFilters();
 
-    document.getElementById('parkingAreaFilter')?.addEventListener('change', (e) => {
-      const area = e.target.value;
-      const filtered = (area === 'all') 
-        ? parkingHistoryDataList 
-        : parkingHistoryDataList.filter(row => row.AreaName === area);
-      paginationState.parkingHistory.currentPage = 1;
-      renderParkingHistoryTable(filtered);
-    });
+    const searchInput = document.getElementById('parkingHistorySearchInput');
+    const areaFilter = document.getElementById('parkingAreaFilter');
+    const refreshBtn = document.getElementById('parkingHistoryRefreshBtn');
+    const downloadBtn = document.getElementById('parkingHistoryDownloadBtn');
 
-    document.getElementById('parkingHistoryRefreshBtn')?.addEventListener('click', () => {
-      document.getElementById('parkingHistorySearchInput').value = '';
-      document.getElementById('parkingAreaFilter').value = 'all';
-      fetchAndRenderParkingHistory();
-      // Also refresh dashboard stats
-      fetchAndRenderParkingDashboard();
-    });
+    // --- Central Filter Function ---
+    function applyFilters() {
+        const search = searchInput.value.toLowerCase();
+        const area = areaFilter.value;
 
-    document.getElementById('parkingHistoryDownloadBtn')?.addEventListener('click', () => {
-      const search = document.getElementById('parkingHistorySearchInput').value.toLowerCase();
-      const area = document.getElementById('parkingAreaFilter').value;
-      
-      const filteredData = parkingHistoryDataList
-        .filter(row => (area === 'all') ? true : row.AreaName === area)
-        .filter(row => 
-          (!search) ? true : (
-            (row.PlateNumber && row.PlateNumber.toLowerCase().includes(search)) ||
-            (row.GuestName && row.GuestName.toLowerCase().includes(search)) ||
-            (row.RoomNumber && row.RoomNumber.toLowerCase().includes(search)) ||
-            (row.SlotName && row.SlotName.toLowerCase().includes(search))
-          )
-        );
+        const filtered = parkingHistoryDataList.filter(row => {
+            // Area Filter
+            const matchesArea = (area === 'all') || (row.AreaName === area);
+            
+            // Search Filter
+            const matchesSearch = !search || (
+                (row.PlateNumber && row.PlateNumber.toLowerCase().includes(search)) ||
+                (row.GuestName && row.GuestName.toLowerCase().includes(search)) ||
+                (row.RoomNumber && row.RoomNumber.toLowerCase().includes(search)) ||
+                (row.SlotName && row.SlotName.toLowerCase().includes(search))
+            );
 
-      if (filteredData.length === 0) {
-          alert('No data to download.');
-          return;
-      }
-      
-      if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined' || typeof window.jspdf.jsPDF.autoTable === 'undefined') {
-          alert('PDF generation library (jspdf) is not loaded. Please ensure you added the script tags to admin.php');
-          console.error('jsPDF or jsPDF-autoTable is not loaded.');
-          return;
-      }
+            return matchesArea && matchesSearch;
+        });
 
-      try {
-          const { jsPDF } = window.jspdf;
-          const doc = new jsPDF(); 
+        paginationState.parkingHistory.currentPage = 1;
+        renderParkingHistoryTable(filtered);
+        return filtered; 
+    }
 
-          doc.setFontSize(18);
-          doc.text("Parking History Report", 14, 22);
-          doc.setFontSize(11);
-          doc.setTextColor(100);
-          doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
-          
-          const head = [[
-              'Slot', 'Plate #', 'Room', 'Name', 'Vehicle Type', 'Category',
-              'Parking Time', 'Entry', 'Exit'
-          ]];
+    // --- FIX: Use .oninput/.onchange instead of addEventListener ---
+    // This overwrites previous listeners, preventing duplicates.
+    if (searchInput) searchInput.oninput = applyFilters;
+    if (areaFilter) areaFilter.onchange = applyFilters;
 
-          const body = filteredData.map(v => [
-              v.SlotName, v.PlateNumber, v.RoomNumber || 'N/A', v.GuestName || 'N/A',
-              v.VehicleType, v.VehicleCategory, v.ParkingTime, v.EntryDateTime, v.ExitDateTime
-          ]);
+    // --- FIX: Refresh Button ---
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            searchInput.value = '';
+            areaFilter.value = 'all';
+            
+            fetchAndRenderParkingHistory();
+            fetchAndRenderParkingDashboard();
+            
+            showParkingToast("Parking History refreshed successfully!");
+        };
+    }
 
-          doc.autoTable({
-              head: head,
-              body: body,
-              startY: 35,
-              headStyles: { fillColor: [72, 12, 27] }, // #480c1b
-              styles: { fontSize: 8, cellPadding: 2 },
-              alternateRowStyles: { fillColor: [245, 245, 245] },
-              columnStyles: {
-                  0: { cellWidth: 15 }, 1: { cellWidth: 20 }, 2: { cellWidth: 12 },
-                  3: { cellWidth: 'auto' }, 4: { cellWidth: 'auto' }, 5: { cellWidth: 'auto' },
-                  6: { cellWidth: 20 }, 7: { cellWidth: 30 }, 8: { cellWidth: 30 }
-              }
-          });
+    // --- FIX: Download Button ---
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            // Get current filtered data
+            const filteredData = applyFilters();
+            
+            if (filteredData.length === 0) {
+                alert("No data to download");
+                return;
+            }
 
-          doc.save('Parking-History-Report.pdf');
+            const headers = ['Slot', 'Plate #', 'Room', 'Name', 'Type', 'Category', 'Duration', 'Entry', 'Exit'];
+            
+            const tableData = filteredData.map(row => [
+                row.SlotName,
+                row.PlateNumber,
+                row.RoomNumber || 'N/A',
+                row.GuestName || 'N/A',
+                row.VehicleType,
+                row.VehicleCategory,
+                row.ParkingTime,
+                row.EntryDateTime,
+                row.ExitDateTime
+            ]);
 
-      } catch (e) {
-          console.error("Error generating PDF:", e);
-          alert('An error occurred while generating the PDF. See console for details.');
-      }
-    });
+            downloadParkingPDF(headers, tableData, "Parking History Report", "parking_history");
+        };
+    }
 }
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    if(document.getElementById('parking-page')) {
+        fetchAndRenderParkingDashboard();
+        fetchAndRenderParkingHistory();
+        // initParkingFilters is called inside fetchAndRenderParkingHistory to ensure data is ready
+    }
+});

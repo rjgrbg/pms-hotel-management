@@ -563,27 +563,11 @@ $conn->close();
         <div class="tabContent active" id="hk-requests-tab">
           <div class="controlsRow">
             <div class="filterControls">
-              <select class="filterDropdown" id="floorFilter">
+              <select class="filterDropdown" id="hkfloorFilter">
                 <option value="">Floor</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
               </select>
-              <select class="filterDropdown" id="roomFilter">
+              <select class="filterDropdown" id="hkroomFilter">
                 <option value="">Room</option>
-
-                <option value="101">101</option>
-                <option value="102">102</option>
-                <option value="103">103</option>
-                <option value="104">104</option>
-                <option value="105">105</option>
-                <option value="201">201</option>
-                <option value="202">202</option>
-                <option value="203">203</option>
-                <option value="204">204</option>
-                <option value="205">205</option>
               </select>
               <div class="searchBox">
                 <input type="text" placeholder="Search Room Number..." class="searchInput" id="hkSearchInput" />
@@ -630,24 +614,9 @@ $conn->close();
             <div class="filterControls">
               <select class="filterDropdown" id="floorFilterHkHist">
                 <option value="">Floor</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
               </select>
               <select class="filterDropdown" id="roomFilterHkHist">
                 <option value="">Room</option>
-                <option value="101">101</option>
-                <option value="102">102</option>
-                <option value="103">103</option>
-                <option value="104">104</option>
-                <option value="105">105</option>
-                <option value="201">201</option>
-                <option value="202">202</option>
-                <option value="203">203</option>
-                <option value="204">204</option>
-                <option value="205">205</option>
               </select>
               <input type="date" class="filterDropdown" id="dateFilterHkHist" style="width: 150px; padding: 8px 14px;">
               <div class="searchBox">
@@ -710,24 +679,9 @@ $conn->close();
             <div class="filterControls">
               <select class="filterDropdown" id="mtFloorFilter">
                 <option value="">Floor</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
               </select>
               <select class="filterDropdown" id="mtRoomFilter">
                 <option value="">Room</option>
-                <option value="101">101</option>
-                <option value="102">102</option>
-                <option value="103">103</option>
-                <option value="104">104</option>
-                <option value="105">105</option>
-                <option value="201">201</option>
-                <option value="202">202</option>
-                <option value="203">203</option>
-                <option value="204">204</option>
-                <option value="205">205</option>
               </select>
               <div class="searchBox">
                 <input type="text" placeholder="Search Room Number..." class="searchInput" id="mtSearchInput" />
@@ -774,24 +728,9 @@ $conn->close();
             <div class="filterControls">
               <select class="filterDropdown" id="mtFloorFilterHist">
                 <option value="">Floor</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
               </select>
               <select class="filterDropdown" id="mtRoomFilterHist">
                 <option value="">Room</option>
-                <option value="101">101</option>
-                <option value="102">102</option>
-                <option value="103">103</option>
-                <option value="104">104</option>
-                <option value="105">105</option>
-                <option value="201">201</option>
-                <option value="202">202</option>
-                <option value="203">203</option>
-                <option value="204">204</option>
-                <option value="205">205</option>
               </select>
               <input type="date" class="filterDropdown" id="dateFilterMtHist" style="width: 150px; padding: 8px 14px;">
               <div class="searchBox">
@@ -904,11 +843,6 @@ $conn->close();
             <div class="filterControls">
               <select class="filterDropdown" id="inventoryCategoryFilter">
                  <option value="">Category</option>
-
-                <option value="Cleaning Solution">Cleaning Solution</option>
-                <option value="Electrical">Electrical</option>
-                <option value="Furniture & Fixtures">Furniture & Fixtures</option>
-                <option value="Room Amenities">Room Amenities</option>
               </select>
               <select class="filterDropdown" id="inventoryStatusFilter">
                 <option value="">Status</option>
@@ -959,11 +893,6 @@ $conn->close();
             <div class="filterControls">
               <select class="filterDropdown" id="invHistCategoryFilter">
                 <option value="">Category</option>
-
-                <option value="Cleaning Solution">Cleaning Solution</option>
-                <option value="Electrical">Electrical</option>
-                <option value="Furniture & Fixtures">Furniture & Fixtures</option>
-                <option value="Room Amenities">Room Amenities</option>
               </select>
               <select class="filterDropdown" id="invHistActionFilter">
                 <option value="">Action</option>
