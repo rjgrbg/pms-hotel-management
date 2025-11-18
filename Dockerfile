@@ -4,17 +4,15 @@ FROM php:8.2-apache
 # Install the mysqli extension for database connection
 RUN docker-php-ext-install mysqli && docker-php-ext-enable mysqli
 
-# Copy your application files to the web server root
-# ADJUST THIS PATH: If your code is in a subfolder 'pms-hotel-management', use that.
-# If 'index.php' is in the root, just use COPY . /var/www/html/
-COPY pms-hotel-management/ /var/www/html/
+# COPY ALL FILES from the repository root (.) to the web server root
+COPY . /var/www/html/
 
-# Set permissions (optional but good practice)
+# Set permissions to ensure Apache can read the files
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
-# Apache configuration to allow .htaccess overrides
+# Enable Apache rewrite module (useful for routing)
 RUN a2enmod rewrite
 
-# Expose port 80
+# Expose port 80 so Render can access it
 EXPOSE 80
