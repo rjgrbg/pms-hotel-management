@@ -3,7 +3,7 @@
 
 // 1. Include necessary files
 require_once('db_connection.php'); // For the $conn database connection
-require_once('User.php'); // For getting the logged-in user's ID
+require_once('user.php'); // For getting the logged-in user's ID
 
 // 2. Start the session
 if (session_status() == PHP_SESSION_NONE) {

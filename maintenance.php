@@ -11,7 +11,7 @@ require_login(['maintenance_manager']);
 
 // 3. Load database and user data
 require_once('db_connection.php');
-require_once('User.php');
+require_once('user.php');
 $userData = getUserData($conn);
 $Fname = htmlspecialchars($userData['Name']);
 $Accounttype = htmlspecialchars($userData['Accounttype']);
