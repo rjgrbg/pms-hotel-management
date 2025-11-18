@@ -20,8 +20,9 @@ WORKDIR /var/www/html
 COPY . .
 
 # 6. Run Composer Install to download PHPMailer
-# This creates the /vendor folder inside the image
-RUN composer install --no-dev --optimize-autoloader
+# We increase the timeout to 2000 seconds to prevent "Network Error" on slow connections
+RUN composer config --global process-timeout 2000 \
+    && composer install --no-dev --optimize-autoloader --no-interaction
 
 # 7. Set permissions so Apache can read files
 RUN chown -R www-data:www-data /var/www/html \
