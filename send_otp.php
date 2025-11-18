@@ -126,8 +126,8 @@ try {
     $response['message'] = 'An OTP has been sent to your email address.';
 
 } catch (Exception $e) {
-    error_log("Mailer Error: {$mail->ErrorInfo}");
-    $response['message'] = "Message could not be sent. Please try again later."; // Generic error for user
+    // Temporary: Show the actual technical error to the user
+    $response['message'] = "Debug Error: " . $mail->ErrorInfo;
     http_response_code(500);
 }
 
