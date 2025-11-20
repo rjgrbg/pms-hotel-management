@@ -348,7 +348,7 @@ function handleUpdateUser($conn, $staffID) {
 function handleGetGuests($conn) {
     
     // Selects the room number and status from your 'rooms' table
-   $sql = "SELECT room_num FROM pms_rooms";
+   $sql = "SELECT room_num FROM tbl_rooms";
  
     $result = $conn->query($sql);
     

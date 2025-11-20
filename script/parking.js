@@ -268,7 +268,15 @@ document.addEventListener('DOMContentLoaded', () => {
             </tr>
         `;
     }
-
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
     function renderDashboard(data) {
         const cards = document.querySelectorAll('.summary-cards .card .card-value');
         if (data.cards) {
@@ -301,119 +309,130 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderSlots(filteredData) {
-        const tbody = document.getElementById('slotsTableBody');
-        if (!tbody) return;
-        
-        const page = currentPages.slots;
-        const totalItems = filteredData.length;
-        setupPagination(totalItems, 'pagination-slots', page);
+    const tbody = document.getElementById('slotsTableBody');
+    if (!tbody) return;
+    
+    const page = currentPages.slots;
+    const totalItems = filteredData.length;
+    setupPagination(totalItems, 'pagination-slots', page);
 
-        if (totalItems === 0) {
-            renderEmptyState(tbody, 5, '🅿️', 'No Slots Found', 'Try adjusting your search or filter.');
-            return;
-        }
-        
-        const startIndex = (page - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        const paginatedData = filteredData.slice(startIndex, endIndex);
-        
-        tbody.innerHTML = paginatedData.map((slot) => {
-            return `
-                <tr>
-                    <td>${slot.AreaName}</td>
-                    <td>${slot.SlotName}</td>
-                    <td>${slot.AllowedVehicle}</td>
-                    <td>
-                        <span class="status-badge status-${slot.Status}">
-                            ${slot.Status === 'available' ? 'Available' : 'Occupied'}
-                        </span>
-                    </td>
-                    <td>
-                        ${slot.Status === 'available' 
-                            ? `<button class="btn-enter" data-slot-id="${slot.SlotID}" data-slot-name="${slot.SlotName}">Enter Vehicle</button>`
-                            : `<button class="btn-enter-gray" disabled>Enter Vehicle</button>`
-                        }
-                    </td>
-                </tr>
-            `;
-        }).join('');
-        updateSortHeaders('slots-tab', sortState.slots);
+    if (totalItems === 0) {
+        renderEmptyState(tbody, 5, '🅿️', 'No Slots Found', 'Try adjusting your search or filter.');
+        return;
     }
+    
+    const startIndex = (page - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+    
+    tbody.innerHTML = paginatedData.map((slot) => {
+        // --- SECURITY FIX: Escape HTML ---
+        const safeArea = escapeHtml(slot.AreaName);
+        const safeSlot = escapeHtml(slot.SlotName);
+        const safeVehicle = escapeHtml(slot.AllowedVehicle);
+        const safeId = escapeHtml(slot.SlotID);
+        const safeStatusClass = escapeHtml(slot.Status);
+
+        return `
+            <tr>
+                <td>${safeArea}</td>
+                <td>${safeSlot}</td>
+                <td>${safeVehicle}</td>
+                <td>
+                    <span class="status-badge status-${safeStatusClass}">
+                        ${slot.Status === 'available' ? 'Available' : 'Occupied'}
+                    </span>
+                </td>
+                <td>
+                    ${slot.Status === 'available' 
+                        ? `<button class="btn-enter" data-slot-id="${safeId}" data-slot-name="${safeSlot}">Enter Vehicle</button>`
+                        : `<button class="btn-enter-gray" disabled>Enter Vehicle</button>`
+                    }
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    updateSortHeaders('slots-tab', sortState.slots);
+}
 
     function renderVehicleIn(filteredData) {
-        const tbody = document.getElementById('vehicleInTableBody');
-        if (!tbody) return;
+    const tbody = document.getElementById('vehicleInTableBody');
+    if (!tbody) return;
 
-        const page = currentPages.vehicleIn;
-        const totalItems = filteredData.length;
-        setupPagination(totalItems, 'pagination-vehicleIn', page);
+    const page = currentPages.vehicleIn;
+    const totalItems = filteredData.length;
+    setupPagination(totalItems, 'pagination-vehicleIn', page);
 
-        if (totalItems === 0) {
-            renderEmptyState(tbody, 9, '🚗', 'No Vehicles Parked', 'Available slots can be seen in the "Slots" tab.');
-            return;
-        }
-
-        const startIndex = (page - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        const paginatedData = filteredData.slice(startIndex, endIndex);
-
-        tbody.innerHTML = paginatedData.map((vehicle) => {
-            return `
-                <tr>
-                    <td>${vehicle.SlotName}</td>
-                    <td>${vehicle.PlateNumber}</td>
-                    <td>${vehicle.RoomNumber}</td>
-                    <td>${vehicle.GuestName}</td>
-                    <td>${vehicle.VehicleType}</td>
-                    <td>${vehicle.VehicleCategory}</td>
-                    <td>${vehicle.EnterTime}</td>
-                    <td>${vehicle.EnterDate}</td>
-                    <td>
-                        <button class="exit-btn" data-slot-id="${vehicle.SlotID}" data-session-id="${vehicle.SessionID}">
-                            <img src="assets/images/parking.png" alt="Exit Vehicle" style="width: 24px; height: 24px;">
-                        </button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-        updateSortHeaders('vehicleIn-tab', sortState.vehicleIn);
+    if (totalItems === 0) {
+        renderEmptyState(tbody, 9, '🚗', 'No Vehicles Parked', 'Available slots can be seen in the "Slots" tab.');
+        return;
     }
+
+    const startIndex = (page - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+
+    tbody.innerHTML = paginatedData.map((vehicle) => {
+        // --- SECURITY FIX: Escape HTML on all fields ---
+        return `
+            <tr>
+                <td>${escapeHtml(vehicle.SlotName)}</td>
+                <td>${escapeHtml(vehicle.PlateNumber)}</td>
+                <td>${escapeHtml(vehicle.RoomNumber)}</td>
+                <td>${escapeHtml(vehicle.GuestName)}</td>
+                <td>${escapeHtml(vehicle.VehicleType)}</td>
+                <td>${escapeHtml(vehicle.VehicleCategory)}</td>
+                <td>${escapeHtml(vehicle.EnterTime)}</td>
+                <td>${escapeHtml(vehicle.EnterDate)}</td>
+                <td>
+                    <button class="exit-btn" data-slot-id="${escapeHtml(vehicle.SlotID)}" data-session-id="${escapeHtml(vehicle.SessionID)}">
+                        <img src="assets/images/parking.png" alt="Exit Vehicle" style="width: 24px; height: 24px;">
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    updateSortHeaders('vehicleIn-tab', sortState.vehicleIn);
+}
 
     function renderHistory(filteredData) {
-        const tbody = document.getElementById('historyTableBody');
-        if (!tbody) return;
-        
-        const page = currentPages.history;
-        const totalItems = filteredData.length;
-        setupPagination(totalItems, 'pagination-history', page);
+    const tbody = document.getElementById('historyTableBody');
+    if (!tbody) return;
+    
+    const page = currentPages.history;
+    const totalItems = filteredData.length;
+    setupPagination(totalItems, 'pagination-history', page);
 
-        if (totalItems === 0) {
-            renderEmptyState(tbody, 9, '📜', 'No History Found', 'Vehicles that exit will appear here.');
-            return;
-        }
-
-        const startIndex = (page - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        const paginatedData = filteredData.slice(startIndex, endIndex);
-
-        tbody.innerHTML = paginatedData.map((vehicle) => {
-            return `
-                <tr>
-                    <td>${vehicle.SlotName}</td>
-                    <td>${vehicle.PlateNumber}</td>
-                    <td>${vehicle.RoomNumber}</td>
-                    <td>${vehicle.GuestName}</td>
-                    <td>${vehicle.VehicleType}</td>
-                    <td>${vehicle.VehicleCategory}</td>
-                    <td>${vehicle.ParkingTime}</td>
-                    <td>${vehicle.EntryDateTime}</td>
-                    <td>${vehicle.ExitDateTime}</td>
-                </tr>
-            `;
-        }).join('');
-        updateSortHeaders('history-tab', sortState.history);
+    if (totalItems === 0) {
+        renderEmptyState(tbody, 9, '📜', 'No History Found', 'Vehicles that exit will appear here.');
+        return;
     }
 
+    const startIndex = (page - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const paginatedData = filteredData.slice(startIndex, endIndex);
+
+    tbody.innerHTML = paginatedData.map((vehicle) => {
+        // --- SECURITY FIX: Escape all fields ---
+        return `
+            <tr>
+                <td>${escapeHtml(vehicle.SlotName)}</td>
+                <td>${escapeHtml(vehicle.PlateNumber)}</td>
+                <td>${escapeHtml(vehicle.RoomNumber)}</td>
+                <td>${escapeHtml(vehicle.GuestName)}</td>
+                <td>${escapeHtml(vehicle.VehicleType)}</td>
+                <td>${escapeHtml(vehicle.VehicleCategory)}</td>
+                <td>${escapeHtml(vehicle.ParkingTime)}</td>
+                <td>${escapeHtml(vehicle.EntryDateTime)}</td>
+                <td>${escapeHtml(vehicle.ExitDateTime)}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    updateSortHeaders('history-tab', sortState.history);
+}
     // ========================================================
     // PAGINATION LOGIC
     // ========================================================
