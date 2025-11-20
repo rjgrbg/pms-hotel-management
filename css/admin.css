@@ -1043,7 +1043,11 @@ tbody tr:hover {
 
 /* Modal styling */
 .addUserModal {
+<<<<<<< HEAD
   background: #480c1b;
+=======
+  background: white;
+>>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
   padding: 30px;
   border-radius: 12px;
   max-width: 600px;
@@ -1054,6 +1058,7 @@ tbody tr:hover {
   box-shadow: 0 10px 40px rgba(0,0,0,0.2);
 }
 
+<<<<<<< HEAD
 .addUserModal h2 {
   color: #D4AF78;
   text-align: center;
@@ -1064,6 +1069,12 @@ tbody tr:hover {
   text-align: center;
   padding: 20px;
 
+=======
+.userProfileSection {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+>>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
   border-radius: 10px;
   margin-bottom: 25px;
   color: white;
@@ -1106,9 +1117,14 @@ tbody tr:hover {
 .formGroup label {
   display: block;
   font-weight: 600;
+<<<<<<< HEAD
   margin-bottom: 20px;
   color: white;
   text-align: center;
+=======
+  margin-bottom: 8px;
+  color: #333;
+>>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
   font-size: 13px;
 }
 
@@ -1127,7 +1143,11 @@ tbody tr:hover {
 .formGroup select:focus,
 .formGroup textarea:focus {
   outline: none;
+<<<<<<< HEAD
   border-color: #c0c0c0;
+=======
+  border-color: #667eea;
+>>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -1160,12 +1180,20 @@ tbody tr:hover {
 }
 
 .confirmBtn {
+<<<<<<< HEAD
   background: #b3905b;
+=======
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+>>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
   color: white;
 }
 
 .confirmBtn:hover {
   transform: translateY(-2px);
+<<<<<<< HEAD
+=======
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+>>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
 }
 
 .confirmBtn:disabled {
@@ -1200,13 +1228,21 @@ tbody tr:hover {
   gap: 15px;
   margin-bottom: 20px;
   padding: 15px;
+<<<<<<< HEAD
   color: #f9f9f9;
+=======
+  background: #f9f9f9;
+>>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
   border-radius: 8px;
 }
 
 .infoGrid label {
   font-size: 11px;
+<<<<<<< HEAD
   color: #ffffff;
+=======
+  color: #666;
+>>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
   display: block;
   margin-bottom: 3px;
   text-transform: uppercase;
@@ -1216,7 +1252,11 @@ tbody tr:hover {
 .infoGrid div div {
   font-size: 14px;
   font-weight: 500;
+<<<<<<< HEAD
   color: #e7e7e7;
+=======
+  color: #333;
+>>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
 }
 
 /* Employee ID Form */
