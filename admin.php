@@ -988,6 +988,7 @@ $conn->close();
               <tr>
                 <th>Floor</th>
                 <th>Room</th>
+                <th>Room Name</th>
                 <th>Type</th>
                 <th>No. Guests</th>
                 <th>Status</th>

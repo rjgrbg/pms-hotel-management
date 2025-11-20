@@ -130,9 +130,24 @@ $sql_staff = "SELECT
                 u.Fname, 
                 u.Lname, 
                 u.Mname,
-                u.AvailabilityStatus
+                CASE 
+                    -- 1. If they are already assigned to a room in PMS, keep status as 'Assigned'
+                    WHEN u.AvailabilityStatus = 'Assigned' THEN 'Assigned'
+                    
+                    -- 2. If they have a valid clock-in today (and no clock-out), they are 'Available'
+                    WHEN a.attendance_id IS NOT NULL AND a.time_out IS NULL THEN 'Available'
+                    
+                    -- 3. Otherwise, they are 'Offline'
+                    ELSE 'Offline'
+                END as AvailabilityStatus
               FROM 
                 pms_users u
+              -- Join Employees to link User to Employee Record
+              JOIN 
+                employees e ON u.EmployeeID = e.employee_code
+              -- Join Attendance to check if that employee is clocked in TODAY
+              LEFT JOIN 
+                attendance a ON e.employee_id = a.employee_id AND a.date = CURDATE()
               WHERE 
                 u.AccountType = 'housekeeping_staff'";
 

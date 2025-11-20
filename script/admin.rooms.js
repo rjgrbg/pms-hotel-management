@@ -77,9 +77,9 @@ function downloadRoomsPDF(headers, data, title, filename) {
             fontStyle: 'bold', 
             halign: 'center' 
         },
-        // Status column bold
+        // Status column bold (Index is now 5 because Rate was removed)
         columnStyles: {
-            5: { fontStyle: 'bold' }
+            5: { fontStyle: 'bold' } 
         }
     });
 
@@ -235,9 +235,10 @@ function renderRoomsTable(data) {
       }
 
       return `
-        <tr data-room-data='${JSON.stringify(row)}' onclick="handleEditClick(event)" style="cursor: pointer;">
+        <tr data-room-data='${JSON.stringify(row)}'>
           <td>${row.Floor}</td>
           <td>${row.Room}</td>
+          <td>${row.Name || '-'}</td>
           <td>${row.Type}</td>
           <td>${row.NoGuests}</td>
           <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
@@ -275,7 +276,7 @@ function handleEditClick(event) {
     roomTypeInput.innerHTML = `<option value="${room.Type}">${room.Type}</option>`;
     roomTypeInput.value = room.Type;
     roomGuestsInput.value = room.NoGuests;
-    roomRateInput.value = parseFloat(room.Rate).toFixed(2);
+    roomRateInput.value = parseFloat(room.Rate || 0).toFixed(2);
     
     // Status Logic
     const currentStatus = room.Status;
@@ -364,7 +365,12 @@ function initRoomFilters() {
         const status = statusFilter.value;
 
         const filtered = roomData.filter(row => {
-            const searchMatch = !search || row.Type.toLowerCase().includes(search) || row.Room.toString().includes(search) || row.Status.toLowerCase().includes(search);
+            const searchMatch = !search || 
+                row.Type.toLowerCase().includes(search) || 
+                row.Room.toString().includes(search) || 
+                (row.Name && row.Name.toLowerCase().includes(search)) ||
+                row.Status.toLowerCase().includes(search);
+
             const floorMatch = !floor || row.Floor.toString() === floor;
             const roomMatch = !room || row.Room.toString() === room;
             const typeMatch = !type || row.Type === type;
@@ -417,13 +423,14 @@ function initRoomFilters() {
                 return;
             }
 
-            const headers = ['Floor', 'Room', 'Type', 'No. Guests', 'Rate', 'Status'];
+            // UPDATED: Removed 'Rate' from Headers and Body
+            const headers = ['Floor', 'Room', 'Room Name', 'Type', 'No. Guests', 'Status'];
             const body = filteredData.map(row => [
                 row.Floor,
                 row.Room,
+                row.Name || '-',
                 row.Type,
                 row.NoGuests,
-                `$${parseFloat(row.Rate).toFixed(2)}`,
                 row.Status
             ]);
 

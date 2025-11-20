@@ -76,6 +76,7 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
                 'RoomID' => $row['room_id'], 
                 'Floor' => $row['floor_num'],
                 'Room' => $row['room_num'],
+                'Name' => $row['room_name'],
                 'Type' => $row['room_type'],
                 'NoGuests' => $row['capacity'],
                 'Status' => $row['RoomStatus'],

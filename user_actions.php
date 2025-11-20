@@ -162,12 +162,13 @@ switch ($action) {
             $token_expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
             // --- SECURE (Prepared Statements) ---
-            $sql_insert = "INSERT INTO pms_users 
+           $sql_insert = "INSERT INTO pms_users 
                             (EmployeeID, Fname, Lname, Mname, Birthday, AccountType, Username, Password, 
-                             EmailAddress, Shift, Address, ContactNumber, ActivationToken, TokenExpiry) 
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                             EmailAddress, Shift, Address, ContactNumber, ActivationToken, TokenExpiry, AvailabilityStatus) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Offline')";
             
             $stmt_insert = $pms_conn->prepare($sql_insert);
+            // Note: We don't need to add a bind param for 'Offline' because we hardcoded it in the VALUES clause
             $stmt_insert->bind_param("ssssssssssssss",
                 $employee_code,
                 $employee['first_name'],

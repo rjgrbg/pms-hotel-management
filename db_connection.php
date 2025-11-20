@@ -44,6 +44,11 @@ function get_db_connection($db_name = 'b9wkqgu32onfqy0dvyva') {
     try {
         $conn = new mysqli($db_host, $db_user, $db_pass, $db_name_config, (int)$db_port);
         $conn->set_charset("utf8mb4");
+
+        // --- TIMEZONE FIX (Synchronize DB and App to Philippine Time) ---
+        date_default_timezone_set('Asia/Manila');
+        $conn->query("SET time_zone = '+08:00'");
+
     } catch (Exception $e) {
         error_log("ERROR: Could not connect to database. " . $e->getMessage());
         return null;

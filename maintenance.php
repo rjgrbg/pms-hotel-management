@@ -129,9 +129,17 @@ $sql_staff = "SELECT
                 u.Fname, 
                 u.Lname, 
                 u.Mname,
-                u.AvailabilityStatus
+                CASE 
+                    WHEN u.AvailabilityStatus = 'Assigned' THEN 'Assigned'
+                    WHEN a.attendance_id IS NOT NULL AND a.time_out IS NULL THEN 'Available'
+                    ELSE 'Offline'
+                END as AvailabilityStatus
               FROM 
                 pms_users u
+              JOIN 
+                employees e ON u.EmployeeID = e.employee_code
+              LEFT JOIN 
+                attendance a ON e.employee_id = a.employee_id AND a.date = CURDATE()
               WHERE 
                 u.AccountType = 'maintenance_staff'";
 
