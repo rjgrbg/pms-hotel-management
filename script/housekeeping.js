@@ -6,12 +6,12 @@ let allRooms = [];
 
 let filteredRequests = [];
 let filteredStaff = [];
-let filteredHistory = []; // This will be used by housekeeping.history.js
+let filteredHistory = []; 
 
 let selectedStaffId = null;
-let currentRoomId = null; // Used for both assigning and editing room status
+let currentRoomId = null; 
 let confirmCallback = null; 
-let selectedTaskTypes = ''; // For the new assign staff workflow
+let selectedTaskTypes = ''; 
 
 // Pagination State
 const paginationState = {
@@ -19,27 +19,70 @@ const paginationState = {
   history: { currentPage: 1, itemsPerPage: 10 }
 };
 
+// ===== TOAST NOTIFICATION SYSTEM (NEW) =====
+function showToast(message, type = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        // Inline styles to ensure it works without external CSS
+        container.style.position = 'fixed';
+        container.style.top = '20px';
+        container.style.right = '20px';
+        container.style.zIndex = '99999';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    
+    // Colors based on type
+    const bgColor = type === 'success' ? '#28a745' : (type === 'error' ? '#dc3545' : '#17a2b8');
+    
+    toast.style.backgroundColor = bgColor;
+    toast.style.color = 'white';
+    toast.style.padding = '12px 24px';
+    toast.style.marginBottom = '10px';
+    toast.style.borderRadius = '4px';
+    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+    toast.style.fontFamily = 'Arial, sans-serif';
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease-in-out';
+
+    container.appendChild(toast);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+    });
+
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            if (container.contains(toast)) {
+                container.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
   console.log('DOM Loaded - Initializing Housekeeping...');
+  
   // Use the new variable names passed from PHP
   currentRequestsData = typeof initialRequestsData !== 'undefined' ? [...initialRequestsData] : [];
   currentStaffData = typeof availableStaffData !== 'undefined' ? [...availableStaffData] : [];
   currentHistoryData = typeof initialHistoryData !== 'undefined' ? [...initialHistoryData] : [];
   allRooms = typeof allRoomsData !== 'undefined' ? [...allRoomsData] : [];
 
-  console.log('Initial Data:', {
-    requests: currentRequestsData.length,
-    staff: currentStaffData.length,
-    history: currentHistoryData.length,
-    rooms: allRooms.length
-  });
-
   // Populate filter dropdowns
-  populateFloorFilterOptions();
-  populateHistoryFloorFilterOptions();
-  updateRoomFilterOptions();
-  updateHistoryRoomFilterOptions();
+  // Note: Assuming these functions exist in your helper files or need to be defined
+  if (typeof populateFloorFilterOptions === 'function') populateFloorFilterOptions();
+  if (typeof populateHistoryFloorFilterOptions === 'function') populateHistoryFloorFilterOptions();
+  if (typeof updateRoomFilterOptions === 'function') updateRoomFilterOptions();
+  if (typeof updateHistoryRoomFilterOptions === 'function') updateHistoryRoomFilterOptions();
 
   // Initial render
   applyRequestFiltersAndRender();
@@ -53,67 +96,65 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.tabContent').forEach(c => c.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById(`${tabId}-tab`).classList.add('active');
-      
-      // Store the active tab
       sessionStorage.setItem('housekeeping_activeTab', tabId);
     });
   });
 
   // Restore active tab
   const activeTab = sessionStorage.getItem('housekeeping_activeTab') || 'requests';
-  document.querySelector(`.tabBtn[data-tab="${activeTab}"]`).click();
+  const activeBtn = document.querySelector(`.tabBtn[data-tab="${activeTab}"]`);
+  if(activeBtn) activeBtn.click();
 
-  // ----- SHARED MODAL/PROFILE LISTENERS -----
+  // Setup Listeners
   setupCommonUIListeners();
-
-  // ----- REQUESTS TAB LISTENERS -----
   setupRequestsTabListeners();
-
-  // ----- HISTORY TAB LISTENERS -----
   setupHistoryTabListeners();
   
-  // ----- MODAL-SPECIFIC LISTENERS -----
-  
-  // Staff Modal
-  document.getElementById('staffModalSearchInput')?.addEventListener('input', applyStaffFilterAndRender);
-  document.getElementById('closeStaffModalBtn')?.addEventListener('click', hideStaffModal);
-  document.getElementById('cancelStaffBtn')?.addEventListener('click', hideStaffModal);
-  document.getElementById('confirmStaffAssignBtn')?.addEventListener('click', handleConfirmStaffAssign);
-
-  // Task Type Modal
-  document.getElementById('taskTypeForm')?.addEventListener('submit', handleAssignStaff);
-  document.getElementById('confirmTaskTypeBtn')?.addEventListener('click', (e) => {
-      e.preventDefault();
-      document.getElementById('taskTypeForm').dispatchEvent(new Event('submit'));
-  });
-  document.getElementById('cancelTaskTypeBtn')?.addEventListener('click', hideTaskTypeModal);
-  document.getElementById('closeTaskTypeModalBtn')?.addEventListener('click', hideTaskTypeModal);
-  document.getElementById('task_select_all')?.addEventListener('change', (e) => {
-      document.querySelectorAll('#taskTypeCheckboxContainer input[type="checkbox"]').forEach(cb => {
-          cb.checked = e.target.checked;
-      });
-  });
-
-  // Edit Room Status Modal
-  document.getElementById('editRoomStatusForm')?.addEventListener('submit', submitEditRoomStatus);
-  document.getElementById('closeEditRoomStatusBtn')?.addEventListener('click', hideEditRoomStatusModal);
-  document.getElementById('cancelEditRoomStatusBtn')?.addEventListener('click', hideEditRoomStatusModal);
-
-  // Confirmation Modal
-  document.getElementById('cancelConfirmBtn')?.addEventListener('click', hideConfirmModal);
-  document.getElementById('confirmActionBtn')?.addEventListener('click', () => {
-    if (typeof confirmCallback === 'function') {
-      confirmCallback();
-    }
-    hideConfirmModal();
-  });
-  
-  // Success Modal
-  document.getElementById('closeSuccessBtn')?.addEventListener('click', hideSuccessModal);
-  document.getElementById('okaySuccessBtn')?.addEventListener('click', hideSuccessModal);
+  // ----- MODAL LISTENERS -----
+  setupModalListeners();
   
   console.log('Housekeeping Initialization Complete.');
 });
+
+function setupModalListeners() {
+    // Staff Modal
+    document.getElementById('staffModalSearchInput')?.addEventListener('input', applyStaffFilterAndRender);
+    document.getElementById('closeStaffModalBtn')?.addEventListener('click', hideStaffModal);
+    document.getElementById('cancelStaffBtn')?.addEventListener('click', hideStaffModal);
+    document.getElementById('confirmStaffAssignBtn')?.addEventListener('click', handleConfirmStaffAssign);
+
+    // Task Type Modal
+    document.getElementById('taskTypeForm')?.addEventListener('submit', handleAssignStaff);
+    document.getElementById('confirmTaskTypeBtn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('taskTypeForm').dispatchEvent(new Event('submit'));
+    });
+    document.getElementById('cancelTaskTypeBtn')?.addEventListener('click', hideTaskTypeModal);
+    document.getElementById('closeTaskTypeModalBtn')?.addEventListener('click', hideTaskTypeModal);
+    document.getElementById('task_select_all')?.addEventListener('change', (e) => {
+        document.querySelectorAll('#taskTypeCheckboxContainer input[type="checkbox"]').forEach(cb => {
+            cb.checked = e.target.checked;
+        });
+    });
+
+    // Edit Room Status Modal
+    document.getElementById('editRoomStatusForm')?.addEventListener('submit', submitEditRoomStatus);
+    document.getElementById('closeEditRoomStatusBtn')?.addEventListener('click', hideEditRoomStatusModal);
+    document.getElementById('cancelEditRoomStatusBtn')?.addEventListener('click', hideEditRoomStatusModal);
+
+    // Confirmation Modal
+    document.getElementById('cancelConfirmBtn')?.addEventListener('click', hideConfirmModal);
+    document.getElementById('confirmActionBtn')?.addEventListener('click', () => {
+        if (typeof confirmCallback === 'function') {
+        confirmCallback();
+        }
+        hideConfirmModal();
+    });
+    
+    // Success Modal
+    document.getElementById('closeSuccessBtn')?.addEventListener('click', hideSuccessModal);
+    document.getElementById('okaySuccessBtn')?.addEventListener('click', hideSuccessModal);
+}
 
 // ===== SHARED UI LISTENERS =====
 function setupCommonUIListeners() {
@@ -131,16 +172,13 @@ function setupCommonUIListeners() {
     e.preventDefault();
     document.getElementById('logoutModal').style.display = 'flex';
   });
-  closeLogoutBtn?.addEventListener('click', () => document.getElementById('logoutModal').style.display = 'none');
-  cancelLogoutBtn?.addEventListener('click', () => document.getElementById('logoutModal').style.display = 'none');
-  confirmLogoutBtn?.addEventListener('click', () => window.location.href = 'logout.php');
   
-  // Close sidebar if clicking outside
-  document.addEventListener('click', (event) => {
-    if (sidebar && !sidebar.contains(event.target) && profileBtn && !profileBtn.contains(event.target)) {
-      sidebar.classList.remove('active');
-    }
-  });
+  const logoutModal = document.getElementById('logoutModal');
+  if(logoutModal) {
+      closeLogoutBtn?.addEventListener('click', () => logoutModal.style.display = 'none');
+      cancelLogoutBtn?.addEventListener('click', () => logoutModal.style.display = 'none');
+      confirmLogoutBtn?.addEventListener('click', () => window.location.href = 'logout.php');
+  }
 }
 
 // ===== REQUESTS TAB LISTENERS =====
@@ -154,7 +192,6 @@ function setupRequestsTabListeners() {
   document.getElementById('refreshBtn')?.addEventListener('click', handleRefreshRequests);
   document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsPDF);
 
-  // Event delegation for action buttons
   document.getElementById('requestsTableBody')?.addEventListener('click', (e) => {
     if (e.target.closest('.assign-staff-btn')) {
       handleAssignStaffClick(e.target.closest('.assign-staff-btn'));
@@ -185,11 +222,9 @@ function setupHistoryTabListeners() {
 // ===== REQUESTS TAB FUNCTIONS ======
 // ===================================
 
-// ===== RENDER REQUESTS TABLE =====
 function renderRequestsTable() {
     const tbody = document.getElementById('requestsTableBody');
     const recordCountEl = document.getElementById('requestsRecordCount');
-    const paginationControlsContainerId = 'requestsPaginationControls';
     const state = paginationState.requests;
 
     if (!tbody || !recordCountEl) return;
@@ -206,20 +241,16 @@ function renderRequestsTable() {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No rooms found.</td></tr>';
     } else {
         tbody.innerHTML = paginatedData.map(req => {
-            // 1. Prepare Variables
             const statusClass = req.status.toLowerCase().replace(/\s+/g, '-');
             const status = req.status;
-
-            // 2. Secure Data (Escape HTML)
             const safeFloor = escapeHtml(req.floor ?? 'N/A');
             const safeRoom = escapeHtml(req.room ?? 'N/A');
             const safeDate = escapeHtml(req.date ?? 'N/A');
             const safeTime = escapeHtml(req.requestTime ?? 'N/A');
             const safeLastClean = escapeHtml(req.lastClean ?? 'N/A');
             const safeStatusDisplay = escapeHtml(status);
-            const safeStaff = escapeHtml(req.staff); // For display in button
+            const safeStaff = escapeHtml(req.staff);
 
-            // 3. Logic for Assign Button
             let assignButton;
             if (req.staff !== 'Not Assigned') {
                 assignButton = `<button class="assignBtn assigned" disabled>${safeStaff}</button>`;
@@ -229,7 +260,6 @@ function renderRequestsTable() {
                 assignButton = `<button class="assignBtn" disabled>ASSIGN</button>`;
             }
 
-            // 4. Logic for Action Button
             let actionButton;
             if (status === 'Pending') {
                 actionButton = `<button class="actionBtn cancel-task-btn" data-task-id="${escapeHtml(req.taskId)}"><i class="fas fa-times"></i></button>`;
@@ -239,7 +269,6 @@ function renderRequestsTable() {
                 actionButton = `<button class="actionBtn" disabled><i class="fas fa-edit"></i></button>`;
             }
 
-            // 5. Render Row
             return `
                 <tr data-room-id="${escapeHtml(req.id)}">
                     <td>${safeFloor}</td>
@@ -255,37 +284,34 @@ function renderRequestsTable() {
         }).join('');
     }
 
-    renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
+    renderPaginationControls('requestsPaginationControls', totalPages, state.currentPage, (page) => {
         state.currentPage = page;
         renderRequestsTable();
     });
 }
-// ===== ACTION HANDLERS (Requests) =====
+
+// ===== ACTION HANDLERS =====
 
 function handleAssignStaffClick(button) {
   currentRoomId = parseInt(button.dataset.roomId);
   const roomNumber = button.dataset.roomNumber;
   
-  // Reset staff modal
   selectedStaffId = null;
   document.getElementById('confirmStaffAssignBtn').disabled = true;
   document.getElementById('staffModalSearchInput').value = '';
   applyStaffFilterAndRender();
   
-  // Reset and prep task type modal
   document.getElementById('taskTypeForm').reset();
   document.getElementById('taskTypeModalRoomNumber').textContent = roomNumber;
   document.getElementById('taskTypeRoomId').value = currentRoomId;
   
-  showTaskTypeModal(); // Show task type modal first
+  showTaskTypeModal();
 }
 
 function handleEditStatusClick(button) {
   currentRoomId = parseInt(button.dataset.roomId);
   const roomNumber = button.dataset.roomNumber;
   const currentStatus = button.dataset.currentStatus;
-
-  console.log(`Editing status for Room ${roomNumber} (ID: ${currentRoomId}), current: ${currentStatus}`);
 
   document.getElementById('editRoomStatusModalTitle').textContent = `Edit Room Status`;
   document.getElementById('editRoomStatusRoomNumber').textContent = roomNumber;
@@ -296,25 +322,21 @@ function handleEditStatusClick(button) {
 }
 
 function handleCancelTaskClick(button) {
-  const taskIdToCancel = parseInt(button.dataset.taskId); // MODIFIED
+  const taskIdToCancel = parseInt(button.dataset.taskId);
   if (!taskIdToCancel) return;
 
-  console.log(`Attempting to cancel task: ${taskIdToCancel}`);
-  
   showConfirmModal(
     'Cancel Task?',
     'Are you sure you want to cancel this pending task?',
     async () => {
-      console.log(`Confirmed cancellation for task: ${taskIdToCancel}`);
       try {
-        const result = await handleApiCall('cancel_task', { taskId: taskIdToCancel }); // MODIFIED
+        const result = await handleApiCall('cancel_task', { taskId: taskIdToCancel });
         if (result.status === 'success') {
           showSuccessModal(result.message || 'Task cancelled successfully.');
-          // Refresh data
+          // Refresh logic
           const index = currentRequestsData.findIndex(r => r.taskId === taskIdToCancel);
           if (index > -1) {
-            // Update local data to reflect cancellation
-            currentRequestsData[index].status = 'Available'; // Or 'Needs Cleaning', depending on logic
+            currentRequestsData[index].status = 'Needs Cleaning';
             currentRequestsData[index].staff = 'Not Assigned';
             currentRequestsData[index].taskId = null;
             currentRequestsData[index].date = 'N/A';
@@ -332,54 +354,41 @@ function handleCancelTaskClick(button) {
   );
 }
 
-// ===== MODAL SUBMIT HANDLERS (Requests) =====
-
-//
-// THIS IS THE CORRECTED FUNCTION
-//
 async function submitEditRoomStatus(e) {
   e.preventDefault();
   
-  // 1. Get the room number from the modal's text element
   const roomNumberEl = document.getElementById('editRoomStatusRoomNumber');
   const roomNumber = roomNumberEl ? roomNumberEl.textContent : ''; 
-  
   const newStatus = document.getElementById('editRoomStatusSelect').value;
 
   if (!roomNumber) {
-      alert('Error: Could not find room number.');
+      showToast('Error: Could not find room number.', 'error');
       return;
   }
-
-  console.log(`Submitting new status for Room Number ${roomNumber}: ${newStatus}`);
   
   try {
     const response = await fetch('room_actions.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // 2. Match the backend's 'update_status' handler
         body: JSON.stringify({ 
-            action: 'update_status',         // <-- FIX: Match backend action
-            room_number: roomNumber,         // <-- FIX: Send room_number
-            new_status: newStatus            // <-- FIX: Send new_status
+            action: 'update_status', 
+            room_number: roomNumber, 
+            new_status: newStatus 
         }) 
     });
     
     const result = await response.json();
 
-    // 3. Check for 'success' boolean, not 'status' string
     if (result.success) {
       hideEditRoomStatusModal();
       showSuccessModal('Room status updated successfully.');
       
-      // Update local data
-      const index = currentRequestsData.findIndex(r => r.room === roomNumber); // Find by room number
+      const index = currentRequestsData.findIndex(r => r.room == roomNumber); // Loose equality for int/string
       if (index > -1) {
         currentRequestsData[index].status = newStatus;
         if (newStatus === 'Available') {
-            // Clear task-related data if set back to Available
             currentRequestsData[index].staff = 'Not Assigned';
-            currentRequestsData[index].taskId = null; // Use 'taskId' for housekeeping
+            currentRequestsData[index].taskId = null;
             currentRequestsData[index].date = 'N/A';
             currentRequestsData[index].requestTime = 'N/A';
         }
@@ -399,36 +408,29 @@ async function submitEditRoomStatus(e) {
 
 async function handleAssignStaff(e) {
   e.preventDefault();
-  
   const formData = new FormData(document.getElementById('taskTypeForm'));
-  selectedTaskTypes = formData.getAll('taskType[]').join(', '); // MODIFIED
+  selectedTaskTypes = formData.getAll('taskType[]').join(', ');
 
   if (!selectedTaskTypes) {
-    alert('Please select at least one task type.');
+    showToast('Please select at least one task type.', 'error');
     return;
   }
   
-  console.log(`Task types selected for Room ID ${currentRoomId}: ${selectedTaskTypes}`);
-  
-  // Hide task modal, show staff modal
   hideTaskTypeModal();
   showStaffModal();
 }
 
-// This is called when "ASSIGN STAFF" is clicked in the staff modal
 async function handleConfirmStaffAssign() {
   if (!selectedStaffId || !currentRoomId || !selectedTaskTypes) {
-    alert('Error: Missing staff, room, or task type information.');
+    showToast('Error: Missing staff, room, or task type information.', 'error');
     return;
   }
   
-  console.log(`Assigning Staff ${selectedStaffId} to Room ${currentRoomId} for tasks: ${selectedTaskTypes}`);
-
   try {
     const data = {
       roomId: currentRoomId,
       staffId: selectedStaffId,
-      taskTypes: selectedTaskTypes // MODIFIED
+      taskTypes: selectedTaskTypes
     };
     
     const result = await handleApiCall('assign_task', data);
@@ -437,17 +439,13 @@ async function handleConfirmStaffAssign() {
       hideStaffModal();
       showSuccessModal(result.message || 'Task assigned successfully.');
 
-      // Update local data
       const index = currentRequestsData.findIndex(r => r.id === currentRoomId);
       if (index > -1) {
         currentRequestsData[index].status = 'Pending';
-        currentRequestsData[index].staff = result.staffName || 'Assigned'; // Get name from API response
-        // In a real app, we'd get the new taskId, date, etc.
-        // For now, we'll just reload or refresh filters
+        currentRequestsData[index].staff = result.staffName || 'Assigned';
       }
       applyRequestFiltersAndRender();
       
-      // Also update the staff member's status in the local staff data
       const staffIndex = currentStaffData.findIndex(s => s.id === selectedStaffId);
       if (staffIndex > -1) {
           currentStaffData[staffIndex].availability = 'Assigned';
@@ -462,14 +460,13 @@ async function handleConfirmStaffAssign() {
     hideStaffModal();
     showErrorModal('An error occurred while assigning the task.');
   } finally {
-    // Clear selections
     currentRoomId = null;
     selectedStaffId = null;
     selectedTaskTypes = '';
   }
 }
 
-// ===== FILTER & RENDER (REQUESTS) =====
+// ===== FILTER & RENDER =====
 function applyRequestFiltersAndRender() {
   const floor = document.getElementById('floorFilter').value;
   const room = document.getElementById('roomFilter').value;
@@ -485,12 +482,10 @@ function applyRequestFiltersAndRender() {
     return matchFloor && matchRoom && matchSearch;
   });
 
-  // Sort: 'Needs Cleaning' and 'Pending' first, then by floor/room
   filteredRequests.sort((a, b) => {
     const statusA = a.status.toLowerCase();
     const statusB = b.status.toLowerCase();
     const priority = { 'needs cleaning': 1, 'pending': 2, 'in progress': 3 };
-
     const priorityA = priority[statusA] || 4;
     const priorityB = priority[statusB] || 4;
 
@@ -502,57 +497,185 @@ function applyRequestFiltersAndRender() {
   renderRequestsTable();
 }
 
-// ===== REFRESH & DOWNLOAD (REQUESTS) =====
+// ===== REFRESH FUNCTIONS WITH TOAST =====
 function handleRefreshRequests() {
-  // In a real app, this would fetch from the server.
-  // For now, we just reset filters and re-render.
   console.log("Refreshing requests data...");
+  
+  // Clear filters
   document.getElementById('floorFilter').value = '';
   document.getElementById('roomFilter').value = '';
   document.getElementById('searchInput').value = '';
 
-  updateRoomFilterOptions(); // Must update rooms after clearing filters
+  if (typeof updateRoomFilterOptions === 'function') updateRoomFilterOptions();
   applyRequestFiltersAndRender();
+  
+  // TRIGGER TOAST
+  showToast('Requests data refreshed!', 'success');
 }
 
-// ===== REQUESTS PDF DOWNLOAD =====
-function downloadRequestsPDF() {
-  if (filteredRequests.length === 0) {
-    alert("No request data to export based on current filters.");
-    return;
+function handleRefreshHistory() {
+  console.log("Refreshing history data...");
+  
+  document.getElementById('floorFilterHistory').value = '';
+  document.getElementById('roomFilterHistory').value = '';
+  document.getElementById('dateFilterHistory').value = '';
+  document.getElementById('historySearchInput').value = '';
+  
+  if (typeof updateHistoryRoomFilterOptions === 'function') updateHistoryRoomFilterOptions();
+  
+  // Assuming you have this function from housekeeping.history.js or similar
+  if (typeof applyHistoryFiltersAndRender === 'function') {
+      applyHistoryFiltersAndRender();
   }
+  
+  // TRIGGER TOAST
+  showToast('History data refreshed!', 'success');
+}
 
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
+// ===== PDF DOWNLOAD FUNCTIONS (FIXED) =====
+// ===== REQUESTS PDF DOWNLOAD (Updated Style) =====
+function downloadRequestsPDF() {
+    if (filteredRequests.length === 0) {
+        showToast("No request data to export based on current filters.", 'error');
+        return;
+    }
 
-  // Define the headers
-  const headers = [
-    ['Floor', 'Room', 'Date', 'Request Time', 'Last Clean', 'Status', 'Staff In Charge']
-  ];
+    if (!window.jspdf) { 
+        showToast("PDF Library not loaded.", 'error'); 
+        return; 
+    }
 
-  // Map the filtered data
-  const bodyData = filteredRequests.map(req => [
-    req.floor ?? 'N/A',
-    req.room ?? 'N/A',
-    req.date ?? 'N/A',
-    req.requestTime ?? 'N/A',
-    req.lastClean ?? 'N/A', // Changed
-    req.status ?? 'N/A',
-    req.staff ?? 'N/A'
-  ]);
+    const { jsPDF } = window.jspdf;
+    // Changed to Landscape ('l') to match your example
+    const doc = new jsPDF('l', 'mm', 'a4'); 
 
-  // Add a title
-  doc.setFontSize(18);
-  doc.text("Housekeeping Requests Report", 14, 22); // Changed
+    // 1. Title Styling (Maroon)
+    doc.setFontSize(18);
+    doc.setTextColor(72, 12, 27); // #480c1b
+    doc.text("Housekeeping Requests Report", 14, 22);
+    
+    // 2. Date Styling
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
-  // Add the table
-  doc.autoTable({
-    startY: 30,
-    head: headers,
-    body: bodyData,
-    theme: 'striped',
-    headStyles: { fillColor: [41, 128, 185] }, // Example color
-  });
+    // 3. Define Headers
+    const headers = [['Floor', 'Room', 'Date', 'Request Time', 'Last Clean', 'Status', 'Staff In Charge']];
+    
+    // 4. Map Data
+    const bodyData = filteredRequests.map(req => [
+        req.floor ?? 'N/A',
+        req.room ?? 'N/A',
+        req.date ?? 'N/A',
+        req.requestTime ?? 'N/A',
+        req.lastClean ?? 'N/A',
+        req.status ?? 'N/A',
+        req.staff ?? 'N/A'
+    ]);
 
-  doc.save(`housekeeping-requests-${new Date().toISOString().split('T')[0]}.pdf`); // Changed
+    // 5. Generate Table
+    doc.autoTable({
+        startY: 35, 
+        head: headers, 
+        body: bodyData, 
+        theme: 'grid',
+        headStyles: { 
+            fillColor: '#480c1b', // Maroon background
+            textColor: '#ffffff', 
+            fontStyle: 'bold', 
+            halign: 'center' 
+        },
+        styles: { fontSize: 10, cellPadding: 3 },
+        // Adjust column widths for Housekeeping data
+        columnStyles: { 
+            4: { cellWidth: 35 }, // Last Clean
+            6: { cellWidth: 40 }  // Staff
+        }
+    });
+
+    doc.save(`housekeeping-requests-${new Date().toISOString().split('T')[0]}.pdf`);
+    showToast('PDF downloaded successfully!', 'success');
+}
+
+// ===== HISTORY PDF DOWNLOAD (Updated Style) =====
+function downloadHistoryPDF() {
+    if (filteredHistory.length === 0) {
+        showToast("No history data to export based on current filters.", 'error');
+        return;
+    }
+    
+    if (!window.jspdf) { 
+        showToast("PDF Library not loaded.", 'error'); 
+        return; 
+    }
+
+    const { jsPDF } = window.jspdf;
+    // Changed to Landscape ('l')
+    const doc = new jsPDF('l', 'mm', 'a4'); 
+
+    // 1. Title Styling (Maroon)
+    doc.setFontSize(18);
+    doc.setTextColor(72, 12, 27); // #480c1b
+    doc.text("Housekeeping History Report", 14, 22);
+    
+    // 2. Date Styling
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    // 3. Define Headers
+    const headers = [['Room', 'Task', 'Staff', 'Date', 'Completed Time', 'Status']];
+    
+    // 4. Map Data
+    const bodyData = filteredHistory.map(hist => [
+        hist.room ?? 'N/A',
+        hist.taskType ?? 'Cleaning',
+        hist.staffName ?? 'N/A',
+        hist.date ?? 'N/A',
+        hist.completedTime ?? 'N/A',
+        hist.status ?? 'Completed'
+    ]);
+
+    // 5. Generate Table
+    doc.autoTable({
+        startY: 35, 
+        head: headers, 
+        body: bodyData, 
+        theme: 'grid',
+        headStyles: { 
+            fillColor: '#480c1b', // Maroon background
+            textColor: '#ffffff', 
+            fontStyle: 'bold', 
+            halign: 'center' 
+        },
+        styles: { fontSize: 10, cellPadding: 3 },
+        // Adjust column widths
+        columnStyles: { 
+            1: { cellWidth: 40 }, // Task
+            2: { cellWidth: 40 }  // Staff
+        } 
+    });
+
+    doc.save(`housekeeping-history-${new Date().toISOString().split('T')[0]}.pdf`);
+    showToast('History PDF downloaded successfully!', 'success');
+}
+
+// ===== HELPER FUNCTIONS =====
+function escapeHtml(text) {
+  if (text === null || text === undefined) return '';
+  return text.toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function getTotalPages(totalItems, itemsPerPage) {
+    return Math.ceil(totalItems / itemsPerPage) || 1;
+}
+
+function paginateData(data, currentPage, itemsPerPage) {
+    const start = (currentPage - 1) * itemsPerPage;
+    return data.slice(start, start + itemsPerPage);
 }
