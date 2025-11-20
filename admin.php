@@ -106,7 +106,7 @@ $sql_hk_rooms = "SELECT
                 u.Lname,
                 u.Mname
               FROM
-                pms_rooms r
+                tbl_rooms r
               LEFT JOIN
                 pms_room_status rs ON r.room_num = rs.RoomNumber
               LEFT JOIN (
@@ -181,7 +181,7 @@ $sql_hk_history = "SELECT
                 FROM 
                     pms_housekeeping_tasks ht
                 JOIN 
-                    pms_rooms r ON ht.RoomID = r.room_id
+                    tbl_rooms r ON ht.RoomID = r.room_id
                 LEFT JOIN 
                     pms_users u ON ht.AssignedUserID = u.UserID 
                 WHERE 
@@ -250,7 +250,7 @@ $sql_mt_rooms = "SELECT
                 u.Lname,
                 u.Mname
               FROM
-                pms_rooms r
+                tbl_rooms r
               LEFT JOIN
                 pms_room_status rs ON r.room_num = rs.RoomNumber
               LEFT JOIN (
@@ -325,7 +325,7 @@ $sql_mt_history = "SELECT
                 FROM 
                     pms_maintenance_requests mr 
                 JOIN 
-                    pms_rooms r ON mr.RoomID = r.room_id
+                    tbl_rooms r ON mr.RoomID = r.room_id
                 LEFT JOIN 
                     pms_users u ON mr.AssignedUserID = u.UserID 
                 WHERE 

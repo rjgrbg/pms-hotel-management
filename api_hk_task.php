@@ -74,7 +74,7 @@ switch ($action) {
                 FROM 
                     pms_housekeeping_tasks ht
                 JOIN 
-                    pms_rooms r ON ht.RoomID = r.room_id
+                    tbl_rooms r ON ht.RoomID = r.room_id
                 WHERE 
                     ht.TaskID = ? AND ht.Status IN ('Pending', 'In Progress')";
         
@@ -161,8 +161,8 @@ switch ($action) {
                     $stmt_status->close();
                 }
 
-                // --- Get RoomNumber (using room_id from pms_rooms) ---
-                $stmt_room = $conn->prepare("SELECT room_num FROM pms_rooms WHERE room_id = ?");
+                // --- Get RoomNumber (using room_id from tbl_rooms) ---
+                $stmt_room = $conn->prepare("SELECT room_num FROM tbl_rooms WHERE room_id = ?");
                 $stmt_room->bind_param("i", $roomId);
                 $stmt_room->execute();
                 $room_data = $stmt_room->get_result()->fetch_assoc();
