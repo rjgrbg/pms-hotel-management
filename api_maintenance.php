@@ -79,7 +79,7 @@ $action = trim($data['action'] ?? '');
 $managerUserId = $_SESSION['UserID']; // Get manager's ID for logging
 
 // Get single database connection
-$conn = get_db_connection('pms');
+$conn = get_db_connection('b9wkqgu32onfqy0dvyva');
 
 if ($conn === null) {
     echo json_encode(['status' => 'error', 'message' => 'Database connection error.']);
@@ -145,7 +145,7 @@ switch ($action) {
                 FROM 
                     pms_users u
                 CROSS JOIN
-                    pms_rooms r
+                    tbl_rooms r
                 WHERE 
                     u.UserID = ? AND r.room_id = ?"
             );

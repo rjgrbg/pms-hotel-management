@@ -9,7 +9,7 @@ header('Content-Type: application/json');
 require_once('db_connection.php');
 
 // Get single database connection
-$conn = get_db_connection('pms');
+$conn = get_db_connection('b9wkqgu32onfqy0dvyva');
 
 if ($conn === null) {
     echo json_encode(['status' => 'error', 'message' => 'Database connection error.']);

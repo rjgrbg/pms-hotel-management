@@ -187,68 +187,79 @@ function setupHistoryTabListeners() {
 
 // ===== RENDER REQUESTS TABLE =====
 function renderRequestsTable() {
-  const tbody = document.getElementById('requestsTableBody');
-  const recordCountEl = document.getElementById('requestsRecordCount');
-  const paginationControlsContainerId = 'requestsPaginationControls';
-  const state = paginationState.requests;
+    const tbody = document.getElementById('requestsTableBody');
+    const recordCountEl = document.getElementById('requestsRecordCount');
+    const paginationControlsContainerId = 'requestsPaginationControls';
+    const state = paginationState.requests;
 
-  if (!tbody || !recordCountEl) return;
+    if (!tbody || !recordCountEl) return;
 
-  const totalPages = getTotalPages(filteredRequests.length, state.itemsPerPage);
-  if (state.currentPage > totalPages) {
-    state.currentPage = Math.max(1, totalPages);
-  }
-  const paginatedData = paginateData(filteredRequests, state.currentPage, state.itemsPerPage);
+    const totalPages = getTotalPages(filteredRequests.length, state.itemsPerPage);
+    if (state.currentPage > totalPages) {
+        state.currentPage = Math.max(1, totalPages);
+    }
+    const paginatedData = paginateData(filteredRequests, state.currentPage, state.itemsPerPage);
 
-  recordCountEl.textContent = filteredRequests.length;
+    recordCountEl.textContent = filteredRequests.length;
 
-  if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No rooms found.</td></tr>'; // Colspan is 8
-  } else {
-    tbody.innerHTML = paginatedData.map(req => {
-        const statusClass = req.status.toLowerCase().replace(/ /g, '-');
-        const statusDisplay = req.status;
+    if (paginatedData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No rooms found.</td></tr>';
+    } else {
+        tbody.innerHTML = paginatedData.map(req => {
+            // 1. Prepare Variables
+            const statusClass = req.status.toLowerCase().replace(/\s+/g, '-');
+            const status = req.status;
 
-        let assignButton;
-        const status = req.status;
+            // 2. Secure Data (Escape HTML)
+            const safeFloor = escapeHtml(req.floor ?? 'N/A');
+            const safeRoom = escapeHtml(req.room ?? 'N/A');
+            const safeDate = escapeHtml(req.date ?? 'N/A');
+            const safeTime = escapeHtml(req.requestTime ?? 'N/A');
+            const safeLastClean = escapeHtml(req.lastClean ?? 'N/A');
+            const safeStatusDisplay = escapeHtml(status);
+            const safeStaff = escapeHtml(req.staff); // For display in button
 
-        if (req.staff !== 'Not Assigned') {
-            assignButton = `<button class="assignBtn assigned" disabled>${req.staff}</button>`;
-        } else if (['Needs Cleaning'].includes(status)) { // MODIFIED
-            assignButton = `<button class="assignBtn assign-staff-btn" data-room-id="${req.id}" data-room-number="${req.room}">ASSIGN</button>`;
-        } else {
-            assignButton = `<button class="assignBtn" disabled>ASSIGN</button>`;
-        }
+            // 3. Logic for Assign Button
+            let assignButton;
+            if (req.staff !== 'Not Assigned') {
+                assignButton = `<button class="assignBtn assigned" disabled>${safeStaff}</button>`;
+            } else if (['Needs Cleaning'].includes(status)) {
+                assignButton = `<button class="assignBtn assign-staff-btn" data-room-id="${escapeHtml(req.id)}" data-room-number="${safeRoom}">ASSIGN</button>`;
+            } else {
+                assignButton = `<button class="assignBtn" disabled>ASSIGN</button>`;
+            }
 
-        let actionButton;
-        if (status === 'Pending') {
-            actionButton = `<button class="actionBtn cancel-task-btn" data-task-id="${req.taskId}"><i class="fas fa-times"></i></button>`; // MODIFIED
-        } else if (status === 'Available' || status === 'Needs Cleaning') {
-            actionButton = `<button class="actionBtn edit-status-btn" data-room-id="${req.id}" data-room-number="${req.room}" data-current-status="${status}"><i class="fas fa-edit"></i></button>`;
-        } else {
-            actionButton = `<button class="actionBtn" disabled><i class="fas fa-edit"></i></button>`;
-        }
+            // 4. Logic for Action Button
+            let actionButton;
+            if (status === 'Pending') {
+                actionButton = `<button class="actionBtn cancel-task-btn" data-task-id="${escapeHtml(req.taskId)}"><i class="fas fa-times"></i></button>`;
+            } else if (status === 'Available' || status === 'Needs Cleaning') {
+                actionButton = `<button class="actionBtn edit-status-btn" data-room-id="${escapeHtml(req.id)}" data-room-number="${safeRoom}" data-current-status="${escapeHtml(status)}"><i class="fas fa-edit"></i></button>`;
+            } else {
+                actionButton = `<button class="actionBtn" disabled><i class="fas fa-edit"></i></button>`;
+            }
 
-      return `
-        <tr data-room-id="${req.id}">
-          <td>${req.floor ?? 'N/A'}</td>
-          <td>${req.room ?? 'N/A'}</td>
-          <td>${req.date ?? 'N/A'}</td>
-          <td>${req.requestTime ?? 'N/A'}</td>
-          <td>${req.lastClean ?? 'N/A'}</td> <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
-          <td>${assignButton}</td>
-          <td>${actionButton}</td>
-        </tr>
-      `;
-    }).join('');
-  }
+            // 5. Render Row
+            return `
+                <tr data-room-id="${escapeHtml(req.id)}">
+                    <td>${safeFloor}</td>
+                    <td>${safeRoom}</td>
+                    <td>${safeDate}</td>
+                    <td>${safeTime}</td>
+                    <td>${safeLastClean}</td>
+                    <td><span class="statusBadge ${statusClass}">${safeStatusDisplay}</span></td>
+                    <td>${assignButton}</td>
+                    <td>${actionButton}</td>
+                </tr>
+            `;
+        }).join('');
+    }
 
-  renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderRequestsTable();
-  });
+    renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
+        state.currentPage = page;
+        renderRequestsTable();
+    });
 }
-
 // ===== ACTION HANDLERS (Requests) =====
 
 function handleAssignStaffClick(button) {

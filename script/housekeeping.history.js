@@ -1,3 +1,19 @@
+// ===== HELPER FUNCTIONS =====
+
+/**
+ * Security Fix: Converts HTML characters to safe entities.
+ * This prevents the browser from interpreting tags like <h1> as code.
+ */
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // ===== HISTORY TAB FUNCTIONS =====
 
 /**
@@ -24,7 +40,7 @@ function applyHistoryFiltersAndRender() {
         
         const matchSearch = !search ||
             (h.room && h.room.toString().includes(search)) ||
-            (h.issueType && h.issueType.toLowerCase().includes(search)) || // MODIFIED to taskType
+            (h.issueType && h.issueType.toLowerCase().includes(search)) ||
             (h.staff && h.staff.toLowerCase().includes(search)) ||
             (h.status && h.status.toLowerCase().includes(search));
         
@@ -35,7 +51,7 @@ function applyHistoryFiltersAndRender() {
 }
 
 /**
- * Renders the history table with pagination
+ * Renders the history table with pagination and HTML escaping
  */
 function renderHistoryTable() {
     const tbody = document.getElementById('historyTableBody');
@@ -56,18 +72,43 @@ function renderHistoryTable() {
     if (paginatedData.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history found matching filters.</td></tr>';
     } else {
-        tbody.innerHTML = paginatedData.map(h => `
+        tbody.innerHTML = paginatedData.map(h => {
+            // 1. Prepare Safe Data (Escape EVERYTHING)
+            const safeFloor = escapeHtml(h.floor ?? 'N/A');
+            const safeRoom = escapeHtml(h.room ?? 'N/A');
+            const safeType = escapeHtml(h.issueType ?? 'N/A');
+            const safeDate = escapeHtml(h.date ?? 'N/A');
+            const safeReqTime = escapeHtml(h.requestedTime ?? 'N/A');
+            const safeCompTime = escapeHtml(h.completedTime ?? 'N/A');
+            const safeStaff = escapeHtml(h.staff ?? 'N/A');
+            const safeStatus = escapeHtml(h.status ?? 'N/A');
+            
+            // 2. Handle Remarks:
+            // Get raw remarks
+            const rawRemarks = h.remarks ?? '';
+            // Create a full escaped version for the Tooltip (hover)
+            const safeFullRemarks = escapeHtml(rawRemarks);
+            // Create a truncated version for Display, then escape it
+            const truncatedRaw = rawRemarks.length > 50 ? rawRemarks.substring(0, 50) + '...' : rawRemarks;
+            const safeDisplayRemarks = escapeHtml(truncatedRaw);
+
+            // 3. Status Class (for coloring)
+            const statusClass = h.status ? h.status.toLowerCase().replace(' ', '-') : '';
+
+            return `
             <tr>
-                <td>${h.floor ?? 'N/A'}</td>
-                <td>${h.room ?? 'N/A'}</td>
-                <td>${h.issueType ?? 'N/A'}</td> <td>${h.date ?? 'N/A'}</td>
-                <td>${h.requestedTime ?? 'N/A'}</td>
-                <td>${h.completedTime ?? 'N/A'}</td>
-                <td>${h.staff ?? 'N/A'}</td>
-                <td><span class="statusBadge ${h.status?.toLowerCase().replace(' ', '-')}">${h.status ?? 'N/A'}</span></td>
-                <td title="${h.remarks || ''}">${h.remarks ? h.remarks.substring(0, 50) + '...' : ''}</td>
+                <td>${safeFloor}</td>
+                <td>${safeRoom}</td>
+                <td>${safeType}</td>
+                <td>${safeDate}</td>
+                <td>${safeReqTime}</td>
+                <td>${safeCompTime}</td>
+                <td>${safeStaff}</td>
+                <td><span class="statusBadge ${statusClass}">${safeStatus}</span></td>
+                <td title="${safeFullRemarks}">${safeDisplayRemarks}</td>
             </tr>
-        `).join('');
+            `;
+        }).join('');
     }
 
     renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
@@ -104,14 +145,14 @@ function downloadHistoryPDF() {
 
     // Define the headers
     const headers = [
-        ['Floor', 'Room', 'Task', 'Date', 'Requested', 'Completed', 'Staff', 'Status', 'Remarks'] // MODIFIED
+        ['Floor', 'Room', 'Task', 'Date', 'Requested', 'Completed', 'Staff', 'Status', 'Remarks']
     ];
 
     // Map the filtered data to match the headers
     const bodyData = filteredHistory.map(h => [
         h.floor ?? 'N/A',
         h.room ?? 'N/A',
-        h.issueType ?? 'N/A', // MODIFIED (was issueType)
+        h.issueType ?? 'N/A',
         h.date ?? 'N/A',
         h.requestedTime ?? 'N/A',
         h.completedTime ?? 'N/A',
@@ -122,7 +163,7 @@ function downloadHistoryPDF() {
 
     // Add a title
     doc.setFontSize(18);
-    doc.text("Housekeeping History Report", 14, 22); // MODIFIED
+    doc.text("Housekeeping History Report", 14, 22);
 
     // Add the table
     doc.autoTable({
@@ -141,5 +182,5 @@ function downloadHistoryPDF() {
         }
     });
 
-    doc.save(`housekeeping-history-${new Date().toISOString().split('T')[0]}.pdf`); // MODIFIED
+    doc.save(`housekeeping-history-${new Date().toISOString().split('T')[0]}.pdf`);
 }

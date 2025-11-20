@@ -126,7 +126,15 @@ function updateHotelAssetsRoomFilterOptions() { // Renamed
         roomFilter.value = currentRoomValue;
     }
 }
-
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 // ===== GENERIC CSV DOWNLOAD =====
 function downloadCSV(csvContent, filenamePrefix) {
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

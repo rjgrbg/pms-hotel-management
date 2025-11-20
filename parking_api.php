@@ -15,7 +15,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 
 // 3. Get the database connection
-$conn = get_db_connection('pms');
+$conn = get_db_connection('b9wkqgu32onfqy0dvyva');
 if (!$conn) {
     header('Content-Type: application/json');
     http_response_code(500);

@@ -1,7 +1,9 @@
 // ===== HOUSEKEEPING RENDER FUNCTIONS =====
+
 function renderHKTable(data = hkData) {
   const tbody = document.getElementById('hkTableBody');
   if (!tbody) return;
+  
   const state = paginationState.housekeeping;
   const totalPages = getTotalPages(data.length, state.itemsPerPage);
   const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
@@ -12,21 +14,24 @@ function renderHKTable(data = hkData) {
     tbody.innerHTML = paginatedData.map(row => {
       const statusClass = getStatusClass(row.status);
       const statusText = formatStatus(row.status);
+      
+      // --- FIX: Escape HTML on all fields ---
       return `
       <tr>
-        <td>${row.floor}</td>
-        <td>${row.room}</td>
-        <td>${row.date}</td>
-        <td>${row.requestTime}</td>
-        <td>${row.lastClean}</td>
-        <td><span class="statusBadge ${statusClass}">${statusText}</span></td>
-        <td>${row.staff}</td>
+        <td>${escapeHtml(row.floor)}</td>
+        <td>${escapeHtml(row.room)}</td>
+        <td>${escapeHtml(row.date)}</td>
+        <td>${escapeHtml(row.requestTime)}</td>
+        <td>${escapeHtml(row.lastClean)}</td>
+        <td><span class="statusBadge ${statusClass}">${escapeHtml(statusText)}</span></td>
+        <td>${escapeHtml(row.staff)}</td>
       </tr>
     `}).join('');
   }
   
   const recordCount = document.getElementById('hkRecordCount');
   if (recordCount) recordCount.textContent = data.length;
+  
   renderPaginationControls('hk-requests-tab', totalPages, state.currentPage, (page) => {
     state.currentPage = page;
     renderHKTable(data);
@@ -36,20 +41,17 @@ function renderHKTable(data = hkData) {
 // Helper function to get the right CSS class
 function getHkHistoryStatusClass(status) {
     switch (status) {
-        case 'In Progress':
-            return 'in-progress';
-        case 'Completed':
-            return 'completed';
-        case 'Cancelled':
-            return 'cancelled';
-        default:
-            return '';
+        case 'In Progress': return 'in-progress';
+        case 'Completed': return 'completed';
+        case 'Cancelled': return 'cancelled';
+        default: return '';
     }
 }
 
 function renderHKHistTable(data = hkHistData) {
   const tbody = document.getElementById('hkHistTableBody');
   if (!tbody) return;
+  
   const state = paginationState.housekeepingHistory;
   const totalPages = getTotalPages(data.length, state.itemsPerPage);
   const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
@@ -58,20 +60,27 @@ function renderHKHistTable(data = hkHistData) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
   } else {
     tbody.innerHTML = paginatedData.map(row => {
-        // --- THIS IS THE FIX ---
         const statusClass = getHkHistoryStatusClass(row.status);
+
+        // --- FIX: Handle Remarks (Truncate & Escape) ---
+        const rawRemarks = row.remarks ?? '';
+        const safeFullRemarks = escapeHtml(rawRemarks); // For tooltip
+        
+        // Truncate first, then escape (prevents huge text issues)
+        const truncatedRaw = rawRemarks.length > 30 ? rawRemarks.substring(0, 30) + '...' : rawRemarks;
+        const safeDisplayRemarks = escapeHtml(truncatedRaw) || 'N/A';
 
         return `
           <tr>
-            <td>${row.floor}</td>
-            <td>${row.room}</td>
-            <td>${row.issueType}</td>
-            <td>${row.date}</td>
-            <td>${row.requestedTime}</td>
-            <td>${row.completedTime}</td>
-            <td>${row.staff}</td>
-            <td><span class="statusBadge ${statusClass}">${row.status}</span></td>
-            <td>${row.remarks || 'N/A'}</td>
+            <td>${escapeHtml(row.floor)}</td>
+            <td>${escapeHtml(row.room)}</td>
+            <td>${escapeHtml(row.issueType)}</td>
+            <td>${escapeHtml(row.date)}</td>
+            <td>${escapeHtml(row.requestedTime)}</td>
+            <td>${escapeHtml(row.completedTime)}</td>
+            <td>${escapeHtml(row.staff)}</td>
+            <td><span class="statusBadge ${statusClass}">${escapeHtml(row.status)}</span></td>
+            <td title="${safeFullRemarks}">${safeDisplayRemarks}</td>
           </tr>
         `;
     }).join('');
@@ -79,6 +88,7 @@ function renderHKHistTable(data = hkHistData) {
   
   const recordCount = document.getElementById('hkHistRecordCount');
   if (recordCount) recordCount.textContent = data.length;
+  
   renderPaginationControls('hk-history-tab', totalPages, state.currentPage, (page) => {
     state.currentPage = page;
     renderHKHistTable(data);

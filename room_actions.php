@@ -17,7 +17,7 @@ if (!isset($_SESSION['UserID']) || !in_array($_SESSION['UserType'], $allowedRole
 }
 
 // Get single database connection
-$conn = get_db_connection('pms');
+$conn = get_db_connection('b9wkqgu32onfqy0dvyva');
 
 // Check connection
 if ($conn === null) {
@@ -57,8 +57,8 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
                 r.floor_num, 
                 r.room_num, 
                 r.room_type,
+                r.room_name,
                 r.capacity,
-                r.price,
                 IFNULL(rs.RoomStatus, 'Available') AS RoomStatus
             FROM 
                 tbl_rooms r
@@ -78,7 +78,6 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
                 'Room' => $row['room_num'],
                 'Type' => $row['room_type'],
                 'NoGuests' => $row['capacity'],
-                'Rate' => $row['price'],
                 'Status' => $row['RoomStatus'],
             ];
         }

@@ -363,16 +363,21 @@ body {
 
 /* ===== TABLES ===== */
 .tableWrapper {
+  width: 100%;
   background-color: #fff;
-  border-radius: 0;
-  overflow: hidden;
+  border-radius: 8px;
+  overflow: hidden; /* Keeps corners rounded */
+  overflow-x: auto; /* Horizontal scroll if needed */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
+  border: 1px solid #eaeaea;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 1000px; /* Ensures columns don't squish too much */
+  table-layout: auto; /* Let browser calculate best widths */
 }
 
 thead {

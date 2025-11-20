@@ -14,13 +14,13 @@ function renderMTRequestsTable(data = mtRequestsData) {
       const statusText = formatStatus(row.status);
       return `
         <tr>
-          <td>${row.floor}</td>
-          <td>${row.room}</td>
-          <td>${row.date}</td>
-          <td>${row.requestTime}</td>
-          <td>${row.lastMaintenance}</td>
-          <td><span class="statusBadge ${statusClass}">${statusText}</span></td>
-          <td>${row.staff}</td>
+          <td>${escapeHtml(row.floor)}</td>
+          <td>${escapeHtml(row.room)}</td>
+          <td>${escapeHtml(row.date)}</td>
+          <td>${escapeHtml(row.requestTime)}</td>
+          <td>${escapeHtml(row.lastMaintenance)}</td>
+          <td><span class="statusBadge ${statusClass}">${escapeHtml(statusText)}</span></td>
+          <td>${escapeHtml(row.staff)}</td>
         </tr>
       `;
     }).join('');
@@ -49,41 +49,65 @@ function getMtHistoryStatusClass(status) {
 }
 
 function renderMTHistTable(data = mtHistData) {
-  const tbody = document.getElementById('mtHistTableBody');
-  if (!tbody) return;
-  const state = paginationState.maintenanceHistory;
-  const totalPages = getTotalPages(data.length, state.itemsPerPage);
-  const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+    const tbody = document.getElementById('mtHistTableBody');
+    if (!tbody) return;
+    
+    const state = paginationState.maintenanceHistory;
+    const totalPages = getTotalPages(data.length, state.itemsPerPage);
+    
+    // Safety check for current page
+    if (state.currentPage > totalPages) {
+        state.currentPage = Math.max(1, totalPages);
+    }
+    
+    const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
   
-  if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
-  } else {
-    tbody.innerHTML = paginatedData.map(row => {
-        // --- THIS IS THE FIX ---
-        const statusClass = getMtHistoryStatusClass(row.status);
-        
-        return `
-          <tr>
-            <td>${row.floor}</td>
-            <td>${row.room}</td>
-            <td>${row.issueType}</td>
-            <td>${row.date}</td>
-            <td>${row.requestedTime}</td>
-            <td>${row.completedTime}</td>
-            <td>${row.staff}</td>
-            <td><span class="statusBadge ${statusClass}">${row.status}</span></td>
-            <td>${row.remarks || 'N/A'}</td>
-          </tr>
-        `;
-    }).join('');
-  }
-  
-  const recordCount = document.getElementById('mtHistRecordCount');
-  if (recordCount) recordCount.textContent = data.length;
-  renderPaginationControls('mt-history-tab', totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderMTHistTable(data);
-  });
+    if (paginatedData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+    } else {
+        tbody.innerHTML = paginatedData.map(row => {
+            const statusClass = getMtHistoryStatusClass(row.status);
+            
+            // --- SECURITY FIX: ESCAPE HTML ---
+            const safeFloor = escapeHtml(row.floor ?? 'N/A');
+            const safeRoom = escapeHtml(row.room ?? 'N/A');
+            const safeType = escapeHtml(row.issueType ?? 'N/A');
+            const safeDate = escapeHtml(row.date ?? 'N/A');
+            const safeReqTime = escapeHtml(row.requestedTime ?? 'N/A');
+            const safeCompTime = escapeHtml(row.completedTime ?? 'N/A');
+            const safeStaff = escapeHtml(row.staff ?? 'N/A');
+            const safeStatus = escapeHtml(row.status ?? 'N/A');
+            
+            // Handle Remarks (Truncate + Escape)
+            const rawRemarks = row.remarks ?? '';
+            const safeFullRemarks = escapeHtml(rawRemarks);
+            const truncatedRaw = rawRemarks.length > 30 ? rawRemarks.substring(0, 30) + '...' : rawRemarks;
+            const safeDisplayRemarks = escapeHtml(truncatedRaw);
+
+            return `
+                <tr>
+                    <td>${safeFloor}</td>
+                    <td>${safeRoom}</td>
+                    <td>${safeType}</td>
+                    <td>${safeDate}</td>
+                    <td>${safeReqTime}</td>
+                    <td>${safeCompTime}</td>
+                    <td>${safeStaff}</td>
+                    <td><span class="statusBadge ${statusClass}">${safeStatus}</span></td>
+                    <td title="${safeFullRemarks}">${safeDisplayRemarks}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+  // --- Helper must be available globally or in this file ---
+
+    const recordCount = document.getElementById('mtHistRecordCount');
+    if (recordCount) recordCount.textContent = data.length;
+    
+    renderPaginationControls('mt-history-tab', totalPages, state.currentPage, (page) => {
+        state.currentPage = page;
+        renderMTHistTable(data);
+    });
 }
 
 /**

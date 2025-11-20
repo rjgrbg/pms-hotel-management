@@ -1,3 +1,13 @@
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // ======================================================
   // === 1. INJECT TOAST CSS STYLES
@@ -434,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // === RENDER & FILTER FUNCTIONS
   // ======================================================
 
-  function renderInventoryTable() {
+ function renderInventoryTable() {
     const category = categoryFilter.value.toLowerCase();
     const status = statusFilter.value.toLowerCase();
     const search = searchInput.value.toLowerCase();
@@ -450,10 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return matchCategory && matchStatus && matchSearch;
     });
 
-    const {
-      column,
-      direction
-    } = sortState.requests;
+    const { column, direction } = sortState.requests;
     sortData(filteredData, column, direction);
 
     const page = currentPages.requests;
@@ -473,15 +480,17 @@ document.addEventListener('DOMContentLoaded', () => {
     requestsTableBody.innerHTML = paginatedData
       .map((item) => {
         const badgeClass = item.ItemStatus.toLowerCase().replace(/\s+/g, '-');
+        
+        // --- SECURITY FIX: ESCAPE HTML ---
         return `
         <tr>
-          <td>${item.ItemID}</td>
-          <td>${item.ItemName}</td>
-          <td>${item.Category}</td>
-          <td>${item.ItemQuantity}</td>
-          <td>${item.ItemDescription || 'N/A'}</td>
-          <td><span class="statusBadge ${badgeClass}">${item.ItemStatus}</span></td>
-          <td>${item.DateofStockIn}</td>
+          <td>${escapeHtml(item.ItemID)}</td>
+          <td>${escapeHtml(item.ItemName)}</td>
+          <td>${escapeHtml(item.Category)}</td>
+          <td>${escapeHtml(item.ItemQuantity)}</td>
+          <td>${escapeHtml(item.ItemDescription || 'N/A')}</td>
+          <td><span class="statusBadge ${badgeClass}">${escapeHtml(item.ItemStatus)}</span></td>
+          <td>${escapeHtml(item.DateofStockIn)}</td>
           <td class="action-cell">
               <button class="action-btn edit-btn" data-id="${item.ItemID}">Edit</button>
               <button class="action-btn delete-btn" data-id="${item.ItemID}">Delete</button>
@@ -493,21 +502,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateSortHeaders('requests-tab', sortState.requests);
 
-    document
-      .querySelectorAll('#requestsTableBody .edit-btn')
-      .forEach((btn) => {
+    // Re-attach Listeners
+    document.querySelectorAll('#requestsTableBody .edit-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
           const itemId = parseInt(e.target.dataset.id);
           const itemToEdit = allInventoryData.find((i) => i.ItemID == itemId);
-          if (itemToEdit) {
-            openEditModal(itemToEdit);
-          }
+          if (itemToEdit) openEditModal(itemToEdit);
         });
       });
 
-    document
-      .querySelectorAll('#requestsTableBody .delete-btn')
-      .forEach((btn) => {
+    document.querySelectorAll('#requestsTableBody .delete-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
           const itemId = parseInt(e.target.dataset.id);
           currentEditItemId = itemId;
@@ -516,7 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
-  function renderHistoryTable() {
+function renderHistoryTable() {
     const category = categoryFilterHistory.value.toLowerCase();
     const status = statusFilterHistory.value.toLowerCase();
     const search = searchInputHistory.value.toLowerCase();
@@ -533,10 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return matchCategory && matchStatus && matchSearch;
     });
 
-    const {
-      column,
-      direction
-    } = sortState.history;
+    const { column, direction } = sortState.history;
     sortData(filteredData, column, direction);
 
     const page = currentPages.history;
@@ -573,17 +574,18 @@ document.addEventListener('DOMContentLoaded', () => {
           const oldQty = (log.OldQuantity === null || log.OldQuantity === undefined) ? 'N/A' : log.OldQuantity;
           const newQty = (log.NewQuantity === null || log.NewQuantity === undefined) ? 'N/A' : log.NewQuantity;
 
+          // --- SECURITY FIX: ESCAPE HTML ---
           return `
             <tr>
-              <td>${log.InvLogID}</td>
-              <td>${log.ItemName}</td>
-              <td>${log.Category}</td>
-              <td>${oldQty}</td>
-              <td class="${changeClass}">${quantityChangeText}</td>
-              <td>${newQty}</td>
-              <td>${log.ItemStatus}</td>
-              <td>${log.DateofStockIn || 'N/A'}</td>
-              <td>${log.PerformedBy}</td>
+              <td>${escapeHtml(log.InvLogID)}</td>
+              <td>${escapeHtml(log.ItemName)}</td>
+              <td>${escapeHtml(log.Category)}</td>
+              <td>${escapeHtml(oldQty)}</td>
+              <td class="${changeClass}">${escapeHtml(quantityChangeText)}</td>
+              <td>${escapeHtml(newQty)}</td>
+              <td>${escapeHtml(log.ItemStatus)}</td>
+              <td>${escapeHtml(log.DateofStockIn || 'N/A')}</td>
+              <td>${escapeHtml(log.PerformedBy)}</td>
             </tr>
           `;
         }
