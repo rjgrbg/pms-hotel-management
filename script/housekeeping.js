@@ -2,219 +2,188 @@
 let currentRequestsData = [];
 let currentStaffData = [];
 let currentHistoryData = [];
-let currentLinensData = [];
 let allRooms = [];
-let linensTypes = [];
-let amenitiesTypes = [];
 
 let filteredRequests = [];
 let filteredStaff = [];
-let filteredHistory = [];
-let filteredLinens = [];
+let filteredHistory = []; // This will be used by housekeeping.history.js
 
 let selectedStaffId = null;
-let currentRequestId = null;
-let currentSubTab = 'linens'; // 'linens' or 'amenities'
-let currentItemId = null; // For edit/delete operations
-let pendingAction = null; // For confirmation modal
+let currentRoomId = null; // Used for both assigning and editing room status
+let confirmCallback = null; 
+let selectedTaskTypes = ''; // For the new assign staff workflow
 
 // Pagination State
 const paginationState = {
   requests: { currentPage: 1, itemsPerPage: 10 },
-  history: { currentPage: 1, itemsPerPage: 10 },
-  linens: { currentPage: 1, itemsPerPage: 10 }
+  history: { currentPage: 1, itemsPerPage: 10 }
 };
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-  // Load data passed from PHP
-  currentRequestsData = typeof initialRequestsData !== 'undefined' ? initialRequestsData : [];
-  currentStaffData = typeof availableStaffData !== 'undefined' ? availableStaffData : [];
-  currentLinensData = typeof initialLinensAmenitiesData !== 'undefined' ? initialLinensAmenitiesData : [];
-  allRooms = typeof allRoomsData !== 'undefined' ? allRoomsData : [];
-  linensTypes = typeof linensTypesData !== 'undefined' ? linensTypesData : [];
-  amenitiesTypes = typeof amenitiesTypesData !== 'undefined' ? amenitiesTypesData : [];
+  console.log('DOM Loaded - Initializing Housekeeping...');
+  // Use the new variable names passed from PHP
+  currentRequestsData = typeof initialRequestsData !== 'undefined' ? [...initialRequestsData] : [];
+  currentStaffData = typeof availableStaffData !== 'undefined' ? [...availableStaffData] : [];
+  currentHistoryData = typeof initialHistoryData !== 'undefined' ? [...initialHistoryData] : [];
+  allRooms = typeof allRoomsData !== 'undefined' ? [...allRoomsData] : [];
+
+  console.log('Initial Data:', {
+    requests: currentRequestsData.length,
+    staff: currentStaffData.length,
+    history: currentHistoryData.length,
+    rooms: allRooms.length
+  });
+
+  // Populate filter dropdowns
+  populateFloorFilterOptions();
+  populateHistoryFloorFilterOptions();
+  updateRoomFilterOptions();
+  updateHistoryRoomFilterOptions();
 
   // Initial render
   applyRequestFiltersAndRender();
-  applyLinensFiltersAndRender();
-
-  // Setup event listeners
-  setupEventListeners();
-  populateStaticFilters();
-  populateLinensFilters();
-});
-
-// ===== SETUP EVENT LISTENERS =====
-function setupEventListeners() {
-  // Tab Navigation
-  const tabBtns = document.querySelectorAll('.tabBtn');
-  tabBtns.forEach(btn => {
+  applyHistoryFiltersAndRender();
+  
+  // ----- TAB NAVIGATION -----
+  document.querySelectorAll('.tabBtn').forEach(btn => {
     btn.addEventListener('click', () => {
-      const tabName = btn.getAttribute('data-tab');
+      const tabId = btn.dataset.tab;
       document.querySelectorAll('.tabBtn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tabContent').forEach(content => content.classList.remove('active'));
+      document.querySelectorAll('.tabContent').forEach(c => c.classList.remove('active'));
       btn.classList.add('active');
-      const activeTab = document.getElementById(`${tabName}-tab`);
-      if (activeTab) activeTab.classList.add('active');
+      document.getElementById(`${tabId}-tab`).classList.add('active');
+      
+      // Store the active tab
+      sessionStorage.setItem('housekeeping_activeTab', tabId);
     });
   });
 
-  // Sub-tab Navigation (Linens/Amenities)
-  const subTabBtns = document.querySelectorAll('.subTabBtn');
-  subTabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const subTab = btn.getAttribute('data-subtab');
-      currentSubTab = subTab;
-      document.querySelectorAll('.subTabBtn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      applyLinensFiltersAndRender();
-      updateTypesFilter();
-    });
+  // Restore active tab
+  const activeTab = sessionStorage.getItem('housekeeping_activeTab') || 'requests';
+  document.querySelector(`.tabBtn[data-tab="${activeTab}"]`).click();
+
+  // ----- SHARED MODAL/PROFILE LISTENERS -----
+  setupCommonUIListeners();
+
+  // ----- REQUESTS TAB LISTENERS -----
+  setupRequestsTabListeners();
+
+  // ----- HISTORY TAB LISTENERS -----
+  setupHistoryTabListeners();
+  
+  // ----- MODAL-SPECIFIC LISTENERS -----
+  
+  // Staff Modal
+  document.getElementById('staffModalSearchInput')?.addEventListener('input', applyStaffFilterAndRender);
+  document.getElementById('closeStaffModalBtn')?.addEventListener('click', hideStaffModal);
+  document.getElementById('cancelStaffBtn')?.addEventListener('click', hideStaffModal);
+  document.getElementById('confirmStaffAssignBtn')?.addEventListener('click', handleConfirmStaffAssign);
+
+  // Task Type Modal
+  document.getElementById('taskTypeForm')?.addEventListener('submit', handleAssignStaff);
+  document.getElementById('confirmTaskTypeBtn')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('taskTypeForm').dispatchEvent(new Event('submit'));
+  });
+  document.getElementById('cancelTaskTypeBtn')?.addEventListener('click', hideTaskTypeModal);
+  document.getElementById('closeTaskTypeModalBtn')?.addEventListener('click', hideTaskTypeModal);
+  document.getElementById('task_select_all')?.addEventListener('change', (e) => {
+      document.querySelectorAll('#taskTypeCheckboxContainer input[type="checkbox"]').forEach(cb => {
+          cb.checked = e.target.checked;
+      });
   });
 
-  // Request Filters
-  document.getElementById('floorFilter')?.addEventListener('change', applyRequestFiltersAndRender);
-  document.getElementById('roomFilter')?.addEventListener('change', applyRequestFiltersAndRender);
-  document.getElementById('searchInput')?.addEventListener('input', applyRequestFiltersAndRender);
-  document.getElementById('refreshBtn')?.addEventListener('click', resetRequestFilters);
-  document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsCSV);
-
-  // Linens Filters
-  document.getElementById('floorFilterLinens')?.addEventListener('change', applyLinensFiltersAndRender);
-  document.getElementById('roomFilterLinens')?.addEventListener('change', applyLinensFiltersAndRender);
-  document.getElementById('statusFilterLinens')?.addEventListener('change', applyLinensFiltersAndRender);
-  document.getElementById('linensSearchInput')?.addEventListener('input', applyLinensFiltersAndRender);
-  document.getElementById('linensRefreshBtn')?.addEventListener('click', resetLinensFilters);
-  document.getElementById('linensDownloadBtn')?.addEventListener('click', downloadLinensCSV);
-
-  // Add Item Button
-  document.getElementById('addItemBtn')?.addEventListener('click', showAddItemModal);
-
-  // Add/Edit Item Modal
-  document.getElementById('closeAddItemBtn')?.addEventListener('click', hideAddItemModal);
-  document.getElementById('cancelAddItemBtn')?.addEventListener('click', hideAddItemModal);
-  document.getElementById('addItemForm')?.addEventListener('submit', handleAddItemSubmit);
-  document.getElementById('itemFloor')?.addEventListener('change', updateRoomDropdown);
+  // Edit Room Status Modal
+  document.getElementById('editRoomStatusForm')?.addEventListener('submit', submitEditRoomStatus);
+  document.getElementById('closeEditRoomStatusBtn')?.addEventListener('click', hideEditRoomStatusModal);
+  document.getElementById('cancelEditRoomStatusBtn')?.addEventListener('click', hideEditRoomStatusModal);
 
   // Confirmation Modal
   document.getElementById('cancelConfirmBtn')?.addEventListener('click', hideConfirmModal);
-  document.getElementById('confirmActionBtn')?.addEventListener('click', handleConfirmAction);
-
+  document.getElementById('confirmActionBtn')?.addEventListener('click', () => {
+    if (typeof confirmCallback === 'function') {
+      confirmCallback();
+    }
+    hideConfirmModal();
+  });
+  
   // Success Modal
   document.getElementById('closeSuccessBtn')?.addEventListener('click', hideSuccessModal);
   document.getElementById('okaySuccessBtn')?.addEventListener('click', hideSuccessModal);
+  
+  console.log('Housekeeping Initialization Complete.');
+});
 
-  // Delete Modal
-  document.getElementById('closeDeleteBtn')?.addEventListener('click', hideDeleteModal);
-  document.getElementById('cancelDeleteBtn')?.addEventListener('click', hideDeleteModal);
-  document.getElementById('confirmDeleteBtn')?.addEventListener('click', handleConfirmDelete);
-
-  // Staff Modal
-  document.getElementById('closeStaffModalBtn')?.addEventListener('click', hideStaffModal);
-  document.getElementById('cancelStaffBtn')?.addEventListener('click', hideStaffModal);
-  document.getElementById('staffModalSearchInput')?.addEventListener('input', filterStaffInModal);
-  document.getElementById('staffModal')?.addEventListener('click', (e) => {
-    if (e.target === e.currentTarget) hideStaffModal();
-  });
-
-  // Profile Sidebar & Logout
+// ===== SHARED UI LISTENERS =====
+function setupCommonUIListeners() {
   const profileBtn = document.getElementById('profileBtn');
   const sidebar = document.getElementById('profile-sidebar');
   const closeSidebarBtn = document.getElementById('sidebar-close-btn');
-  profileBtn?.addEventListener('click', () => sidebar?.classList.add('active'));
-  closeSidebarBtn?.addEventListener('click', () => sidebar?.classList.remove('active'));
-
   const logoutBtn = document.getElementById('logoutBtn');
-  const logoutModal = document.getElementById('logoutModal');
   const closeLogoutBtn = document.getElementById('closeLogoutBtn');
   const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
   const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
 
-  logoutBtn?.addEventListener('click', (e) => { e.preventDefault(); if(logoutModal) logoutModal.style.display = 'flex'; });
-  closeLogoutBtn?.addEventListener('click', () => { if(logoutModal) logoutModal.style.display = 'none'; });
-  cancelLogoutBtn?.addEventListener('click', () => { if(logoutModal) logoutModal.style.display = 'none'; });
-  confirmLogoutBtn?.addEventListener('click', () => { window.location.href = 'logout.php'; });
-  logoutModal?.addEventListener('click', (e) => { if (e.target === e.currentTarget) logoutModal.style.display = 'none'; });
-}
-
-// ===== PAGINATION UTILITIES =====
-function paginateData(data, page, itemsPerPage) {
-  const startIndex = (page - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  return data.slice(startIndex, endIndex);
-}
-
-function getTotalPages(dataLength, itemsPerPage) {
-  return Math.ceil(dataLength / itemsPerPage);
-}
-
-function renderPaginationControls(containerId, totalPages, currentPage, onPageChange) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  container.innerHTML = '';
-  if (totalPages <= 1) return;
-
-  // Previous Button
-  const prevBtn = document.createElement('button');
-  prevBtn.className = 'paginationBtn';
-  prevBtn.textContent = '←';
-  prevBtn.disabled = currentPage === 1;
-  prevBtn.onclick = () => onPageChange(currentPage - 1);
-  container.appendChild(prevBtn);
-
-  // Page Number Logic
-  const maxVisiblePages = 5;
-  let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-  let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-  if (endPage - startPage + 1 < maxVisiblePages) {
-    startPage = Math.max(1, endPage - maxVisiblePages + 1);
-  }
-
-  if (startPage > 1) {
-    const firstPageBtn = document.createElement('button');
-    firstPageBtn.className = 'paginationBtn';
-    firstPageBtn.textContent = '1';
-    firstPageBtn.onclick = () => onPageChange(1);
-    container.appendChild(firstPageBtn);
-    if (startPage > 2) {
-      const dots = document.createElement('span');
-      dots.textContent = '...';
-      dots.className = 'paginationDots';
-      container.appendChild(dots);
+  profileBtn?.addEventListener('click', () => sidebar.classList.toggle('active'));
+  closeSidebarBtn?.addEventListener('click', () => sidebar.classList.remove('active'));
+  logoutBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('logoutModal').style.display = 'flex';
+  });
+  closeLogoutBtn?.addEventListener('click', () => document.getElementById('logoutModal').style.display = 'none');
+  cancelLogoutBtn?.addEventListener('click', () => document.getElementById('logoutModal').style.display = 'none');
+  confirmLogoutBtn?.addEventListener('click', () => window.location.href = 'logout.php');
+  
+  // Close sidebar if clicking outside
+  document.addEventListener('click', (event) => {
+    if (sidebar && !sidebar.contains(event.target) && profileBtn && !profileBtn.contains(event.target)) {
+      sidebar.classList.remove('active');
     }
-  }
-
-  for (let i = startPage; i <= endPage; i++) {
-    const pageBtn = document.createElement('button');
-    pageBtn.className = `paginationBtn ${i === currentPage ? 'active' : ''}`;
-    pageBtn.textContent = i;
-    pageBtn.onclick = () => onPageChange(i);
-    container.appendChild(pageBtn);
-  }
-
-  if (endPage < totalPages) {
-    if (endPage < totalPages - 1) {
-      const dots = document.createElement('span');
-      dots.textContent = '...';
-      dots.className = 'paginationDots';
-      container.appendChild(dots);
-    }
-    const lastPageBtn = document.createElement('button');
-    lastPageBtn.className = 'paginationBtn';
-    lastPageBtn.textContent = totalPages;
-    lastPageBtn.onclick = () => onPageChange(totalPages);
-    container.appendChild(lastPageBtn);
-  }
-
-  // Next Button
-  const nextBtn = document.createElement('button');
-  nextBtn.className = 'paginationBtn';
-  nextBtn.textContent = '→';
-  nextBtn.disabled = currentPage === totalPages;
-  nextBtn.onclick = () => onPageChange(currentPage + 1);
-  container.appendChild(nextBtn);
+  });
 }
+
+// ===== REQUESTS TAB LISTENERS =====
+function setupRequestsTabListeners() {
+  document.getElementById('floorFilter')?.addEventListener('change', () => {
+    updateRoomFilterOptions();
+    applyRequestFiltersAndRender();
+  });
+  document.getElementById('roomFilter')?.addEventListener('change', applyRequestFiltersAndRender);
+  document.getElementById('searchInput')?.addEventListener('input', applyRequestFiltersAndRender);
+  document.getElementById('refreshBtn')?.addEventListener('click', handleRefreshRequests);
+  document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsPDF);
+
+  // Event delegation for action buttons
+  document.getElementById('requestsTableBody')?.addEventListener('click', (e) => {
+    if (e.target.closest('.assign-staff-btn')) {
+      handleAssignStaffClick(e.target.closest('.assign-staff-btn'));
+    }
+    if (e.target.closest('.edit-status-btn')) {
+      handleEditStatusClick(e.target.closest('.edit-status-btn'));
+    }
+    if (e.target.closest('.cancel-task-btn')) {
+      handleCancelTaskClick(e.target.closest('.cancel-task-btn'));
+    }
+  });
+}
+
+// ===== HISTORY TAB LISTENERS =====
+function setupHistoryTabListeners() {
+  document.getElementById('floorFilterHistory')?.addEventListener('change', () => {
+    updateHistoryRoomFilterOptions();
+    applyHistoryFiltersAndRender();
+  });
+  document.getElementById('roomFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender);
+  document.getElementById('dateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender);
+  document.getElementById('historySearchInput')?.addEventListener('input', applyHistoryFiltersAndRender);
+  document.getElementById('historyRefreshBtn')?.addEventListener('click', handleRefreshHistory);
+  document.getElementById('historyDownloadBtn')?.addEventListener('click', downloadHistoryPDF);
+}
+
+// ===================================
+// ===== REQUESTS TAB FUNCTIONS ======
+// ===================================
 
 // ===== RENDER REQUESTS TABLE =====
 function renderRequestsTable() {
@@ -229,587 +198,350 @@ function renderRequestsTable() {
   if (state.currentPage > totalPages) {
     state.currentPage = Math.max(1, totalPages);
   }
-
   const paginatedData = paginateData(filteredRequests, state.currentPage, state.itemsPerPage);
 
-  if (paginatedData.length === 0 && state.currentPage === 1) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No rooms need cleaning or match filters.</td></tr>';
-  } else if (paginatedData.length === 0 && state.currentPage > 1) {
-    state.currentPage--;
-    renderRequestsTable();
-    return;
-  } else {
-    tbody.innerHTML = paginatedData.map(req => `
-      <tr>
-        <td>${req.floor ?? 'N/A'}</td>
-        <td>${req.room ?? 'N/A'}</td>
-        <td>${req.date ?? 'N/A'}</td>
-        <td>${req.requestTime ?? 'N/A'}</td>
-        <td>${req.lastCleaned ?? 'N/A'}</td>
-        <td><span class="statusBadge needs-cleaning">Needs Cleaning</span></td>
-        <td>
-          <button class="assignBtn" data-room-id="${req.id}">Assign Staff</button>
-        </td>
-      </tr>
-    `).join('');
-
-    tbody.querySelectorAll('.assignBtn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        currentRequestId = parseInt(e.target.getAttribute('data-room-id'));
-        showStaffModal();
-      });
-    });
-  }
-
   recordCountEl.textContent = filteredRequests.length;
+
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No rooms found.</td></tr>'; // Colspan is 8
+  } else {
+    tbody.innerHTML = paginatedData.map(req => {
+        const statusClass = req.status.toLowerCase().replace(/ /g, '-');
+        const statusDisplay = req.status;
+
+        let assignButton;
+        const status = req.status;
+
+        if (req.staff !== 'Not Assigned') {
+            assignButton = `<button class="assignBtn assigned" disabled>${req.staff}</button>`;
+        } else if (['Needs Cleaning'].includes(status)) { // MODIFIED
+            assignButton = `<button class="assignBtn assign-staff-btn" data-room-id="${req.id}" data-room-number="${req.room}">ASSIGN</button>`;
+        } else {
+            assignButton = `<button class="assignBtn" disabled>ASSIGN</button>`;
+        }
+
+        let actionButton;
+        if (status === 'Pending') {
+            actionButton = `<button class="actionBtn cancel-task-btn" data-task-id="${req.taskId}"><i class="fas fa-times"></i></button>`; // MODIFIED
+        } else if (status === 'Available' || status === 'Needs Cleaning') {
+            actionButton = `<button class="actionBtn edit-status-btn" data-room-id="${req.id}" data-room-number="${req.room}" data-current-status="${status}"><i class="fas fa-edit"></i></button>`;
+        } else {
+            actionButton = `<button class="actionBtn" disabled><i class="fas fa-edit"></i></button>`;
+        }
+
+      return `
+        <tr data-room-id="${req.id}">
+          <td>${req.floor ?? 'N/A'}</td>
+          <td>${req.room ?? 'N/A'}</td>
+          <td>${req.date ?? 'N/A'}</td>
+          <td>${req.requestTime ?? 'N/A'}</td>
+          <td>${req.lastClean ?? 'N/A'}</td> <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
+          <td>${assignButton}</td>
+          <td>${actionButton}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
   renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
     state.currentPage = page;
     renderRequestsTable();
   });
 }
 
-// ===== RENDER LINENS & AMENITIES TABLE =====
-function renderLinensTable() {
-  const tbody = document.getElementById('linensTableBody');
-  const recordCountEl = document.getElementById('linensRecordCount');
-  const paginationControlsContainerId = 'linensPaginationControls';
-  const state = paginationState.linens;
+// ===== ACTION HANDLERS (Requests) =====
 
-  if (!tbody || !recordCountEl) return;
-
-  const totalPages = getTotalPages(filteredLinens.length, state.itemsPerPage);
-  if (state.currentPage > totalPages) {
-    state.currentPage = Math.max(1, totalPages);
-  }
-
-  const paginatedData = paginateData(filteredLinens, state.currentPage, state.itemsPerPage);
-
-  if (paginatedData.length === 0 && state.currentPage === 1) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No items found matching filters.</td></tr>';
-  } else if (paginatedData.length === 0 && state.currentPage > 1) {
-    state.currentPage--;
-    renderLinensTable();
-    return;
-  } else {
-    tbody.innerHTML = paginatedData.map(item => `
-      <tr>
-        <td>${item.floor ?? 'N/A'}</td>
-        <td>${item.room ?? 'N/A'}</td>
-        <td>${item.type ?? 'N/A'}</td>
-        <td>${item.item ?? 'N/A'}</td>
-        <td>${item.lastCleaned ?? 'Never'}</td>
-        <td><span class="statusBadge cleaned">Available</span></td>
-        <td>${item.remarks ?? ''}</td>
-        <td>
-          <button class="actionIconBtn editBtn" data-item-id="${item.id}" title="Edit">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button class="actionIconBtn deleteBtn" data-item-id="${item.id}" title="Delete">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
-      </tr>
-    `).join('');
-
-    // IMPORTANT: Add event listeners AFTER innerHTML is set
-    const editButtons = tbody.querySelectorAll('.editBtn');
-    const deleteButtons = tbody.querySelectorAll('.deleteBtn');
-
-    editButtons.forEach(btn => {
-      btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const itemId = parseInt(this.getAttribute('data-item-id'));
-        console.log('Edit clicked for item:', itemId); // Debug log
-        handleEditItem(itemId);
-      });
-    });
-
-    deleteButtons.forEach(btn => {
-      btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const itemId = parseInt(this.getAttribute('data-item-id'));
-        console.log('Delete clicked for item:', itemId); // Debug log
-        handleDeleteItem(itemId);
-      });
-    });
-  }
-
-  recordCountEl.textContent = filteredLinens.length;
-  renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderLinensTable();
-  });
+function handleAssignStaffClick(button) {
+  currentRoomId = parseInt(button.dataset.roomId);
+  const roomNumber = button.dataset.roomNumber;
+  
+  // Reset staff modal
+  selectedStaffId = null;
+  document.getElementById('confirmStaffAssignBtn').disabled = true;
+  document.getElementById('staffModalSearchInput').value = '';
+  applyStaffFilterAndRender();
+  
+  // Reset and prep task type modal
+  document.getElementById('taskTypeForm').reset();
+  document.getElementById('taskTypeModalRoomNumber').textContent = roomNumber;
+  document.getElementById('taskTypeRoomId').value = currentRoomId;
+  
+  showTaskTypeModal(); // Show task type modal first
 }
 
-// ===== RENDER STAFF LIST MODAL =====
-function renderStaffList(staffToRender = filteredStaff) {
-  const staffList = document.getElementById('staffList');
-  if (!staffList) return;
+function handleEditStatusClick(button) {
+  currentRoomId = parseInt(button.dataset.roomId);
+  const roomNumber = button.dataset.roomNumber;
+  const currentStatus = button.dataset.currentStatus;
 
-  if (staffToRender.length === 0) {
-    staffList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No available staff found.</div>';
-    return;
-  }
+  console.log(`Editing status for Room ${roomNumber} (ID: ${currentRoomId}), current: ${currentStatus}`);
 
-  staffList.innerHTML = staffToRender.map(staff => `
-    <div class="staffListItem ${staff.assigned ? 'assigned' : ''}" data-staff-id="${staff.id}">
-      <div class="staffListName">${staff.name}</div>
-      <span class="staffListStatus ${staff.assigned ? 'assigned' : 'available'}">${staff.assigned ? 'Assigned' : 'Available'}</span>
-    </div>
-  `).join('');
+  document.getElementById('editRoomStatusModalTitle').textContent = `Edit Room Status`;
+  document.getElementById('editRoomStatusRoomNumber').textContent = roomNumber;
+  document.getElementById('editRoomStatusRoomId').value = currentRoomId;
+  document.getElementById('editRoomStatusSelect').value = currentStatus;
+  
+  showEditRoomStatusModal();
 }
 
-// ===== FILTERING LOGIC =====
+function handleCancelTaskClick(button) {
+  const taskIdToCancel = parseInt(button.dataset.taskId); // MODIFIED
+  if (!taskIdToCancel) return;
+
+  console.log(`Attempting to cancel task: ${taskIdToCancel}`);
+  
+  showConfirmModal(
+    'Cancel Task?',
+    'Are you sure you want to cancel this pending task?',
+    async () => {
+      console.log(`Confirmed cancellation for task: ${taskIdToCancel}`);
+      try {
+        const result = await handleApiCall('cancel_task', { taskId: taskIdToCancel }); // MODIFIED
+        if (result.status === 'success') {
+          showSuccessModal(result.message || 'Task cancelled successfully.');
+          // Refresh data
+          const index = currentRequestsData.findIndex(r => r.taskId === taskIdToCancel);
+          if (index > -1) {
+            // Update local data to reflect cancellation
+            currentRequestsData[index].status = 'Available'; // Or 'Needs Cleaning', depending on logic
+            currentRequestsData[index].staff = 'Not Assigned';
+            currentRequestsData[index].taskId = null;
+            currentRequestsData[index].date = 'N/A';
+            currentRequestsData[index].requestTime = 'N/A';
+          }
+          applyRequestFiltersAndRender();
+        } else {
+          showErrorModal(result.message || 'Failed to cancel task.');
+        }
+      } catch (error) {
+        console.error('Error cancelling task:', error);
+        showErrorModal('An error occurred while cancelling the task.');
+      }
+    }
+  );
+}
+
+// ===== MODAL SUBMIT HANDLERS (Requests) =====
+
+//
+// THIS IS THE CORRECTED FUNCTION
+//
+async function submitEditRoomStatus(e) {
+  e.preventDefault();
+  
+  // 1. Get the room number from the modal's text element
+  const roomNumberEl = document.getElementById('editRoomStatusRoomNumber');
+  const roomNumber = roomNumberEl ? roomNumberEl.textContent : ''; 
+  
+  const newStatus = document.getElementById('editRoomStatusSelect').value;
+
+  if (!roomNumber) {
+      alert('Error: Could not find room number.');
+      return;
+  }
+
+  console.log(`Submitting new status for Room Number ${roomNumber}: ${newStatus}`);
+  
+  try {
+    const response = await fetch('room_actions.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // 2. Match the backend's 'update_status' handler
+        body: JSON.stringify({ 
+            action: 'update_status',         // <-- FIX: Match backend action
+            room_number: roomNumber,         // <-- FIX: Send room_number
+            new_status: newStatus            // <-- FIX: Send new_status
+        }) 
+    });
+    
+    const result = await response.json();
+
+    // 3. Check for 'success' boolean, not 'status' string
+    if (result.success) {
+      hideEditRoomStatusModal();
+      showSuccessModal('Room status updated successfully.');
+      
+      // Update local data
+      const index = currentRequestsData.findIndex(r => r.room === roomNumber); // Find by room number
+      if (index > -1) {
+        currentRequestsData[index].status = newStatus;
+        if (newStatus === 'Available') {
+            // Clear task-related data if set back to Available
+            currentRequestsData[index].staff = 'Not Assigned';
+            currentRequestsData[index].taskId = null; // Use 'taskId' for housekeeping
+            currentRequestsData[index].date = 'N/A';
+            currentRequestsData[index].requestTime = 'N/A';
+        }
+      }
+      applyRequestFiltersAndRender();
+      
+    } else {
+        document.getElementById('editRoomStatusErrorMessage').textContent = result.message || 'An error occurred.';
+        showEditRoomStatusModal('error-view');
+    }
+  } catch (error) {
+    console.error('Error updating room status:', error);
+    document.getElementById('editRoomStatusErrorMessage').textContent = error.message;
+    showEditRoomStatusModal('error-view');
+  }
+}
+
+async function handleAssignStaff(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(document.getElementById('taskTypeForm'));
+  selectedTaskTypes = formData.getAll('taskType[]').join(', '); // MODIFIED
+
+  if (!selectedTaskTypes) {
+    alert('Please select at least one task type.');
+    return;
+  }
+  
+  console.log(`Task types selected for Room ID ${currentRoomId}: ${selectedTaskTypes}`);
+  
+  // Hide task modal, show staff modal
+  hideTaskTypeModal();
+  showStaffModal();
+}
+
+// This is called when "ASSIGN STAFF" is clicked in the staff modal
+async function handleConfirmStaffAssign() {
+  if (!selectedStaffId || !currentRoomId || !selectedTaskTypes) {
+    alert('Error: Missing staff, room, or task type information.');
+    return;
+  }
+  
+  console.log(`Assigning Staff ${selectedStaffId} to Room ${currentRoomId} for tasks: ${selectedTaskTypes}`);
+
+  try {
+    const data = {
+      roomId: currentRoomId,
+      staffId: selectedStaffId,
+      taskTypes: selectedTaskTypes // MODIFIED
+    };
+    
+    const result = await handleApiCall('assign_task', data);
+
+    if (result.status === 'success') {
+      hideStaffModal();
+      showSuccessModal(result.message || 'Task assigned successfully.');
+
+      // Update local data
+      const index = currentRequestsData.findIndex(r => r.id === currentRoomId);
+      if (index > -1) {
+        currentRequestsData[index].status = 'Pending';
+        currentRequestsData[index].staff = result.staffName || 'Assigned'; // Get name from API response
+        // In a real app, we'd get the new taskId, date, etc.
+        // For now, we'll just reload or refresh filters
+      }
+      applyRequestFiltersAndRender();
+      
+      // Also update the staff member's status in the local staff data
+      const staffIndex = currentStaffData.findIndex(s => s.id === selectedStaffId);
+      if (staffIndex > -1) {
+          currentStaffData[staffIndex].availability = 'Assigned';
+      }
+
+    } else {
+      hideStaffModal();
+      showErrorModal(result.message || 'Failed to assign task.');
+    }
+  } catch (error) {
+    console.error('Error assigning task:', error);
+    hideStaffModal();
+    showErrorModal('An error occurred while assigning the task.');
+  } finally {
+    // Clear selections
+    currentRoomId = null;
+    selectedStaffId = null;
+    selectedTaskTypes = '';
+  }
+}
+
+// ===== FILTER & RENDER (REQUESTS) =====
 function applyRequestFiltersAndRender() {
-  const floor = document.getElementById('floorFilter')?.value || '';
-  const room = document.getElementById('roomFilter')?.value || '';
-  const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+  const floor = document.getElementById('floorFilter').value;
+  const room = document.getElementById('roomFilter').value;
+  const search = document.getElementById('searchInput').value.toLowerCase();
 
   filteredRequests = currentRequestsData.filter(req => {
-    const matchFloor = !floor || req.floor.toString() === floor;
-    const matchRoom = !room || req.room.toString() === room;
-    const matchSearch = !search || req.room.toString().includes(search);
-
+    const matchFloor = !floor || (req.floor && req.floor.toString() === floor);
+    const matchRoom = !room || (req.room && req.room.toString() === room);
+    const matchSearch = !search ||
+      (req.room && req.room.toString().includes(search)) ||
+      (req.staff && req.staff.toLowerCase().includes(search)) ||
+      (req.status && req.status.toLowerCase().includes(search));
     return matchFloor && matchRoom && matchSearch;
   });
 
-  paginationState.requests.currentPage = 1;
+  // Sort: 'Needs Cleaning' and 'Pending' first, then by floor/room
+  filteredRequests.sort((a, b) => {
+    const statusA = a.status.toLowerCase();
+    const statusB = b.status.toLowerCase();
+    const priority = { 'needs cleaning': 1, 'pending': 2, 'in progress': 3 };
+
+    const priorityA = priority[statusA] || 4;
+    const priorityB = priority[statusB] || 4;
+
+    if (priorityA !== priorityB) return priorityA - priorityB;
+    if (a.floor !== b.floor) return (a.floor || 0) - (b.floor || 0);
+    return (a.room || '').localeCompare(b.room || '', undefined, { numeric: true });
+  });
+
   renderRequestsTable();
-  updateRoomFilterOptions();
 }
 
-function applyLinensFiltersAndRender() {
-  const floor = document.getElementById('floorFilterLinens')?.value || '';
-  const room = document.getElementById('roomFilterLinens')?.value || '';
-  const status = document.getElementById('statusFilterLinens')?.value || '';
-  const search = document.getElementById('linensSearchInput')?.value.toLowerCase() || '';
-
-  filteredLinens = currentLinensData.filter(item => {
-    const matchCategory = item.category.toLowerCase() === currentSubTab;
-    const matchFloor = !floor || item.floor.toString() === floor;
-    const matchRoom = !room || item.room.toString() === room;
-    const matchStatus = !status; // Status filter logic can be added here
-    const matchSearch = !search || item.item.toLowerCase().includes(search) || item.type.toLowerCase().includes(search);
-
-    return matchCategory && matchFloor && matchRoom && matchStatus && matchSearch;
-  });
-
-  paginationState.linens.currentPage = 1;
-  renderLinensTable();
-  updateLinensRoomFilterOptions();
-}
-
-function filterStaffInModal() {
-  const search = document.getElementById('staffModalSearchInput')?.value.toLowerCase() || '';
-  filteredStaff = currentStaffData.filter(staff =>
-    staff.name.toLowerCase().includes(search)
-  );
-  renderStaffList();
-}
-
-// ===== FILTER UTILITIES =====
-function populateStaticFilters() {
-  // Populate Floor filter for Requests
-  const floorFilter = document.getElementById('floorFilter');
-  const floors = [...new Set(currentRequestsData.map(r => r.floor))].sort((a, b) => a - b);
-  if (floorFilter) {
-    floors.forEach(f => {
-      const option = document.createElement('option');
-      option.value = f;
-      option.textContent = f;
-      floorFilter.appendChild(option);
-    });
-  }
-  updateRoomFilterOptions();
-}
-
-function populateLinensFilters() {
-  // Populate Floor filter
-  const floorFilter = document.getElementById('floorFilterLinens');
-  const floors = [...new Set(allRooms.map(r => r.floor))].sort((a, b) => a - b);
-  if (floorFilter) {
-    floors.forEach(f => {
-      const option = document.createElement('option');
-      option.value = f;
-      option.textContent = f;
-      floorFilter.appendChild(option);
-    });
-  }
-
-  updateLinensRoomFilterOptions();
-}
-
-function updateRoomFilterOptions() {
-  const floorFilter = document.getElementById('floorFilter');
-  const roomFilter = document.getElementById('roomFilter');
-  if (!roomFilter) return;
-
-  const selectedFloor = floorFilter?.value;
-  const currentRoomValue = roomFilter.value;
-
-  roomFilter.innerHTML = '<option value="">Room</option>';
-
-  const roomsToShow = selectedFloor
-    ? currentRequestsData.filter(r => r.floor.toString() === selectedFloor)
-    : currentRequestsData;
-
-  const roomNumbers = [...new Set(roomsToShow.map(r => r.room))].sort((a, b) => a - b);
-
-  roomNumbers.forEach(roomNum => {
-    const option = document.createElement('option');
-    option.value = roomNum;
-    option.textContent = roomNum;
-    roomFilter.appendChild(option);
-  });
-
-  if (roomNumbers.includes(parseInt(currentRoomValue))) {
-    roomFilter.value = currentRoomValue;
-  }
-}
-
-function updateLinensRoomFilterOptions() {
-  const floorFilter = document.getElementById('floorFilterLinens');
-  const roomFilter = document.getElementById('roomFilterLinens');
-  if (!roomFilter) return;
-
-  const selectedFloor = floorFilter?.value;
-  const currentRoomValue = roomFilter.value;
-
-  roomFilter.innerHTML = '<option value="">Room</option>';
-
-  const roomsToShow = selectedFloor
-    ? allRooms.filter(r => r.floor.toString() === selectedFloor)
-    : allRooms;
-
-  const roomNumbers = [...new Set(roomsToShow.map(r => r.room))].sort((a, b) => a - b);
-
-  roomNumbers.forEach(roomNum => {
-    const option = document.createElement('option');
-    option.value = roomNum;
-    option.textContent = roomNum;
-    roomFilter.appendChild(option);
-  });
-
-  if (roomNumbers.includes(parseInt(currentRoomValue))) {
-    roomFilter.value = currentRoomValue;
-  }
-}
-
-function updateTypesFilter() {
-  // This function is called when sub-tab changes
-  // Types filter is now Status filter in the new design
-}
-
-function resetRequestFilters() {
+// ===== REFRESH & DOWNLOAD (REQUESTS) =====
+function handleRefreshRequests() {
+  // In a real app, this would fetch from the server.
+  // For now, we just reset filters and re-render.
+  console.log("Refreshing requests data...");
   document.getElementById('floorFilter').value = '';
   document.getElementById('roomFilter').value = '';
   document.getElementById('searchInput').value = '';
+
+  updateRoomFilterOptions(); // Must update rooms after clearing filters
   applyRequestFiltersAndRender();
 }
 
-function resetLinensFilters() {
-  document.getElementById('floorFilterLinens').value = '';
-  document.getElementById('roomFilterLinens').value = '';
-  document.getElementById('statusFilterLinens').value = '';
-  document.getElementById('linensSearchInput').value = '';
-  applyLinensFiltersAndRender();
-}
-
-// ===== MODAL VISIBILITY =====
-function showStaffModal() {
-  selectedStaffId = null;
-  document.getElementById('staffModalSearchInput').value = '';
-  filteredStaff = [...currentStaffData];
-  renderStaffList();
-  document.getElementById('staffModal').style.display = 'flex';
-}
-
-function hideStaffModal() {
-  document.getElementById('staffModal').style.display = 'none';
-}
-
-function showAddItemModal(isEdit = false, itemData = null) {
-  const modal = document.getElementById('addItemModal');
-  const modalTitle = document.getElementById('addItemModalTitle');
-  const submitBtn = document.getElementById('submitItemBtn');
-  
-  if (isEdit && itemData) {
-    modalTitle.textContent = 'Edit Item';
-    submitBtn.textContent = 'UPDATE ITEM';
-    
-    document.getElementById('itemId').value = itemData.id;
-    populateFloorDropdown();
-    document.getElementById('itemFloor').value = itemData.floor;
-    
-    updateRoomDropdown();
-    setTimeout(() => {
-      const roomSelect = document.getElementById('itemRoom');
-      const roomOption = Array.from(roomSelect.options).find(opt => opt.textContent == itemData.room);
-      if (roomOption) {
-        roomSelect.value = roomOption.value;
-      }
-    }, 50);
-    
-    document.getElementById('itemName').value = itemData.item;
-    document.getElementById('itemType').value = itemData.type;
-    
-    if (itemData.lastCleaned && itemData.lastCleaned !== 'Never') {
-      const date = new Date(itemData.lastCleaned);
-      const dateStr = date.toISOString().split('T')[0];
-      document.getElementById('itemLastReplaced').value = dateStr;
-    }
-  } else {
-    modalTitle.textContent = 'Add Item';
-    submitBtn.textContent = 'ADD ITEM';
-    document.getElementById('itemId').value = '';
-    document.getElementById('addItemForm').reset();
-    populateFloorDropdown();
-  }
-  
-  modal.style.display = 'flex';
-}
-
-function hideAddItemModal() {
-  document.getElementById('addItemModal').style.display = 'none';
-  document.getElementById('addItemForm').reset();
-}
-
-function showConfirmModal(title, text, actionText) {
-  document.getElementById('confirmModalTitle').textContent = title;
-  document.getElementById('confirmModalText').textContent = text;
-  document.getElementById('confirmActionBtn').textContent = actionText;
-  document.getElementById('confirmModal').style.display = 'flex';
-}
-
-function hideConfirmModal() {
-  document.getElementById('confirmModal').style.display = 'none';
-  pendingAction = null;
-}
-
-function showSuccessModal(message) {
-  document.getElementById('successModalMessage').textContent = message;
-  document.getElementById('successModal').style.display = 'flex';
-}
-
-function hideSuccessModal() {
-  document.getElementById('successModal').style.display = 'none';
-}
-
-function showDeleteModal() {
-  document.getElementById('deleteModal').style.display = 'flex';
-}
-
-function hideDeleteModal() {
-  document.getElementById('deleteModal').style.display = 'none';
-  currentItemId = null;
-}
-
-// ===== FORM HANDLING =====
-function populateFloorDropdown() {
-  const floorSelect = document.getElementById('itemFloor');
-  floorSelect.innerHTML = '<option value="">Select Floor</option>';
-  
-  const floors = [...new Set(allRooms.map(r => r.floor))].sort((a, b) => a - b);
-  floors.forEach(floor => {
-    const option = document.createElement('option');
-    option.value = floor;
-    option.textContent = floor;
-    floorSelect.appendChild(option);
-  });
-}
-
-function updateRoomDropdown() {
-  const floorSelect = document.getElementById('itemFloor');
-  const roomSelect = document.getElementById('itemRoom');
-  const selectedFloor = floorSelect.value;
-  
-  roomSelect.innerHTML = '<option value="">Select Room</option>';
-  
-  if (!selectedFloor) return;
-  
-  const rooms = allRooms.filter(r => r.floor.toString() === selectedFloor);
-  rooms.forEach(room => {
-    const option = document.createElement('option');
-    option.value = room.id;
-    option.textContent = room.room;
-    roomSelect.appendChild(option);
-  });
-}
-
-function handleAddItemSubmit(e) {
-  e.preventDefault();
-  
-  const itemId = document.getElementById('itemId').value;
-  const isEdit = itemId !== '';
-  
-  const formData = {
-    id: itemId,
-    roomId: document.getElementById('itemRoom').value,
-    item: document.getElementById('itemName').value,
-    type: document.getElementById('itemType').value,
-    lastReplaced: document.getElementById('itemLastReplaced').value,
-    category: currentSubTab
-  };
-  
-  const room = allRooms.find(r => r.id.toString() === formData.roomId);
-  if (!room) {
-    alert('Please select a valid room');
-    return;
-  }
-  
-  formData.floor = room.floor;
-  formData.room = room.room;
-  
-  pendingAction = {
-    type: isEdit ? 'edit' : 'add',
-    data: formData
-  };
-  
-  hideAddItemModal();
-  
-  if (isEdit) {
-    showConfirmModal(
-      'Are you sure you want to update this item?',
-      'Please review the details before confirming. Once updated, the changes will be reflected in the maintenance records.',
-      'YES, UPDATE ITEM'
-    );
-  } else {
-    showConfirmModal(
-      'Are you sure you want to add this item?',
-      'Please review the details before confirming. Once added, the item will be recorded and visible in the maintenance records.',
-      'YES, ADD ITEM'
-    );
-  }
-}
-
-function handleConfirmAction() {
-  if (!pendingAction) return;
-  
-  if (pendingAction.type === 'add') {
-    const newItem = {
-      id: Date.now(),
-      roomId: parseInt(pendingAction.data.roomId),
-      floor: pendingAction.data.floor,
-      room: pendingAction.data.room,
-      type: pendingAction.data.type,
-      item: pendingAction.data.item,
-      category: pendingAction.data.category,
-      lastCleaned: pendingAction.data.lastReplaced || 'Never',
-      remarks: ''
-    };
-    
-    currentLinensData.push(newItem);
-    
-    hideConfirmModal();
-    showSuccessModal('Item Added Successfully');
-    applyLinensFiltersAndRender();
-    
-  } else if (pendingAction.type === 'edit') {
-    const itemIndex = currentLinensData.findIndex(item => item.id.toString() === pendingAction.data.id);
-    if (itemIndex !== -1) {
-      currentLinensData[itemIndex] = {
-        ...currentLinensData[itemIndex],
-        roomId: parseInt(pendingAction.data.roomId),
-        floor: pendingAction.data.floor,
-        room: pendingAction.data.room,
-        type: pendingAction.data.type,
-        item: pendingAction.data.item,
-        category: pendingAction.data.category,
-        lastCleaned: pendingAction.data.lastReplaced || currentLinensData[itemIndex].lastCleaned
-      };
-      
-      hideConfirmModal();
-      showSuccessModal('Item Updated Successfully');
-      applyLinensFiltersAndRender();
-    }
-  }
-  
-  pendingAction = null;
-}
-
-function handleEditItem(itemId) {
-  const item = currentLinensData.find(i => i.id === itemId);
-  if (!item) return;
-  
-  currentItemId = itemId;
-  showAddItemModal(true, item);
-}
-
-function handleDeleteItem(itemId) {
-  currentItemId = itemId;
-  showDeleteModal();
-}
-
-function handleConfirmDelete() {
-  if (!currentItemId) return;
-  
-  const itemIndex = currentLinensData.findIndex(item => item.id === currentItemId);
-  if (itemIndex !== -1) {
-    currentLinensData.splice(itemIndex, 1);
-    hideDeleteModal();
-    showSuccessModal('Item Deleted Successfully');
-    applyLinensFiltersAndRender();
-  }
-}
-
-// ===== CSV DOWNLOAD =====
-function downloadRequestsCSV() {
+// ===== REQUESTS PDF DOWNLOAD =====
+function downloadRequestsPDF() {
   if (filteredRequests.length === 0) {
     alert("No request data to export based on current filters.");
     return;
   }
-  const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Cleaned', 'Status', 'Staff In Charge'];
-  const csvContent = [
-    headers.join(','),
-    ...filteredRequests.map(req =>
-      [
-        req.floor,
-        req.room,
-        req.date,
-        req.requestTime,
-        req.lastCleaned,
-        'Needs Cleaning',
-        req.staff
-      ].join(',')
-    )
-  ].join('\n');
-  downloadCSV(csvContent, 'housekeeping-requests');
-}
 
-function downloadLinensCSV() {
-  if (filteredLinens.length === 0) {
-    alert("No linens/amenities data to export based on current filters.");
-    return;
-  }
-  const headers = ['Floor', 'Room', 'Type', 'Items', 'Time/Date', 'Status', 'Remarks'];
-  const csvContent = [
-    headers.join(','),
-    ...filteredLinens.map(item =>
-      [
-        item.floor,
-        item.room,
-        item.type,
-        `"${item.item.replace(/"/g, '""')}"`,
-        item.lastCleaned,
-        'Available',
-        `"${(item.remarks || '').replace(/"/g, '""')}"`
-      ].join(',')
-    )
-  ].join('\n');
-  downloadCSV(csvContent, `housekeeping-${currentSubTab}`);
-}
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
 
-function downloadCSV(csvContent, filenamePrefix) {
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.setAttribute('href', url);
-  link.setAttribute('download', `${filenamePrefix}-${new Date().toISOString().split('T')[0]}.csv`);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  // Define the headers
+  const headers = [
+    ['Floor', 'Room', 'Date', 'Request Time', 'Last Clean', 'Status', 'Staff In Charge']
+  ];
+
+  // Map the filtered data
+  const bodyData = filteredRequests.map(req => [
+    req.floor ?? 'N/A',
+    req.room ?? 'N/A',
+    req.date ?? 'N/A',
+    req.requestTime ?? 'N/A',
+    req.lastClean ?? 'N/A', // Changed
+    req.status ?? 'N/A',
+    req.staff ?? 'N/A'
+  ]);
+
+  // Add a title
+  doc.setFontSize(18);
+  doc.text("Housekeeping Requests Report", 14, 22); // Changed
+
+  // Add the table
+  doc.autoTable({
+    startY: 30,
+    head: headers,
+    body: bodyData,
+    theme: 'striped',
+    headStyles: { fillColor: [41, 128, 185] }, // Example color
+  });
+
+  doc.save(`housekeeping-requests-${new Date().toISOString().split('T')[0]}.pdf`); // Changed
 }

@@ -1,6 +1,6 @@
 <?php
 // 🚨 IMPORTANT: Replace 'MyTestPassword123' with the actual password you want to use.
-$password_to_hash = 'admin'; 
+$password_to_hash = 'asdasd'; 
 
 // This function creates the secure, long hash string.
 $hashed_password = password_hash($password_to_hash, PASSWORD_DEFAULT);

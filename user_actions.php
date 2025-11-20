@@ -1,316 +1,309 @@
 <?php
-// user_actions.php
+// user_actions.php - ADD USERS FROM employees TABLE
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+error_reporting(E_ALL);
+ini_set('display_errors', 0); 
+ini_set('log_errors', 1);
+
 header('Content-Type: application/json');
 
-// Includes - Ensure these paths are correct
-include('db_connection.php');
+require 'vendor/autoload.php';
+include('email_config.php');
+include('db_connection.php'); 
+include('check_session.php'); 
 
+// --- Define Allowed Account Types ---
+$allowed_account_types = [
+    'admin',  
+];
 
-// Ensure errors are logged, not displayed, to avoid breaking JSON
-error_reporting(E_ALL);
-ini_set('display_errors', 0); // Don't display errors directly to the browser
-ini_set('log_errors', 1); // Log errors to the server's error log
-// ini_set('error_log', '/path/to/your/php-error.log'); // Optional: Specify a custom log file path
+// --- Position Name to Account Type Mapping ---
+$position_to_account_type = [
+    'Administrator' => 'admin',
+    'Housekeeping Manager' => 'housekeeping_manager',
+    'House Keeping Staff' => 'housekeeping_staff',
+    'Maintenance Manager' => 'maintenance_manager',
+    'Maintenance Staff' => 'maintenance_staff',
+    'Inventory Manager' => 'inventory_manager',
+    'Parking Manager' => 'parking_manager'
+];
 
 function send_json_response($success, $message, $data = null) {
     $response = ['success' => $success, 'message' => $message];
     if ($data !== null) {
         $response['data'] = $data;
     }
-    // Ensure connection is closed before sending response if it exists
-    global $conn;
-    if (isset($conn) && $conn instanceof mysqli) {
-        $conn->close();
-    }
+    // --- SANITIZE (Not Needed) ---
+    // This function sends JSON. It is inherently safe from XSS.
+    // The client-side JS is responsible for sanitizing data if it renders to HTML.
     echo json_encode($response);
     exit;
 }
 
-function require_admin_privilege() {
-    if (!isset($_SESSION['UserID']) || !isset($_SESSION['UserType']) || $_SESSION['UserType'] !== 'admin') {
-        send_json_response(false, 'Unauthorized: Admin privileges required.');
-    }
-}
+// --- STRIP ---
+$action = trim($_POST['action'] ?? $_GET['action'] ?? ''); // <-- REFINEMENT: Added trim() and default ''
+error_log("user_actions.php called with action: " . ($action ?: 'NULL'));
 
-// Check DB connection after including db_connection.php
-if (!isset($conn) || !($conn instanceof mysqli) || $conn->connect_error) {
-    error_log("Database connection failed in user_actions.php: " . ($conn->connect_error ?? 'Connection object not initialized'));
-    send_json_response(false, 'Database connection error. Please try again later.');
-}
-
-
-$action = $_POST['action'] ?? $_GET['action'] ?? null;
-
-if (!$action) {
+if (empty($action)) { // Use empty() to check for ''
     send_json_response(false, 'No action specified.');
 }
 
 switch ($action) {
+
+    // --- FETCH USERS (from PMS) ---
     case 'fetch_users':
-        // Check if user is logged in (session started by check_session.php)
-        if (!isset($_SESSION['UserID'])) {
-             send_json_response(false, 'Unauthorized: Login required.');
+        if (!isset($_SESSION['UserID']) || $_SESSION['UserType'] !== 'admin') {
+            send_json_response(false, 'Unauthorized access. Admin only.');
         }
-        // Optional: Add admin check for consistency, though admin.php checks page access
-        if (!isset($_SESSION['UserType']) || $_SESSION['UserType'] !== 'admin') {
-            send_json_response(false, 'Unauthorized: Admin privileges required for fetching users.');
+        
+        $pms_conn = get_db_connection('pms');
+        if ($pms_conn === null) {
+            send_json_response(false, 'Database connection error.');
         }
+        
+        // --- SECURE (No User Input) ---
+        $sql = "SELECT UserID, EmployeeID, Fname, Lname, Mname, Birthday, AccountType, Username, EmailAddress, Shift, Address, ContactNumber FROM pms_users ORDER BY Lname, Fname";
+        $result = $pms_conn->query($sql);
 
-        $sql = "SELECT UserID, Fname, Lname, Mname, Birthday, AccountType, Username, EmailAddress, Shift, Address FROM users ORDER BY Lname, Fname";
-
-        // **Improved Error Handling**
-        $result = $conn->query($sql); // Execute the query
-
-        // Check if the query execution itself failed
         if ($result === false) {
-             error_log("Database error fetching users: " . $conn->error); // Log detailed error server-side
-             send_json_response(false, 'Database error fetching users. Please check server logs.'); // More generic message client-side
+             error_log("Database query error: " . $pms_conn->error);
+             send_json_response(false, 'Database query error: ' . $pms_conn->error);
         } else {
-             // Check if the result is a valid result object before fetching
-             if ($result instanceof mysqli_result) {
-                 $users = $result->fetch_all(MYSQLI_ASSOC);
-                 $result->free(); // Free the result set memory
-                 send_json_response(true, 'Users fetched successfully.', $users);
-             } else {
-                 // This case indicates an unexpected issue if $result wasn't false
-                 error_log("Unexpected non-result object from user fetch query.");
-                 send_json_response(false, 'Unexpected error fetching user data.');
-             }
+             $users = $result->fetch_all(MYSQLI_ASSOC);
+             $result->free();
+             send_json_response(true, 'Users fetched successfully.', $users);
         }
-        // ** Ensure break is present if needed, but send_json_response exits **
-        break; // Added break for clarity and safety
+        break;
 
-    case 'add_user':
-        require_admin_privilege(); // Keep admin check for modification actions
-
-        // ... (rest of add_user logic - ensure it uses send_json_response on error/success) ...
-        // [Existing add_user code from your file goes here]
-        // Make sure all exit points use send_json_response()
-         $required_fields = ['username', 'fname', 'lname', 'birthday', 'accountType', 'email', 'shift', 'address', 'password', 'confirmPassword'];
-        foreach ($required_fields as $field) {
-            if (empty($_POST[$field])) {
-                send_json_response(false, "Missing required field: " . ucfirst($field));
-            }
+    // --- ADD USER FROM employees TABLE ---
+    case 'add_user_from_employee':
+        if (!isset($_SESSION['UserID']) || $_SESSION['UserType'] !== 'admin') {
+            send_json_response(false, 'Unauthorized access.');
+        }
+        
+        // --- STRIP ---
+        $employee_code = trim($_POST['employeeCode'] ?? '');
+        
+        if (empty($employee_code)) {
+            send_json_response(false, 'Employee Code is required.');
         }
 
-        $username = trim($_POST['username']);
-        $fname = trim($_POST['fname']);
-        $lname = trim($_POST['lname']);
-        $mname = !empty($_POST['mname']) ? trim($_POST['mname']) : null;
-        $birthday = $_POST['birthday'];
-        $accountType = $_POST['accountType'];
-        $email = filter_var(trim($_POST['email']), FILTER_VALIDATE_EMAIL);
-        $shift = $_POST['shift'];
-        $address = trim($_POST['address']);
-        $password = $_POST['password'];
-        $confirmPassword = $_POST['confirmPassword'];
-
-        if (!$email) {
-            send_json_response(false, 'Invalid email format.');
-        }
-        if (strlen($password) < 6) {
-             send_json_response(false, 'Password must be at least 6 characters long.');
-        }
-        if ($password !== $confirmPassword) {
-            send_json_response(false, 'Passwords do not match.');
+        $pms_conn = get_db_connection('pms');
+        if ($pms_conn === null) {
+            send_json_response(false, 'Database connection error.');
         }
 
-        $check_sql = "SELECT UserID FROM users WHERE Username = ? OR EmailAddress = ?";
-        $stmt_check = $conn->prepare($check_sql);
-        if (!$stmt_check) {
-             error_log("DB Prepare Error (Check User Exists): " . $conn->error);
-             send_json_response(false, 'Database error preparing check.');
-        }
-        $stmt_check->bind_param("ss", $username, $email);
+        // --- SECURE (Prepared Statements) ---
+        $stmt_check = $pms_conn->prepare("SELECT UserID FROM pms_users WHERE EmployeeID = ?");
+        $stmt_check->bind_param("s", $employee_code);
         $stmt_check->execute();
         $stmt_check->store_result();
         if ($stmt_check->num_rows > 0) {
             $stmt_check->close();
-            send_json_response(false, 'Username or Email already exists.');
+            send_json_response(false, 'This employee is already registered in the system.');
         }
         $stmt_check->close();
 
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-
-        $insert_sql = "INSERT INTO users (Username, Fname, Lname, Mname, Birthday, AccountType, EmailAddress, Shift, Address, Password) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt_insert = $conn->prepare($insert_sql);
-        if (!$stmt_insert) {
-             error_log("DB Prepare Error (Insert User): " . $conn->error);
-             send_json_response(false, 'Database error preparing insert.');
-        }
-        $stmt_insert->bind_param("ssssssssss", $username, $fname, $lname, $mname, $birthday, $accountType, $email, $shift, $address, $hashed_password);
-
-        if ($stmt_insert->execute()) {
-            send_json_response(true, 'User added successfully.');
-        } else {
-             error_log("DB Execute Error (Insert User): " . $stmt_insert->error);
-            send_json_response(false, 'Failed to add user.');
-        }
-        $stmt_insert->close();
-        break;
-
-
-    case 'edit_user':
-        require_admin_privilege(); // Keep admin check
-
-        // ... (rest of edit_user logic - ensure it uses send_json_response) ...
-        // [Existing edit_user code from your file goes here]
-        // Make sure all exit points use send_json_response()
-         $required_fields = ['userID', 'username', 'fname', 'lname', 'birthday', 'accountType', 'email', 'shift', 'address'];
-        foreach ($required_fields as $field) {
-            // Skip password validation here if it's optional on edit
-            if (($field === 'password' || $field === 'confirmPassword')) continue;
-            if (empty($_POST[$field])) {
-                send_json_response(false, "Missing required field: " . ucfirst($field));
+        // --- SECURE (Prepared Statements) ---
+        $sql_employee = "SELECT 
+                e.employee_code,
+                e.first_name,
+                e.last_name,
+                e.middle_name,
+                e.birthdate,
+                ee.email,
+                ec.contact_number,
+                ea.home_address,
+                e.shift,
+                jp.position_name
+            FROM employees e
+            LEFT JOIN employee_emails ee ON e.employee_id = ee.employee_id
+            LEFT JOIN employee_contact_numbers ec ON e.employee_id = ec.employee_id
+            LEFT JOIN employee_addresses ea ON e.employee_id = ea.employee_id
+            LEFT JOIN job_positions jp ON e.position_id = jp.position_id
+            WHERE e.employee_code = ?
+            LIMIT 1";
+        
+        $stmt_emp = $pms_conn->prepare($sql_employee);
+        $stmt_emp->bind_param("s", $employee_code);
+        $stmt_emp->execute();
+        $result_emp = $stmt_emp->get_result();
+        
+        if ($employee = $result_emp->fetch_assoc()) {
+            
+            // ... (rest of the logic is safe, variables are from DB) ...
+            $position_name = $employee['position_name'];
+            
+            if (!isset($position_to_account_type[$position_name])) {
+                $allowed_positions = implode(', ', array_keys($position_to_account_type));
+                send_json_response(false, "Employee's position ('$position_name') is not allowed to access the PMS. Allowed positions: $allowed_positions");
             }
+            
+            $accountType = $position_to_account_type[$position_name];
+            $username = strtolower($employee['last_name'] . '.' . $employee_code);
+            
+            // --- SECURE (Prepared Statements) ---
+            $stmt_check_user = $pms_conn->prepare("SELECT UserID FROM pms_users WHERE Username = ?");
+            $stmt_check_user->bind_param("s", $username);
+            $stmt_check_user->execute();
+            $stmt_check_user->store_result();
+            if ($stmt_check_user->num_rows > 0) {
+                $stmt_check_user->close();
+                send_json_response(false, "Username '$username' is already taken.");
+            }
+            $stmt_check_user->close();
+
+            $temp_password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
+            $token = bin2hex(random_bytes(32));
+            $token_expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
+            // --- SECURE (Prepared Statements) ---
+            $sql_insert = "INSERT INTO pms_users 
+                            (EmployeeID, Fname, Lname, Mname, Birthday, AccountType, Username, Password, 
+                             EmailAddress, Shift, Address, ContactNumber, ActivationToken, TokenExpiry) 
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            
+            $stmt_insert = $pms_conn->prepare($sql_insert);
+            $stmt_insert->bind_param("ssssssssssssss",
+                $employee_code,
+                $employee['first_name'],
+                $employee['last_name'],
+                $employee['middle_name'],
+                $employee['birthdate'],
+                $accountType,
+                $username,
+                $temp_password,
+                $employee['email'],
+                $employee['shift'],
+                $employee['home_address'],
+                $employee['contact_number'],
+                $token,
+                $token_expiry
+            );
+
+            if ($stmt_insert->execute()) {
+                // --- PHPMailer (Safe) ---
+                $mail = new PHPMailer(true);
+                $activation_link = BASE_URL . "activate.php?token=" . $token;
+
+                try {
+                    $mail->isSMTP();
+                    $mail->Host       = 'smtp.gmail.com';
+                    $mail->SMTPAuth   = true;
+                    $mail->Username   = GMAIL_EMAIL;
+                    $mail->Password   = GMAIL_APP_PASSWORD;
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+                    $mail->Port       = 465;
+
+                    $mail->setFrom(GMAIL_EMAIL, EMAIL_FROM_NAME);
+                    $mail->addAddress($employee['email'], $employee['first_name'] . ' ' . $employee['last_name']);
+
+                    $mail->isHTML(true);
+                    $mail->Subject = 'Activate Your Celestia Hotel PMS Account';
+                    $mail->Body    = "Dear {$employee['first_name']},<br><br>An account has been created for you in the Celestia Hotel Property Management System.<br><br>Your username is: <b>$username</b><br><br>Please click the link below to activate your account and set your password. This link is valid for 24 hours.<br><br><a href='$activation_link'>$activation_link</a><br><br>Sincerely,<br>The Celestia Hotel Team";
+                    $mail->AltBody = "Welcome, {$employee['first_name']}. Your username is $username. Please visit this link to activate your account and set your password: $activation_link";
+
+                    $mail->send();
+                    send_json_response(true, "Success! User '$username' created. An activation email has been sent to {$employee['email']}.");
+
+                } catch (Throwable $e) {
+                    error_log("PHPMailer Error for $username: " . $e->getMessage());
+                    send_json_response(true, "User '$username' was created, but the activation email could not be sent. Error: " . $mail->ErrorInfo);
+                }
+            } else {
+                error_log("PMS Insert Error: " . $stmt_insert->error);
+                send_json_response(false, 'Failed to add user to PMS.');
+            }
+            $stmt_insert->close();
+
+        } else {
+            send_json_response(false, 'Employee Code not found in employees table.');
+        }
+        $stmt_emp->close();
+        break;
+        
+    // --- EDIT USER (Password Only) ---
+    case 'edit_user':
+        if (!isset($_SESSION['UserID']) || $_SESSION['UserType'] !== 'admin') {
+            send_json_response(false, 'Unauthorized access.');
+        }
+        
+        $pms_conn = get_db_connection('pms');
+        if ($pms_conn === null) {
+            send_json_response(false, 'PMS Database connection error.');
         }
 
-        $userID = filter_var($_POST['userID'], FILTER_VALIDATE_INT);
-        $username = trim($_POST['username']);
-        $fname = trim($_POST['fname']);
-        $lname = trim($_POST['lname']);
-        $mname = !empty($_POST['mname']) ? trim($_POST['mname']) : null;
-        $birthday = $_POST['birthday'];
-        $accountType = $_POST['accountType'];
-        $email = filter_var(trim($_POST['email']), FILTER_VALIDATE_EMAIL);
-        $shift = $_POST['shift'];
-        $address = trim($_POST['address']);
-        $password = $_POST['password'] ?? null;
-        $confirmPassword = $_POST['confirmPassword'] ?? null;
+        // --- STRIP & VALIDATE ---
+        $userID = filter_var($_POST['userID'] ?? null, FILTER_VALIDATE_INT);
+        $password = trim($_POST['password'] ?? ''); // Admin is setting password, trim is OK.
 
         if ($userID === false) {
              send_json_response(false, 'Invalid User ID.');
         }
-         if (!$email) {
-            send_json_response(false, 'Invalid email format.');
+        
+        if (empty($password)) {
+            send_json_response(false, 'Password is required.');
         }
 
-        // Check for duplicate username/email EXCEPT for the current user
-        $check_sql = "SELECT UserID FROM users WHERE (Username = ? OR EmailAddress = ?) AND UserID != ?";
-        $stmt_check = $conn->prepare($check_sql);
-         if (!$stmt_check) {
-             error_log("DB Prepare Error (Check User Exists Edit): " . $conn->error);
-             send_json_response(false, 'Database error preparing check.');
-        }
-        $stmt_check->bind_param("ssi", $username, $email, $userID);
-        $stmt_check->execute();
-        $stmt_check->store_result();
-        if ($stmt_check->num_rows > 0) {
-            $stmt_check->close();
-            send_json_response(false, 'Username or Email already exists for another user.');
-        }
-        $stmt_check->close();
-
-        // Build the update query dynamically
-        $update_fields = [
-            'Username' => $username,
-            'Fname' => $fname,
-            'Lname' => $lname,
-            'Mname' => $mname,
-            'Birthday' => $birthday,
-            'AccountType' => $accountType,
-            'EmailAddress' => $email,
-            'Shift' => $shift,
-            'Address' => $address
-        ];
-        $types = "sssssssss"; // 9 strings initially
-        $params = array_values($update_fields); // Use array_values to ensure numeric keys
-
-        $update_sql_parts = [];
-        foreach (array_keys($update_fields) as $key) {
-            $update_sql_parts[] = "`$key` = ?";
-        }
-
-        // Only add password to update if provided
-        if (!empty($password)) {
-             if (strlen($password) < 6) {
-                 send_json_response(false, 'Password must be at least 6 characters long.');
-             }
-            if ($password !== $confirmPassword) {
-                send_json_response(false, 'Passwords do not match.');
-            }
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $update_sql_parts[] = "`Password` = ?";
-            $types .= "s"; // Add string type for password
-            $params[] = $hashed_password;
-        }
-
-        // Add the UserID for the WHERE clause
-        $types .= "i"; // Add integer type for UserID
-        $params[] = $userID;
-
-        $update_sql = "UPDATE users SET " . implode(', ', $update_sql_parts) . " WHERE UserID = ?";
-
-        $stmt_update = $conn->prepare($update_sql);
-         if (!$stmt_update) {
-             error_log("DB Prepare Error (Update User): " . $conn->error . " SQL: " . $update_sql);
-             send_json_response(false, 'Database error preparing update.');
-        }
-
-        // Dynamically bind parameters using references
-        $bind_params = [];
-        $bind_params[] = $types;
-        foreach ($params as $key => $value) {
-            $bind_params[] = &$params[$key]; // Pass by reference
-        }
-        call_user_func_array([$stmt_update, 'bind_param'], $bind_params);
-
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        
+        // --- SECURE (Prepared Statements) ---
+        $sql_update = "UPDATE pms_users SET Password = ? WHERE UserID = ?";
+        $stmt_update = $pms_conn->prepare($sql_update);
+        $stmt_update->bind_param("si", $hashed_password, $userID);
 
         if ($stmt_update->execute()) {
              if ($stmt_update->affected_rows > 0) {
-                 send_json_response(true, 'User updated successfully.');
+                 send_json_response(true, 'Password updated successfully.');
              } else {
-                 // Check if there was actually an error or just no change
-                 if ($stmt_update->errno) {
-                     error_log("DB Execute Error (Update User): " . $stmt_update->error);
-                     send_json_response(false, 'Failed to update user.');
-                 } else {
-                     send_json_response(true, 'No changes detected for the user.'); // Not an error
-                 }
+                 send_json_response(false, 'No changes were made.');
              }
         } else {
-            error_log("DB Execute Error (Update User): " . $stmt_update->error);
-            send_json_response(false, 'Failed to update user.');
+            error_log("DB Execute Error (Update Password): " . $stmt_update->error);
+            send_json_response(false, 'Failed to update password.');
         }
         $stmt_update->close();
         break;
 
-
+    // --- DELETE USER ---
     case 'delete_user':
-        require_admin_privilege(); // Keep admin check
+        if (!isset($_SESSION['UserID']) || $_SESSION['UserType'] !== 'admin') {
+            send_json_response(false, 'Unauthorized access.');
+        }
+        
+        $pms_conn = get_db_connection('pms');
+        if ($pms_conn === null) {
+            send_json_response(false, 'PMS Database connection error.');
+        }
 
-        // ... (rest of delete_user logic - ensure it uses send_json_response) ...
-        // [Existing delete_user code from your file goes here]
-        // Make sure all exit points use send_json_response()
+        // --- VALIDATE ---
         $userID = filter_var($_POST['userID'] ?? null, FILTER_VALIDATE_INT);
 
         if ($userID === false) {
             send_json_response(false, 'Invalid User ID provided.');
         }
-
-         // Prevent self-deletion
-         if (isset($_SESSION['UserID']) && $userID === (int)$_SESSION['UserID']) {
-             send_json_response(false, 'Cannot delete your own account.');
-         }
-
-        $delete_sql = "DELETE FROM users WHERE UserID = ?";
-        $stmt_delete = $conn->prepare($delete_sql);
-         if (!$stmt_delete) {
-              error_log("DB Prepare Error (Delete User): " . $conn->error);
-             send_json_response(false, 'Database error preparing delete.');
+        
+        if (isset($_SESSION['UserID']) && $userID === (int)$_SESSION['UserID']) {
+             send_json_response(false, 'You cannot delete your own account.');
         }
+
+        // --- SECURE (Prepared Statements) ---
+        $stmt_delete = $pms_conn->prepare("DELETE FROM pms_users WHERE UserID = ?");
         $stmt_delete->bind_param("i", $userID);
 
         if ($stmt_delete->execute()) {
              if ($stmt_delete->affected_rows > 0) {
-                 send_json_response(true, 'User deleted successfully.');
+                 send_json_response(true, 'User deleted successfully from PMS.');
              } else {
-                 send_json_response(false, 'User not found or already deleted.'); // More informative
+                 send_json_response(false, 'User not found in PMS.');
              }
         } else {
-             // Check for foreign key constraint error (MySQL error code 1451)
              if ($stmt_delete->errno == 1451) {
-                 send_json_response(false, 'Cannot delete user: User is referenced in other records (e.g., logs, tasks). Please reassign or remove related records first.');
+                 send_json_response(false, 'Cannot delete user: They are referenced in other records (e.g., tasks, logs).');
              } else {
                   error_log("DB Execute Error (Delete User): " . $stmt_delete->error);
                  send_json_response(false, 'Failed to delete user.');
@@ -319,20 +312,52 @@ switch ($action) {
         $stmt_delete->close();
         break;
 
+    // --- FETCH USER LOGS ---
+    case 'fetch_user_logs':
+        if (!isset($_SESSION['UserID']) || $_SESSION['UserType'] !== 'admin') {
+            send_json_response(false, 'Unauthorized access.');
+        }
+
+        $pms_conn = get_db_connection('pms');
+        if ($pms_conn === null) {
+            send_json_response(false, 'PMS Database connection error.');
+        }
+
+        // --- SECURE (No User Input) ---
+        $sql = "SELECT
+                    ul.LogID,
+                    ul.ActionType,
+                    ul.Timestamp,
+                    u.UserID,
+                    u.EmployeeID,
+                    u.Fname,
+                    u.Lname,
+                    u.Mname,
+                    u.AccountType,
+                    u.Shift,
+                    u.Username,
+                    u.EmailAddress
+                FROM
+                    pms_user_logs ul
+                JOIN
+                    pms_users u ON ul.UserID = u.UserID
+                ORDER BY
+                    ul.LogID DESC";
+        
+        $result = $pms_conn->query($sql);
+
+        if ($result === false) {
+             error_log("Database query error (fetch logs): " . $pms_conn->error);
+             send_json_response(false, 'Database query error: ' . $pms_conn->error);
+        } else {
+             $logs = $result->fetch_all(MYSQLI_ASSOC);
+             $result->free();
+             send_json_response(true, 'User logs fetched successfully.', $logs);
+        }
+        break;
 
     default:
         send_json_response(false, 'Invalid action specified.');
         break;
-}
-
-// Function to pass array values by reference needed for call_user_func_array with bind_param
-function array_ref_values($arr){
-    if (strnatcmp(phpversion(),'5.3') >= 0) { //Reference is required for PHP 5.3+
-        $refs = array();
-        foreach($arr as $key => $value)
-            $refs[$key] = &$arr[$key];
-        return $refs;
-    }
-    return $arr;
 }
 ?>
