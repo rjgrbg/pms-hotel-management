@@ -1219,11 +1219,7 @@ $conn->close();
   <div class="modalBackdrop" id="userModal" style="display: none;">
     <div class="addUserModal">
       <button class="closeBtn" id="closeUserModalBtn">&times;</button>
-<<<<<<< HEAD
       <h2 id="userModalTitle" >Add User from Employee</h2>
-=======
-      <h2 id="userModalTitle">Add User from Employee</h2>
->>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
       <div id="userFormMessage" class="formMessage" style="display:none;"></div>
 
       <form id="employeeCodeForm" style="display: block;">
@@ -1232,11 +1228,7 @@ $conn->close();
           <input type="text" id="employeeCodeInput" name="employeeCode" required
             placeholder="e.g., EMP-0001"
             style="font-size: 16px; padding: 12px;" />
-<<<<<<< HEAD
           <small style="color: #e1e1e1ff; font-size: 12px; display: block; margin-top: 10px; text-align: center;">
-=======
-          <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">
->>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
             Enter the Employee Code from the employees table. Only employees with these positions can be added:<br>
             <strong>Administrator, Housekeeping Manager, House Keeping Staff, Maintenance Manager, Maintenance Staff, Inventory Manager, Parking Manager</strong>
           </small>
@@ -1244,11 +1236,7 @@ $conn->close();
 
         <div class="modalButtons">
           <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeCodeBtn">CANCEL</button>
-<<<<<<< HEAD
           <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn" style="background: #b99156ff;">ADD EMPLOYEE</button>
-=======
-          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn">ADD EMPLOYEE</button>
->>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
         </div>
       </form>
 
@@ -1260,7 +1248,6 @@ $conn->close();
             <img src="assets/icons/profile-icon.png" alt="Profile" />
           </div>
           <h3 id="displayFullName" class="editUserName">User Full Name</h3>
-<<<<<<< HEAD
           <p class="editUserEmployeeId" style="color: white;">Employee Code: <span id="displayEmployeeCode">------</span></p>
         </div>
 
@@ -1279,56 +1266,24 @@ $conn->close();
           </div>
           <div>
             <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Username</label>
-=======
-          <p class="editUserEmployeeId">Employee Code: <span id="displayEmployeeCode">------</span></p>
-        </div>
-
-        <div class="infoGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
-          <div>
-            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Email</label>
-            <div id="displayEmail" style="font-size: 14px; font-weight: 500;">-</div>
-          </div>
-          <div>
-            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Account Type</label>
-            <div id="displayAccountType" style="font-size: 14px; font-weight: 500;">-</div>
-          </div>
-          <div>
-            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Shift</label>
-            <div id="displayShift" style="font-size: 14px; font-weight: 500;">-</div>
-          </div>
-          <div>
-            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Username</label>
->>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
             <div id="displayUsername" style="font-size: 14px; font-weight: 500;">-</div>
           </div>
         </div>
 
         <form id="passwordChangeForm">
           <div class="formGroup">
-<<<<<<< HEAD
             <label for="newPassword" style="text-align: left;">New Password *</label>
             <input type="password" id="newPassword" name="password" required
               placeholder="Enter new password"
               style="border: 2px solid #efefefff;" />
             <small style="color: #c6c6c6ff; font-size: 11px; display: block; margin-top: 5px;">
-=======
-            <label for="newPassword">New Password *</label>
-            <input type="password" id="newPassword" name="password" required
-              placeholder="Enter new password"
-              style="border: 2px solid #4CAF50;" />
-            <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">
->>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
               All other user information is read-only and comes from the employees table.
             </small>
           </div>
 
           <div class="modalButtons">
             <button type="button" class="modalBtn cancelBtn" id="cancelPasswordChangeBtn">CANCEL</button>
-<<<<<<< HEAD
             <button type="submit" class="modalBtn confirmBtn" id="savePasswordBtn" style="background:#D4AF78;">UPDATE PASSWORD</button>
-=======
-            <button type="submit" class="modalBtn confirmBtn" id="savePasswordBtn">UPDATE PASSWORD</button>
->>>>>>> c30312843034b99669aa158bf20d59d425f4c4b3
           </div>
         </form>
       </div>
