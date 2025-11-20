@@ -1,0 +1,891 @@
+/* ============================================= */
+/* === FONT IMPORTS                          === */
+/* ============================================= */
+@import url('https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Forum&display=swap');
+
+/* ============================================= */
+/* === GLOBAL & FONT STYLES                  === */
+/* ============================================= */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+/* ============================================= */
+/* === HEADER                                === */
+/* ============================================= */
+.header {
+  background-color: #480c1b;
+  padding: 15px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.headerLogo {
+  width: 35px;
+  height: 35px;
+  object-fit: contain;
+}
+
+.hotelName {
+  color: #d4af78;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  font-family: Forum, serif;
+}
+
+.profileIcon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+/* ============================================= */
+/* === PROFILE SIDEBAR                       === */
+/* ============================================= */
+.profile-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 100%;
+  background-color: #480c1b;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+  z-index: 1100;
+}
+
+.profile-sidebar.active {
+  transform: translateX(0);
+}
+
+.sidebar-close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #fff;
+}
+
+.profile-header {
+  text-align: center;
+  padding: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.profile-pic-container {
+  font-size: 50px;
+  color: #fff;
+  margin-bottom: 10px;
+}
+
+.profile-header h3 {
+  margin: 5px 0;
+  color: #fff;
+}
+
+.profile-header p {
+  margin: 0;
+  color: #fff;
+  font-size: 14px;
+}
+
+.profile-nav {
+  flex-grow: 1;
+  padding: 20px 0;
+}
+
+.profile-nav a,
+.profile-footer a {
+  display: block;
+  padding: 15px 20px;
+  text-decoration: none;
+  color: #fff;
+  transition: color 0.3s;
+}
+
+.profile-nav a:hover,
+.profile-footer a:hover {
+  color: #ffa237;
+}
+
+.profile-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  padding: 10px 0;
+}
+
+/* ============================================= */
+/* --- PASTE THESE NEW STYLES into inventory_log_page.css --- */
+
+/* Logout Modal */
+/* ============================================= */
+/* === MODALS (STYLES FROM INVENTORY.CSS)    === */
+/* ============================================= */
+
+.modalBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: none; /* JS controls display */
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
+/* This is a general rule from inventory.css */
+.logoutModal {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideIn 0.3s ease;
+}
+
+.closeBtn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #fff; /* White close button for dark modal */
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+.closeBtn:hover {
+  opacity: 1;
+}
+
+.modalButtons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 25px;
+}
+
+.modalBtn {
+  padding: 11px 28px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+
+.modalBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modalBtn.cancelBtn {
+  background-color: #e0e0e0;
+  color: #333;
+  min-width: 120px;
+}
+
+.modalBtn.cancelBtn:hover {
+  background-color: #d5d5d5;
+}
+
+/* This .confirmBtn style from inventory.css uses a gold background */
+.modalBtn.confirmBtn {
+  background-color: #ffb400; 
+  color: #480c1b;
+  min-width: 160px;
+}
+
+.modalBtn.confirmBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+/* --- Logout Modal (Dark Theme from inventory.css) --- */
+.logoutModal {
+  background-color: #480c1b; /* This is the correct dark maroon */
+  border-radius: 8px;
+  padding: 35px;
+  max-width: 420px;
+  text-align: center;
+  color: #fff; /* White text */
+}
+
+.logoutModal h2 {
+  font-size: 18px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #fff; /* Ensure header text is white */
+}
+
+.logoutModal p {
+  color: #dcc8b0; /* Light text for dark background */
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.modalIcon {
+  margin: 10px auto 20px;
+}
+
+.logoutIcon {
+  height: 50px;
+  width: 50px;
+}
+
+/* ============================================= */
+/* === KEYFRAMES (FROM INVENTORY.CSS)        === */
+/* ============================================= */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ============================================= */
+/* === MAIN LAYOUT                           === */
+/* ============================================= */
+.main-container {
+  max-width: 1400px;
+  margin: 30px auto;
+  padding: 0 30px;
+}
+
+.page-title {
+  text-align: center;
+  font-size: 32px;
+  letter-spacing: 2px;
+  margin-bottom: 30px;
+  font-weight: 400;
+  color: #333;
+}
+
+.inventory-log-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+/* ============================================= */
+/* === TABLE SECTION                         === */
+/* ============================================= */
+.table-section {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
+}
+
+.controls-row {
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-dropdown {
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 13px;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: border 0.2s;
+  font-family: 'Arial', sans-serif;
+  min-width: 100px;
+}
+
+.filter-dropdown:focus {
+  outline: none;
+  border-color: #ffb400;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #fff;
+  padding: 0 12px;
+  flex: 1;
+  min-width: 250px;
+}
+
+.search-input {
+  border: none;
+  flex: 1;
+  padding: 10px 0;
+  font-size: 13px;
+  background-color: #fff;
+}
+
+.search-input:focus {
+  outline: none;
+}
+
+.search-icon {
+  width: 18px;
+  height: 18px;
+  color: #888;
+}
+
+.table-container {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inventory-table th,
+.inventory-table td {
+  padding: 14px 12px;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+  font-size: 12px;
+}
+
+.inventory-table th {
+  background-color: #2d2d2d;
+  color: #fff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.inventory-table tbody tr {
+  transition: background-color 0.2s;
+}
+
+.inventory-table tbody tr:nth-child(odd) {
+  background-color: #f9f9f9;
+}
+
+.inventory-table tbody tr:hover {
+  background-color: #f0f0f0;
+}
+
+.inventory-table tbody tr.selected {
+  background-color: #e6f7ff !important;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.status-in-stock {
+  background-color: #5cb85c;
+}
+
+.status-low-stock {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.status-out-of-stock {
+  background-color: #dc3545;
+}
+
+/* Action Button in Table */
+.inventory-table .action-btn {
+  background-color: #480c1b;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.inventory-table .action-btn:hover:not(:disabled) {
+  background-color: #6a1129;
+}
+
+.inventory-table .action-btn:disabled {
+  background-color: #aaa;
+  color: #777;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ============================================= */
+/* === DETAILS SECTION                       === */
+/* ============================================= */
+.item-details-section {
+  background-color: #480c1b;
+  color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 25px;
+  position: sticky;
+  top: 30px;
+}
+
+.details-title {
+  font-family: 'Forum', serif;
+  font-size: 26px;
+  color: #d4af78;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(212, 175, 120, 0.3);
+  font-weight: 500;
+}
+
+.item-details-content {
+  min-height: 300px;
+  max-height: 450px;
+  overflow-y: auto;
+  margin-bottom: 25px;
+}
+
+.placeholder-text {
+  font-size: 16px;
+  color: #dcc8b0;
+  text-align: center;
+  padding: 50px 20px;
+  font-style: italic;
+}
+
+.details-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.details-item:last-child {
+  border-bottom: none;
+}
+
+.item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-grow: 1;
+  margin-right: 15px;
+}
+
+.item-name {
+  font-size: 17px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.item-category {
+  font-size: 14px;
+  color: #dcc8b0;
+}
+
+.item-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-btn {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.control-btn:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.4);
+}
+
+.control-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.control-btn.remove-btn {
+  background-color: rgba(220, 53, 69, 0.7);
+  font-size: 18px;
+}
+
+.control-btn.remove-btn:hover {
+  background-color: #dc3545;
+}
+
+.quantity-input {
+  width: 50px;
+  text-align: center;
+  font-size: 16px;
+  padding: 5px;
+  border: none;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #333;
+  -moz-appearance: textfield;
+}
+
+.quantity-input::-webkit-outer-spin-button,
+.quantity-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.details-actions {
+  display: flex;
+  gap: 15px;
+  border-top: 1px solid rgba(212, 175, 120, 0.3);
+  padding-top: 25px;
+}
+
+.action-btn-outline,
+.action-btn-confirm {
+  flex: 1;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.action-btn-outline {
+  background-color: transparent;
+  border: 2px solid #e0e0e0;
+  color: #e0e0e0;
+}
+
+.action-btn-outline:hover {
+  background-color: #e0e0e0;
+  color: #480c1b;
+}
+
+.action-btn-confirm {
+  background-color: #ffa237;
+  color: #480c1b;
+}
+
+.action-btn-confirm:hover:not(:disabled) {
+  background-color: #ffb65a;
+}
+
+.action-btn-confirm:disabled {
+  background-color: #aaa;
+  color: #777;
+  cursor: not-allowed;
+}
+
+/* ============================================= */
+/* === MODALS                                === */
+/* ============================================= */
+
+/* Message Box Backdrop */
+.message-box-backdrop,
+.confirmation-modal-backdrop {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+/* Message Box (for Success/Error alerts) */
+.message-box-content {
+  background-color: #fff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  max-width: 450px;
+  width: 100%;
+  text-align: center;
+}
+
+#messageBoxTitle {
+  font-family: 'Forum', serif;
+  font-size: 24px;
+  color: #480c1b;
+  margin-bottom: 15px;
+}
+
+#messageBoxText {
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 25px;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+#messageBoxClose {
+  background-color: #ffa237;
+  color: #480c1b;
+  padding: 10px 30px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#messageBoxClose:hover {
+  background-color: #ffb65a;
+}
+
+/* Confirmation Modal (for 'DONE') */
+.confirmation-modal-content {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.confirmation-modal-header {
+  background-color: #480c1b;
+  color: #d4af78;
+  padding: 15px 25px;
+  font-size: 18px;
+  font-weight: bold;
+  font-family: 'Forum', serif;
+}
+
+.confirmation-modal-body {
+  padding: 25px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.confirm-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 17px;
+  padding: 12px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.confirm-item:last-child {
+  border-bottom: none;
+}
+
+.confirm-name {
+  color: #333;
+  font-weight: bold;
+}
+
+.confirm-qty {
+  color: #555;
+  font-size: 16px;
+}
+
+.confirmation-modal-actions {
+  display: flex;
+  gap: 15px;
+  padding: 20px 25px;
+  background-color: #f9f9f9;
+  border-top: 1px solid #e0e0e0;
+}
+
+#cancelConfirmBtn {
+  flex: 1;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #e0e0e0;
+  color: #333;
+  border: none;
+}
+
+#cancelConfirmBtn:hover {
+  background-color: #d5d5d5;
+}
+
+#confirmBtn {
+  flex: 1;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: #ffa237;
+  color: #480c1b;
+  border: none;
+}
+
+#confirmBtn:hover {
+  background-color: #ffb65a;
+}
+
+/* ============================================= */
+/* === SCROLLBAR                             === */
+/* ============================================= */
+.item-details-content::-webkit-scrollbar,
+.table-container::-webkit-scrollbar,
+.confirmation-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.item-details-content::-webkit-scrollbar-track,
+.table-container::-webkit-scrollbar-track,
+.confirmation-modal-body::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 3px;
+}
+
+.item-details-content::-webkit-scrollbar-thumb,
+.table-container::-webkit-scrollbar-thumb,
+.confirmation-modal-body::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.item-details-content::-webkit-scrollbar-thumb:hover,
+.table-container::-webkit-scrollbar-thumb:hover,
+.confirmation-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* ============================================= */
+/* === RESPONSIVE STYLES                     === */
+/* ============================================= */
+@media (max-width: 1200px) {
+  .inventory-log-container {
+    grid-template-columns: 1fr;
+  }
+
+  .item-details-section {
+    position: static;
+    top: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 15px;
+  }
+
+  .profile-sidebar {
+    width: 280px;
+  }
+
+  .main-container {
+    margin: 20px auto;
+    padding: 0 15px;
+  }
+
+  .page-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+
+  .filter-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .filter-dropdown,
+  .search-box {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .inventory-table th,
+  .inventory-table td {
+    padding: 12px 8px;
+    font-size: 11px;
+  }
+
+  .item-details-content {
+    min-height: auto;
+    max-height: 300px;
+  }
+
+  .details-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .item-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .item-controls .quantity-input {
+    flex-grow: 1;
+    margin: 0 10px;
+  }
+}
