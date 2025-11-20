@@ -17,7 +17,7 @@ if (!isset($_SESSION['UserID']) || !in_array($_SESSION['UserType'], $allowedRole
 }
 
 // Get single database connection
-$conn = get_db_connection('pms');
+$conn = get_db_connection('b9wkqgu32onfqy0dvyva');
 
 // Check connection
 if ($conn === null) {
@@ -57,11 +57,11 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
                 r.floor_num, 
                 r.room_num, 
                 r.room_type,
+                r.room_name,
                 r.capacity,
-                r.price,
                 IFNULL(rs.RoomStatus, 'Available') AS RoomStatus
             FROM 
-                pms_rooms r
+                tbl_rooms r
             LEFT JOIN 
                 pms_room_status rs ON r.room_num = rs.RoomNumber
             WHERE
@@ -78,7 +78,6 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
                 'Room' => $row['room_num'],
                 'Type' => $row['room_type'],
                 'NoGuests' => $row['capacity'],
-                'Rate' => $row['price'],
                 'Status' => $row['RoomStatus'],
             ];
         }
@@ -105,9 +104,9 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
         
         // Security Check: Prevent setting to 'Available' if active tasks exist
         if ($status === 'Available') {
-            // 1. Get room_id from pms_rooms
+            // 1. Get room_id from tbl_rooms
             // Using prepared statements, so no escaping is needed on $number
-            $stmt_room = $conn->prepare("SELECT room_id FROM pms_rooms WHERE room_num = ?");
+            $stmt_room = $conn->prepare("SELECT room_id FROM tbl_rooms WHERE room_num = ?");
             $stmt_room->bind_param("s", $number); // Use "s" for string since it was trimmed
             $stmt_room->execute();
             $room_result = $stmt_room->get_result();
@@ -174,7 +173,7 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
 
         // Security Check: (This logic is identical to 'update_status')
         if ($status === 'Available') { 
-            $stmt_room = $conn->prepare("SELECT room_id FROM pms_rooms WHERE room_num = ?");
+            $stmt_room = $conn->prepare("SELECT room_id FROM tbl_rooms WHERE room_num = ?");
             $stmt_room->bind_param("s", $number); // Use "s" for string
             $stmt_room->execute();
             $room_result = $stmt_room->get_result();
@@ -236,9 +235,9 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
     if (empty($room_id)) {
         $response['message'] = 'Missing Room ID.';
     } else {
-        // 1. Find the room_num from pms_rooms using the room_id
+        // 1. Find the room_num from tbl_rooms using the room_id
         $roomNumber = null;
-        $stmt_find = $conn->prepare("SELECT room_num FROM pms_rooms WHERE room_id = ?");
+        $stmt_find = $conn->prepare("SELECT room_num FROM tbl_rooms WHERE room_id = ?");
         $stmt_find->bind_param("s", $room_id); // Use "s" for string
         if ($stmt_find->execute()) {
             $result = $stmt_find->get_result();

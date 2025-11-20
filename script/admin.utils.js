@@ -12,7 +12,15 @@ function showFormMessage(message, type = 'error', isUserForm = false) {
         }, 3000);
     }
 }
-
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 function hideFormMessage(isUserForm = false) {
     const msgElement = isUserForm ? document.getElementById('userFormMessage') : document.getElementById('roomFormMessage');
     if (!msgElement) return;

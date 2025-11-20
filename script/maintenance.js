@@ -686,39 +686,121 @@ function downloadHistoryPDF() {
 
     doc.save('maintenance-history.pdf');
 }
+// =======================================================
+// ===== HISTORY TAB RENDER LOGIC (The Missing Part) =====
+// =======================================================
 
-// ===== Helper for History Filters (Assumed required) =====
+/**
+ * Filters the history data based on dropdowns and search
+ */
 function applyHistoryFiltersAndRender() {
     const floor = document.getElementById('floorFilterHistory')?.value;
     const room = document.getElementById('roomFilterHistory')?.value;
     const date = document.getElementById('dateFilterHistory')?.value;
     const search = document.getElementById('historySearchInput')?.value.toLowerCase();
 
-    // Convert date input (YYYY-MM-DD) to match data format if needed (e.g., MM.DD.YYYY)
-    // This logic depends on your specific date format in currentHistoryData
+    // Convert Input Date (YYYY-MM-DD) to Data Format (MM.DD.YYYY) if needed
     let formattedDate = '';
-    if(date) {
+    if (date) {
         const [y, m, d] = date.split('-');
-        formattedDate = `${m}.${d}.${y}`; // Example format
+        formattedDate = `${m}.${d}.${y}`;
     }
 
     filteredHistory = currentHistoryData.filter(h => {
         const matchFloor = !floor || h.floor.toString() === floor;
         const matchRoom = !room || h.room.toString() === room;
-        const matchDate = !date || h.date === formattedDate;
+        const matchDate = !formattedDate || h.date === formattedDate;
+        
+        // Safe search handling (checks if fields exist before converting to lower case)
         const matchSearch = !search || 
-                            (h.room && h.room.toString().includes(search)) || 
-                            (h.staff && h.staff.toLowerCase().includes(search)) ||
-                            (h.issueType && h.issueType.toLowerCase().includes(search));
+            (h.room && h.room.toString().includes(search)) || 
+            (h.staff && h.staff.toLowerCase().includes(search)) ||
+            (h.issueType && h.issueType.toLowerCase().includes(search)) ||
+            (h.status && h.status.toLowerCase().includes(search)) ||
+            (h.remarks && h.remarks.toLowerCase().includes(search));
+
         return matchFloor && matchRoom && matchDate && matchSearch;
     });
 
+    // Reset to page 1
     paginationState.history.currentPage = 1;
-    // Assumes renderMTHistTable is defined elsewhere or you rename it here
-    if(typeof renderMTHistTable === 'function') {
-        renderMTHistTable(filteredHistory);
-    } else {
-        // If you need the render function here, let me know
-        console.log("renderMTHistTable not found in this file, make sure it is loaded.");
+    
+    // Call the render function
+    renderHistoryTable();
+}
+
+/**
+ * Draws the History Table HTML
+ */
+function renderHistoryTable() {
+    const tbody = document.getElementById('historyTableBody');
+    const recordCountEl = document.getElementById('historyRecordCount');
+    const paginationControlsContainerId = 'historyPaginationControls';
+    const state = paginationState.history;
+
+    if (!tbody || !recordCountEl) return;
+
+    // Calculate Pages
+    const totalPages = getTotalPages(filteredHistory.length, state.itemsPerPage);
+    
+    // Safety Check: Ensure current page isn't too high
+    if (state.currentPage > totalPages && totalPages > 0) {
+        state.currentPage = totalPages;
     }
+
+    // Get slice of data for current page
+    const paginatedData = paginateData(filteredHistory, state.currentPage, state.itemsPerPage);
+
+    // Render Rows
+    if (paginatedData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history records found.</td></tr>';
+    } else {
+        tbody.innerHTML = paginatedData.map(h => {
+            // 1. Prepare Status Class
+            const statusClass = h.status ? h.status.toLowerCase().replace(/\s+/g, '-') : '';
+
+            // 2. Prepare Safe Data (Escape HTML to prevent XSS/Layout breaks)
+            // We use the escapeHtml() helper function on every field.
+            const safeFloor = escapeHtml(h.floor ?? 'N/A');
+            const safeRoom = escapeHtml(h.room ?? 'N/A');
+            const safeType = escapeHtml(h.issueType ?? 'N/A');
+            const safeDate = escapeHtml(h.date ?? 'N/A');
+            const safeReqTime = escapeHtml(h.requestedTime ?? 'N/A');
+            const safeCompTime = escapeHtml(h.completedTime ?? 'N/A');
+            const safeStaff = escapeHtml(h.staff ?? 'N/A');
+            const safeStatus = escapeHtml(h.status ?? 'N/A');
+
+            // 3. Special Handling for Remarks (Truncate then Escape)
+            const rawRemarks = h.remarks ?? '';
+            const safeFullRemarks = escapeHtml(rawRemarks); // For tooltip
+            
+            // Truncate the RAW text first, then escape the result
+            // This prevents cutting off an escape sequence like "&amp;" in the middle
+            const truncatedRaw = rawRemarks.length > 30 ? rawRemarks.substring(0, 30) + '...' : rawRemarks;
+            const safeDisplayRemarks = escapeHtml(truncatedRaw);
+
+            return `
+                <tr>
+                    <td>${safeFloor}</td>
+                    <td>${safeRoom}</td>
+                    <td>${safeType}</td>
+                    <td>${safeDate}</td>
+                    <td>${safeReqTime}</td>
+                    <td>${safeCompTime}</td>
+                    <td>${safeStaff}</td>
+                    <td><span class="statusBadge ${statusClass}">${safeStatus}</span></td>
+                    <td title="${safeFullRemarks}">${safeDisplayRemarks}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // Update Count Text
+    recordCountEl.textContent = filteredHistory.length;
+
+    // Render Pagination Buttons
+    renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
+        state.currentPage = page;
+        renderHistoryTable();
+    });
 }

@@ -16,7 +16,7 @@ session_start([
 // --- Database Connection (Using the correct function-based method) ---
 try {
     require_once 'db_connection.php'; 
-    $conn = get_db_connection('pms'); 
+    $conn = get_db_connection('b9wkqgu32onfqy0dvyva'); 
     
     if ($conn === null) {
         throw new Exception('get_db_connection("pms") returned null.');

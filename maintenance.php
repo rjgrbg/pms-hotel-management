@@ -60,7 +60,7 @@ $sql_rooms = "SELECT
                 u.Lname,
                 u.Mname
               FROM
-                pms_rooms r
+                tbl_rooms r
               LEFT JOIN
                 pms_room_status rs ON r.room_num = rs.RoomNumber
               LEFT JOIN (
@@ -159,7 +159,7 @@ if ($result_staff = $conn->query($sql_staff)) {
 
 // 6. Fetch all rooms for dropdowns (MODIFIED FOR SINGLE DB)
 $allRooms = [];
-$sql_all_rooms = "SELECT room_id, floor_num, room_num FROM pms_rooms WHERE is_archived = 0 ORDER BY floor_num, room_num";
+$sql_all_rooms = "SELECT room_id, floor_num, room_num FROM tbl_rooms WHERE is_archived = 0 ORDER BY floor_num, room_num";
 if ($result_all_rooms = $conn->query($sql_all_rooms)) {
     while ($row = $result_all_rooms->fetch_assoc()) {
         $allRooms[] = [
@@ -188,7 +188,7 @@ $sql_history = "SELECT
                 FROM 
                     pms_maintenance_requests mr 
                 JOIN 
-                    pms_rooms r ON mr.RoomID = r.room_id
+                    tbl_rooms r ON mr.RoomID = r.room_id
                 LEFT JOIN 
                     pms_users u ON mr.AssignedUserID = u.UserID 
                 WHERE 

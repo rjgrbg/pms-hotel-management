@@ -106,7 +106,7 @@ $sql_hk_rooms = "SELECT
                 u.Lname,
                 u.Mname
               FROM
-                pms_rooms r
+                tbl_rooms r
               LEFT JOIN
                 pms_room_status rs ON r.room_num = rs.RoomNumber
               LEFT JOIN (
@@ -181,7 +181,7 @@ $sql_hk_history = "SELECT
                 FROM 
                     pms_housekeeping_tasks ht
                 JOIN 
-                    pms_rooms r ON ht.RoomID = r.room_id
+                    tbl_rooms r ON ht.RoomID = r.room_id
                 LEFT JOIN 
                     pms_users u ON ht.AssignedUserID = u.UserID 
                 WHERE 
@@ -250,7 +250,7 @@ $sql_mt_rooms = "SELECT
                 u.Lname,
                 u.Mname
               FROM
-                pms_rooms r
+                tbl_rooms r
               LEFT JOIN
                 pms_room_status rs ON r.room_num = rs.RoomNumber
               LEFT JOIN (
@@ -325,7 +325,7 @@ $sql_mt_history = "SELECT
                 FROM 
                     pms_maintenance_requests mr 
                 JOIN 
-                    pms_rooms r ON mr.RoomID = r.room_id
+                    tbl_rooms r ON mr.RoomID = r.room_id
                 LEFT JOIN 
                     pms_users u ON mr.AssignedUserID = u.UserID 
                 WHERE 
@@ -1219,7 +1219,7 @@ $conn->close();
   <div class="modalBackdrop" id="userModal" style="display: none;">
     <div class="addUserModal">
       <button class="closeBtn" id="closeUserModalBtn">&times;</button>
-      <h2 id="userModalTitle">Add User from Employee</h2>
+      <h2 id="userModalTitle" >Add User from Employee</h2>
       <div id="userFormMessage" class="formMessage" style="display:none;"></div>
 
       <form id="employeeCodeForm" style="display: block;">
@@ -1228,7 +1228,7 @@ $conn->close();
           <input type="text" id="employeeCodeInput" name="employeeCode" required
             placeholder="e.g., EMP-0001"
             style="font-size: 16px; padding: 12px;" />
-          <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">
+          <small style="color: #e1e1e1ff; font-size: 12px; display: block; margin-top: 10px; text-align: center;">
             Enter the Employee Code from the employees table. Only employees with these positions can be added:<br>
             <strong>Administrator, Housekeeping Manager, House Keeping Staff, Maintenance Manager, Maintenance Staff, Inventory Manager, Parking Manager</strong>
           </small>
@@ -1236,7 +1236,7 @@ $conn->close();
 
         <div class="modalButtons">
           <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeCodeBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn">ADD EMPLOYEE</button>
+          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn" style="background: #b99156ff;">ADD EMPLOYEE</button>
         </div>
       </form>
 
@@ -1248,42 +1248,42 @@ $conn->close();
             <img src="assets/icons/profile-icon.png" alt="Profile" />
           </div>
           <h3 id="displayFullName" class="editUserName">User Full Name</h3>
-          <p class="editUserEmployeeId">Employee Code: <span id="displayEmployeeCode">------</span></p>
+          <p class="editUserEmployeeId" style="color: white;">Employee Code: <span id="displayEmployeeCode">------</span></p>
         </div>
 
-        <div class="infoGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+        <div class="infoGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; border-radius: 8px;">
           <div>
-            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Email</label>
+            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Email</label>
             <div id="displayEmail" style="font-size: 14px; font-weight: 500;">-</div>
           </div>
           <div>
-            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Account Type</label>
+            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Account Type</label>
             <div id="displayAccountType" style="font-size: 14px; font-weight: 500;">-</div>
           </div>
           <div>
-            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Shift</label>
+            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Shift</label>
             <div id="displayShift" style="font-size: 14px; font-weight: 500;">-</div>
           </div>
           <div>
-            <label style="font-size: 11px; color: #666; display: block; margin-bottom: 3px;">Username</label>
+            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Username</label>
             <div id="displayUsername" style="font-size: 14px; font-weight: 500;">-</div>
           </div>
         </div>
 
         <form id="passwordChangeForm">
           <div class="formGroup">
-            <label for="newPassword">New Password *</label>
+            <label for="newPassword" style="text-align: left;">New Password *</label>
             <input type="password" id="newPassword" name="password" required
               placeholder="Enter new password"
-              style="border: 2px solid #4CAF50;" />
-            <small style="color: #666; font-size: 11px; display: block; margin-top: 5px;">
+              style="border: 2px solid #efefefff;" />
+            <small style="color: #c6c6c6ff; font-size: 11px; display: block; margin-top: 5px;">
               All other user information is read-only and comes from the employees table.
             </small>
           </div>
 
           <div class="modalButtons">
             <button type="button" class="modalBtn cancelBtn" id="cancelPasswordChangeBtn">CANCEL</button>
-            <button type="submit" class="modalBtn confirmBtn" id="savePasswordBtn">UPDATE PASSWORD</button>
+            <button type="submit" class="modalBtn confirmBtn" id="savePasswordBtn" style="background:#D4AF78;">UPDATE PASSWORD</button>
           </div>
         </form>
       </div>

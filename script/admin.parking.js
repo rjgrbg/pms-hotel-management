@@ -166,23 +166,27 @@ function renderParkingHistoryTable(data) {
   if (paginatedData.length === 0) {
     tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
   } else {
-    tbody.innerHTML = paginatedData.map(row => `
-      <tr>
-        <td>${row.SlotName}</td>
-        <td>${row.PlateNumber}</td>
-        <td>${row.RoomNumber || 'N/A'}</td>
-        <td>${row.GuestName || 'N/A'}</td>
-        <td>${row.VehicleType}</td>
-        <td>${row.VehicleCategory}</td>
-        <td>${row.ParkingTime}</td>
-        <td>${row.EntryDateTime}</td>
-        <td>${row.ExitDateTime}</td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = paginatedData.map(row => {
+        // --- FIX: Escape HTML on all fields ---
+        return `
+        <tr>
+            <td>${escapeHtml(row.SlotName)}</td>
+            <td>${escapeHtml(row.PlateNumber)}</td>
+            <td>${escapeHtml(row.RoomNumber || 'N/A')}</td>
+            <td>${escapeHtml(row.GuestName || 'N/A')}</td>
+            <td>${escapeHtml(row.VehicleType)}</td>
+            <td>${escapeHtml(row.VehicleCategory)}</td>
+            <td>${escapeHtml(row.ParkingTime)}</td>
+            <td>${escapeHtml(row.EntryDateTime)}</td>
+            <td>${escapeHtml(row.ExitDateTime)}</td>
+        </tr>
+        `;
+    }).join('');
   }
   
   const recordCount = document.getElementById('parkingHistoryRecordCount');
   if (recordCount) recordCount.textContent = data.length;
+  
   renderPaginationControls('parking-page', totalPages, state.currentPage, (page) => {
     state.currentPage = page;
     renderParkingHistoryTable(data);

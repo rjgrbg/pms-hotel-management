@@ -5,6 +5,15 @@
 /**
  * Main function to filter data, update pagination, and render the table
  */
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 function applyHistoryFiltersAndRender() {
     const floor = document.getElementById('floorFilterHistory')?.value || '';
     const room = document.getElementById('roomFilterHistory')?.value || '';
@@ -23,7 +32,7 @@ function applyHistoryFiltersAndRender() {
         const matchFloor = !floor || (h.floor && h.floor.toString() === floor);
         const matchRoom = !room || (h.room && h.room.toString() === room);
         const matchDate = !formattedDate || (h.date && h.date === formattedDate);
-        
+
         const matchSearch = !search ||
             (h.room && h.room.toString().includes(search)) ||
             (h.issueType && h.issueType.toLowerCase().includes(search)) ||
@@ -36,7 +45,7 @@ function applyHistoryFiltersAndRender() {
 
     // Reset to page 1 for any new filter, but only if it's not just a re-render
     if (paginationState.history.currentPage !== 1) {
-         paginationState.history.currentPage = 1;
+        paginationState.history.currentPage = 1;
     }
 
     // Render the table and pagination
@@ -46,50 +55,67 @@ function applyHistoryFiltersAndRender() {
 /**
  * Renders the rows for the history table based on pagination
  */
-function renderHistoryTable() {
-    const tbody = document.getElementById('historyTableBody');
-    const recordCountEl = document.getElementById('historyRecordCount');
-    const paginationControlsContainerId = 'historyPaginationControls';
-    const state = paginationState.history; // Get pagination state for history
-
-    if (!tbody || !recordCountEl) return;
-
-    // Get total pages and current page data
-    const totalPages = getTotalPages(filteredHistory.length, state.itemsPerPage);
-    if (state.currentPage > totalPages) {
-        state.currentPage = Math.max(1, totalPages);
-    }
-    const paginatedData = paginateData(filteredHistory, state.currentPage, state.itemsPerPage);
-
-    // Render table rows
+/**
+ * Renders the Maintenance History Table with HTML Escaping
+ */
+function renderMTHistTable(data = mtHistData) {
+    const tbody = document.getElementById('mtHistTableBody');
+    if (!tbody) return;
+    
+    const state = paginationState.maintenanceHistory;
+    const totalPages = getTotalPages(data.length, state.itemsPerPage);
+    
+    // Safety check
+    if (state.currentPage > totalPages) state.currentPage = Math.max(1, totalPages);
+    
+    const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+  
     if (paginatedData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history records found.</td></tr>'; // Colspan is 9
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
     } else {
-        tbody.innerHTML = paginatedData.map(h => {
+        tbody.innerHTML = paginatedData.map(row => {
+            const statusClass = getMtHistoryStatusClass(row.status);
+            
+            // --- FIX: ESCAPE ALL DATA TO PREVENT LARGE TEXT/TAGS ---
+            const safeFloor = escapeHtml(row.floor ?? 'N/A');
+            const safeRoom = escapeHtml(row.room ?? 'N/A');
+            const safeType = escapeHtml(row.issueType ?? 'N/A');
+            const safeDate = escapeHtml(row.date ?? 'N/A');
+            const safeReqTime = escapeHtml(row.requestedTime ?? 'N/A');
+            const safeCompTime = escapeHtml(row.completedTime ?? 'N/A');
+            const safeStaff = escapeHtml(row.staff ?? 'N/A');
+            const safeStatus = escapeHtml(row.status ?? 'N/A');
+            
+            // Fix Remarks: Truncate and Escape
+            const rawRemarks = row.remarks ?? '';
+            const safeFullRemarks = escapeHtml(rawRemarks); 
+            const truncatedRaw = rawRemarks.length > 30 ? rawRemarks.substring(0, 30) + '...' : rawRemarks;
+            const safeDisplayRemarks = escapeHtml(truncatedRaw);
+
             return `
                 <tr>
-                    <td>${h.floor ?? 'N/A'}</td>
-                    <td>${h.room ?? 'N/A'}</td>
-                    <td>${h.issueType ?? 'N/A'}</td>
-                    <td>${h.date ?? 'N/A'}</td>
-                    <td>${h.requestedTime ?? 'N/A'}</td>
-                    <td>${h.completedTime ?? 'N/A'}</td>
-                    <td>${h.staff ?? 'N/A'}</td>
-                    <td><span class="statusBadge ${h.status?.toLowerCase().replace(' ', '-')}">${h.status ?? 'N/A'}</span></td>
-                    <td>${h.remarks ?? ''}</td>
+                    <td>${safeFloor}</td>
+                    <td>${safeRoom}</td>
+                    <td>${safeType}</td>
+                    <td>${safeDate}</td>
+                    <td>${safeReqTime}</td>
+                    <td>${safeCompTime}</td>
+                    <td>${safeStaff}</td>
+                    <td><span class="statusBadge ${statusClass}">${safeStatus}</span></td>
+                    <td title="${safeFullRemarks}">${safeDisplayRemarks}</td>
                 </tr>
             `;
         }).join('');
     }
-
-    // Update record count and render pagination controls
-    recordCountEl.textContent = filteredHistory.length;
-    renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
+  
+    const recordCount = document.getElementById('mtHistRecordCount');
+    if (recordCount) recordCount.textContent = data.length;
+    
+    renderPaginationControls('mt-history-tab', totalPages, state.currentPage, (page) => {
         state.currentPage = page;
-        renderHistoryTable(); // Re-render table for the new page
+        renderMTHistTable(data);
     });
 }
-
 /**
  * Resets all history filters and re-renders the table
  */
@@ -98,7 +124,7 @@ function resetHistoryFilters() {
     document.getElementById('roomFilterHistory').value = '';
     document.getElementById('dateFilterHistory').value = '';
     document.getElementById('historySearchInput').value = '';
-    
+
     // Re-apply filters (which are all empty) and render
     applyHistoryFiltersAndRender();
 }

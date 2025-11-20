@@ -1,4 +1,13 @@
 // Wait for the DOM to be fully loaded
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- START: Header/Sidebar/Logout Logic ---
@@ -225,38 +234,39 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Render Right-Side Details Panel
-    const renderDetailsPanel = () => {
-        if (Object.keys(selectedItems).length === 0) {
-            itemDetailsContent.innerHTML = '<p class="placeholder-text">Select an item from the table to get started.</p>';
-            doneBtn.disabled = true;
-            return;
-        }
+   const renderDetailsPanel = () => {
+    if (Object.keys(selectedItems).length === 0) {
+        itemDetailsContent.innerHTML = '<p class="placeholder-text">Select an item from the table to get started.</p>';
+        doneBtn.disabled = true;
+        return;
+    }
 
-        itemDetailsContent.innerHTML = '';
-        doneBtn.disabled = false;
+    itemDetailsContent.innerHTML = '';
+    doneBtn.disabled = false;
 
-        for (const itemID in selectedItems) {
-            const item = selectedItems[itemID];
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'details-item';
-            itemDiv.setAttribute('data-item-id', itemID);
-            
-            itemDiv.innerHTML = `
-                <div class="item-info">
-                    <span class="item-name">${item.name}</span>
-                    <span class="item-category">${item.category}</span>
-                </div>
-                <div class="item-controls">
-                    <button class="control-btn remove-btn">&times;</button>
-                    <button class="control-btn decrease-btn" ${item.issueQty <= 0 ? 'disabled' : ''}>-</button>
-                    <input type="number" class="quantity-input" value="${item.issueQty}" min="0" max="${item.stock}">
-                    <button class="control-btn increase-btn" ${item.issueQty >= item.stock ? 'disabled' : ''}>+</button>
-                </div>
-            `;
+    for (const itemID in selectedItems) {
+        const item = selectedItems[itemID];
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'details-item';
+        itemDiv.setAttribute('data-item-id', itemID);
+        
+        // --- SECURITY FIX: Apply escapeHtml() ---
+        itemDiv.innerHTML = `
+            <div class="item-info">
+                <span class="item-name">${escapeHtml(item.name)}</span>
+                <span class="item-category">${escapeHtml(item.category)}</span>
+            </div>
+            <div class="item-controls">
+                <button class="control-btn remove-btn">&times;</button>
+                <button class="control-btn decrease-btn" ${item.issueQty <= 0 ? 'disabled' : ''}>-</button>
+                <input type="number" class="quantity-input" value="${escapeHtml(item.issueQty)}" min="0" max="${escapeHtml(item.stock)}">
+                <button class="control-btn increase-btn" ${item.issueQty >= item.stock ? 'disabled' : ''}>+</button>
+            </div>
+        `;
 
-            itemDetailsContent.appendChild(itemDiv);
-        }
-    };
+        itemDetailsContent.appendChild(itemDiv);
+    }
+};
 
     // --- Event Handlers ---
 

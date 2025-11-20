@@ -11,7 +11,7 @@ require_once 'db_connection.php';
 
 $conn = null;
 if (function_exists('get_db_connection')) {
-    $conn = get_db_connection('pms');
+    $conn = get_db_connection('b9wkqgu32onfqy0dvyva');
 }
 
 if (isset($_SESSION['UserID']) && $conn) {

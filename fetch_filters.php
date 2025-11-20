@@ -12,12 +12,12 @@ if (!isset($conn) || $conn->connect_error) {
 
 // 1. FLOORS
 $floors = [];
-$result = $conn->query("SELECT DISTINCT floor_num FROM pms_rooms WHERE floor_num IS NOT NULL ORDER BY floor_num ASC");
+$result = $conn->query("SELECT DISTINCT floor_num FROM tbl_rooms WHERE floor_num IS NOT NULL ORDER BY floor_num ASC");
 if ($result) while($row = $result->fetch_assoc()) $floors[] = $row['floor_num'];
 
 // 2. ROOMS
 $rooms = [];
-$result = $conn->query("SELECT room_num, floor_num FROM pms_rooms ORDER BY room_num ASC");
+$result = $conn->query("SELECT room_num, floor_num FROM tbl_rooms ORDER BY room_num ASC");
 if ($result) while($row = $result->fetch_assoc()) $rooms[] = $row;
 
 // 3. CATEGORIES (The important part!)

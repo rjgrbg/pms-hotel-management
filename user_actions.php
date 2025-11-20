@@ -60,7 +60,7 @@ switch ($action) {
             send_json_response(false, 'Unauthorized access. Admin only.');
         }
         
-        $pms_conn = get_db_connection('pms');
+        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
         if ($pms_conn === null) {
             send_json_response(false, 'Database connection error.');
         }
@@ -92,7 +92,7 @@ switch ($action) {
             send_json_response(false, 'Employee Code is required.');
         }
 
-        $pms_conn = get_db_connection('pms');
+        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
         if ($pms_conn === null) {
             send_json_response(false, 'Database connection error.');
         }
@@ -232,7 +232,7 @@ switch ($action) {
             send_json_response(false, 'Unauthorized access.');
         }
         
-        $pms_conn = get_db_connection('pms');
+        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
         if ($pms_conn === null) {
             send_json_response(false, 'PMS Database connection error.');
         }
@@ -275,7 +275,7 @@ switch ($action) {
             send_json_response(false, 'Unauthorized access.');
         }
         
-        $pms_conn = get_db_connection('pms');
+        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
         if ($pms_conn === null) {
             send_json_response(false, 'PMS Database connection error.');
         }
@@ -318,7 +318,7 @@ switch ($action) {
             send_json_response(false, 'Unauthorized access.');
         }
 
-        $pms_conn = get_db_connection('pms');
+        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
         if ($pms_conn === null) {
             send_json_response(false, 'PMS Database connection error.');
         }

@@ -202,6 +202,8 @@ async function fetchAndRenderInventoryHistory() {
 // 4. RENDER FUNCTIONS
 // =============================================
 
+// ===== RENDER FUNCTIONS (INVENTORY) =====
+
 function renderInventoryTable(data = inventoryDataList) {
     const tbody = document.getElementById('inventoryTableBody');
     if (!tbody) return;
@@ -218,15 +220,16 @@ function renderInventoryTable(data = inventoryDataList) {
                             row.ItemStatus === 'Low Stock' ? 'Low Stock' : 'Out of Stock';
             const statusClass = statusText.toLowerCase().replace(/ /g, '-');
             
+            // --- FIX: Escape HTML ---
             return `
                 <tr>
-                <td>${row.ItemID}</td>
-                <td>${row.ItemName}</td>
-                <td>${row.Category}</td>
-                <td>${row.ItemQuantity ?? '-'}</td>
-                <td>${row.ItemDescription || 'N/A'}</td>
-                <td><span class="statusBadge ${statusClass}">${statusText}</span></td>
-                <td>${row.DateofStockIn}</td>
+                <td>${escapeHtml(row.ItemID)}</td>
+                <td>${escapeHtml(row.ItemName)}</td>
+                <td>${escapeHtml(row.Category)}</td>
+                <td>${escapeHtml(row.ItemQuantity ?? '-')}</td>
+                <td>${escapeHtml(row.ItemDescription || 'N/A')}</td>
+                <td><span class="statusBadge ${statusClass}">${escapeHtml(statusText)}</span></td>
+                <td>${escapeHtml(row.DateofStockIn)}</td>
                 </tr>
             `;
         }).join('');
@@ -267,17 +270,18 @@ function renderInventoryHistoryTable(data = inventoryHistoryDataList) {
                 quantityChangeText = '0';
             }
             
+            // --- FIX: Escape HTML ---
             return `
                 <tr>
-                    <td>${row.InvLogID}</td>
-                    <td>${row.ItemName}</td>
-                    <td>${row.Category}</td>
-                    <td>${row.OldQuantity ?? 'N/A'}</td>
-                    <td class="${changeClass}">${quantityChangeText}</td>
-                    <td>${row.NewQuantity ?? 'N/A'}</td>
-                    <td>${row.ItemStatus}</td>
-                    <td>${row.DateofStockIn || 'N/A'}</td>
-                    <td>${row.PerformedBy}</td>
+                    <td>${escapeHtml(row.InvLogID)}</td>
+                    <td>${escapeHtml(row.ItemName)}</td>
+                    <td>${escapeHtml(row.Category)}</td>
+                    <td>${escapeHtml(row.OldQuantity ?? 'N/A')}</td>
+                    <td class="${changeClass}">${escapeHtml(quantityChangeText)}</td>
+                    <td>${escapeHtml(row.NewQuantity ?? 'N/A')}</td>
+                    <td>${escapeHtml(row.ItemStatus)}</td>
+                    <td>${escapeHtml(row.DateofStockIn || 'N/A')}</td>
+                    <td>${escapeHtml(row.PerformedBy)}</td>
                 </tr>
             `;
         }).join('');
@@ -291,7 +295,6 @@ function renderInventoryHistoryTable(data = inventoryHistoryDataList) {
         renderInventoryHistoryTable(data);
     });
 }
-
 // =============================================
 // 5. FILTER INITIALIZATION
 // =============================================
