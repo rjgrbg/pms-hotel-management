@@ -146,8 +146,10 @@ $sql_staff = "SELECT
               JOIN 
                 employees e ON u.EmployeeID = e.employee_code
               -- Join Attendance to check if that employee is clocked in TODAY
-              LEFT JOIN 
-                attendance a ON e.employee_id = a.employee_id AND a.date = CURDATE()
+           LEFT JOIN 
+    attendance a ON e.employee_id = a.employee_id 
+    AND a.time_out IS NULL 
+    AND a.date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
               WHERE 
                 u.AccountType = 'housekeeping_staff'";
 

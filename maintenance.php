@@ -139,7 +139,9 @@ $sql_staff = "SELECT
               JOIN 
                 employees e ON u.EmployeeID = e.employee_code
               LEFT JOIN 
-                attendance a ON e.employee_id = a.employee_id AND a.date = CURDATE()
+    attendance a ON e.employee_id = a.employee_id 
+    AND a.time_out IS NULL 
+    AND a.date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
               WHERE 
                 u.AccountType = 'maintenance_staff'";
 
