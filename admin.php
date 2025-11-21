@@ -1062,6 +1062,7 @@ $conn->close();
             <table>
               <thead>
                 <tr>
+                  <th>Employee ID</th>
                   <th>Username</th>
                   <th>Full Name</th>
                   <th>Role</th>

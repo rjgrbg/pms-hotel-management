@@ -122,7 +122,7 @@ if ($result_rooms = $conn->query($sql_rooms)) {
     error_log("Error fetching all room statuses: " . $conn->error);
 }
 
-// 5. Fetch Maintenance Staff (UNCHANGED)
+// 5. Fetch Maintenance Staff
 $maintenanceStaff = [];
 $sql_staff = "SELECT 
                 u.UserID, 
@@ -139,14 +139,23 @@ $sql_staff = "SELECT
               JOIN 
                 employees e ON u.EmployeeID = e.employee_code
               LEFT JOIN 
-    attendance a ON e.employee_id = a.employee_id 
-    AND a.time_out IS NULL 
-    AND a.date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+                attendance a ON e.employee_id = a.employee_id 
+                AND a.time_out IS NULL 
+                AND a.date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
               WHERE 
-                u.AccountType = 'maintenance_staff'";
+                u.AccountType = 'maintenance_staff' GROUP BY u.UserID" ; // <--- Specific to Maintenance
 
 if ($result_staff = $conn->query($sql_staff)) {
     while ($row = $result_staff->fetch_assoc()) {
+        
+        $availability = $row['AvailabilityStatus'];
+
+        // --- FILTER: Only show Available staff ---
+        if ($availability !== 'Available') {
+            continue; 
+        }
+        // -----------------------------------------
+
         $staffName = trim(
             htmlspecialchars($row['Fname']) .
             (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
@@ -154,8 +163,6 @@ if ($result_staff = $conn->query($sql_staff)) {
             htmlspecialchars($row['Lname'])
         );
         
-        $availability = $row['AvailabilityStatus'];
-
         $maintenanceStaff[] = [
             'id' => $row['UserID'],
             'name' => $staffName,
@@ -166,7 +173,6 @@ if ($result_staff = $conn->query($sql_staff)) {
 } else {
     error_log("Error fetching maintenance staff: ". $conn->error);
 }
-
 // 6. Fetch all rooms for dropdowns (MODIFIED FOR SINGLE DB)
 $allRooms = [];
 $sql_all_rooms = "SELECT room_id, floor_num, room_num FROM tbl_rooms WHERE is_archived = 0 ORDER BY floor_num, room_num";

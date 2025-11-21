@@ -123,7 +123,7 @@ if ($result_rooms = $conn->query($sql_rooms)) {
     error_log("Error fetching all room statuses: " . $conn->error);
 }
 
-// 5. Fetch Housekeeping Staff (UNCHANGED)
+// 5. Fetch Housekeeping Staff
 $housekeepingStaff = [];
 $sql_staff = "SELECT 
                 u.UserID, 
@@ -145,24 +145,31 @@ $sql_staff = "SELECT
               -- Join Employees to link User to Employee Record
               JOIN 
                 employees e ON u.EmployeeID = e.employee_code
-              -- Join Attendance to check if that employee is clocked in TODAY
-           LEFT JOIN 
-    attendance a ON e.employee_id = a.employee_id 
-    AND a.time_out IS NULL 
-    AND a.date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+              -- Join Attendance: Find any ACTIVE session (No time_out) from Today or Yesterday
+              LEFT JOIN 
+                attendance a ON e.employee_id = a.employee_id 
+                AND a.time_out IS NULL 
+                AND a.date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
               WHERE 
-                u.AccountType = 'housekeeping_staff'";
+                u.AccountType = 'housekeeping_staff' GROUP BY u.UserID";
 
 if ($result_staff = $conn->query($sql_staff)) {
     while ($row = $result_staff->fetch_assoc()) {
+        
+        $availability = $row['AvailabilityStatus'];
+
+        // --- MODIFICATION: Filter to ONLY show Available staff ---
+        if ($availability !== 'Available') {
+            continue; // Skip this row if they are Offline or Assigned
+        }
+        // ---------------------------------------------------------
+
         $staffName = trim(
             htmlspecialchars($row['Fname']) .
             (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
             ' ' .
             htmlspecialchars($row['Lname'])
         );
-        
-        $availability = $row['AvailabilityStatus'];
 
         $housekeepingStaff[] = [
             'id' => $row['UserID'],

@@ -129,6 +129,7 @@ function renderUsersTable(data) {
 
             return `
                 <tr>
+                <td><span style="font-weight:bold; color:#555;">${row.EmployeeID || '-'}</span></td>
                     <td>${row.Username}</td>
                     <td>${fullName}</td>
                     <td><span class="statusBadge ${row.AccountType}">${roleName}</span></td>
@@ -332,8 +333,19 @@ function initUserFilters() {
         downloadBtn.onclick = () => {
             const data = applyFilters();
             if (data.length === 0) return alert("No data.");
-            const headers = ['Username', 'Name', 'Role', 'Email', 'Shift', 'Emp Code'];
-            const rows = data.map(r => [r.Username, `${r.Lname}, ${r.Fname}`, r.AccountType, r.EmailAddress, r.Shift, r.EmployeeID || '']);
+            
+            // MODIFIED: Added 'Employee ID' as the first column
+            const headers = ['Employee ID', 'Username', 'Name', 'Role', 'Email', 'Shift'];
+            
+            const rows = data.map(r => [
+                r.EmployeeID || '-',  // Added this line
+                r.Username, 
+                `${r.Lname}, ${r.Fname}`, 
+                r.AccountType, 
+                r.EmailAddress, 
+                r.Shift
+            ]);
+            
             downloadUsersPDF(headers, rows, 'User Management Report', 'users_report');
         };
     }
