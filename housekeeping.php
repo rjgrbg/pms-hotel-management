@@ -478,45 +478,45 @@ $conn->close();
 
     <div class="modalBackdrop" id="taskTypeModal" style="display: none;">
         <div class="addItemModal">
-            <button class="closeBtn" id="closeTaskTypeModalBtn">×</button>
+            <button class="closeBtn" id="closeTaskTypeModalBtn" style="color: #bababa">×</button>
             <div class="modalIconHeader">
                 <i class="fas fa-broom" style="font-size: 48px; color: #FFA237;"></i>
             </div>
-            <h2>Select Task Types</h2>
-            <p class="modalSubtext">Select all relevant tasks for the request in Room <strong id="taskTypeModalRoomNumber">---</strong>.</p>
+            <h2 style="color: #ffffffff">Select Task Types</h2>
+            <p class="modalSubtext" style="color: #bababa">>Select all relevant tasks for the request in Room <strong id="taskTypeModalRoomNumber">---</strong>.</p>
             
             <form id="taskTypeForm">
                 <input type="hidden" id="taskTypeRoomId" value="">
                 
                 <div class="formGroup checkboxGroup" style="width: 100%; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 10px;">
                     <input type="checkbox" id="task_select_all">
-                    <label for="task_select_all" style="font-weight: 700; color: #333;">SELECT ALL</label>
+                    <label for="task_select_all" style="font-weight: 700; color: #d4d4d4ff;">SELECT ALL</label>
                 </div>
 
                 <div class="formRow" id="taskTypeCheckboxContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px 15px; max-height: 250px; overflow-y: auto;">
                     <div class="formGroup checkboxGroup">
                         <input type="checkbox" id="task_general" name="taskType[]" value="General Cleaning">
-                        <label for="task_general">General Cleaning</label>
+                        <label for="task_general" style="color: #bababa">General Cleaning</label>
                     </div>
                     <div class="formGroup checkboxGroup">
                         <input type="checkbox" id="task_linen" name="taskType[]" value="Bed and Linen Care">
-                        <label for="task_linen">Bed and Linen Care</label>
+                        <label for="task_linen" style="color: #bababa">Bed and Linen Care</label>
                     </div>
                     <div class="formGroup checkboxGroup">
                         <input type="checkbox" id="task_bathroom" name="taskType[]" value="Bathroom Cleaning">
-                        <label for="task_bathroom">Bathroom Cleaning</label>
+                        <label for="task_bathroom" style="color: #bababa">Bathroom Cleaning</label>
                     </div>
                     <div class="formGroup checkboxGroup">
                         <input type="checkbox" id="task_restock" name="taskType[]" value="Restocking Supplies">
-                        <label for="task_restock">Restocking Supplies</label>
+                        <label for="task_restock"style="color: #bababa">Restocking Supplies</label>
                     </div>
                     <div class="formGroup checkboxGroup">
                         <input type="checkbox" id="task_trash" name="taskType[]" value="Trash Removal">
-                        <label for="task_trash">Trash Removal</label>
+                        <label for="task_trash"style="color: #bababa">Trash Removal</label>
                     </div>
                     <div class="formGroup checkboxGroup">
                         <input type="checkbox" id="task_windows" name="taskType[]" value="Window & Curtains Care">
-                        <label for="task_windows">Window & Curtains Care</label>
+                        <label for="task_windows" style="color: #bababa">Window & Curtains Care</label>
                     </div>
                 </div>
                 
