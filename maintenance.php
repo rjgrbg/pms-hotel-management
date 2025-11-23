@@ -508,18 +508,18 @@ $conn->close();
             <div class="modalIconHeader">
                 <i class="fas fa-bed" style="font-size: 48px; color: #FFA237;"></i>
             </div>
-            <h2 id="editRoomStatusModalTitle">Edit Room Status</h2>
+            <h2 id="editRoomStatusModalTitle" style="color: white;">Edit Room Status</h2>
             
-            <p class="modalSubtext normal-message">
+            <p class="modalSubtext normal-message" style="color: white;">
                 Update the status for Room <strong id="editRoomStatusRoomNumber">---</strong>.
             </p>
             <p class="modalSubtext error-message" id="editRoomStatusErrorMessage">
                 </p>
-            <form id="editRoomStatusForm">
+            <form id="editRoomStatusForm" style="color: white;">
                 <input type="hidden" id="editRoomStatusRoomId" value="">
                 <div class="formRow">
                     <div class="formGroup">
-                        <label>Room Status</label>
+                        <label style="color: #c7c7c7;">Room Status</label>
                         <select class="formInput" id="editRoomStatusSelect" required>
                             <option value="Available">Available</option>
                             <option value="Needs Maintenance">Needs Maintenance</option>

@@ -567,7 +567,7 @@ tbody tr:hover {
 .confirmModal,
 .successModal,
 .deleteConfirmModal {
-  background-color: #fff;
+  background-color: #480c1b;
   border-radius: 12px;
   padding: 35px;
   max-width: 500px;
@@ -626,7 +626,7 @@ tbody tr:hover {
 }
 
 .addItemModal .closeBtn {
-  color: #333;
+  color: #e5e5e5;
 }
 
 .deleteConfirmModal .closeBtn {
@@ -1249,7 +1249,7 @@ tbody tr:hover {
 /* Headings (h2) */
 #issueTypeModal h2,
 #staffModal h2 {
-    color: rgb(212, 175, 120) !important; /* Gold Color */
+    color: #ffb400 !important; /* Gold Color */
     font-weight: bold;
 }
 
@@ -1279,7 +1279,7 @@ tbody tr:hover {
 
 /* Icon Header (the list icon) */
 #issueTypeModal .modalIconHeader i {
-    color: rgb(212, 175, 120) !important; /* Make the icon Gold too */
+    color: #ffb400 !important; /* Make the icon Gold too */
 }
 
 
@@ -1354,14 +1354,14 @@ tbody tr:hover {
 /* Action Buttons (Next/Assign) */
 #issueTypeModal .confirmBtn,
 #staffModal .confirmBtn {
-    background-color: rgb(212, 175, 120) !important; /* Gold Background */
+    background-color: #ffb400 !important; /* Gold Background */
     color: rgb(72, 12, 27) !important; /* Dark Red Text */
     font-weight: bold;
     border: none;
 }
 #issueTypeModal .confirmBtn:hover,
 #staffModal .confirmBtn:hover {
-    background-color: rgb(192, 155, 100) !important; /* Slightly darker gold on hover */
+    background-color: #bb8300 !important; /* Slightly darker gold on hover */
 }
 #issueTypeModal .confirmBtn:disabled,
 #staffModal .confirmBtn:disabled {

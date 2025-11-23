@@ -249,7 +249,7 @@ if (isset($_SESSION['UserID'])) {
 
 
     <div class="mainContainer">
-        <h1 class="pageTitle">Parking</h1>
+        <h1 class="pageTitle">PARKING</h1>
 
         <div class="tabNavigation">
             <button class="tabBtn active" data-tab="dashboard">

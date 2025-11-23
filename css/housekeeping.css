@@ -588,7 +588,7 @@ tbody tr:hover {
 .editTypesModal,
 .logoutModal,
 .deleteConfirmModal {
-  background-color: #fff;
+  background-color: #480c1b;
   border-radius: 12px;
   color: rgb(255, 166, 0);
   padding: 35px;

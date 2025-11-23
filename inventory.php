@@ -291,7 +291,7 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
   <div class="mainContainer">
-    <h1 class="pageTitle">Inventory</h1>
+    <h1 class="pageTitle">INVENTORY</h1>
 
     <div class="tabNavigation">
       <button class="tabBtn active" data-tab="requests">

@@ -336,8 +336,8 @@ $conn->close();
             <div class="modalIcon">
                 <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
             </div>
-            <h2>Are you sure you want to logout?</h2>
-            <p>You will be logged out from your account and redirected to the login page.</p>
+            <h2 style="color: #FFA237; text-align: center; font-size: 20px;">Are you sure you want to logout?</h2>
+            <p style="color: #d8d8d8ff; text-align: center; font-size: 13px;">You will be logged out from your account and redirected to the login page.</p>
             <div class="modalButtons">
                 <button class="modalBtn cancelBtn" id="cancelLogoutBtn">CANCEL</button>
                 <button class="modalBtn confirmBtn" id="confirmLogoutBtn">YES, LOGOUT</button>
@@ -529,13 +529,13 @@ $conn->close();
     </div>
 
     <div class="modalBackdrop" id="editRoomStatusModal" style="display: none;">
-        <div class="addItemModal"> <button class="closeBtn" id="closeEditRoomStatusBtn">×</button>
+        <div class="addItemModal"> <button class="closeBtn" id="closeEditRoomStatusBtn" style="color: white;">×</button>
             <div class="modalIconHeader">
                 <i class="fas fa-bed" style="font-size: 48px; color: #FFA237;"></i>
             </div>
-            <h2 id="editRoomStatusModalTitle">Edit Room Status</h2>
+            <h2 id="editRoomStatusModalTitle" style="color: white;">Edit Room Status</h2>
             
-            <p class="modalSubtext normal-message">
+            <p class="modalSubtext normal-message" style="color: white;">
                 Update the status for Room <strong id="editRoomStatusRoomNumber">---</strong>.
             </p>
             <p class="modalSubtext error-message" id="editRoomStatusErrorMessage">
@@ -544,7 +544,7 @@ $conn->close();
                 <input type="hidden" id="editRoomStatusRoomId" value="">
                 <div class="formRow">
                     <div class="formGroup">
-                        <label>Room Status</label>
+                        <label style="color: white;">Room Status</label>
                         <select class="formInput" id="editRoomStatusSelect" required>
                             <option value="Available">Available</option>
                             <option value="Needs Cleaning">Needs Cleaning</option>
