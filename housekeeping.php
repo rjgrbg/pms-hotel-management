@@ -478,12 +478,12 @@ $conn->close();
 
     <div class="modalBackdrop" id="taskTypeModal" style="display: none;">
         <div class="addItemModal">
-            <button class="closeBtn" id="closeTaskTypeModalBtn" style="color: #bababa">×</button>
+            <button class="closeBtn" id="closeTaskTypeModalBtn" style="color: #bababa" >×</button>
             <div class="modalIconHeader">
                 <i class="fas fa-broom" style="font-size: 48px; color: #FFA237;"></i>
             </div>
             <h2 style="color: #ffffffff">Select Task Types</h2>
-            <p class="modalSubtext" style="color: #bababa">>Select all relevant tasks for the request in Room <strong id="taskTypeModalRoomNumber">---</strong>.</p>
+            <p class="modalSubtext" style="color: #bababa">Select all relevant tasks for the request in Room <strong id="taskTypeModalRoomNumber">---</strong>.</p>
             
             <form id="taskTypeForm">
                 <input type="hidden" id="taskTypeRoomId" value="">
