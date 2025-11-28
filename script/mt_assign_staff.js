@@ -20,6 +20,14 @@ const modalBackdrop = document.getElementById('modalBackdrop');
 const modalCancel = document.getElementById('modalCancel');
 const modalSave = document.getElementById('modalSave');
 
+const toast = document.getElementById('toast');
+
+// View Containers
+const taskContent = document.getElementById('task-content');
+const loadingState = document.getElementById('loading-state');
+const errorState = document.getElementById('error-state');
+const errorMessage = document.getElementById('error-message');
+
 // ===== PAGE INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Maintenance Details page loaded');
@@ -29,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const requestId = urlParams.get('request_id');
 
   if (!requestId) {
-    document.body.innerHTML = '<h1>Error: No Request ID provided.</h1>';
+    showErrorView('No Request ID provided in the URL.');
     return;
   }
 
@@ -38,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 2. Fetch task details from API
   fetchTaskDetails(CURRENT_REQUEST_ID);
 
-  // 3. *** ADDED: Setup event listeners for buttons ***
+  // 3. Setup event listeners
   setupEventListeners();
 });
 
@@ -46,6 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Fetch task details from the backend
  */
 async function fetchTaskDetails(requestId) {
+  showLoadingView();
   try {
     const response = await fetch(`api_staff_task.php?action=get_task_details&request_id=${requestId}`);
     
@@ -56,36 +65,14 @@ async function fetchTaskDetails(requestId) {
     const result = await response.json();
 
     if (result.status === 'success') {
-      // 3. Populate the page with data
       initializePageData(result.data);
+      showTaskView();
     } else {
-      // --- MODIFICATION START ---
-      // Show a user-friendly error card instead of just text
-      const container = document.querySelector('.container');
-      if (container) {
-          container.innerHTML = `
-              <div class="header">
-                  <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" style="height: 50px; width: 50px;">
-                  <div class="hotel-name">The Celestia Hotel</div>
-              </div>
-              <div class="content" style="padding: 30px;">
-                  <div class="task-error-card" style="display: block;">
-                      <h2 style="font-size: 1.5rem; color: #d9534f; margin-bottom: 15px;">Task Not Available</h2>
-                      <p style="font-size: 1rem; color: #555; margin-bottom: 25px; line-height: 1.5;">
-                          ${result.message || 'This task is completed, cancelled, or no longer exists.'}
-                      </p>
-                  </div>
-              </div>
-          `;
-      } else {
-          // Fallback if the .container element isn't found
-          document.body.innerHTML = `<h1>Error: ${result.message}</h1>`;
-      }
-      // --- MODIFICATION END ---
+      showErrorView(result.message || 'This task is completed, cancelled, or no longer exists.');
     }
   } catch (error) {
     console.error('Error fetching task details:', error);
-    document.body.innerHTML = '<h1>Error: Could not load task details.</h1>';
+    showErrorView('Could not load task details. Please check your connection.');
   }
 }
 
@@ -102,25 +89,28 @@ function initializePageData(data) {
   
   remarksTextarea.value = data.Remarks || '';
   
+  // Reset Visibility
+  inProgressBtn.style.display = '';
+  inProgressBtn.disabled = false;
+  doneBtn.disabled = false;
+  remarksTextarea.disabled = false;
+
   // Set button states based on status
   if (data.Status === 'In Progress') {
-    inProgressBtn.disabled = true;
-    inProgressBtn.textContent = 'In Progress';
-    remarksTextarea.disabled = false; // Make sure remarks can be edited
+    // *** HIDE In Progress button if already In Progress ***
+    inProgressBtn.style.display = 'none'; 
+    
   } else if (data.Status === 'Completed') {
     inProgressBtn.disabled = true;
     doneBtn.disabled = true;
     inProgressBtn.textContent = 'Task Completed';
     doneBtn.textContent = 'Task Completed';
-    remarksTextarea.disabled = true; // Disable remarks if completed
-  } else {
-    // Pending status
-    inProgressBtn.disabled = false;
-    remarksTextarea.disabled = false;
+    remarksTextarea.disabled = true; 
+    inProgressBtn.style.display = ''; // Show (disabled)
   }
 }
 
-// ===== *** NEW: EVENT LISTENER SETUP *** =====
+// ===== EVENT LISTENER SETUP =====
 function setupEventListeners() {
     // --- "In Progress" Button ---
     inProgressBtn.addEventListener('click', () => {
@@ -130,15 +120,15 @@ function setupEventListeners() {
 
     // --- "Done" Button (opens modal) ---
     doneBtn.addEventListener('click', () => {
-        modalBackdrop.style.display = 'flex'; // Use display flex to show
+        modalBackdrop.style.display = 'flex';
     });
 
     // --- Modal "Cancel" Button ---
     modalCancel.addEventListener('click', () => {
-        modalBackdrop.style.display = 'none'; // Use display none to hide
+        modalBackdrop.style.display = 'none';
     });
 
-    // --- *** FIXED: Modal "Save" Button (completes task) *** ---
+    // --- Modal "Save" Button (completes task) ---
     modalSave.addEventListener('click', () => {
         console.log('Setting status to Completed...');
         updateTaskStatus('Completed');
@@ -147,11 +137,25 @@ function setupEventListeners() {
     // --- Modal Backdrop (closes modal) ---
     modalBackdrop.addEventListener('click', (e) => {
         if (e.target === modalBackdrop) {
-            modalBackdrop.style.display = 'none'; // Use display none to hide
+            modalBackdrop.style.display = 'none';
         }
     });
 }
 
+
+/**
+ * Show Toast Notification
+ */
+function showToast(message, type = 'success') {
+    if (!toast) return;
+
+    toast.textContent = message;
+    toast.className = `toast toast-${type} toast-visible`;
+
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+    }, 3000);
+}
 
 /**
  * Send the status update to the backend
@@ -182,17 +186,43 @@ async function updateTaskStatus(newStatus) {
     const result = await response.json();
 
     if (result.status === 'success') {
-      alert(`✅ Task status updated to ${newStatus}`);
+      showToast(`✅ Task status updated to ${newStatus}`, 'success');
+      
       if (newStatus === 'Completed') {
-         modalBackdrop.style.display = 'none'; // Use display none to hide
+         modalBackdrop.style.display = 'none';
+         setTimeout(() => {
+             window.location.reload();
+         }, 1500);
+      } else {
+         // Reload details (which will trigger the hiding logic in initializePageData)
+         fetchTaskDetails(CURRENT_REQUEST_ID);
       }
-      // Reload details to show new status
-      fetchTaskDetails(CURRENT_REQUEST_ID); 
     } else {
-      alert(`⚠️ Error: ${result.message}`);
+      showToast(`⚠️ Error: ${result.message}`, 'error');
     }
   } catch (error) {
     console.error('Error updating task status:', error);
-    alert('Error: Could not connect to server to update status.');
+    showToast('Error: Could not connect to server to update status.', 'error');
   }
+}
+
+// ===== VIEW CONTROLS =====
+
+function showLoadingView() {
+    if (taskContent) taskContent.style.display = 'none';
+    if (errorState) errorState.style.display = 'none';
+    if (loadingState) loadingState.style.display = 'block';
+}
+
+function showErrorView(message) {
+    if (taskContent) taskContent.style.display = 'none';
+    if (loadingState) loadingState.style.display = 'none';
+    if (errorMessage) errorMessage.textContent = message;
+    if (errorState) errorState.style.display = 'block';
+}
+
+function showTaskView() {
+    if (loadingState) loadingState.style.display = 'none';
+    if (errorState) errorState.style.display = 'none';
+    if (taskContent) taskContent.style.display = 'block';
 }

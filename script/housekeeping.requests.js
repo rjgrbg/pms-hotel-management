@@ -120,7 +120,7 @@ function handleEditStatusClick(button) {
 }
 
 function handleCancelTaskClick(button) {
-  const taskIdToCancel = parseInt(button.dataset.taskId); // MODIFIED
+  const taskIdToCancel = parseInt(button.dataset.taskId);
   if (!taskIdToCancel) return;
 
   console.log(`Attempting to cancel task: ${taskIdToCancel}`);
@@ -131,14 +131,19 @@ function handleCancelTaskClick(button) {
     async () => {
       console.log(`Confirmed cancellation for task: ${taskIdToCancel}`);
       try {
-        const result = await handleApiCall('cancel_task', { taskId: taskIdToCancel }); // MODIFIED
+        const result = await handleApiCall('cancel_task', { taskId: taskIdToCancel });
         if (result.status === 'success') {
           showSuccessModal(result.message || 'Task cancelled successfully.');
-          // Refresh data
+          
+          // --- ADDED: Reload page after 1.5 seconds (Like Maintenance) ---
+          setTimeout(() => {
+             window.location.reload();
+          }, 1500);
+          
+          // (The code below is technically redundant if we reload, but keeps the UI consistent for the 1.5s delay)
           const index = currentRequestsData.findIndex(r => r.taskId === taskIdToCancel);
           if (index > -1) {
-            // Update local data to reflect cancellation
-            currentRequestsData[index].status = 'Available'; // Or 'Needs Cleaning', depending on logic
+            currentRequestsData[index].status = 'Available';
             currentRequestsData[index].staff = 'Not Assigned';
             currentRequestsData[index].taskId = null;
             currentRequestsData[index].date = 'N/A';
@@ -250,16 +255,19 @@ async function handleConfirmStaffAssign() {
       hideStaffModal();
       showSuccessModal(result.message || 'Task assigned successfully.');
 
+      // --- ADDED: Reload page after 1.5 seconds (Like Maintenance) ---
+      setTimeout(() => {
+           window.location.reload();
+      }, 1500);
+
+      // (Kept for UI consistency during delay)
       const index = currentRequestsData.findIndex(r => r.id === currentRoomId);
       if (index > -1) {
         currentRequestsData[index].status = 'Pending';
         currentRequestsData[index].staff = result.staffName || 'Assigned';
-        // We need the new taskId from the API to make cancel work
-        // Let's assume the API returns it
         if(result.newTaskId) {
             currentRequestsData[index].taskId = result.newTaskId;
         }
-        // In a real app, we'd get date/time too
       }
       applyRequestFiltersAndRender();
       
@@ -282,7 +290,6 @@ async function handleConfirmStaffAssign() {
     selectedTaskTypes = '';
   }
 }
-
 // ===== FILTER & RENDER (REQUESTS) =====
 function applyRequestFiltersAndRender() {
   const floor = document.getElementById('floorFilter').value;

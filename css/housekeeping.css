@@ -367,7 +367,7 @@ tbody tr:hover {
 }
 
 .statusBadge.needs-cleaning {
-  background-color: #ff6b35;
+  background-color: #9b59b6;
 }
 
 .statusBadge.cleaned {
@@ -444,7 +444,7 @@ tbody tr:hover {
   border: none;
   padding: 6px 10px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px; /* Changed from 14px to 16px */
   transition: all 0.2s;
   color: #666;
 }
@@ -454,13 +454,12 @@ tbody tr:hover {
 }
 
 .actionIconBtn.editBtn:hover {
-  color: #FFA237;
+  color: #FFA237; /* Orange hover for Edit */
 }
 
 .actionIconBtn.deleteBtn:hover {
-  color: #dc3545;
+  color: #dc3545; /* Red hover for Cancel */
 }
-
 .pagination {
   display: flex;
   justify-content: space-between;
@@ -1005,8 +1004,8 @@ tbody tr:hover {
 
 /* Special button styling for staff modal */
 .modalBtn.confirmBtn#confirmStaffAssignBtn {
-  background-color: #28a745;
-  color: white;
+  background-color: #bb8300;
+  color: rgb(72, 12, 27);
 }
 
 .modalBtn.confirmBtn#confirmStaffAssignBtn:hover:not(:disabled) {

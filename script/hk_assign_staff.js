@@ -1,33 +1,15 @@
 // ===== HOUSEKEEPING TASK DETAILS PAGE SCRIPT =====
 
 // --- GLOBALS ---
-let CURRENT_TASK_ID = null; // MODIFIED
+let CURRENT_TASK_ID = null;
 
 // --- DOM ELEMENTS ---
-// Assumes hk_assign_staff.html uses the same IDs as mt_assign_staff.html
-const roomValue = document.getElementById('room-value');
-const roomTypeValue = document.getElementById('room-type-value');
-const dateValue = document.getElementById('date-value');
-const requestTimeValue = document.getElementById('request-time-value');
-const statusValue = document.getElementById('status-value');
-const issueTypeValue = document.getElementById('issue-type-value'); // This ID should be in your HTML, e.g., "task-type-value"
-
-const remarksTextarea = document.querySelector('.remarks-textarea');
-
-const inProgressBtn = document.getElementById('inProgressBtn');
-const doneBtn = document.getElementById('doneBtn');
-
-const modalBackdrop = document.getElementById('modalBackdrop');
-const modalCancel = document.getElementById('modalCancel');
-const modalSave = document.getElementById('modalSave');
-
-// --- NEW: Get all elements from your new HTML structure ---
 const elements = {
     taskIdInput: document.getElementById('task-id'),
     roomNumber: document.getElementById('room-number'),
     dateRequested: document.getElementById('date-requested'),
     timeRequested: document.getElementById('time-requested'),
-    taskType: document.getElementById('task-type'), // MODIFIED
+    taskType: document.getElementById('task-type'),
     currentStatus: document.getElementById('current-status'),
     remarksTextarea: document.getElementById('remarks-textarea'),
     inProgressBtn: document.getElementById('inProgressBtn'),
@@ -40,7 +22,8 @@ const elements = {
     loadingState: document.getElementById('loading-state'),
     errorState: document.getElementById('error-state'),
     errorMessage: document.getElementById('error-message'),
-    taskContent: document.getElementById('task-content')
+    taskContent: document.getElementById('task-content'),
+    toast: document.getElementById('toast')
 };
 
 // ===== PAGE INITIALIZATION =====
@@ -49,10 +32,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 1. Get task_id from URL
   const urlParams = new URLSearchParams(window.location.search);
-  const taskId = urlParams.get('task_id'); // MODIFIED
+  const taskId = urlParams.get('task_id');
 
   if (!taskId) {
-    showErrorView('Task ID not provided in the URL.', elements); // MODIFIED
+    showErrorView('Task ID not provided in the URL.', elements);
     return;
   }
 
@@ -72,7 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchTaskDetails(taskId, elements) {
     showLoadingView(elements);
     try {
-        // MODIFIED: API path and parameter
         const response = await fetch(`api_hk_task.php?action=get_task_details&task_id=${taskId}`);
         if (!response.ok) {
             throw new Error('Network response was not ok');
@@ -98,17 +80,26 @@ function populateTaskDetails(data, elements) {
     elements.roomNumber.textContent = data.RoomNumber || 'N/A';
     elements.dateRequested.textContent = data.DateRequested || 'N/A';
     elements.timeRequested.textContent = data.TimeRequested || 'N/A';
-    elements.taskType.textContent = data.TaskType || 'N/A'; // MODIFIED
+    elements.taskType.textContent = data.TaskType || 'N/A';
     elements.currentStatus.textContent = data.Status || 'N/A';
     elements.remarksTextarea.value = data.Remarks || '';
 
+    // Reset button visibility
+    elements.inProgressBtn.style.display = ''; 
+    elements.inProgressBtn.disabled = false;
+    elements.doneBtn.disabled = false;
+    elements.remarksTextarea.disabled = false;
+
     if (data.Status === 'In Progress') {
-        elements.inProgressBtn.disabled = true;
-        elements.inProgressBtn.textContent = 'In Progress';
+        // *** HIDE In Progress button if already In Progress ***
+        elements.inProgressBtn.style.display = 'none';
+        
     } else if (data.Status === 'Completed') {
         elements.inProgressBtn.disabled = true;
         elements.doneBtn.disabled = true;
         elements.remarksTextarea.disabled = true;
+        elements.inProgressBtn.textContent = 'Task Completed';
+        elements.inProgressBtn.style.display = ''; // Show disabled button
     }
 }
 
@@ -145,33 +136,44 @@ function addEventListeners(elements) {
         }
     });
 
-    // --- Success Modal OK Button ---
-    elements.okaySuccessBtn.addEventListener('click', () => {
-        elements.successModal.style.display = 'none';
-        if (elements.currentStatus.textContent === 'Completed') {
-            // Optional: Close window or redirect
-            // window.close();
-        }
-    });
+    // --- Success Modal OK Button (Legacy) ---
+    if (elements.okaySuccessBtn) {
+        elements.okaySuccessBtn.addEventListener('click', () => {
+            elements.successModal.style.display = 'none';
+        });
+    }
 }
 
+/**
+ * Show Toast Notification
+ */
+function showToast(message, type = 'success') {
+    if (!elements.toast) return;
+
+    elements.toast.textContent = message;
+    elements.toast.className = `toast toast-${type} toast-visible`;
+
+    setTimeout(() => {
+        elements.toast.classList.remove('toast-visible');
+    }, 3000);
+}
 
 /**
  * Send the status update to the backend
  */
 async function updateTaskStatus(newStatus, elements) {
   const taskData = {
-    task_id: CURRENT_TASK_ID, // MODIFIED
+    task_id: CURRENT_TASK_ID, 
     status: newStatus,
     remarks: elements.remarksTextarea.value 
   };
 
-  // Disable buttons
+  // Disable buttons while processing
   elements.inProgressBtn.disabled = true;
   elements.doneBtn.disabled = true;
 
   try {
-    const response = await fetch('api_hk_task.php', { // MODIFIED
+    const response = await fetch('api_hk_task.php', { 
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -189,27 +191,33 @@ async function updateTaskStatus(newStatus, elements) {
     const result = await response.json();
 
     if (result.status === 'success') {
-      elements.successModal.style.display = 'flex';
+      showToast(`✅ Task status updated to ${newStatus}`, 'success');
       elements.currentStatus.textContent = newStatus;
       
       if (newStatus === 'Completed') {
          elements.modalBackdrop.style.display = 'none';
          elements.remarksTextarea.disabled = true;
+         
+         setTimeout(() => {
+             window.location.reload();
+         }, 1500);
+
       } else if (newStatus === 'In Progress') {
-         elements.inProgressBtn.textContent = 'In Progress';
+         // *** HIDE In Progress button immediately ***
+         elements.inProgressBtn.style.display = 'none'; 
          elements.doneBtn.disabled = false; // Re-enable done button
       }
     } else {
-      alert(`Error: ${result.message}`);
+      showToast(`⚠️ Error: ${result.message}`, 'error');
       // Re-enable buttons if error
-      elements.inProgressBtn.disabled = (newStatus === 'In Progress');
+      elements.inProgressBtn.disabled = false;
       elements.doneBtn.disabled = false;
     }
   } catch (error) {
     console.error('Update task status error:', error);
-    alert('An error occurred while updating the status.');
+    showToast('Error: Could not connect to server to update status.', 'error');
     // Re-enable buttons if error
-    elements.inProgressBtn.disabled = (newStatus === 'In Progress');
+    elements.inProgressBtn.disabled = false;
     elements.doneBtn.disabled = false;
   }
 }
@@ -217,20 +225,20 @@ async function updateTaskStatus(newStatus, elements) {
 // ===== VIEW CONTROLS =====
 
 function showLoadingView(elements) {
-    elements.taskContent.style.display = 'none';
-    elements.errorState.style.display = 'none';
-    elements.loadingState.style.display = 'block';
+    if (elements.taskContent) elements.taskContent.style.display = 'none';
+    if (elements.errorState) elements.errorState.style.display = 'none';
+    if (elements.loadingState) elements.loadingState.style.display = 'block';
 }
 
 function showErrorView(message, elements) {
-    elements.taskContent.style.display = 'none';
-    elements.loadingState.style.display = 'none';
-    elements.errorMessage.textContent = message;
-    elements.errorState.style.display = 'block';
+    if (elements.taskContent) elements.taskContent.style.display = 'none';
+    if (elements.loadingState) elements.loadingState.style.display = 'none';
+    if (elements.errorMessage) elements.errorMessage.textContent = message;
+    if (elements.errorState) elements.errorState.style.display = 'block';
 }
 
 function showTaskView(elements) {
-    elements.loadingState.style.display = 'none';
-    elements.errorState.style.display = 'none';
-    elements.taskContent.style.display = 'block';
+    if (elements.loadingState) elements.loadingState.style.display = 'none';
+    if (elements.errorState) elements.errorState.style.display = 'none';
+    if (elements.taskContent) elements.taskContent.style.display = 'block';
 }

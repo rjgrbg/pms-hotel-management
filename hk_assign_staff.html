@@ -6,6 +6,40 @@
     <title>Housekeeping Task - The Celestia Hotel</title>
     <link rel="stylesheet" href="css/mt_assign_staff.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* TOAST STYLES */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #333; /* Default dark */
+            color: white;
+            padding: 12px 24px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+            z-index: 10000;
+            font-family: sans-serif;
+            font-size: 14px;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none; /* Prevent clicking when invisible */
+        }
+
+        .toast.toast-success {
+            background-color: #28a745; /* Green */
+        }
+        
+        .toast.toast-error {
+            background-color: #dc3545; /* Red */
+        }
+
+        .toast.toast-visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -68,7 +102,8 @@
 
     <div class="modal-backdrop" id="modalBackdrop">
         <div class="modal">
-            <h2 class="modal-title">Done?</h2>
+            <h2 class="modal-title">Complete Task?</h2>
+            <p>Are you sure you want to mark this task as complete?</p> 
             <div class="modal-buttons">
                 <button class="modal-btn modal-btn-cancel" id="modalCancel">Cancel</button>
                 <button class="modal-btn modal-btn-confirm" id="modalSave">Save</button>
@@ -88,6 +123,8 @@
             </div>
         </div>
     </div>
+
+    <div id="toast" class="toast">Notification</div>
 
     <script src="script/hk_assign_staff.js"></script>
 </body>

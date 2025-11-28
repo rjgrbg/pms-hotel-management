@@ -20,15 +20,19 @@ document.addEventListener('DOMContentLoaded', () => {
       right: 20px;
       background-color: #28a745; /* Green Background */
       color: white;
-      padding: 16px 24px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 12px 24px; /* Adjusted to match Maintenance */
+      border-radius: 5px; /* Adjusted to match Maintenance */
+      box-shadow: 0 4px 6px rgba(0,0,0,0.15); /* Adjusted shadow */
       z-index: 9999;
       opacity: 0;
       transform: translateY(-20px);
       transition: all 0.3s ease-in-out;
-      font-family: sans-serif;
+      
+      /* --- FONT STYLE FIX --- */
+      font-family: 'Segoe UI', sans-serif;
       font-size: 14px;
+      /* ---------------------- */
+      
       font-weight: 500;
       display: flex;
       align-items: center;
@@ -131,28 +135,60 @@ document.addEventListener('DOMContentLoaded', () => {
   const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
   const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
 
-  // ======================================================
+// ======================================================
   // === HELPER FUNCTIONS (Toast & Modals)
   // ======================================================
 
-  // --- NEW TOAST FUNCTION ---
-  const showToast = (message) => {
+  // --- UPDATED TOAST FUNCTION (No Icon, Bold Text) ---
+  const showToast = (message, type = 'success') => {
     // Create Toast Element
     const toast = document.createElement('div');
-    toast.className = 'toast-notification';
-    // Add a checkmark icon for visual flair
-    toast.innerHTML = `<span>&#10004;</span> ${message}`;
+    
+    // CHANGED: Just text, no icon
+    toast.innerText = message;
+
+    // --- APPLY STYLES DIRECTLY ---
+    toast.style.fontFamily = "'Segoe UI', sans-serif";
+    toast.style.fontSize = '14px';
+   // CHANGED: Made bold
+    
+    // Color Logic
+    if (type === 'error') {
+        toast.style.backgroundColor = '#dc3545'; // Red
+    } else {
+        toast.style.backgroundColor = '#28a745'; // Green
+    }
+    
+    // Layout & Positioning
+    toast.style.color = 'white';
+    toast.style.padding = '12px 24px';
+    toast.style.borderRadius = '5px';
+    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)';
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '99999';
+    toast.style.display = 'flex';
+    toast.style.alignItems = 'center';
+    
+    // Animation States
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-20px)';
+    toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    toast.style.pointerEvents = 'none';
 
     document.body.appendChild(toast);
 
-    // Trigger animation (fade in)
+    // Trigger animation (Fade In)
     requestAnimationFrame(() => {
-      toast.classList.add('show');
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
     });
 
     // Remove after 3 seconds
     setTimeout(() => {
-      toast.classList.remove('show');
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-20px)';
       // Wait for transition to finish before removing from DOM
       setTimeout(() => {
         if (document.body.contains(toast)) {

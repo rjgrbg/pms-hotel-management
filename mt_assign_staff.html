@@ -5,12 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Maintenance Details - The Celestia Hotel</title>
   <link rel="stylesheet" href="css/mt_assign_staff.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   
   <style>
     .detail-value-issues {
       white-space: normal; /* Allows the text to wrap */
       line-height: 1.5;
       text-align: right;   /* Aligns the wrapped text to the right */
+    }
+
+    /* TOAST STYLES */
+    .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #333;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 5px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        z-index: 10000;
+        font-family: sans-serif;
+        font-size: 14px;
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: none;
+    }
+
+    .toast.toast-success {
+        background-color: #28a745;
+    }
+
+    .toast.toast-error {
+        background-color: #dc3545;
+    }
+
+    .toast.toast-visible {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
     }
   </style>
 
@@ -22,7 +56,7 @@
       <div class="hotel-name">The Celestia Hotel</div>
     </div>
 
-    <div class="content">
+    <div class="content" id="task-content">
       <h1 class="page-title">Maintenance Details</h1>
 
       <div class="details-grid">
@@ -62,18 +96,32 @@
         <button class="btn btn-done" id="doneBtn">Done</button>
       </div>
     </div>
+
+    <div class="content" id="loading-state" style="display: none; text-align: center; padding: 40px;">
+        <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #FFA237;"></i>
+        <h2 style="color: #555;">Loading Task Details...</h2>
+    </div>
+
+    <div class="content" id="error-state" style="display: none; text-align: center; padding: 40px;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 48px; color: #d9534f;"></i>
+        <h2 style="color: #555;">Task Not Found</h2>
+        <p id="error-message" style="color: #666;">This task may have been completed, cancelled, or the link is invalid.</p>
+    </div>
+
   </div>
 
   <div class="modal-backdrop" id="modalBackdrop">
     <div class="modal">
       <h2 class="modal-title">Complete Task?</h2>
-      <p>Are you sure you want to mark this task as complete?</p>
+      <p>Are you sure you want to mark this task as complete?</p> 
       <div class="modal-buttons">
         <button class="modal-btn modal-btn-cancel" id="modalCancel">Cancel</button>
         <button class="modal-btn modal-btn-confirm" id="modalSave">Save</button>
       </div>
     </div>
   </div>
+
+  <div id="toast" class="toast">Notification</div>
 
   <script src="script/mt_assign_staff.js"></script>
 </body>

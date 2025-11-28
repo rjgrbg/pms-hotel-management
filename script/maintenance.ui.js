@@ -26,8 +26,19 @@ function renderStaffList(staffToRender = filteredStaff) {
 
   staffList.querySelectorAll('.staffListItem.clickable').forEach(item => {
     item.addEventListener('click', () => {
-        staffList.querySelectorAll('.staffListItem').forEach(i => i.classList.remove('selected'));
+        // 1. Reset all items
+        staffList.querySelectorAll('.staffListItem').forEach(i => {
+            i.classList.remove('selected');
+            i.style.backgroundColor = ''; 
+            i.style.border = '';          
+        });
+
+        // 2. Highlight selected item (Darker Gray)
         item.classList.add('selected');
+        item.style.backgroundColor = '#cccccc'; // Changed to a darker gray
+        item.style.border = '1px solid #999';   
+        
+        // 3. Update State
         selectedStaffId = parseInt(item.dataset.staffId);
         if (assignBtn) assignBtn.disabled = false;
     });
@@ -70,7 +81,7 @@ function hideEditRoomStatusModal() {
     document.getElementById('editRoomStatusModal').style.display = 'none';
 }
 
-function showAddHotelAssetModal(isEdit = false, assetData = null) { // Renamed
+function showAddHotelAssetModal(isEdit = false, assetData = null) { 
   const modal = document.getElementById('addHotelAssetModal');
   const modalTitle = document.getElementById('addHotelAssetModalTitle');
   const modalSubtext = document.getElementById('addHotelAssetModalSubtext');
@@ -101,18 +112,18 @@ function showAddHotelAssetModal(isEdit = false, assetData = null) { // Renamed
     
     document.getElementById('hotelAssetId').value = assetData.id;
     
-    populateHotelAssetFloorDropdown(); // Renamed
+    populateHotelAssetFloorDropdown(); 
     inputs.floor.value = assetData.floor;
-    inputs.floor.disabled = false; // Allow editing all fields
+    inputs.floor.disabled = false; 
     
-    updateHotelAssetRoomDropdown(); // Renamed
-    inputs.room.value = assetData.roomId; // Use roomId
+    updateHotelAssetRoomDropdown(); 
+    inputs.room.value = assetData.roomId; 
     inputs.room.disabled = false;
     
     inputs.name.value = assetData.item;
     inputs.name.disabled = false;
     
-    populateHotelAssetTypeDropdown(); // Renamed
+    populateHotelAssetTypeDropdown(); 
     inputs.type.value = assetData.type;
     inputs.type.disabled = false;
     
@@ -148,16 +159,16 @@ function showAddHotelAssetModal(isEdit = false, assetData = null) { // Renamed
     remarksGroup.style.display = 'none';
     inputs.remarks.disabled = true;
 
-    populateHotelAssetFloorDropdown(); // Renamed
-    updateHotelAssetRoomDropdown(); // Renamed
-    populateHotelAssetTypeDropdown(); // Renamed
+    populateHotelAssetFloorDropdown(); 
+    updateHotelAssetRoomDropdown(); 
+    populateHotelAssetTypeDropdown(); 
   }
   
   modal.style.display = 'flex';
 }
 
 
-function hideAddHotelAssetModal() { // Renamed
+function hideAddHotelAssetModal() { 
   document.getElementById('addHotelAssetModal').style.display = 'none';
   document.getElementById('addHotelAssetForm').reset();
   
@@ -174,29 +185,25 @@ function hideAddHotelAssetModal() { // Renamed
 }
 
 function showSuccessModal(message) {
-  console.log('showSuccessModal called:', message);
   document.getElementById('successModalMessage').textContent = message;
   document.getElementById('successModal').style.display = 'flex';
 }
 
 function hideSuccessModal() {
-  console.log('hideSuccessModal called');
   document.getElementById('successModal').style.display = 'none';
 }
 
 function showDeleteModal() {
-  console.log('showDeleteModal called');
   document.getElementById('deleteModal').style.display = 'flex';
 }
 
 function hideDeleteModal() {
-  console.log('hideDeleteModal called');
   document.getElementById('deleteModal').style.display = 'none';
-  currentHotelAssetId = null; // Renamed
+  currentHotelAssetId = null; 
 }
 
 // ===== MODAL FORM POPULATION =====
-function populateHotelAssetFloorDropdown() { // Renamed
+function populateHotelAssetFloorDropdown() { 
   const floorSelect = document.getElementById('hotelAssetFloor');
   floorSelect.innerHTML = '<option value="">Select Floor</option>';
   
@@ -210,7 +217,7 @@ function populateHotelAssetFloorDropdown() { // Renamed
   });
 }
 
-function updateHotelAssetRoomDropdown() { // Renamed
+function updateHotelAssetRoomDropdown() { 
   const floorSelect = document.getElementById('hotelAssetFloor');
   const roomSelect = document.getElementById('hotelAssetRoom');
   const selectedFloor = floorSelect.value;
@@ -228,13 +235,13 @@ function updateHotelAssetRoomDropdown() { // Renamed
   });
 }
 
-function populateHotelAssetTypeDropdown() { // Renamed
+function populateHotelAssetTypeDropdown() { 
     const typeSelect = document.getElementById('hotelAssetType');
     while (typeSelect.options.length > 1) {
         typeSelect.remove(1);
     }
     
-    hotelAssetsTypes.forEach(type => { // Renamed
+    hotelAssetsTypes.forEach(type => { 
         const option = document.createElement('option');
         option.value = type;
         option.textContent = type;

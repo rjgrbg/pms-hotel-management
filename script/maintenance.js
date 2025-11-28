@@ -22,8 +22,8 @@ const paginationState = {
 // --- INJECT TOAST CSS ---
 const maintToastStyle = document.createElement("style");
 maintToastStyle.textContent = `
-    .toast-success {
-        position: fixed; top: 20px; right: 20px; background-color: #28a745; color: white;
+    .toast-notification {
+        position: fixed; top: 20px; right: 20px; color: white;
         padding: 12px 24px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);
         z-index: 99999; font-family: 'Segoe UI', sans-serif; font-size: 14px;
         opacity: 0; transform: translateY(-20px); transition: opacity 0.3s ease, transform 0.3s ease;
@@ -33,14 +33,22 @@ maintToastStyle.textContent = `
 `;
 document.head.appendChild(maintToastStyle);
 
-// --- SHOW TOAST FUNCTION ---
-function showMaintenanceToast(message) {
-    const existingToast = document.querySelector('.toast-success');
+// --- SHOW TOAST FUNCTION (Updated to support types) ---
+function showMaintenanceToast(message, type = 'success') {
+    const existingToast = document.querySelector('.toast-notification');
     if (existingToast) existingToast.remove();
 
     const toast = document.createElement('div');
-    toast.className = 'toast-success';
+    toast.className = 'toast-notification';
     toast.innerText = message;
+    
+    // Set color based on type
+    if (type === 'error') {
+        toast.style.backgroundColor = '#dc3545'; // Red
+    } else {
+        toast.style.backgroundColor = '#28a745'; // Green
+    }
+
     document.body.appendChild(toast);
 
     requestAnimationFrame(() => toast.classList.add('toast-visible'));
@@ -364,13 +372,15 @@ function renderRequestsTable() {
             assignButton = `<button class="assignBtn" data-room-id="${req.id}" disabled>Not Required</button>`;
         }
         
+        // --- ADDED: 'deleteBtn' class for red hover ---
         let cancelButton = ''; 
         if (req.status === 'Pending') {
-            cancelButton = `<button class="actionIconBtn cancel-request-btn" title="Cancel Request" data-request-id="${req.requestId}">
+            cancelButton = `<button class="actionIconBtn deleteBtn cancel-request-btn" title="Cancel Request" data-request-id="${req.requestId}">
                                 <i class="fas fa-times"></i>
                             </button>`;
         }
 
+        // --- ADDED: 'editBtn' class for orange hover ---
         return `
           <tr data-room-id="${req.id}" data-request-id="${req.requestId}" data-room-number="${req.room}" data-status="${req.status}">
             <td>${req.floor ?? 'N/A'}</td>
@@ -381,7 +391,7 @@ function renderRequestsTable() {
             <td><span class="statusBadge ${statusClass}">${req.status}</span></td>
             <td>${assignButton}</td>
             <td class="action-cell">
-                <button class="actionIconBtn edit-room-status-btn" title="Edit Room Status">
+                <button class="actionIconBtn editBtn edit-room-status-btn" title="Edit Room Status">
                     <i class="fas fa-edit"></i>
                 </button>
                 ${cancelButton} 
@@ -422,10 +432,26 @@ function handleRequestsTableClick(e) {
         const roomNumber = row.dataset.roomNumber;
         const status = row.dataset.status;
         
+        // --- SAFETY CHECKS ---
+
+        // 1. Prevent editing if task is active
+        if (status === 'Pending' || status === 'In Progress') {
+            showMaintenanceToast(`Cannot edit status for Room ${roomNumber} while a maintenance task is ${status}.`, 'error');
+            return;
+        }
+
+        // 2. Prevent editing if status belongs to Housekeeping
+        if (status === 'Needs Cleaning') {
+            showMaintenanceToast(`Cannot edit status. Room ${roomNumber} currently needs cleaning.`, 'error');
+            return;
+        }
+        // ---------------------
+        
         document.getElementById('editRoomStatusRoomNumber').textContent = roomNumber;
         document.getElementById('editRoomStatusRoomId').value = currentRoomId;
         
         const statusSelect = document.getElementById('editRoomStatusSelect');
+        // Pre-select the correct value or default
         if (status === 'Needs Maintenance') {
             statusSelect.value = 'Needs Maintenance';
         } else {
@@ -589,7 +615,10 @@ function applyRequestFiltersAndRender() {
   renderRequestsTable();
 }
 
-function resetRequestFilters() {
+async function resetRequestFilters() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    const originalText = refreshBtn.innerHTML;
+
     document.getElementById('floorFilter').value = '';
     document.getElementById('roomFilter').value = '';
     document.getElementById('searchInput').value = '';
@@ -599,19 +628,58 @@ function resetRequestFilters() {
     sessionStorage.removeItem('requests_searchInput');
 
     updateRoomFilterOptions(); 
-    applyRequestFiltersAndRender();
-    showMaintenanceToast("Maintenance Requests Refreshed!");
+    
+    try {
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        // Use handleApiCall wrapper to fetch 'get_all_requests'
+        const result = await handleApiCall('get_all_requests', {});
+        
+        if (result.status === 'success') {
+            currentRequestsData = result.data;
+            applyRequestFiltersAndRender();
+            showMaintenanceToast("Maintenance Requests updated!", 'success');
+        } else {
+            showMaintenanceToast("Failed to fetch new data.", 'error');
+        }
+    } catch (error) {
+        console.error("Refresh Error:", error);
+        showMaintenanceToast("Network error during refresh.", 'error');
+    } finally {
+        refreshBtn.innerHTML = originalText;
+    }
 }
 
-function resetHistoryFilters() {
+async function resetHistoryFilters() {
+    const refreshBtn = document.getElementById('historyRefreshBtn');
+    const originalText = refreshBtn.innerHTML;
+
     document.getElementById('floorFilterHistory').value = '';
     document.getElementById('roomFilterHistory').value = '';
     document.getElementById('dateFilterHistory').value = '';
     document.getElementById('historySearchInput').value = '';
     
     updateHistoryRoomFilterOptions();
-    applyHistoryFiltersAndRender();
-    showMaintenanceToast("Maintenance History Refreshed!");
+    
+    try {
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        // Use handleApiCall wrapper to fetch 'get_all_history'
+        const result = await handleApiCall('get_all_history', {});
+        
+        if (result.status === 'success') {
+            currentHistoryData = result.data;
+            applyHistoryFiltersAndRender();
+            showMaintenanceToast("Maintenance History updated!", 'success');
+        } else {
+            showMaintenanceToast("Failed to fetch history.", 'error');
+        }
+    } catch (error) {
+        console.error("Refresh Error:", error);
+        showMaintenanceToast("Network error during refresh.", 'error');
+    } finally {
+        refreshBtn.innerHTML = originalText;
+    }
 }
 
 // ===== REQUESTS PDF DOWNLOAD =====

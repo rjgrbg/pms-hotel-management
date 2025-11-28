@@ -19,7 +19,7 @@ const paginationState = {
   history: { currentPage: 1, itemsPerPage: 10 }
 };
 
-// ===== TOAST NOTIFICATION SYSTEM (NEW) =====
+// ===== TOAST NOTIFICATION SYSTEM (UPDATED FONT) =====
 function showToast(message, type = 'success') {
     let container = document.getElementById('toast-container');
     if (!container) {
@@ -43,9 +43,14 @@ function showToast(message, type = 'success') {
     toast.style.color = 'white';
     toast.style.padding = '12px 24px';
     toast.style.marginBottom = '10px';
-    toast.style.borderRadius = '4px';
-    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
-    toast.style.fontFamily = 'Arial, sans-serif';
+    
+    // --- UPDATED STYLES TO MATCH MAINTENANCE ---
+    toast.style.borderRadius = '5px'; // Changed from 4px
+    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)'; // Changed opacity from 0.1
+    toast.style.fontFamily = "'Segoe UI', sans-serif"; // Changed from Arial
+    toast.style.fontSize = '14px'; // Added to match Maintenance
+    // -------------------------------------------
+
     toast.style.opacity = '0';
     toast.style.transition = 'opacity 0.3s ease-in-out';
 
@@ -251,23 +256,35 @@ function renderRequestsTable() {
             const safeStatusDisplay = escapeHtml(status);
             const safeStaff = escapeHtml(req.staff);
 
+            // Assign Button Logic
             let assignButton;
             if (req.staff !== 'Not Assigned') {
                 assignButton = `<button class="assignBtn assigned" disabled>${safeStaff}</button>`;
             } else if (['Needs Cleaning'].includes(status)) {
-                assignButton = `<button class="assignBtn assign-staff-btn" data-room-id="${escapeHtml(req.id)}" data-room-number="${safeRoom}">ASSIGN</button>`;
+                assignButton = `<button class="assignBtn assign-staff-btn" data-room-id="${escapeHtml(req.id)}" data-room-number="${safeRoom}">Assign Staff</button>`;
             } else {
-                assignButton = `<button class="assignBtn" disabled>ASSIGN</button>`;
+                assignButton = `<button class="assignBtn" disabled>Not Required</button>`;
             }
 
-            let actionButton;
+            // --- ACTION BUTTONS LOGIC (Fixed to match Maintenance) ---
+            
+            // 1. Edit Button (Always visible)
+            const editButton = `<button class="actionIconBtn editBtn edit-status-btn" title="Edit Status" 
+                                data-room-id="${escapeHtml(req.id)}" 
+                                data-room-number="${safeRoom}" 
+                                data-current-status="${escapeHtml(status)}">
+                                <i class="fas fa-edit"></i>
+                                </button>`;
+
+            // 2. Cancel Button (Only visible if Pending)
+            let cancelButton = '';
             if (status === 'Pending') {
-                actionButton = `<button class="actionBtn cancel-task-btn" data-task-id="${escapeHtml(req.taskId)}"><i class="fas fa-times"></i></button>`;
-            } else if (status === 'Available' || status === 'Needs Cleaning') {
-                actionButton = `<button class="actionBtn edit-status-btn" data-room-id="${escapeHtml(req.id)}" data-room-number="${safeRoom}" data-current-status="${escapeHtml(status)}"><i class="fas fa-edit"></i></button>`;
-            } else {
-                actionButton = `<button class="actionBtn" disabled><i class="fas fa-edit"></i></button>`;
+                cancelButton = `<button class="actionIconBtn deleteBtn cancel-task-btn" title="Cancel Task" 
+                                data-task-id="${escapeHtml(req.taskId)}">
+                                <i class="fas fa-times"></i>
+                                </button>`;
             }
+            // ---------------------------------------------------------
 
             return `
                 <tr data-room-id="${escapeHtml(req.id)}">
@@ -278,7 +295,10 @@ function renderRequestsTable() {
                     <td>${safeLastClean}</td>
                     <td><span class="statusBadge ${statusClass}">${safeStatusDisplay}</span></td>
                     <td>${assignButton}</td>
-                    <td>${actionButton}</td>
+                    <td class="action-cell" style="white-space: nowrap;">
+                        ${editButton}
+                        ${cancelButton}
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -313,6 +333,21 @@ function handleEditStatusClick(button) {
   const roomNumber = button.dataset.roomNumber;
   const currentStatus = button.dataset.currentStatus;
 
+  // --- SAFETY CHECKS ---
+  
+  // 1. Prevent editing if task is active
+  if (currentStatus === 'Pending' || currentStatus === 'In Progress') {
+      showToast(`Cannot edit status for Room ${roomNumber} while a task is ${currentStatus}. Please cancel the task first.`, 'error');
+      return;
+  }
+
+  // 2. Prevent editing if status belongs to Maintenance
+  if (currentStatus === 'Needs Maintenance') {
+      showToast(`Cannot edit status. Room ${roomNumber} is currently marked for Maintenance.`, 'error');
+      return;
+  }
+  // --------------------
+
   document.getElementById('editRoomStatusModalTitle').textContent = `Edit Room Status`;
   document.getElementById('editRoomStatusRoomNumber').textContent = roomNumber;
   document.getElementById('editRoomStatusRoomId').value = currentRoomId;
@@ -320,7 +355,6 @@ function handleEditStatusClick(button) {
   
   showEditRoomStatusModal();
 }
-
 function handleCancelTaskClick(button) {
   const taskIdToCancel = parseInt(button.dataset.taskId);
   if (!taskIdToCancel) return;
@@ -333,10 +367,16 @@ function handleCancelTaskClick(button) {
         const result = await handleApiCall('cancel_task', { taskId: taskIdToCancel });
         if (result.status === 'success') {
           showSuccessModal(result.message || 'Task cancelled successfully.');
-          // Refresh logic
+          
+          // --- ADDED: Reload page after 1.5 seconds ---
+          setTimeout(() => {
+             window.location.reload();
+          }, 1500);
+
+          // (Optional: UI update logic while waiting for reload)
           const index = currentRequestsData.findIndex(r => r.taskId === taskIdToCancel);
           if (index > -1) {
-            currentRequestsData[index].status = 'Needs Cleaning';
+            currentRequestsData[index].status = 'Needs Cleaning'; // Reset status
             currentRequestsData[index].staff = 'Not Assigned';
             currentRequestsData[index].taskId = null;
             currentRequestsData[index].date = 'N/A';
@@ -426,6 +466,13 @@ async function handleConfirmStaffAssign() {
     return;
   }
   
+  // --- START CHANGE: Get button and set "ASSIGNING..." indicator ---
+  const assignBtn = document.getElementById('confirmStaffAssignBtn');
+  // Store original text to restore it later
+  const originalText = assignBtn.textContent; 
+  assignBtn.disabled = true;
+  assignBtn.textContent = 'ASSIGNING...';
+  
   try {
     const data = {
       roomId: currentRoomId,
@@ -439,6 +486,12 @@ async function handleConfirmStaffAssign() {
       hideStaffModal();
       showSuccessModal(result.message || 'Task assigned successfully.');
 
+      // --- ADDED: Reload page after 1.5 seconds ---
+      setTimeout(() => {
+           window.location.reload();
+      }, 1500);
+
+      // (Optional: UI update logic while waiting for reload)
       const index = currentRequestsData.findIndex(r => r.id === currentRoomId);
       if (index > -1) {
         currentRequestsData[index].status = 'Pending';
@@ -460,6 +513,11 @@ async function handleConfirmStaffAssign() {
     hideStaffModal();
     showErrorModal('An error occurred while assigning the task.');
   } finally {
+    if (assignBtn) {
+        assignBtn.disabled = false;
+        // Restore the original text (e.g., "ASSIGN STAFF")
+        assignBtn.textContent = originalText; 
+    }
     currentRoomId = null;
     selectedStaffId = null;
     selectedTaskTypes = '';
@@ -498,8 +556,10 @@ function applyRequestFiltersAndRender() {
 }
 
 // ===== REFRESH FUNCTIONS WITH TOAST =====
-function handleRefreshRequests() {
+async function handleRefreshRequests() {
   console.log("Refreshing requests data...");
+  const refreshBtn = document.getElementById('refreshBtn');
+  const originalText = refreshBtn.innerHTML;
   
   // Clear filters
   document.getElementById('floorFilter').value = '';
@@ -507,15 +567,33 @@ function handleRefreshRequests() {
   document.getElementById('searchInput').value = '';
 
   if (typeof updateRoomFilterOptions === 'function') updateRoomFilterOptions();
-  applyRequestFiltersAndRender();
-  
-  // TRIGGER TOAST
-  showToast('Requests data refreshed!', 'success');
+
+  try {
+      refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      
+      // Fetch fresh data from API
+      const result = await handleApiCall('get_all_tasks', {});
+      
+      if (result.status === 'success') {
+          currentRequestsData = result.data; // Update global variable
+          applyRequestFiltersAndRender();
+          showToast('Requests data updated!', 'success');
+      } else {
+          showToast('Failed to refresh data.', 'error');
+      }
+  } catch (error) {
+      console.error("Refresh error:", error);
+      showToast('Error connecting to server.', 'error');
+  } finally {
+      refreshBtn.innerHTML = originalText;
+  }
 }
 
-function handleRefreshHistory() {
+async function handleRefreshHistory() {
   console.log("Refreshing history data...");
-  
+  const refreshBtn = document.getElementById('historyRefreshBtn');
+  const originalText = refreshBtn.innerHTML;
+
   document.getElementById('floorFilterHistory').value = '';
   document.getElementById('roomFilterHistory').value = '';
   document.getElementById('dateFilterHistory').value = '';
@@ -523,13 +601,26 @@ function handleRefreshHistory() {
   
   if (typeof updateHistoryRoomFilterOptions === 'function') updateHistoryRoomFilterOptions();
   
-  // Assuming you have this function from housekeeping.history.js or similar
-  if (typeof applyHistoryFiltersAndRender === 'function') {
-      applyHistoryFiltersAndRender();
+  try {
+      refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      
+      const result = await handleApiCall('get_all_history', {});
+      
+      if (result.status === 'success') {
+          currentHistoryData = result.data; // Update global variable
+          if (typeof applyHistoryFiltersAndRender === 'function') {
+              applyHistoryFiltersAndRender();
+          }
+          showToast('History updated!', 'success');
+      } else {
+          showToast('Failed to refresh history.', 'error');
+      }
+  } catch (error) {
+      console.error("Refresh error:", error);
+      showToast('Error connecting to server.', 'error');
+  } finally {
+      refreshBtn.innerHTML = originalText;
   }
-  
-  // TRIGGER TOAST
-  showToast('History data refreshed!', 'success');
 }
 
 // ===== PDF DOWNLOAD FUNCTIONS (FIXED) =====

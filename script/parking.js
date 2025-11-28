@@ -91,31 +91,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ========================================================
-    // UTILITY & HELPER FUNCTIONS
-    // ========================================================
-    function showToast(message, type = 'success') {
-        const container = document.getElementById('toast-container');
-        if (!container) return;
-        
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.textContent = message;
-        
-        container.appendChild(toast);
-        
-        setTimeout(() => {
-            toast.classList.add('show');
-        }, 10);
-        
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => {
-                if (toast.parentNode) {
-                    toast.remove();
-                }
-            }, 400);
-        }, 3000);
+// UTILITY & HELPER FUNCTIONS
+// ========================================================
+function showToast(message, type = 'success') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        // Create container if it doesn't exist (Self-contained)
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.position = 'fixed';
+        container.style.top = '20px';
+        container.style.right = '20px';
+        container.style.zIndex = '99999';
+        document.body.appendChild(container);
     }
+    
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    
+    // Colors based on type
+    const bgColor = type === 'success' ? '#28a745' : (type === 'error' ? '#dc3545' : '#17a2b8');
+    
+    // Apply Styles (Matching Maintenance/HK)
+    toast.style.backgroundColor = bgColor;
+    toast.style.color = 'white';
+    toast.style.padding = '12px 24px';
+    toast.style.marginBottom = '10px';
+    toast.style.borderRadius = '5px';
+    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)';
+    
+    // --- FONT STYLE FIX ---
+    toast.style.fontFamily = "'Segoe UI', sans-serif"; 
+    toast.style.fontSize = '14px';
+    // ----------------------
+    
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease-in-out';
+    
+    container.appendChild(toast);
+    
+    // Trigger animation
+    requestAnimationFrame(() => {
+        toast.classList.add('show'); // Keep class for potential external overrides
+        toast.style.opacity = '1';
+    });
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            if (container.contains(toast)) {
+                container.removeChild(toast);
+            }
+        }, 300); // Wait for transition
+    }, 3000);
+}
 
     function escapeHTML(str) {
         if (typeof str !== 'string') return '';

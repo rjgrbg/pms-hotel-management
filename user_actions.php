@@ -45,10 +45,10 @@ function send_json_response($success, $message, $data = null) {
 }
 
 // --- STRIP ---
-$action = trim($_POST['action'] ?? $_GET['action'] ?? ''); // <-- REFINEMENT: Added trim() and default ''
+$action = trim($_POST['action'] ?? $_GET['action'] ?? ''); 
 error_log("user_actions.php called with action: " . ($action ?: 'NULL'));
 
-if (empty($action)) { // Use empty() to check for ''
+if (empty($action)) { 
     send_json_response(false, 'No action specified.');
 }
 
@@ -65,6 +65,30 @@ switch ($action) {
             send_json_response(false, 'Database connection error.');
         }
         
+        // --- SYNC LOGIC: Update pms_users with latest data from employees tables ---
+        // This ensures the "Refresh" button pulls the latest info (Shift, Name, Email, etc.)
+        $sync_sql = "UPDATE pms_users p
+            INNER JOIN employees e ON p.EmployeeID = e.employee_code
+            LEFT JOIN employee_emails ee ON e.employee_id = ee.employee_id
+            LEFT JOIN employee_contact_numbers ec ON e.employee_id = ec.employee_id
+            LEFT JOIN employee_addresses ea ON e.employee_id = ea.employee_id
+            SET 
+                p.Fname = e.first_name,
+                p.Lname = e.last_name,
+                p.Mname = e.middle_name,
+                p.Birthday = e.birthdate,
+                p.Shift = e.shift,
+                -- Only update if the new value is not empty/null to avoid overwriting with blanks if data is missing
+                p.EmailAddress = COALESCE(NULLIF(ee.email, ''), p.EmailAddress),
+                p.ContactNumber = COALESCE(NULLIF(ec.contact_number, ''), p.ContactNumber),
+                p.Address = COALESCE(NULLIF(ea.home_address, ''), p.Address)
+            WHERE p.EmployeeID IS NOT NULL AND p.EmployeeID != ''";
+            
+        if (!$pms_conn->query($sync_sql)) {
+            // Log sync error but don't stop the fetch
+            error_log("Sync Error in fetch_users: " . $pms_conn->error);
+        }
+
         // --- SECURE (No User Input) ---
         $sql = "SELECT UserID, EmployeeID, Fname, Lname, Mname, Birthday, AccountType, Username, EmailAddress, Shift, Address, ContactNumber FROM pms_users ORDER BY Lname, Fname";
         $result = $pms_conn->query($sql);
@@ -135,7 +159,6 @@ switch ($action) {
         
         if ($employee = $result_emp->fetch_assoc()) {
             
-            // ... (rest of the logic is safe, variables are from DB) ...
             $position_name = $employee['position_name'];
             
             if (!isset($position_to_account_type[$position_name])) {
@@ -168,7 +191,6 @@ switch ($action) {
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Offline')";
             
             $stmt_insert = $pms_conn->prepare($sql_insert);
-            // Note: We don't need to add a bind param for 'Offline' because we hardcoded it in the VALUES clause
             $stmt_insert->bind_param("ssssssssssssss",
                 $employee_code,
                 $employee['first_name'],
@@ -240,7 +262,7 @@ switch ($action) {
 
         // --- STRIP & VALIDATE ---
         $userID = filter_var($_POST['userID'] ?? null, FILTER_VALIDATE_INT);
-        $password = trim($_POST['password'] ?? ''); // Admin is setting password, trim is OK.
+        $password = trim($_POST['password'] ?? '');
 
         if ($userID === false) {
              send_json_response(false, 'Invalid User ID.');

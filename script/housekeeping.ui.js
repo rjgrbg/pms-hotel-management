@@ -8,7 +8,7 @@ function renderStaffList(staffToRender = filteredStaff) {
   if (assignBtn) assignBtn.disabled = true;
 
   if (staffToRender.length === 0) {
-    staffList.innerHTML = '<div style=\"text-align: center; padding: 20px; color: #666;\">No housekeeping staff found.</div>'; // MODIFIED
+    staffList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No housekeeping staff found.</div>';
     return;
   }
 
@@ -25,13 +25,39 @@ function renderStaffList(staffToRender = filteredStaff) {
   }).join('');
 
   staffList.querySelectorAll('.staffListItem.clickable').forEach(item => {
-    item.addEventListener('click', () => handleStaffItemClick(item, staffList, assignBtn));
+    item.addEventListener('click', () => {
+        // 1. Reset all items
+        staffList.querySelectorAll('.staffListItem').forEach(i => {
+            i.classList.remove('selected');
+            i.style.backgroundColor = ''; 
+            i.style.border = '';          
+        });
+
+        // 2. Highlight selected item (Darker Gray)
+        item.classList.add('selected');
+        item.style.backgroundColor = '#cccccc'; // Changed to darker gray
+        item.style.border = '1px solid #999';   
+        
+        // 3. Update State
+        selectedStaffId = parseInt(item.dataset.staffId);
+        if (assignBtn) assignBtn.disabled = false;
+    });
   });
 }
 
 function handleStaffItemClick(item, staffList, assignBtn) {
-    staffList.querySelectorAll('.staffListItem').forEach(i => i.classList.remove('selected'));
+    // This function is now redundant as logic is embedded above, 
+    // but kept just in case it's called elsewhere.
+    staffList.querySelectorAll('.staffListItem').forEach(i => {
+        i.classList.remove('selected');
+        i.style.backgroundColor = '';
+        i.style.border = '';
+    });
+    
     item.classList.add('selected');
+    item.style.backgroundColor = '#cccccc';
+    item.style.border = '1px solid #999';
+    
     selectedStaffId = parseInt(item.dataset.staffId);
     if (assignBtn) assignBtn.disabled = false;
 }
@@ -62,11 +88,11 @@ function hideStaffModal() {
   document.getElementById('staffModal').style.display = 'none';
 }
 
-function showTaskTypeModal() { // MODIFIED
-  document.getElementById('taskTypeModal').style.display = 'flex'; // MODIFIED
+function showTaskTypeModal() { 
+  document.getElementById('taskTypeModal').style.display = 'flex'; 
 }
-function hideTaskTypeModal() { // MODIFIED
-  document.getElementById('taskTypeModal').style.display = 'none'; // MODIFIED
+function hideTaskTypeModal() { 
+  document.getElementById('taskTypeModal').style.display = 'none'; 
 }
 
 function showEditRoomStatusModal(view = 'normal') {
@@ -103,6 +129,5 @@ function hideSuccessModal() {
 }
 
 function showErrorModal(message) {
-    // Re-using success modal for error display, simple alert is also fine
     alert(message);
 }

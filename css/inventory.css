@@ -360,7 +360,7 @@ tbody tr:hover {
 
 .statusBadge.low-stock {
     background-color: #ffc107;
-    color: #333;
+    color: #fff;
 }
 
 .statusBadge.out-of-stock {
