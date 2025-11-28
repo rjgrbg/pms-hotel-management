@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $log_error = null;
                     try {
                         // This query will now work!
-                        $log_sql = "INSERT INTO user_logs (UserID, ActionType) VALUES (?, 'Logged In')";
+                        $log_sql = "INSERT INTO pms_user_logs (UserID, ActionType) VALUES (?, 'Logged In')";
                         if ($log_stmt = $conn->prepare($log_sql)) {
                             // Use the UserID from the $user array
                             $log_stmt->bind_param("i", $user['UserID']); 
@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $response['success'] = true;
                     $response['message'] = 'Login successful.';
-                    $response['redirect'] = 'inventory_log.php'; // Redirect target
+                    $response['redirect'] = 'index.php'; // Redirect target
 
                     if ($log_error !== null) {
                         $response['log_error'] = $log_error;
