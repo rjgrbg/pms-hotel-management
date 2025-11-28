@@ -17,7 +17,7 @@ if (function_exists('get_db_connection')) {
 if (isset($_SESSION['UserID']) && $conn) {
     try {
         $userID = $_SESSION['UserID'];
-        $log_sql = "INSERT INTO user_logs (UserID, ActionType) VALUES (?, 'Logged Out')";
+        $log_sql = "INSERT INTO pms_user_logs (UserID, ActionType) VALUES (?, 'Logged Out')";
         
         if ($log_stmt = $conn->prepare($log_sql)) {
             $log_stmt->bind_param("i", $userID);
