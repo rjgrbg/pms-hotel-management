@@ -382,7 +382,7 @@ tbody tr:hover {
 .statusBadge.occupied,
 .statusBadge.pending,
 .statusBadge.in-progress {
-  background-color: #ff9500;
+  background-color: #007bff;
   color: #fff;
 }
 

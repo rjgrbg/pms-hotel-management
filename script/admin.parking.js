@@ -113,10 +113,19 @@ async function loadParkingAreaFilters() {
     const result = await apiCall('getParkingAreas', {}, 'GET', 'parking_api.php');
     
     if (result.success && result.areas) {
-        result.areas.forEach(area => {
+        
+        // --- FIX: Client-side deduplication of area names ---
+        // 1. Extract all AreaNames
+        const allAreaNames = result.areas.map(area => area.AreaName);
+        // 2. Use a Set to filter for unique names
+        const uniqueAreaNames = Array.from(new Set(allAreaNames));
+        // --- END FIX ---
+
+        // Iterate over unique names and create the dropdown options
+        uniqueAreaNames.forEach(areaName => {
             const option = document.createElement('option');
-            option.value = area.AreaName;
-            option.textContent = area.AreaName;
+            option.value = areaName;
+            option.textContent = areaName;
             areaFilter.appendChild(option);
         });
     }
@@ -199,7 +208,7 @@ function renderParkingHistoryTable(data) {
 
 function initParkingFilters() {
     // Load Areas for dropdown
-    loadParkingAreaFilters();
+
 
     const searchInput = document.getElementById('parkingHistorySearchInput');
     const areaFilter = document.getElementById('parkingAreaFilter');

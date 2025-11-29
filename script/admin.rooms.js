@@ -126,10 +126,15 @@ async function fetchAndRenderRooms() {
 }
 
 function populateDynamicFilters(data) {
-    if (!roomsFloorFilter || !roomsRoomFilter) return;
+    // Get the room type filter element
+    const roomsTypeFilter = document.getElementById('roomsTypeFilter');
+
+    // Update the safety check to include the new element
+    if (!roomsFloorFilter || !roomsRoomFilter || !roomsTypeFilter) return;
 
     // Save current selection to restore if possible
     const currentFloor = roomsFloorFilter.value;
+    const currentType = roomsTypeFilter.value; // Store current type selection
 
     const floors = [...new Set(data.map(room => room.Floor))].sort((a, b) => a - b);
     
@@ -144,6 +149,23 @@ function populateDynamicFilters(data) {
     if (floors.includes(parseInt(currentFloor))) {
         roomsFloorFilter.value = currentFloor;
     }
+    
+    // NEW LOGIC: Populate Room Type Filter dynamically from room data
+    // It assumes the room type is in the 'Type' field of the room object.
+    const roomTypes = [...new Set(data.map(room => room.Type))].filter(Boolean).sort();
+
+    roomsTypeFilter.innerHTML = '<option value="">Room Type</option>';
+    roomTypes.forEach(type => {
+        const option = document.createElement('option');
+        option.value = type;
+        option.textContent = type;
+        roomsTypeFilter.appendChild(option);
+    });
+    
+    if (roomTypes.includes(currentType)) {
+        roomsTypeFilter.value = currentType;
+    }
+
 
     updateRoomFilterOptions(data, roomsFloorFilter.value);
 }
