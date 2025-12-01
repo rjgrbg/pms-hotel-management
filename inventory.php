@@ -292,6 +292,7 @@ if (isset($_SESSION['UserID'])) {
   </div>
   <div class="mainContainer">
     <h1 class="pageTitle">INVENTORY</h1>
+    <p class="pageDescription">Track hotel supplies, manage stock levels, and monitor inventory transactions</p>
 
     <div class="tabNavigation">
       <button class="tabBtn active" data-tab="requests">

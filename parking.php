@@ -250,6 +250,7 @@ if (isset($_SESSION['UserID'])) {
 
     <div class="mainContainer">
         <h1 class="pageTitle">PARKING</h1>
+        <p class="pageDescription">Manage parking slots, track vehicle entries and exits, and view parking history</p>
 
         <div class="tabNavigation">
             <button class="tabBtn active" data-tab="dashboard">

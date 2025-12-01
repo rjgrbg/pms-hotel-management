@@ -129,7 +129,7 @@ body {
 
 .profile-nav a:hover,
 .profile-footer a:hover {
-  color: #ffa237;
+  color: #d4af78;
 }
 
 .profile-footer {
@@ -151,8 +151,16 @@ body {
   font-size: 32px;
   color: #333;
   letter-spacing: 2px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.pageDescription {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
   margin-bottom: 30px;
-  font-weight: 400;
+  line-height: 1.5;
 }
 
 .tabNavigation {
@@ -237,7 +245,7 @@ body {
 .filterDropdown:focus,
 .searchInput:focus {
   outline: none;
-  border-color: #ffb400;
+  border-color: #d4af78;
 }
 
 .searchBox {
@@ -259,7 +267,7 @@ body {
 
 .searchInput:focus {
   outline: none;
-  border-color: #ffb400;
+  border-color: #d4af78;
 }
 
 .searchBtn {
@@ -293,7 +301,7 @@ body {
 .refreshBtn:hover,
 .downloadBtn:hover {
   background-color: #f9f9f9;
-  border-color: #ffb400;
+  border-color: #d4af78;
 }
 
 /* ============================================= */
@@ -415,14 +423,15 @@ tbody tr:hover {
 }
 
 .paginationBtn:hover {
-  border-color: #ffb400;
-  color: #ffb400;
+  border-color: #d4af78;
+  color: #d4af78;
 }
 
 .paginationBtn.active {
-  background-color: #ffb400;
-  border-color: #ffb400;
-  color: #fff;
+  background-color: #d4af78;
+  border-color: #d4af78;
+  color: #480c1b;
+  font-weight: 600;
 }
 
 .paginationBtn:disabled {
@@ -525,7 +534,7 @@ tbody tr:hover {
 }
 
 .confirmBtn {
-  background-color: #ffb400;
+  background-color: #d4af78;
   color: #480c1b;
   min-width: 160px;
 }
@@ -552,7 +561,7 @@ tbody tr:hover {
   font-size: 18px;
   margin-bottom: 12px;
   font-weight: 600;
-  color: #FFA237;
+  color: #d4af78;
 }
 
 .logoutModal p {
@@ -648,13 +657,13 @@ tbody tr:hover {
 .modal-title {
     display: flex;
     align-items: center;
-    color: #FFA237;
+    color: #d4af78;
 }
 
 .modal-icon-fa {
     font-size: 35px;
     margin-right: 15px;
-    color: #FFA237;
+    color: #d4af78;
     width: 40px;
     text-align: center;
 }
@@ -662,7 +671,7 @@ tbody tr:hover {
 .modal-title h2 {
     margin: 0;
     font-size: 24px;
-    color: #FFA237;
+    color: #d4af78;
     font-weight: 600;
     text-transform: uppercase;
     font-family: 'Arial', sans-serif;
@@ -731,7 +740,7 @@ tbody tr:hover {
     padding: 8px 12px;
     font-size: 13px;
     font-weight: 600;
-    background-color: #ffc107;
+    background-color: #d4af78;
     color: #212529;
     border: none;
     border-radius: 5px;
@@ -741,7 +750,7 @@ tbody tr:hover {
 }
 
 .edit-category-btn:hover {
-    background-color: #e0a800;
+    background-color: #c2a06d;
 }
 
 .edit-category-btn .fa-pencil-alt {
@@ -773,7 +782,7 @@ tbody tr:hover {
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #FFA237;
+    border-color: #d4af78;
 }
 
 .form-group select {
@@ -788,7 +797,7 @@ tbody tr:hover {
 .submit-btn {
     width: 100%;
     padding: 12px;
-    background-color: #FFA237;
+    background-color: #d4af78;
     color: #480c1b;
     border: none;
     border-radius: 6px;
@@ -802,7 +811,7 @@ tbody tr:hover {
 }
 
 .submit-btn:hover {
-    background-color: #ff8c00;
+    background-color: #c4a16c;
     transform: translateY(-1px);
 }
 
@@ -885,13 +894,14 @@ tbody tr:hover {
 }
 
 .confirm-buttons .btn-confirm {
-    background-color: #FFA237;
+    background-color: #d4af78;
     color: #480c1b;
     min-width: 160px;
+    font-weight: 600;
 }
 
 .confirm-buttons .btn-confirm:hover {
-    background-color: #ff8c00;
+    background-color: #c3a06d;
 }
 
 /* ============================================= */
@@ -948,7 +958,7 @@ tbody tr:hover {
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    background-color: #FFA237;
+    background-color: #d4af78;
     color: #480c1b;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -957,7 +967,7 @@ tbody tr:hover {
 }
 
 .modal-content-success .btn-okay:hover {
-    background-color: #ff8c00;
+    background-color: #be9d6b;
     transform: translateY(-1px);
 }
 
@@ -1119,7 +1129,7 @@ tbody tr:hover {
 
 #edit-category-name-modal .modal-title i.category-header-icon {
     font-size: 24px;
-    color: #FFA237;
+    color: #d4af78;
     margin-right: 15px;
 }
 
@@ -1192,18 +1202,18 @@ tbody tr:hover {
 }
 
 .category-actions i {
-    color: #FFA237;
+    color: #d4af78;
     margin-left: 15px;
     cursor: pointer;
     transition: color 0.2s;
 }
 
 .category-actions i:hover {
-    color: #ffb65a;
+    color: #c09d6a;
 }
 
 .category-actions .btn-edit-category:hover {
-    color: #FFA237;
+    color: #c9a672;
 }
 
 .category-actions .btn-delete-category:hover {
@@ -1230,7 +1240,7 @@ tbody tr:hover {
 
 .spinner {
     border: 4px solid rgba(255, 255, 255, 0.3);
-    border-top: 4px solid #FFA237;
+    border-top: 4px solid #d4af78;
     border-radius: 50%;
     width: 30px;
     height: 30px;
@@ -1291,7 +1301,7 @@ tbody tr:hover {
 }
 
 .action-icons i:hover {
-    color: #FFA237;
+    color: #d4af78;
 }
 
 .action-cell {
@@ -1342,7 +1352,7 @@ tbody tr:hover {
 }
 
 .actionIconBtn.editBtn:hover {
-    color: #FFA237;
+    color: #d4af78;
 }
 
 .actionIconBtn.deleteBtn:hover {
@@ -1376,8 +1386,8 @@ tbody tr:hover {
 
 .category-list-container::-webkit-scrollbar { width: 6px; }
 .category-list-container::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 3px; }
-.category-list-container::-webkit-scrollbar-thumb { background: rgba(255, 162, 55, 0.5); border-radius: 3px; }
-.category-list-container::-webkit-scrollbar-thumb:hover { background: #FFA237; }
+.category-list-container::-webkit-scrollbar-thumb { background: rgba(212, 175, 120, 0.5); border-radius: 3px; }
+.category-list-container::-webkit-scrollbar-thumb:hover { background: #d4af78; }
 
 /* ============================================= */
 /* === RESPONSIVE STYLES                   === */
