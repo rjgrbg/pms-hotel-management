@@ -117,7 +117,7 @@ body {
 
 .profile-nav a:hover,
 .profile-footer a:hover {
-  color: #ffa237;
+  color: #d4af78;
 }
 
 .profile-footer {
@@ -137,8 +137,16 @@ body {
   font-size: 32px;
   color: #333;
   letter-spacing: 2px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.pageDescription {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
   margin-bottom: 30px;
-  font-weight: 400;
+  line-height: 1.5;
 }
 
 /* ===== TAB NAVIGATION ===== */
@@ -447,7 +455,7 @@ tbody tr:hover {
 }
 
 .actionIconBtn.editBtn:hover {
-  color: #FFA237;
+  color: #d4af78;
 }
 
 .actionIconBtn.deleteBtn:hover {
@@ -639,7 +647,7 @@ tbody tr:hover {
 }
 
 .staffSelectionModal h2 {
-  color: #FFA237;
+  color: #d4af78;
   font-size: 18px;
   margin-bottom: 15px;
   font-weight: 600;
@@ -834,7 +842,7 @@ tbody tr:hover {
 
 .formInput:focus {
   outline: none;
-  border-color: #FFA237;
+  border-color: #d4af78;
 }
 
 /* Modal Buttons */
@@ -896,13 +904,14 @@ tbody tr:hover {
 }
 
 .confirmBtn {
-  background: #FFA237;
-  color: #fff;
+  background: #d4af78;
+  color: #480c1b;
   min-width: 180px;
+  font-weight: 600;
 }
 
 .confirmBtn:hover:not(:disabled) {
-  background: #ff8c00;
+  background: #d4af78;
 }
 
 .confirmBtn.deleteBtn {
@@ -914,9 +923,10 @@ tbody tr:hover {
 }
 
 .okayBtn {
-  background-color: #FFA237;
-  color: #ffffff;
+  background-color: #d4af78;
+  color: #480c1b;
   min-width: 250px;
+  font-weight: 600;
   padding: 14px 40px;
 }
 
@@ -1112,7 +1122,7 @@ tbody tr:hover {
 .statusBadge.pending,
 .statusBadge.low-stock,
 .statusBadge.in-progress { /* 'In Progress' is used */
-  background-color: #ff9500;
+  background-color: #d4af78;
   color: #fff;
 }
 
@@ -1152,8 +1162,9 @@ tbody tr:hover {
 }
 /* --- New Room Status Badges --- */
 .statusBadge.pending {
-  background-color: #ff9500; /* Orange */
-  color: #fff;
+  background-color: #d4af78; /* Gold */
+  color: #480c1b;
+  font-weight: 600;
 }
 
 .statusBadge.in-progress {
@@ -1249,7 +1260,7 @@ tbody tr:hover {
 /* Headings (h2) */
 #issueTypeModal h2,
 #staffModal h2 {
-    color: #ffb400 !important; /* Gold Color */
+    color: #d4af78 !important; /* Gold Color */
     font-weight: bold;
 }
 
@@ -1279,7 +1290,7 @@ tbody tr:hover {
 
 /* Icon Header (the list icon) */
 #issueTypeModal .modalIconHeader i {
-    color: #ffb400 !important; /* Make the icon Gold too */
+    color: #d4af78 !important; /* Make the icon Gold too */
 }
 
 
@@ -1354,14 +1365,14 @@ tbody tr:hover {
 /* Action Buttons (Next/Assign) */
 #issueTypeModal .confirmBtn,
 #staffModal .confirmBtn {
-    background-color: #ffb400 !important; /* Gold Background */
+    background-color: #d4af78 !important; /* Gold Background */
     color: rgb(72, 12, 27) !important; /* Dark Red Text */
     font-weight: bold;
     border: none;
 }
 #issueTypeModal .confirmBtn:hover,
 #staffModal .confirmBtn:hover {
-    background-color: #bb8300 !important; /* Slightly darker gold on hover */
+    background-color: #d4af78 !important; /* Slightly darker gold on hover */
 }
 #issueTypeModal .confirmBtn:disabled,
 #staffModal .confirmBtn:disabled {

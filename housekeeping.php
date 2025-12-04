@@ -347,6 +347,7 @@ $conn->close();
 
     <div class="mainContainer">
         <h1 class="pageTitle">HOUSEKEEPING</h1>
+        <p class="pageDescription">Manage room cleaning requests, track staff assignments, and view cleaning history</p>
 
         <div class="tabNavigation">
             <button class="tabBtn active" data-tab="requests">

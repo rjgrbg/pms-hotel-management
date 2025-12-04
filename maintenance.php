@@ -310,6 +310,7 @@ $conn->close();
 
     <div class="mainContainer">
         <h1 class="pageTitle">MAINTENANCE</h1>
+        <p class="pageDescription">Monitor maintenance requests, assign technicians, and review completed repairs</p>
 
         <div class="tabNavigation">
             <button class="tabBtn active" data-tab="requests">

@@ -129,7 +129,7 @@ body {
 
 .profile-nav a:hover,
 .profile-footer a:hover {
-  color: #ffa237;
+  color: #d4af78;
 }
 
 .profile-footer {
@@ -151,8 +151,16 @@ body {
   font-size: 32px;
   color: #333;
   letter-spacing: 2px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.pageDescription {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
   margin-bottom: 30px;
-  font-weight: 400;
+  line-height: 1.5;
 }
 
 .tabNavigation {
@@ -237,7 +245,7 @@ body {
 .filterDropdown:focus,
 .searchInput:focus {
   outline: none;
-  border-color: #ffb400;
+  border-color: #d4af78;
 }
 
 .searchBox {
@@ -288,7 +296,7 @@ body {
 .refreshBtn:hover,
 .downloadBtn:hover {
   background-color: #f9f9f9;
-  border-color: #ffb400;
+  border-color: #d4af78;
 }
 
 /* ============================================= */
@@ -430,7 +438,9 @@ td.text-right {
 }
 
 .status-occupied {
-    background-color: #FFA237;
+    background-color: #d4af78;
+    color: #480c1b;
+    font-weight: 600;
 }
 
 /* Table Action Buttons */
@@ -512,14 +522,15 @@ td.text-right {
 }
 
 .paginationBtn:hover {
-  border-color: #ffb400;
-  color: #ffb400;
+  border-color: #d4af78;
+  color: #d4af78;
 }
 
 .paginationBtn.active {
-  background-color: #ffb400;
-  border-color: #ffb400;
-  color: #fff;
+  background-color: #d4af78;
+  border-color: #d4af78;
+  color: #480c1b;
+  font-weight: 600;
 }
 
 .paginationBtn:disabled {
@@ -616,20 +627,21 @@ td.text-right {
 }
 
 .confirmBtn {
-  background-color: #FFA237;
-  color: #fff;
+  background-color: #d4af78;
+  color: #480c1b;
   min-width: 180px;
+  font-weight: 600;
 }
 
 .confirmBtn:hover:not(:disabled) {
-  background-color: #ff8c00;
+  background-color: #d4af78;
 }
 
 .logoutModal h2 {
   font-size: 18px;
   margin-bottom: 15px;
   font-weight: 600;
-  color: #FFA237;
+  color: #d4af78;
 }
 
 .logoutModal p {
@@ -698,13 +710,13 @@ td.text-right {
 .modal-title {
     display: flex;
     align-items: center;
-    color: #FFA237;
+    color: #d4af78;
 }
 
 .modal-icon-fa {
     font-size: 35px;
     margin-right: 15px;
-    color: #FFA237;
+    color: #d4af78;
     width: 40px;
     text-align: center;
 }
@@ -712,7 +724,7 @@ td.text-right {
 .modal-title h2 {
     margin: 0;
     font-size: 24px;
-    color: #FFA237;
+    color: #d4af78;
     font-weight: 600;
     text-transform: uppercase;
     font-family: 'Arial', sans-serif;
@@ -791,7 +803,7 @@ td.text-right {
 }
 
 .edit-category-btn:hover {
-    background-color: #e0a800;
+    background-color: #be9c68;
 }
 
 .edit-category-btn .fa-pencil-alt {
@@ -829,7 +841,7 @@ td.text-right {
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #FFA237;
+    border-color: #d4af78;
 }
 
 .form-group select {
@@ -844,7 +856,7 @@ td.text-right {
 .submit-btn {
     width: 100%;
     padding: 12px;
-    background-color: #FFA237;
+    background-color: #d4af78;
     color: #480c1b;
     border: none;
     border-radius: 6px;
@@ -858,7 +870,7 @@ td.text-right {
 }
 
 .submit-btn:hover {
-    background-color: #ff8c00;
+    background-color: #c3a16f;
     transform: translateY(-1px);
 }
 
@@ -921,7 +933,7 @@ td.text-right {
 }
 
 .modal-content-confirm p strong {
-    color: #FFA237;
+    color: #d4af78;
 }
 
 .confirm-buttons {
@@ -953,13 +965,14 @@ td.text-right {
 }
 
 .confirm-buttons .btn-confirm {
-    background-color: #FFA237;
+    background-color: #d4af78;
     color: #480c1b;
     min-width: 160px;
+    font-weight: 600;
 }
 
 .confirm-buttons .btn-confirm:hover {
-    background-color: #ff8c00;
+    background-color: #be9d6a;
 }
 
 /* ============================================= */
@@ -1016,7 +1029,7 @@ td.text-right {
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    background-color: #FFA237;
+    background-color: #d4af78;
     color: #480c1b;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -1025,7 +1038,7 @@ td.text-right {
 }
 
 .modal-content-success .btn-okay:hover {
-    background-color: #ff8c00;
+    background-color: #c19f6d;
     transform: translateY(-1px);
 }
 
@@ -1094,7 +1107,7 @@ td.text-right {
 }
 
 .category-actions .btn-edit-category:hover {
-    color: #FFA237;
+    color: #d4af78;
 }
 
 .category-actions .btn-delete-category:hover {
@@ -1110,7 +1123,7 @@ td.text-right {
 
 .spinner {
     border: 4px solid rgba(255, 255, 255, 0.3);
-    border-top: 4px solid #FFA237;
+    border-top: 4px solid #d4af78;
     border-radius: 50%;
     width: 30px;
     height: 30px;
@@ -1197,8 +1210,8 @@ td.text-right {
 
 .category-list-container::-webkit-scrollbar { width: 6px; }
 .category-list-container::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 3px; }
-.category-list-container::-webkit-scrollbar-thumb { background: rgba(255, 162, 55, 0.5); border-radius: 3px; }
-.category-list-container::-webkit-scrollbar-thumb:hover { background: #FFA237; }
+.category-list-container::-webkit-scrollbar-thumb { background: rgba(212, 175, 120, 0.5); border-radius: 3px; }
+.category-list-container::-webkit-scrollbar-thumb:hover { background: #d4af78; }
 
 /* ============================================= */
 /* === RESPONSIVE STYLES                     === */

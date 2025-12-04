@@ -195,8 +195,15 @@ body {
   font-size: 32px;
   color: #333;
   letter-spacing: 2px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.pageDescription {
+  font-size: 14px;
+  color: #666;
   margin-bottom: 30px;
-  font-weight: 400;
+  line-height: 1.5;
 }
 
 .pagePlaceholder {
@@ -213,7 +220,7 @@ body {
 
 .sectionTitle {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 400;
   color: #333;
   margin-bottom: 20px;
   text-transform: uppercase;
@@ -225,37 +232,135 @@ body {
 /* Stats Grid */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
 }
 
 .statCard {
   background-color: #fff;
-  border-radius: 8px;
-  padding: 25px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  transition: all 0.2s;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .statCard:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
 }
 
-.statLabel {
-  font-size: 13px;
-  font-weight: 500;
-  color: #666;
-  margin-bottom: 15px;
-  text-transform: capitalize;
+.statCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+  min-height: 48px;
+}
+
+.statCardIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.statCardIcon.burgundy {
+  background-color: rgba(72, 12, 27, 0.1);
+  color: #480c1b;
+}
+
+.statCardIcon.gold {
+  background-color: rgba(212, 175, 120, 0.15);
+  color: #d4af78;
+}
+
+.statCardIcon.green {
+  background-color: rgba(92, 184, 92, 0.1);
+  color: #5cb85c;
+}
+
+.statCardIcon.blue {
+  background-color: rgba(0, 123, 255, 0.1);
+  color: #007bff;
+}
+
+.statCardBadge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statCardBadge.increase {
+  background-color: rgba(92, 184, 92, 0.15);
+  color: #5cb85c;
+}
+
+.statCardBadge.active {
+  background-color: rgba(0, 123, 255, 0.15);
+  color: #007bff;
+}
+
+.statCardBadge.resources {
+  background-color: rgba(92, 184, 92, 0.15);
+  color: #5cb85c;
 }
 
 .statValue {
-  font-size: 40px;
+  font-size: 48px;
   font-weight: 700;
+  color: #2d2d2d;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 20px;
+  text-transform: capitalize;
+}
+
+.statCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.statCardLink {
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+
+.statCardLink:hover {
   color: #480c1b;
-  margin-bottom: 5px;
+}
+
+.statCardLink::after {
+  content: '→';
+  font-size: 16px;
+  transition: transform 0.2s;
+}
+
+.statCardLink:hover::after {
+  transform: translateX(4px);
 }
 
 .statSubtext {
@@ -501,7 +606,7 @@ tbody tr:hover {
 }
 
 .statusBadge.maintenance_manager {
-    background-color: #ff9500; /* Orange - Standard for Caution/Work-in-progress */
+    background-color: #d4af78; /* Gold - Standard for Caution/Work-in-progress */
 }
 
 .statusBadge.parking_manager {
@@ -585,7 +690,7 @@ tbody tr:hover {
 }
 
 .statusChangeBtn:hover {
-  background-color: #e68600;
+  background-color: #c9a066;
 }
 
 /* ===== ROOMS ACTION ALIGNMENT ===== */
@@ -1706,17 +1811,37 @@ tbody tr:hover {
 .addRoomBtn:focus,
 .modalBtn:focus,
 .actionBtn:focus,
-.paginationBtn:focus {
-  outline: 2px solid #d4af78;
-  outline-offset: 2px;
+.paginationBtn:focus,
+.logoutBtn:focus,
+.subTabBtn:focus,
+.statusChangeBtn:focus,
+.editBtn:focus,
+.deleteBtn:focus,
+.editUserBtn:focus,
+.deleteUserBtn:focus,
+.searchBtn:focus,
+.closeBtn:focus,
+.cancelBtn:focus,
+.confirmBtn:focus {
+  outline: none;
 }
 
 .navLink:focus-visible,
 .tabBtn:focus-visible,
 .filterDropdown:focus-visible,
-.searchInput:focus-visible {
-  outline: 2px solid #d4af78;
-  outline-offset: 2px;
+.searchInput:focus-visible,
+.subTabBtn:focus-visible {
+  outline: none;
+}
+
+button:focus,
+button:active,
+a:focus,
+a:active,
+select:focus,
+input:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Screen reader only */
@@ -1873,8 +1998,9 @@ input[readonly]:focus {
 
 /* --- New Room Status Badges --- */
 .statusBadge.pending {
-  background-color: #ff9500; /* Orange */
-  color: #fff;
+  background-color: #d4af78; /* Gold */
+  color: #480c1b;
+  font-weight: 600;
 }
 
 .statusBadge.in-progress {

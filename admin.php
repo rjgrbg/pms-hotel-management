@@ -382,6 +382,7 @@ $conn->close();
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Celestia Hotel - Admin Dashboard</title>
   <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
@@ -462,21 +463,40 @@ $conn->close();
     <main class="mainContent">
       <div class="page active" id="dashboard-page">
         <h1 class="pageTitle">ADMIN DASHBOARD</h1>
+        <p class="pageDescription">Overview of hotel operations, staff management, and key metrics</p>
 
         <section class="dashboardSection">
           <h2 class="sectionTitle">Housekeeping and Maintenance</h2>
           <div class="statsGrid">
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon burgundy"><i class="fas fa-door-open"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Total Rooms</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#rooms" class="statCardLink navLink" data-page="rooms">View all</a>
+              </div>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon blue"><i class="fas fa-broom"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Needs Cleaning</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#housekeeping" class="statCardLink navLink" data-page="housekeeping">Manage</a>
+              </div>
             </div>
             <div class="statCard">
-              <h3 class="statLabel">Maintenance Requests</h3>
+              <div class="statCardHeader">
+                <div class="statCardIcon gold"><i class="fas fa-tools"></i></div>
+              </div>
               <p class="statValue">0</p>
+              <h3 class="statLabel">Maintenance Requests</h3>
+              <div class="statCardFooter">
+                <a href="#maintenance" class="statCardLink navLink" data-page="maintenance">Manage</a>
+              </div>
             </div>
           </div>
         </section>
@@ -485,16 +505,34 @@ $conn->close();
           <h2 class="sectionTitle">Inventory</h2>
           <div class="statsGrid">
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon green"><i class="fas fa-boxes"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Total Items</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#inventory" class="statCardLink navLink" data-page="inventory">View all</a>
+              </div>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon gold"><i class="fas fa-exclamation-triangle"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Low Stock</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#inventory" class="statCardLink navLink" data-page="inventory">Manage</a>
+              </div>
             </div>
             <div class="statCard">
-              <h3 class="statLabel">Out of Stock</h3>
+              <div class="statCardHeader">
+                <div class="statCardIcon burgundy"><i class="fas fa-times-circle"></i></div>
+              </div>
               <p class="statValue">0</p>
+              <h3 class="statLabel">Out of Stock</h3>
+              <div class="statCardFooter">
+                <a href="#inventory" class="statCardLink navLink" data-page="inventory">Manage</a>
+              </div>
             </div>
           </div>
         </section>
@@ -503,46 +541,85 @@ $conn->close();
           <h2 class="sectionTitle">Parking</h2>
           <div class="statsGrid">
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon blue"><i class="fas fa-parking"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Total Slots</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#parking" class="statCardLink navLink" data-page="parking">View all</a>
+              </div>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon burgundy"><i class="fas fa-car"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Occupied</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#parking" class="statCardLink navLink" data-page="parking">Manage</a>
+              </div>
             </div>
             <div class="statCard">
-              <h3 class="statLabel">Vacant</h3>
+              <div class="statCardHeader">
+                <div class="statCardIcon green"><i class="fas fa-check-circle"></i></div>
+              </div>
               <p class="statValue">0</p>
+              <h3 class="statLabel">Vacant</h3>
+              <div class="statCardFooter">
+                <a href="#parking" class="statCardLink navLink" data-page="parking">View all</a>
+              </div>
             </div>
           </div>
         </section>
 
         <section class="dashboardSection">
           <h2 class="sectionTitle">Users</h2>
-          <div class="statsGrid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+          <div class="statsGrid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon burgundy"><i class="fas fa-users"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Total Employees</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#manage-users" class="statCardLink navLink" data-page="manage-users">View all</a>
+              </div>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon burgundy"><i class="fas fa-user-shield"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Admin</h3>
-              <p class="statValue">0</p>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon blue"><i class="fas fa-broom"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Housekeeping</h3>
-              <p class="statValue">0</p>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon gold"><i class="fas fa-wrench"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Maintenance</h3>
-              <p class="statValue">0</p>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon green"><i class="fas fa-parking"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Parking</h3>
-              <p class="statValue">0</p>
             </div>
             <div class="statCard">
-              <h3 class="statLabel">Inventory</h3>
+              <div class="statCardHeader">
+                <div class="statCardIcon green"><i class="fas fa-box"></i></div>
+              </div>
               <p class="statValue">0</p>
+              <h3 class="statLabel">Inventory</h3>
             </div>
           </div>
         </section>
@@ -550,6 +627,7 @@ $conn->close();
 
       <div class="page" id="housekeeping-page">
         <h1 class="pageTitle">HOUSEKEEPING</h1>
+        <p class="pageDescription">Manage room cleaning requests, track staff assignments, and view cleaning history</p>
 
         <div class="tabNavigation">
           <button class="tabBtn active" data-hk-tab="hk-requests">
@@ -664,6 +742,7 @@ $conn->close();
 
       <div class="page" id="maintenance-page">
         <h1 class="pageTitle">MAINTENANCE</h1>
+        <p class="pageDescription">Monitor maintenance requests, assign technicians, and review completed repairs</p>
 
         <div class="tabNavigation">
           <button class="tabBtn active" data-mt-tab="mt-requests">
@@ -778,6 +857,7 @@ $conn->close();
 
       <div class="page" id="parking-page">
         <h1 class="pageTitle">PARKING HISTORY</h1>
+        <p class="pageDescription">View parking slot usage, guest vehicle records, and parking activity logs</p>
 
         <div class="controlsRow">
           <div class="filterControls">
@@ -828,6 +908,7 @@ $conn->close();
 
       <div class="page" id="inventory-page">
         <h1 class="pageTitle">INVENTORY</h1>
+        <p class="pageDescription">Track hotel supplies, manage stock levels, and monitor inventory transactions</p>
 
         <div class="tabNavigation">
           <button class="tabBtn active" data-inv-tab="inv-items">
@@ -942,8 +1023,11 @@ $conn->close();
       </div>
 
       <div class="page" id="rooms-page">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-          <h1 class="pageTitle" style="margin-bottom: 0;">ROOMS</h1>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+          <div>
+            <h1 class="pageTitle" style="margin-bottom: 8px;">ROOMS</h1>
+            <p class="pageDescription" style="margin-bottom: 0;">Manage room information, availability status, and room configurations</p>
+          </div>
         </div>
 
         <div class="controlsRow">
@@ -1008,8 +1092,11 @@ $conn->close();
       </div>
 
       <div class="page" id="manage-users-page">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-          <h1 class="pageTitle" style="margin-bottom: 0;">MANAGE USERS</h1>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+          <div>
+            <h1 class="pageTitle" style="margin-bottom: 8px;">MANAGE USERS</h1>
+            <p class="pageDescription" style="margin-bottom: 0;">Add, edit, and manage staff accounts, roles, and access permissions</p>
+          </div>
         </div>
 
         <div class="tabNavigation">
