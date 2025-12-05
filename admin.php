@@ -696,7 +696,13 @@ $conn->close();
               <select class="filterDropdown" id="roomFilterHkHist">
                 <option value="">Room</option>
               </select>
-              <input type="date" class="filterDropdown" id="dateFilterHkHist" style="width: 150px; padding: 8px 14px;">
+              
+              <div style="display: flex; align-items: center; gap: 5px; background: white; border-radius: 5px; border: 1px solid #ddd; padding: 0 5px;">
+                  <input type="date" id="startDateFilterHkHist" title="Start Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+                  <span style="color: #666;">-</span>
+                  <input type="date" id="endDateFilterHkHist" title="End Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+              </div>
+              
               <div class="searchBox">
                 <input type="text" placeholder="Search" class="searchInput" id="hkHistSearchInput" />
                 <button class="searchBtn">
@@ -811,7 +817,13 @@ $conn->close();
               <select class="filterDropdown" id="mtRoomFilterHist">
                 <option value="">Room</option>
               </select>
-              <input type="date" class="filterDropdown" id="dateFilterMtHist" style="width: 150px; padding: 8px 14px;">
+              
+              <div style="display: flex; align-items: center; gap: 5px; background: white; border-radius: 5px; border: 1px solid #ddd; padding: 0 5px;">
+                  <input type="date" id="startDateFilterMtHist" title="Start Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+                  <span style="color: #666;">-</span>
+                  <input type="date" id="endDateFilterMtHist" title="End Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+              </div>
+              
               <div class="searchBox">
                 <input type="text" placeholder="Search" class="searchInput" id="mtHistSearchInput" />
                 <button class="searchBtn">

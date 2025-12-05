@@ -2,7 +2,6 @@
 
 /**
  * Security Fix: Converts HTML characters to safe entities.
- * This prevents the browser from interpreting tags like <h1> as code.
  */
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
@@ -22,22 +21,43 @@ function escapeHtml(text) {
 function applyHistoryFiltersAndRender() {
     const floor = document.getElementById('floorFilterHistory')?.value || '';
     const room = document.getElementById('roomFilterHistory')?.value || '';
-    const dateInput = document.getElementById('dateFilterHistory')?.value || '';
+    
+    // NEW: Get Start and End dates
+    const startDateVal = document.getElementById('startDateFilterHistory')?.value || '';
+    const endDateVal = document.getElementById('endDateFilterHistory')?.value || '';
+    
     const search = document.getElementById('historySearchInput')?.value.toLowerCase() || '';
-
-    // Convert YYYY-MM-DD to MM.DD.YYYY to match PHP data format
-    let formattedDate = '';
-    if (dateInput) {
-        const parts = dateInput.split('-');
-        formattedDate = `${parts[1]}.${parts[2]}.${parts[0]}`;
-    }
 
     // Filter the data
     filteredHistory = currentHistoryData.filter(h => {
         const matchFloor = !floor || (h.floor && h.floor.toString() === floor);
         const matchRoom = !room || (h.room && h.room.toString() === room);
-        const matchDate = !formattedDate || (h.date && h.date === formattedDate);
         
+        // NEW: Date Range Logic
+        let matchDate = true;
+        if (startDateVal || endDateVal) {
+            // h.date format is MM.DD.YYYY e.g., "10.25.2023"
+            if (!h.date || h.date === 'N/A') {
+                matchDate = false;
+            } else {
+                const parts = h.date.split('.');
+                // Create date object (Month is 0-indexed in JS)
+                const rowDate = new Date(parts[2], parts[0] - 1, parts[1]);
+                rowDate.setHours(0, 0, 0, 0);
+
+                if (startDateVal) {
+                    const start = new Date(startDateVal);
+                    start.setHours(0, 0, 0, 0);
+                    if (rowDate < start) matchDate = false;
+                }
+                if (endDateVal && matchDate) {
+                    const end = new Date(endDateVal);
+                    end.setHours(0, 0, 0, 0);
+                    if (rowDate > end) matchDate = false;
+                }
+            }
+        }
+
         const matchSearch = !search ||
             (h.room && h.room.toString().includes(search)) ||
             (h.issueType && h.issueType.toLowerCase().includes(search)) ||
@@ -84,11 +104,8 @@ function renderHistoryTable() {
             const safeStatus = escapeHtml(h.status ?? 'N/A');
             
             // 2. Handle Remarks:
-            // Get raw remarks
             const rawRemarks = h.remarks ?? '';
-            // Create a full escaped version for the Tooltip (hover)
             const safeFullRemarks = escapeHtml(rawRemarks);
-            // Create a truncated version for Display, then escape it
             const truncatedRaw = rawRemarks.length > 50 ? rawRemarks.substring(0, 50) + '...' : rawRemarks;
             const safeDisplayRemarks = escapeHtml(truncatedRaw);
 
@@ -124,7 +141,11 @@ function handleRefreshHistory() {
     console.log("Refreshing history data...");
     document.getElementById('floorFilterHistory').value = '';
     document.getElementById('roomFilterHistory').value = '';
-    document.getElementById('dateFilterHistory').value = '';
+    
+    // Reset both date inputs
+    if(document.getElementById('startDateFilterHistory')) document.getElementById('startDateFilterHistory').value = '';
+    if(document.getElementById('endDateFilterHistory')) document.getElementById('endDateFilterHistory').value = '';
+    
     document.getElementById('historySearchInput').value = '';
 
     updateHistoryRoomFilterOptions();

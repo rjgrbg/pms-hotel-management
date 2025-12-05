@@ -25,7 +25,6 @@ function showToast(message, type = 'success') {
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-container';
-        // Inline styles to ensure it works without external CSS
         container.style.position = 'fixed';
         container.style.top = '20px';
         container.style.right = '20px';
@@ -44,24 +43,20 @@ function showToast(message, type = 'success') {
     toast.style.padding = '12px 24px';
     toast.style.marginBottom = '10px';
     
-    // --- UPDATED STYLES TO MATCH MAINTENANCE ---
-    toast.style.borderRadius = '5px'; // Changed from 4px
-    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)'; // Changed opacity from 0.1
-    toast.style.fontFamily = "'Segoe UI', sans-serif"; // Changed from Arial
-    toast.style.fontSize = '14px'; // Added to match Maintenance
-    // -------------------------------------------
+    toast.style.borderRadius = '5px'; 
+    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)'; 
+    toast.style.fontFamily = "'Segoe UI', sans-serif"; 
+    toast.style.fontSize = '14px'; 
 
     toast.style.opacity = '0';
     toast.style.transition = 'opacity 0.3s ease-in-out';
 
     container.appendChild(toast);
 
-    // Trigger animation
     requestAnimationFrame(() => {
         toast.style.opacity = '1';
     });
 
-    // Remove after 3 seconds
     setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => {
@@ -83,15 +78,14 @@ document.addEventListener('DOMContentLoaded', () => {
   allRooms = typeof allRoomsData !== 'undefined' ? [...allRoomsData] : [];
 
   // Populate filter dropdowns
-  // Note: Assuming these functions exist in your helper files or need to be defined
   if (typeof populateFloorFilterOptions === 'function') populateFloorFilterOptions();
   if (typeof populateHistoryFloorFilterOptions === 'function') populateHistoryFloorFilterOptions();
   if (typeof updateRoomFilterOptions === 'function') updateRoomFilterOptions();
   if (typeof updateHistoryRoomFilterOptions === 'function') updateHistoryRoomFilterOptions();
 
   // Initial render
-  applyRequestFiltersAndRender();
-  applyHistoryFiltersAndRender();
+  if (typeof applyRequestFiltersAndRender === 'function') applyRequestFiltersAndRender();
+  if (typeof applyHistoryFiltersAndRender === 'function') applyHistoryFiltersAndRender();
   
   // ----- TAB NAVIGATION -----
   document.querySelectorAll('.tabBtn').forEach(btn => {
@@ -210,14 +204,19 @@ function setupRequestsTabListeners() {
   });
 }
 
-// ===== HISTORY TAB LISTENERS =====
+// ===== HISTORY TAB LISTENERS (FIXED) =====
 function setupHistoryTabListeners() {
   document.getElementById('floorFilterHistory')?.addEventListener('change', () => {
     updateHistoryRoomFilterOptions();
     applyHistoryFiltersAndRender();
   });
   document.getElementById('roomFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender);
-  document.getElementById('dateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender);
+  
+  // --- START FIX: Listen to BOTH new date inputs ---
+  document.getElementById('startDateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender);
+  document.getElementById('endDateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender);
+  // ------------------------------------------------
+  
   document.getElementById('historySearchInput')?.addEventListener('input', applyHistoryFiltersAndRender);
   document.getElementById('historyRefreshBtn')?.addEventListener('click', handleRefreshHistory);
   document.getElementById('historyDownloadBtn')?.addEventListener('click', downloadHistoryPDF);
@@ -266,9 +265,6 @@ function renderRequestsTable() {
                 assignButton = `<button class="assignBtn" disabled>Not Required</button>`;
             }
 
-            // --- ACTION BUTTONS LOGIC (Fixed to match Maintenance) ---
-            
-            // 1. Edit Button (Always visible)
             const editButton = `<button class="actionIconBtn editBtn edit-status-btn" title="Edit Status" 
                                 data-room-id="${escapeHtml(req.id)}" 
                                 data-room-number="${safeRoom}" 
@@ -276,7 +272,6 @@ function renderRequestsTable() {
                                 <i class="fas fa-edit"></i>
                                 </button>`;
 
-            // 2. Cancel Button (Only visible if Pending)
             let cancelButton = '';
             if (status === 'Pending') {
                 cancelButton = `<button class="actionIconBtn deleteBtn cancel-task-btn" title="Cancel Task" 
@@ -284,7 +279,6 @@ function renderRequestsTable() {
                                 <i class="fas fa-times"></i>
                                 </button>`;
             }
-            // ---------------------------------------------------------
 
             return `
                 <tr data-room-id="${escapeHtml(req.id)}">
@@ -333,20 +327,15 @@ function handleEditStatusClick(button) {
   const roomNumber = button.dataset.roomNumber;
   const currentStatus = button.dataset.currentStatus;
 
-  // --- SAFETY CHECKS ---
-  
-  // 1. Prevent editing if task is active
   if (currentStatus === 'Pending' || currentStatus === 'In Progress') {
       showToast(`Cannot edit status for Room ${roomNumber} while a task is ${currentStatus}. Please cancel the task first.`, 'error');
       return;
   }
 
-  // 2. Prevent editing if status belongs to Maintenance
   if (currentStatus === 'Needs Maintenance') {
       showToast(`Cannot edit status. Room ${roomNumber} is currently marked for Maintenance.`, 'error');
       return;
   }
-  // --------------------
 
   document.getElementById('editRoomStatusModalTitle').textContent = `Edit Room Status`;
   document.getElementById('editRoomStatusRoomNumber').textContent = roomNumber;
@@ -355,6 +344,7 @@ function handleEditStatusClick(button) {
   
   showEditRoomStatusModal();
 }
+
 function handleCancelTaskClick(button) {
   const taskIdToCancel = parseInt(button.dataset.taskId);
   if (!taskIdToCancel) return;
@@ -368,12 +358,10 @@ function handleCancelTaskClick(button) {
         if (result.status === 'success') {
           showSuccessModal(result.message || 'Task cancelled successfully.');
           
-          // --- ADDED: Reload page after 1.5 seconds ---
           setTimeout(() => {
              window.location.reload();
           }, 1500);
 
-          // (Optional: UI update logic while waiting for reload)
           const index = currentRequestsData.findIndex(r => r.taskId === taskIdToCancel);
           if (index > -1) {
             currentRequestsData[index].status = 'Needs Cleaning'; // Reset status
@@ -423,7 +411,7 @@ async function submitEditRoomStatus(e) {
       hideEditRoomStatusModal();
       showSuccessModal('Room status updated successfully.');
       
-      const index = currentRequestsData.findIndex(r => r.room == roomNumber); // Loose equality for int/string
+      const index = currentRequestsData.findIndex(r => r.room == roomNumber);
       if (index > -1) {
         currentRequestsData[index].status = newStatus;
         if (newStatus === 'Available') {
@@ -466,9 +454,7 @@ async function handleConfirmStaffAssign() {
     return;
   }
   
-  // --- START CHANGE: Get button and set "ASSIGNING..." indicator ---
   const assignBtn = document.getElementById('confirmStaffAssignBtn');
-  // Store original text to restore it later
   const originalText = assignBtn.textContent; 
   assignBtn.disabled = true;
   assignBtn.textContent = 'ASSIGNING...';
@@ -486,12 +472,10 @@ async function handleConfirmStaffAssign() {
       hideStaffModal();
       showSuccessModal(result.message || 'Task assigned successfully.');
 
-      // --- ADDED: Reload page after 1.5 seconds ---
       setTimeout(() => {
            window.location.reload();
       }, 1500);
 
-      // (Optional: UI update logic while waiting for reload)
       const index = currentRequestsData.findIndex(r => r.id === currentRoomId);
       if (index > -1) {
         currentRequestsData[index].status = 'Pending';
@@ -515,7 +499,6 @@ async function handleConfirmStaffAssign() {
   } finally {
     if (assignBtn) {
         assignBtn.disabled = false;
-        // Restore the original text (e.g., "ASSIGN STAFF")
         assignBtn.textContent = originalText; 
     }
     currentRoomId = null;
@@ -555,13 +538,12 @@ function applyRequestFiltersAndRender() {
   renderRequestsTable();
 }
 
-// ===== REFRESH FUNCTIONS WITH TOAST =====
+// ===== REFRESH FUNCTIONS WITH TOAST (FIXED) =====
 async function handleRefreshRequests() {
   console.log("Refreshing requests data...");
   const refreshBtn = document.getElementById('refreshBtn');
   const originalText = refreshBtn.innerHTML;
   
-  // Clear filters
   document.getElementById('floorFilter').value = '';
   document.getElementById('roomFilter').value = '';
   document.getElementById('searchInput').value = '';
@@ -571,11 +553,10 @@ async function handleRefreshRequests() {
   try {
       refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
       
-      // Fetch fresh data from API
       const result = await handleApiCall('get_all_tasks', {});
       
       if (result.status === 'success') {
-          currentRequestsData = result.data; // Update global variable
+          currentRequestsData = result.data;
           applyRequestFiltersAndRender();
           showToast('Requests data updated!', 'success');
       } else {
@@ -596,7 +577,12 @@ async function handleRefreshHistory() {
 
   document.getElementById('floorFilterHistory').value = '';
   document.getElementById('roomFilterHistory').value = '';
-  document.getElementById('dateFilterHistory').value = '';
+  
+  // --- START FIX: Clear new date inputs, avoid crash ---
+  if(document.getElementById('startDateFilterHistory')) document.getElementById('startDateFilterHistory').value = '';
+  if(document.getElementById('endDateFilterHistory')) document.getElementById('endDateFilterHistory').value = '';
+  // ----------------------------------------------------
+  
   document.getElementById('historySearchInput').value = '';
   
   if (typeof updateHistoryRoomFilterOptions === 'function') updateHistoryRoomFilterOptions();
@@ -607,7 +593,7 @@ async function handleRefreshHistory() {
       const result = await handleApiCall('get_all_history', {});
       
       if (result.status === 'success') {
-          currentHistoryData = result.data; // Update global variable
+          currentHistoryData = result.data; 
           if (typeof applyHistoryFiltersAndRender === 'function') {
               applyHistoryFiltersAndRender();
           }
@@ -623,8 +609,7 @@ async function handleRefreshHistory() {
   }
 }
 
-// ===== PDF DOWNLOAD FUNCTIONS (FIXED) =====
-// ===== REQUESTS PDF DOWNLOAD (Updated Style) =====
+// ===== PDF DOWNLOAD FUNCTIONS =====
 function downloadRequestsPDF() {
     if (filteredRequests.length === 0) {
         showToast("No request data to export based on current filters.", 'error');
@@ -637,23 +622,18 @@ function downloadRequestsPDF() {
     }
 
     const { jsPDF } = window.jspdf;
-    // Changed to Landscape ('l') to match your example
     const doc = new jsPDF('l', 'mm', 'a4'); 
 
-    // 1. Title Styling (Maroon)
     doc.setFontSize(18);
-    doc.setTextColor(72, 12, 27); // #480c1b
+    doc.setTextColor(72, 12, 27);
     doc.text("Housekeeping Requests Report", 14, 22);
     
-    // 2. Date Styling
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
-    // 3. Define Headers
     const headers = [['Floor', 'Room', 'Date', 'Request Time', 'Last Clean', 'Status', 'Staff In Charge']];
     
-    // 4. Map Data
     const bodyData = filteredRequests.map(req => [
         req.floor ?? 'N/A',
         req.room ?? 'N/A',
@@ -664,23 +644,21 @@ function downloadRequestsPDF() {
         req.staff ?? 'N/A'
     ]);
 
-    // 5. Generate Table
     doc.autoTable({
         startY: 35, 
         head: headers, 
         body: bodyData, 
         theme: 'grid',
         headStyles: { 
-            fillColor: '#480c1b', // Maroon background
+            fillColor: '#480c1b',
             textColor: '#ffffff', 
             fontStyle: 'bold', 
             halign: 'center' 
         },
         styles: { fontSize: 10, cellPadding: 3 },
-        // Adjust column widths for Housekeeping data
         columnStyles: { 
-            4: { cellWidth: 35 }, // Last Clean
-            6: { cellWidth: 40 }  // Staff
+            4: { cellWidth: 35 },
+            6: { cellWidth: 40 }
         }
     });
 
@@ -688,7 +666,6 @@ function downloadRequestsPDF() {
     showToast('PDF downloaded successfully!', 'success');
 }
 
-// ===== HISTORY PDF DOWNLOAD (Updated Style) =====
 function downloadHistoryPDF() {
     if (filteredHistory.length === 0) {
         showToast("No history data to export based on current filters.", 'error');
@@ -701,23 +678,18 @@ function downloadHistoryPDF() {
     }
 
     const { jsPDF } = window.jspdf;
-    // Changed to Landscape ('l')
     const doc = new jsPDF('l', 'mm', 'a4'); 
 
-    // 1. Title Styling (Maroon)
     doc.setFontSize(18);
-    doc.setTextColor(72, 12, 27); // #480c1b
+    doc.setTextColor(72, 12, 27);
     doc.text("Housekeeping History Report", 14, 22);
     
-    // 2. Date Styling
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
 
-    // 3. Define Headers
     const headers = [['Room', 'Task', 'Staff', 'Date', 'Completed Time', 'Status']];
     
-    // 4. Map Data
     const bodyData = filteredHistory.map(hist => [
         hist.room ?? 'N/A',
         hist.taskType ?? 'Cleaning',
@@ -727,23 +699,21 @@ function downloadHistoryPDF() {
         hist.status ?? 'Completed'
     ]);
 
-    // 5. Generate Table
     doc.autoTable({
         startY: 35, 
         head: headers, 
         body: bodyData, 
         theme: 'grid',
         headStyles: { 
-            fillColor: '#480c1b', // Maroon background
+            fillColor: '#480c1b',
             textColor: '#ffffff', 
             fontStyle: 'bold', 
             halign: 'center' 
         },
         styles: { fontSize: 10, cellPadding: 3 },
-        // Adjust column widths
         columnStyles: { 
-            1: { cellWidth: 40 }, // Task
-            2: { cellWidth: 40 }  // Staff
+            1: { cellWidth: 40 },
+            2: { cellWidth: 40 }
         } 
     });
 

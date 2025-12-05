@@ -211,12 +211,15 @@ function initHKRequestFilters() {
     const refreshBtn = document.getElementById('hkRefreshBtn');
     const downloadBtn = document.getElementById('hkDownloadBtn');
 
+    // Store filtered data for download
+    let filteredRequests = [...hkData];
+
     function applyHKRequestFilters() {
         const searchValue = searchInput.value.toLowerCase();
         const selectedFloor = floorSelect.value;
         const selectedRoom = roomSelect.value;
 
-        const filtered = hkData.filter(row => {
+        filteredRequests = hkData.filter(row => {
             const matchesSearch = row.room.toLowerCase().includes(searchValue) ||
                                   (row.staff && row.staff.toLowerCase().includes(searchValue));
             const matchesFloor = selectedFloor === "" || row.floor.toString() === selectedFloor;
@@ -225,7 +228,7 @@ function initHKRequestFilters() {
         });
 
         paginationState.housekeeping.currentPage = 1;
-        renderHKTable(filtered);
+        renderHKTable(filteredRequests);
     }
 
     if (floorSelect) {
@@ -283,8 +286,12 @@ function initHKRequestFilters() {
 
     if (downloadBtn) {
         downloadBtn.onclick = () => {
+            if (filteredRequests.length === 0) {
+                alert("No data available to download based on current filters.");
+                return;
+            }
             const headers = ['Floor', 'Room', 'Date', 'Req Time', 'Last Clean', 'Status', 'Staff'];
-            const tableData = hkData.map(row => [
+            const tableData = filteredRequests.map(row => [
                 row.floor, row.room, row.date, row.requestTime, row.lastClean, 
                 typeof formatStatus === 'function' ? formatStatus(row.status) : row.status, row.staff
             ]);
@@ -301,33 +308,55 @@ function initHKHistoryFilters() {
     const searchInput = document.getElementById('hkHistSearchInput');
     const floorSelect = document.getElementById('floorFilterHkHist');
     const roomSelect = document.getElementById('roomFilterHkHist');
-    const dateInput = document.getElementById('dateFilterHkHist');
+    const startDateInput = document.getElementById('startDateFilterHkHist');
+    const endDateInput = document.getElementById('endDateFilterHkHist');
     const refreshBtn = document.getElementById('hkHistRefreshBtn');
     const downloadBtn = document.getElementById('hkHistDownloadBtn');
+
+    // Store filtered data for download
+    let filteredHistory = [...hkHistData];
 
     function applyHKHistoryFilters() {
         const searchValue = searchInput.value.toLowerCase();
         const selectedFloor = floorSelect.value;
         const selectedRoom = roomSelect.value;
-        const selectedDate = dateInput.value; 
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
 
-        const filtered = hkHistData.filter(row => {
+        filteredHistory = hkHistData.filter(row => {
             const matchesSearch = row.room.toLowerCase().includes(searchValue) ||
                                   (row.staff && row.staff.toLowerCase().includes(searchValue)) ||
                                   row.issueType.toLowerCase().includes(searchValue);
             const matchesFloor = selectedFloor === "" || row.floor.toString() === selectedFloor;
             const matchesRoom = selectedRoom === "" || row.room.toString() === selectedRoom;
+            
+            // Date Range Logic
             let matchesDate = true;
-            if (selectedDate) {
-                const [y, m, d] = selectedDate.split('-');
-                const formattedInput = `${m}.${d}.${y}`; 
-                matchesDate = row.date === formattedInput;
+            if (startDate || endDate) {
+                if (!row.date || row.date === 'N/A') {
+                    matchesDate = false;
+                } else {
+                    const [m, d, y] = row.date.split('.');
+                    const rowDate = new Date(y, m - 1, d);
+
+                    if (startDate) {
+                        const [sy, sm, sd] = startDate.split('-');
+                        const start = new Date(sy, sm - 1, sd);
+                        if (rowDate < start) matchesDate = false;
+                    }
+                    if (endDate && matchesDate) {
+                        const [ey, em, ed] = endDate.split('-');
+                        const end = new Date(ey, em - 1, ed);
+                        if (rowDate > end) matchesDate = false;
+                    }
+                }
             }
+
             return matchesSearch && matchesFloor && matchesRoom && matchesDate;
         });
 
         paginationState.housekeepingHistory.currentPage = 1;
-        renderHKHistTable(filtered);
+        renderHKHistTable(filteredHistory);
     }
 
     if (floorSelect) {
@@ -346,7 +375,8 @@ function initHKHistoryFilters() {
 
     if (searchInput) searchInput.oninput = applyHKHistoryFilters;
     if (roomSelect) roomSelect.onchange = applyHKHistoryFilters;
-    if (dateInput) dateInput.onchange = applyHKHistoryFilters;
+    if (startDateInput) startDateInput.onchange = applyHKHistoryFilters;
+    if (endDateInput) endDateInput.onchange = applyHKHistoryFilters;
 
     // --- REFRESH WITH LOADING & SERVER FETCH ---
     if (refreshBtn) {
@@ -354,7 +384,8 @@ function initHKHistoryFilters() {
             searchInput.value = '';
             floorSelect.value = '';
             roomSelect.value = '';
-            dateInput.value = '';
+            startDateInput.value = '';
+            endDateInput.value = '';
             populateSelect('roomFilterHkHist', globalRoomList, 'Room');
             
             const tbody = document.getElementById('hkHistTableBody');
@@ -384,8 +415,12 @@ function initHKHistoryFilters() {
 
     if (downloadBtn) {
         downloadBtn.onclick = () => {
+            if (filteredHistory.length === 0) {
+                alert("No data available to download based on current filters.");
+                return;
+            }
             const headers = ['Floor', 'Room', 'Task', 'Date', 'Req Time', 'Comp Time', 'Staff', 'Status', 'Remarks'];
-            const tableData = hkHistData.map(row => [
+            const tableData = filteredHistory.map(row => [
                 row.floor, row.room, row.issueType, row.date, row.requestedTime, 
                 row.completedTime, row.staff, row.status, row.remarks || ''
             ]);

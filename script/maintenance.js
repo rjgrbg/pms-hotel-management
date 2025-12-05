@@ -115,7 +115,11 @@ function setupEventListeners() {
         applyHistoryFiltersAndRender(); 
     });
     document.getElementById('roomFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender); 
-    document.getElementById('dateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender); 
+    
+    // UPDATED: Listeners for Date Range
+    document.getElementById('startDateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender); 
+    document.getElementById('endDateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender); 
+    
     document.getElementById('historySearchInput')?.addEventListener('input', applyHistoryFiltersAndRender); 
     document.getElementById('historyRefreshBtn')?.addEventListener('click', resetHistoryFilters); 
     document.getElementById('historyDownloadBtn')?.addEventListener('click', downloadHistoryPDF); 
@@ -656,7 +660,11 @@ async function resetHistoryFilters() {
 
     document.getElementById('floorFilterHistory').value = '';
     document.getElementById('roomFilterHistory').value = '';
-    document.getElementById('dateFilterHistory').value = '';
+    
+    // UPDATED: Clear both date inputs
+    if(document.getElementById('startDateFilterHistory')) document.getElementById('startDateFilterHistory').value = '';
+    if(document.getElementById('endDateFilterHistory')) document.getElementById('endDateFilterHistory').value = '';
+    
     document.getElementById('historySearchInput').value = '';
     
     updateHistoryRoomFilterOptions();
@@ -754,8 +762,9 @@ function downloadHistoryPDF() {
 
     doc.save('maintenance-history.pdf');
 }
+
 // =======================================================
-// ===== HISTORY TAB RENDER LOGIC (The Missing Part) =====
+// ===== HISTORY TAB RENDER LOGIC =====
 // =======================================================
 
 /**
@@ -764,22 +773,43 @@ function downloadHistoryPDF() {
 function applyHistoryFiltersAndRender() {
     const floor = document.getElementById('floorFilterHistory')?.value;
     const room = document.getElementById('roomFilterHistory')?.value;
-    const date = document.getElementById('dateFilterHistory')?.value;
+    const startDate = document.getElementById('startDateFilterHistory')?.value; // YYYY-MM-DD
+    const endDate = document.getElementById('endDateFilterHistory')?.value;     // YYYY-MM-DD
     const search = document.getElementById('historySearchInput')?.value.toLowerCase();
-
-    // Convert Input Date (YYYY-MM-DD) to Data Format (MM.DD.YYYY) if needed
-    let formattedDate = '';
-    if (date) {
-        const [y, m, d] = date.split('-');
-        formattedDate = `${m}.${d}.${y}`;
-    }
 
     filteredHistory = currentHistoryData.filter(h => {
         const matchFloor = !floor || h.floor.toString() === floor;
         const matchRoom = !room || h.room.toString() === room;
-        const matchDate = !formattedDate || h.date === formattedDate;
         
-        // Safe search handling (checks if fields exist before converting to lower case)
+        // Date Range Logic
+        let matchDate = true;
+        if (startDate || endDate) {
+            // If row has no date, and we are filtering by date, exclude it
+            if (!h.date || h.date === 'N/A') {
+                matchDate = false;
+            } else {
+                // Parse "MM.DD.YYYY" to Y, M, D integers
+                const [m, d, y] = h.date.split('.');
+                // Create Date at midnight (months are 0-indexed in JS Date)
+                const rowDate = new Date(y, m - 1, d);
+                
+                // Check Start Date
+                if (startDate) {
+                    const [sy, sm, sd] = startDate.split('-');
+                    const start = new Date(sy, sm - 1, sd);
+                    if (rowDate < start) matchDate = false;
+                }
+                
+                // Check End Date (only if start check passed)
+                if (endDate && matchDate) {
+                    const [ey, em, ed] = endDate.split('-');
+                    const end = new Date(ey, em - 1, ed);
+                    if (rowDate > end) matchDate = false;
+                }
+            }
+        }
+        
+        // Search Logic
         const matchSearch = !search || 
             (h.room && h.room.toString().includes(search)) || 
             (h.staff && h.staff.toLowerCase().includes(search)) ||
@@ -828,7 +858,6 @@ function renderHistoryTable() {
             const statusClass = h.status ? h.status.toLowerCase().replace(/\s+/g, '-') : '';
 
             // 2. Prepare Safe Data (Escape HTML to prevent XSS/Layout breaks)
-            // We use the escapeHtml() helper function on every field.
             const safeFloor = escapeHtml(h.floor ?? 'N/A');
             const safeRoom = escapeHtml(h.room ?? 'N/A');
             const safeType = escapeHtml(h.issueType ?? 'N/A');
@@ -841,9 +870,6 @@ function renderHistoryTable() {
             // 3. Special Handling for Remarks (Truncate then Escape)
             const rawRemarks = h.remarks ?? '';
             const safeFullRemarks = escapeHtml(rawRemarks); // For tooltip
-            
-            // Truncate the RAW text first, then escape the result
-            // This prevents cutting off an escape sequence like "&amp;" in the middle
             const truncatedRaw = rawRemarks.length > 30 ? rawRemarks.substring(0, 30) + '...' : rawRemarks;
             const safeDisplayRemarks = escapeHtml(truncatedRaw);
 

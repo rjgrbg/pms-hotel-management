@@ -198,12 +198,15 @@ function initMTRequestFilters() {
     const refreshBtn = document.getElementById('mtRefreshBtn');
     const downloadBtn = document.getElementById('mtDownloadBtn');
 
+    // Store filtered data for download
+    let filteredRequests = [...mtRequestsData];
+
     function applyMTRequestFilters() {
         const searchValue = searchInput.value.toLowerCase();
         const selectedFloor = floorSelect.value;
         const selectedRoom = roomSelect.value;
 
-        const filtered = mtRequestsData.filter(row => {
+        filteredRequests = mtRequestsData.filter(row => {
             const matchesSearch = row.room.toLowerCase().includes(searchValue) ||
                                   (row.staff && row.staff.toLowerCase().includes(searchValue));
             const matchesFloor = selectedFloor === "" || row.floor.toString() === selectedFloor;
@@ -212,7 +215,7 @@ function initMTRequestFilters() {
         });
 
         paginationState.maintenance.currentPage = 1;
-        renderMTRequestsTable(filtered);
+        renderMTRequestsTable(filteredRequests);
     }
 
     if (floorSelect) {
@@ -270,8 +273,12 @@ function initMTRequestFilters() {
 
     if (downloadBtn) {
         downloadBtn.onclick = () => {
+            if (filteredRequests.length === 0) {
+                alert("No data available to download based on current filters.");
+                return;
+            }
             const headers = ['Floor', 'Room', 'Date', 'Req Time', 'Last Maint', 'Status', 'Staff'];
-            const tableData = mtRequestsData.map(row => [
+            const tableData = filteredRequests.map(row => [
                 row.floor, row.room, row.date, row.requestTime, row.lastMaintenance, 
                 typeof formatStatus === 'function' ? formatStatus(row.status) : row.status, row.staff
             ]);
@@ -288,33 +295,55 @@ function initMTHistoryFilters() {
     const searchInput = document.getElementById('mtHistSearchInput');
     const floorSelect = document.getElementById('mtFloorFilterHist');
     const roomSelect = document.getElementById('mtRoomFilterHist');
-    const dateInput = document.getElementById('dateFilterMtHist');
+    const startDateInput = document.getElementById('startDateFilterMtHist');
+    const endDateInput = document.getElementById('endDateFilterMtHist');
     const refreshBtn = document.getElementById('mtHistRefreshBtn');
     const downloadBtn = document.getElementById('mtHistDownloadBtn');
+
+    // Store filtered data for download
+    let filteredHistory = [...mtHistData];
 
     function applyMTHistoryFilters() {
         const searchValue = searchInput.value.toLowerCase();
         const selectedFloor = floorSelect.value;
         const selectedRoom = roomSelect.value;
-        const selectedDate = dateInput.value; 
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
 
-        const filtered = mtHistData.filter(row => {
+        filteredHistory = mtHistData.filter(row => {
             const matchesSearch = row.room.toLowerCase().includes(searchValue) ||
                                   (row.staff && row.staff.toLowerCase().includes(searchValue)) ||
                                   row.issueType.toLowerCase().includes(searchValue);
             const matchesFloor = selectedFloor === "" || row.floor.toString() === selectedFloor;
             const matchesRoom = selectedRoom === "" || row.room.toString() === selectedRoom;
+            
+            // Date Range Logic
             let matchesDate = true;
-            if (selectedDate) {
-                const [y, m, d] = selectedDate.split('-');
-                const formattedInput = `${m}.${d}.${y}`; 
-                matchesDate = row.date === formattedInput;
+            if (startDate || endDate) {
+                if (!row.date || row.date === 'N/A') {
+                    matchesDate = false;
+                } else {
+                    const [m, d, y] = row.date.split('.');
+                    const rowDate = new Date(y, m - 1, d);
+
+                    if (startDate) {
+                        const [sy, sm, sd] = startDate.split('-');
+                        const start = new Date(sy, sm - 1, sd);
+                        if (rowDate < start) matchesDate = false;
+                    }
+                    if (endDate && matchesDate) {
+                        const [ey, em, ed] = endDate.split('-');
+                        const end = new Date(ey, em - 1, ed);
+                        if (rowDate > end) matchesDate = false;
+                    }
+                }
             }
+
             return matchesSearch && matchesFloor && matchesRoom && matchesDate;
         });
 
         paginationState.maintenanceHistory.currentPage = 1;
-        renderMTHistTable(filtered);
+        renderMTHistTable(filteredHistory);
     }
 
     if (floorSelect) {
@@ -333,7 +362,8 @@ function initMTHistoryFilters() {
 
     if (searchInput) searchInput.oninput = applyMTHistoryFilters;
     if (roomSelect) roomSelect.onchange = applyMTHistoryFilters;
-    if (dateInput) dateInput.onchange = applyMTHistoryFilters;
+    if (startDateInput) startDateInput.onchange = applyMTHistoryFilters;
+    if (endDateInput) endDateInput.onchange = applyMTHistoryFilters;
 
     // --- REFRESH WITH LOADING & SERVER FETCH ---
     if (refreshBtn) {
@@ -341,7 +371,8 @@ function initMTHistoryFilters() {
             searchInput.value = '';
             floorSelect.value = '';
             roomSelect.value = '';
-            dateInput.value = '';
+            startDateInput.value = '';
+            endDateInput.value = '';
             populateMTSelect('mtRoomFilterHist', globalMTRoomList, 'Room');
             
             const tbody = document.getElementById('mtHistTableBody');
@@ -371,8 +402,12 @@ function initMTHistoryFilters() {
 
     if (downloadBtn) {
         downloadBtn.onclick = () => {
+            if (filteredHistory.length === 0) {
+                alert("No data available to download based on current filters.");
+                return;
+            }
             const headers = ['Floor', 'Room', 'Type', 'Date', 'Req Time', 'Comp Time', 'Staff', 'Status', 'Remarks'];
-            const tableData = mtHistData.map(row => [
+            const tableData = filteredHistory.map(row => [
                 row.floor, row.room, row.issueType, row.date, row.requestedTime, 
                 row.completedTime, row.staff, row.status, row.remarks || ''
             ]);

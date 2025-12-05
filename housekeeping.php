@@ -407,30 +407,35 @@ $conn->close();
         </div>
 
         <div class="tabContent" id="history-tab">
-            <div class="controlsRow">
-                <div class="filterControls">
-                    <select class="filterDropdown" id="floorFilterHistory">
-                        <option value="">Floor</option>
-                    </select>
-                    <select class="filterDropdown" id="roomFilterHistory">
-                        <option value="">Room</option>
-                    </select>
-                    <input type="date" class="filterDropdown" id="dateFilterHistory" style="width: 150px; padding: 8px 14px;">
-                    
-                    <div class="searchBox">
-                        <input type="text" placeholder="Search" class="searchInput" id="historySearchInput" />
-                        <button class="searchBtn">
-                            <img src="assets/icons/search-icon.png" alt="Search" />
-                        </button>
-                    </div>
-                    <button class="refreshBtn" id="historyRefreshBtn">
-                        <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-                    </button>
-                    <button class="downloadBtn" id="historyDownloadBtn">
-                        <img src="assets/icons/download-icon.png" alt="Download" />
-                    </button>
-                </div>
-            </div>
+           <div class="controlsRow">
+    <div class="filterControls">
+        <select class="filterDropdown" id="floorFilterHistory">
+            <option value="">Floor</option>
+        </select>
+        <select class="filterDropdown" id="roomFilterHistory">
+            <option value="">Room</option>
+        </select>
+        
+        <div style="display: flex; align-items: center; gap: 5px; background: white; border-radius: 5px; border: 1px solid #ddd; padding: 0 5px;">
+            <input type="date" id="startDateFilterHistory" title="Start Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+            <span style="color: #666;">-</span>
+            <input type="date" id="endDateFilterHistory" title="End Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+        </div>
+
+        <div class="searchBox">
+            <input type="text" placeholder="Search" class="searchInput" id="historySearchInput" />
+            <button class="searchBtn">
+                <img src="assets/icons/search-icon.png" alt="Search" />
+            </button>
+        </div>
+        <button class="refreshBtn" id="historyRefreshBtn">
+            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+        </button>
+        <button class="downloadBtn" id="historyDownloadBtn">
+            <img src="assets/icons/download-icon.png" alt="Download" />
+        </button>
+    </div>
+</div>
             
             <div class="tableWrapper">
                 <table class="historyTable">
