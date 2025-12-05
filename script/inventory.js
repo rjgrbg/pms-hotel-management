@@ -20,19 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
       right: 20px;
       background-color: #28a745; /* Green Background */
       color: white;
-      padding: 12px 24px; /* Adjusted to match Maintenance */
-      border-radius: 5px; /* Adjusted to match Maintenance */
-      box-shadow: 0 4px 6px rgba(0,0,0,0.15); /* Adjusted shadow */
+      padding: 12px 24px;
+      border-radius: 5px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.15);
       z-index: 9999;
       opacity: 0;
       transform: translateY(-20px);
       transition: all 0.3s ease-in-out;
-      
-      /* --- FONT STYLE FIX --- */
       font-family: 'Segoe UI', sans-serif;
       font-size: 14px;
-      /* ---------------------- */
-      
       font-weight: 500;
       display: flex;
       align-items: center;
@@ -101,6 +97,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const successModal = document.getElementById('success-modal');
   const editItemModal = document.getElementById('edit-item-modal');
   const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+  const restoreConfirmModal = document.getElementById('restore-confirm-modal'); 
 
   // Forms & Inputs
   const addItemBtn = document.getElementById('addItemBtn');
@@ -118,12 +115,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const editItemIdSpan = document.getElementById('edit-item-id');
   const editItemIdInput = document.getElementById('edit-item-id-input');
   const editStockInput = document.getElementById('edit-item-add-stock');
+  const editItemThresholdInput = document.getElementById('edit-item-threshold'); 
 
   const editModalCancelBtn = document.getElementById('edit-modal-cancel-btn');
 
   const deleteCancelBtn = document.getElementById('delete-cancel-btn');
   const deleteConfirmBtn = document.getElementById('delete-confirm-btn');
   const deleteModalCloseBtn = document.getElementById('delete-modal-close-btn');
+
+  const restoreCancelBtn = document.getElementById('restore-cancel-btn');
+  const restoreConfirmBtn = document.getElementById('restore-confirm-btn');
+  const restoreModalCloseBtn = document.getElementById('restore-modal-close-btn');
 
   // Sidebar / Auth
   const profileBtn = document.getElementById('profileBtn');
@@ -139,27 +141,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // === HELPER FUNCTIONS (Toast & Modals)
   // ======================================================
 
-  // --- UPDATED TOAST FUNCTION (No Icon, Bold Text) ---
   const showToast = (message, type = 'success') => {
-    // Create Toast Element
     const toast = document.createElement('div');
-    
-    // CHANGED: Just text, no icon
     toast.innerText = message;
-
-    // --- APPLY STYLES DIRECTLY ---
     toast.style.fontFamily = "'Segoe UI', sans-serif";
     toast.style.fontSize = '14px';
-   // CHANGED: Made bold
     
-    // Color Logic
     if (type === 'error') {
-        toast.style.backgroundColor = '#dc3545'; // Red
+        toast.style.backgroundColor = '#dc3545';
     } else {
-        toast.style.backgroundColor = '#28a745'; // Green
+        toast.style.backgroundColor = '#28a745';
     }
     
-    // Layout & Positioning
     toast.style.color = 'white';
     toast.style.padding = '12px 24px';
     toast.style.borderRadius = '5px';
@@ -171,7 +164,6 @@ document.addEventListener('DOMContentLoaded', () => {
     toast.style.display = 'flex';
     toast.style.alignItems = 'center';
     
-    // Animation States
     toast.style.opacity = '0';
     toast.style.transform = 'translateY(-20px)';
     toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
@@ -179,17 +171,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.body.appendChild(toast);
 
-    // Trigger animation (Fade In)
     requestAnimationFrame(() => {
       toast.style.opacity = '1';
       toast.style.transform = 'translateY(0)';
     });
 
-    // Remove after 3 seconds
     setTimeout(() => {
       toast.style.opacity = '0';
       toast.style.transform = 'translateY(-20px)';
-      // Wait for transition to finish before removing from DOM
       setTimeout(() => {
         if (document.body.contains(toast)) {
           document.body.removeChild(toast);
@@ -389,8 +378,34 @@ document.addEventListener('DOMContentLoaded', () => {
   // === DATA FETCHING
   // ======================================================
 
+  function populateFilterDropdown(data, dropdown) {
+      if (!dropdown) return;
+      
+      const currentValue = dropdown.value;
+      
+      const categories = [...new Set(data.map(item => item.Category))].filter(c => c).sort();
+
+      while (dropdown.options.length > 1) {
+          dropdown.remove(1);
+      }
+
+      categories.forEach(cat => {
+          const option = document.createElement('option');
+          option.value = cat;
+          option.textContent = cat;
+          dropdown.appendChild(option);
+      });
+      
+      dropdown.value = currentValue;
+  }
+
   async function fetchInventory() {
     try {
+      // Show loading
+      if(requestsTableBody) {
+          requestsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Loading items...</td></tr>';
+      }
+
       const response = await fetch('inventory_actions.php?action=get_inventory');
       if (!response.ok) throw new Error('Network response was not ok.');
       const items = await response.json();
@@ -401,16 +416,22 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         allInventoryData = items;
         renderInventoryTable();
+        populateFilterDropdown(allInventoryData, categoryFilter);
       }
     } catch (error) {
       handleError('Error fetching inventory: ' + error.message);
       requestsTableBody.innerHTML =
-        '<tr><td colspan="8" class="no-data-cell">Error loading data.</td></tr>';
+        '<tr><td colspan="7" class="no-data-cell">Error loading data.</td></tr>'; 
     }
   }
 
   async function fetchHistory() {
     try {
+      // Show loading
+      if(historyTableBody) {
+          historyTableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">Loading history...</td></tr>';
+      }
+
       const response = await fetch('inventory_actions.php?action=get_history');
       if (!response.ok) throw new Error('Network response was not ok.');
       const logs = await response.json();
@@ -421,6 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         allHistoryData = logs;
         renderHistoryTable();
+        populateFilterDropdown(allHistoryData, categoryFilterHistory);
       }
     } catch (error) {
       handleError('Error fetching history: ' + error.message);
@@ -440,35 +462,17 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // 1. Reset Add/Edit dropdowns
       addCategorySelect.innerHTML = '<option value="" disabled selected>Select a category</option>';
       editCategorySelect.innerHTML = '';
 
-      // 2. Reset Filter Dropdowns
-      if (categoryFilter) categoryFilter.innerHTML = '<option value="">All Categories</option>';
-      if (categoryFilterHistory) categoryFilterHistory.innerHTML = '<option value="">All Categories</option>';
-
       categories.forEach((category) => {
-        // --- Create Option for FORMS (Uses ID for DB) ---
-        const optionForForm = document.createElement('option');
-        optionForForm.value = category.ItemCategoryID;
-        optionForForm.textContent = category.ItemCategoryName;
+        if (category.is_archived != 1) {
+            const optionForForm = document.createElement('option');
+            optionForForm.value = category.ItemCategoryID;
+            optionForForm.textContent = category.ItemCategoryName;
 
-        // Append to Add/Edit Forms
-        addCategorySelect.appendChild(optionForForm.cloneNode(true));
-        editCategorySelect.appendChild(optionForForm.cloneNode(true));
-
-        // --- Create Option for FILTERS (Uses Name for Matching Table Text) ---
-        const optionForFilter = document.createElement('option');
-        optionForFilter.value = category.ItemCategoryName;
-        optionForFilter.textContent = category.ItemCategoryName;
-
-        // Append to Filter Dropdowns
-        if (categoryFilter) {
-          categoryFilter.appendChild(optionForFilter.cloneNode(true));
-        }
-        if (categoryFilterHistory) {
-          categoryFilterHistory.appendChild(optionForFilter.cloneNode(true));
+            addCategorySelect.appendChild(optionForForm.cloneNode(true));
+            editCategorySelect.appendChild(optionForForm.cloneNode(true));
         }
       });
     } catch (error) {
@@ -486,14 +490,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const search = searchInput.value.toLowerCase();
 
     const filteredData = allInventoryData.filter((item) => {
+      const itemIsArchived = parseInt(item.is_archived) === 1;
+      
+      if (status === 'archived') {
+          if (!itemIsArchived) return false; 
+      } else {
+          if (itemIsArchived) return false; 
+          
+          if (status && item.ItemStatus.toLowerCase() !== status) return false;
+      }
+
       const matchCategory = !category || item.Category.toLowerCase() === category;
-      const matchStatus = !status || item.ItemStatus.toLowerCase() === status;
       const matchSearch =
         !search ||
         item.ItemName.toLowerCase().includes(search) ||
         item.ItemID.toString().includes(search);
 
-      return matchCategory && matchStatus && matchSearch;
+      return matchCategory && matchSearch;
     });
 
     const { column, direction } = sortState.requests;
@@ -505,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (totalItems === 0) {
       requestsTableBody.innerHTML =
-        '<tr><td colspan="8" class="no-data-cell">No inventory items found</td></tr>';
+        '<tr><td colspan="7" class="no-data-cell">No inventory items found</td></tr>'; 
       return;
     }
 
@@ -516,11 +529,30 @@ document.addEventListener('DOMContentLoaded', () => {
     requestsTableBody.innerHTML = paginatedData
       .map((item) => {
         const badgeClass = item.ItemStatus.toLowerCase().replace(/\s+/g, '-');
+        const isArchived = parseInt(item.is_archived) === 1;
         
-        // --- SECURITY FIX: ESCAPE HTML ---
+        let actionButtons = '';
+        
+        // --- UPDATED: Use Icon Buttons & correct classes ---
+        if (isArchived) {
+            actionButtons = `
+                <button class="actionIconBtn restore-btn" data-id="${item.ItemID}" title="Restore">
+                    <i class="fas fa-trash-restore" style="color: #28a745;"></i>
+                </button>
+            `;
+        } else {
+            actionButtons = `
+                <button class="actionIconBtn edit-btn" data-id="${item.ItemID}" title="Edit">
+                    <img src="assets/icons/edit-icon.png" alt="Edit" style="width: 16px; height: 16px;">
+                </button>
+                <button class="actionIconBtn delete-btn" data-id="${item.ItemID}" title="Archive">
+                    <i class="fas fa-archive" style="color: #dc3545;"></i>
+                </button>
+            `;
+        }
+
         return `
         <tr>
-          <td>${escapeHtml(item.ItemID)}</td>
           <td>${escapeHtml(item.ItemName)}</td>
           <td>${escapeHtml(item.Category)}</td>
           <td>${escapeHtml(item.ItemQuantity)}</td>
@@ -528,8 +560,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <td><span class="statusBadge ${badgeClass}">${escapeHtml(item.ItemStatus)}</span></td>
           <td>${escapeHtml(item.DateofStockIn)}</td>
           <td class="action-cell">
-              <button class="action-btn edit-btn" data-id="${item.ItemID}">Edit</button>
-              <button class="action-btn delete-btn" data-id="${item.ItemID}">Delete</button>
+              ${actionButtons}
           </td>
         </tr>
       `;
@@ -538,10 +569,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateSortHeaders('requests-tab', sortState.requests);
 
-    // Re-attach Listeners
+    // --- UPDATED LISTENERS: use e.currentTarget to safely get dataset ---
     document.querySelectorAll('#requestsTableBody .edit-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
-          const itemId = parseInt(e.target.dataset.id);
+          const itemId = parseInt(e.currentTarget.dataset.id);
           const itemToEdit = allInventoryData.find((i) => i.ItemID == itemId);
           if (itemToEdit) openEditModal(itemToEdit);
         });
@@ -549,9 +580,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('#requestsTableBody .delete-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
-          const itemId = parseInt(e.target.dataset.id);
+          const itemId = parseInt(e.currentTarget.dataset.id);
           currentEditItemId = itemId;
           showModal(deleteConfirmModal);
+        });
+      });
+      
+    document.querySelectorAll('#requestsTableBody .restore-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const itemId = parseInt(e.currentTarget.dataset.id);
+          currentEditItemId = itemId; 
+          showModal(restoreConfirmModal);
         });
       });
   }
@@ -610,7 +649,6 @@ function renderHistoryTable() {
           const oldQty = (log.OldQuantity === null || log.OldQuantity === undefined) ? 'N/A' : log.OldQuantity;
           const newQty = (log.NewQuantity === null || log.NewQuantity === undefined) ? 'N/A' : log.NewQuantity;
 
-          // --- SECURITY FIX: ESCAPE HTML ---
           return `
             <tr>
               <td>${escapeHtml(log.InvLogID)}</td>
@@ -656,6 +694,7 @@ function renderHistoryTable() {
       document.getElementById('item-description').value
     );
     formData.append('quantity', document.getElementById('item-quantity').value);
+    formData.append('low_stock_threshold', document.getElementById('item-threshold').value); // Append Threshold
     formData.append(
       'stock_in_date',
       document.getElementById('stock-in-date').value
@@ -673,6 +712,7 @@ function renderHistoryTable() {
       if (result.success) {
         showModal(successModal);
         addItemForm.reset();
+        document.getElementById('item-threshold').value = 10; 
         hideModal(addItemModal);
         fetchInventory();
         fetchHistory();
@@ -691,6 +731,7 @@ function renderHistoryTable() {
     document.getElementById('edit-item-name').value = item.ItemName;
     editCategorySelect.value = item.ItemCategoryID;
     document.getElementById('edit-item-description').value = item.ItemDescription;
+    editItemThresholdInput.value = item.LowStockThreshold || 10; 
     editStockInput.value = '';
     document.getElementById('edit-item-current-qty').textContent = item.ItemQuantity;
 
@@ -709,6 +750,7 @@ function renderHistoryTable() {
       'description',
       document.getElementById('edit-item-description').value
     );
+    formData.append('low_stock_threshold', editItemThresholdInput.value); 
     const stockToAdd = editStockInput.value || 0;
     formData.append('stock_adjustment', stockToAdd);
 
@@ -750,11 +792,12 @@ function renderHistoryTable() {
       if (result.success) {
         fetchInventory();
         fetchHistory();
+        showToast('Item archived successfully.', 'success'); 
       } else {
         throw new Error(result.error || 'Failed to delete item.');
       }
     } catch (error) {
-      handleError('Error deleting item: ' + error.message);
+      handleError('Error archiving item: ' + error.message);
     }
   });
 
@@ -797,6 +840,38 @@ function renderHistoryTable() {
     editModalCancelBtn.addEventListener('click', () => {
       hideModal(editItemModal);
     });
+  }
+
+  if (restoreCancelBtn) restoreCancelBtn.addEventListener('click', () => hideModal(restoreConfirmModal));
+  if (restoreModalCloseBtn) restoreModalCloseBtn.addEventListener('click', () => hideModal(restoreConfirmModal));
+
+  if (restoreConfirmBtn) {
+      restoreConfirmBtn.addEventListener('click', async () => {
+        if (!currentEditItemId) return;
+
+        const formData = new FormData();
+        formData.append('item_id', currentEditItemId);
+
+        try {
+          const response = await fetch('inventory_actions.php?action=restore_item', {
+            method: 'POST',
+            body: formData,
+          });
+          const result = await response.json();
+
+          hideModal(restoreConfirmModal);
+
+          if (result.success) {
+            fetchInventory();
+            fetchHistory();
+            showToast('Item restored successfully.', 'success');
+          } else {
+            throw new Error(result.error || 'Failed to restore item.');
+          }
+        } catch (error) {
+          handleError('Error restoring item: ' + error.message);
+        }
+      });
   }
 
   if (profileBtn && sidebar && sidebarCloseBtn) {
@@ -852,25 +927,30 @@ function renderHistoryTable() {
     renderHistoryTable();
   });
 
-  // === UPDATED REFRESH BUTTON LISTENERS ===
   if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
+    // UPDATED REFRESH LOGIC FOR INVENTORY ITEMS
+    refreshBtn.addEventListener('click', async () => {
       categoryFilter.value = '';
       statusFilter.value = '';
       searchInput.value = '';
       currentPages.requests = 1;
-      fetchInventory();
+      
+      // Also reload data from server to be "just like in admin"
+      await fetchCategories();
+      await fetchInventory(); 
       showToast('Data refreshed successfully!');
     });
   }
 
   if (refreshBtnHistory) {
-    refreshBtnHistory.addEventListener('click', () => {
+    // UPDATED REFRESH LOGIC FOR HISTORY
+    refreshBtnHistory.addEventListener('click', async () => {
       categoryFilterHistory.value = '';
       statusFilterHistory.value = '';
       searchInputHistory.value = '';
       currentPages.history = 1;
-      fetchHistory();
+      
+      await fetchHistory();
       showToast('History data refreshed!');
     });
   }

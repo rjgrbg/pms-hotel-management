@@ -71,7 +71,7 @@ if (isset($_SESSION['UserID'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Celestia Hotel - Parking Management</title>
     
-    <link rel="stylesheet" href="css/parking.css?v=1.5">
+    <link rel="stylesheet" href="css/parking.css?v=1.9">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
@@ -165,8 +165,22 @@ if (isset($_SESSION['UserID'])) {
         margin-left: 10px;
         transition: color 0.2s ease;
     }
-    .category-actions .btn-edit-category:hover { color: #007bff; }
-    .category-actions .btn-delete-category:hover { color: #dc3545; }
+    .category-actions .btn-edit-category:hover, 
+    .category-actions .btn-edit-area:hover,
+    .category-actions .btn-edit-slot:hover { color: #007bff; }
+    
+    .category-actions .btn-delete-category:hover,
+    .category-actions .btn-archive-area:hover,
+    .category-actions .btn-archive-slot:hover { color: #dc3545; }
+
+    /* NEW: Restore Button Styles */
+    .category-actions .btn-restore-area:hover,
+    .category-actions .btn-restore-slot:hover { color: #28a745; }
+
+    /* NEW: Archived Row Style */
+    tr.archived-slot { background-color: #f9f9f9; color: #999; }
+    tr.archived-slot td { color: #999; }
+    tr.archived-slot .status-badge { background-color: #e0e0e0; color: #777; border: 1px solid #ccc; }
 
     /* Modal footer */
     .modal-footer {
@@ -276,6 +290,9 @@ if (isset($_SESSION['UserID'])) {
                     <button class="refreshBtn" id="refreshBtnDashboard">
                         <img src="assets/icons/refresh-icon.png" alt="Refresh" />
                     </button>
+                    <button class="add-btn" id="btnManageAreas" style="margin-left: 10px; background-color: #480c1b; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+                        <i class="fas fa-map-marker-alt"></i> Manage Areas
+                    </button>
                 </div>
             </div>
             
@@ -322,6 +339,7 @@ if (isset($_SESSION['UserID'])) {
                         <option value="all">All Status</option>
                         <option value="available">Available</option>
                         <option value="occupied">Occupied</option>
+                        <option value="archived" style="color:red; font-weight:bold;">Archived</option>
                     </select>
                     <div class="searchBox">
                         <input type="text" placeholder="Search by Slot..." class="searchInput" id="searchSlots" />
@@ -331,6 +349,9 @@ if (isset($_SESSION['UserID'])) {
                     </div>
                     <button class="refreshBtn" id="refreshBtnSlots">
                         <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+                    </button>
+                    <button class="add-btn" id="btnAddSlot" style="margin-left: 10px; background-color: #480c1b; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+                        <i class="fas fa-plus"></i> Add Slot
                     </button>
                 </div>
             </div>
@@ -629,6 +650,80 @@ if (isset($_SESSION['UserID'])) {
             </div>
         </div>
     </div>
+
+    <div class="modal-overlay" id="manageAreasModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-map-marker-alt modal-icon-fa"></i> <h2>Manage Areas</h2></div>
+                <button class="modal-close-btn" data-modal-id="manageAreasModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Add New Area</label>
+                    <div class="add-category-wrapper">
+                        <input type="text" id="newAreaName" placeholder="Area Name (e.g., Basement 1)">
+                        <button type="button" class="submit-btn" id="btnSaveNewArea">ADD</button>
+                    </div>
+                </div>
+                <hr class="category-divider">
+                <div class="form-group form-group-vertical">
+                    <label>Existing Areas</label>
+                    <div class="category-list-container" id="areaListContainer">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="manageSlotModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-parking modal-icon-fa"></i> <h2 id="slotModalTitle">Add Slot</h2></div>
+                <button class="modal-close-btn" data-modal-id="manageSlotModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="slotForm">
+                    <input type="hidden" id="slotIdInput">
+                    <div class="form-group">
+                        <label>Area</label>
+                        <select id="slotAreaSelect" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Slot Name/Number</label>
+                        <input type="text" id="slotNameInput" required placeholder="e.g., A-01">
+                    </div>
+                    <div class="form-group">
+                        <label>Allowed Vehicle Type</label>
+                        <select id="slotTypeSelect" required></select>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="submit-btn">SAVE</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="editAreaModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <div class="modal-title"><h2>Edit Area</h2></div>
+                <button class="modal-close-btn" data-modal-id="editAreaModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editAreaForm">
+                    <input type="hidden" id="editAreaId">
+                    <div class="form-group">
+                        <label>Area Name</label>
+                        <input type="text" id="editAreaName" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="submit-btn">UPDATE</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <div id="toast-container"></div>
 
     <script>
@@ -639,5 +734,6 @@ if (isset($_SESSION['UserID'])) {
         }
     </script>
     
-    <script src="script/parking.js?v=1.6"></script> </body>
+    <script src="script/parking.js?v=2.1"></script> 
+</body>
 </html>

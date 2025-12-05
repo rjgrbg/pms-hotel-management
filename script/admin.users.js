@@ -1,13 +1,12 @@
 /**
- * USER MANAGEMENT MODULE
- * Fix: Removed duplicate 'usersData' declaration to prevent SyntaxError
+ * USER MANAGEMENT MODULE (Complete)
+ * Features: Add (Dropdown), Edit, Archive/Restore, Filters, PDF
  */
 
 // ==========================================
-// 1. GLOBAL HELPERS (Toast & PDF)
+// 1. GLOBAL HELPERS (Toast & CSS Injection)
 // ==========================================
 
-// Only inject style if it doesn't exist yet
 if (!document.getElementById('user-toast-style')) {
     const userStyle = document.createElement("style");
     userStyle.id = 'user-toast-style';
@@ -20,6 +19,24 @@ if (!document.getElementById('user-toast-style')) {
             pointer-events: none;
         }
         .toast-visible { opacity: 1; transform: translateY(0); }
+        
+        /* Archived Row Style */
+        tr.user-archived {
+            background-color: #f9f9f9;
+            color: #999;
+        }
+        tr.user-archived td {
+            color: #999;
+        }
+        tr.user-archived .statusBadge {
+            background-color: #ddd !important;
+            color: #777 !important;
+        }
+        
+        /* Icons */
+        .restoreUserBtn i { font-size: 16px; }
+        .deleteUserBtn i { font-size: 16px; color: #dc3545; }
+        .deleteUserBtn:hover i { color: #c82333; }
     `;
     document.head.appendChild(userStyle);
 }
@@ -45,14 +62,12 @@ function downloadUsersPDF(headers, data, title, filename) {
         alert("PDF Library not loaded.");
         return;
     }
-
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4');
 
     doc.setFontSize(18);
     doc.setTextColor(72, 12, 27);
     doc.text(title, 14, 20);
-    
     doc.setFontSize(11);
     doc.setTextColor(100); 
     doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
@@ -65,16 +80,12 @@ function downloadUsersPDF(headers, data, title, filename) {
         styles: { fontSize: 10, cellPadding: 3, textColor: 50 },
         headStyles: { fillColor: '#480c1b', textColor: '#ffffff', fontStyle: 'bold', halign: 'center' }
     });
-
     doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 // ==========================================
 // 2. DATA FETCHING & RENDER
 // ==========================================
-
-// NOTE: 'usersData' variable is already declared at the top of admin.js
-// We do NOT declare it again here.
 
 async function fetchAndRenderUsers() {
     const tbody = document.getElementById('usersTableBody');
@@ -86,14 +97,19 @@ async function fetchAndRenderUsers() {
         const result = await apiCall('fetch_users', {}, 'GET', 'user_actions.php');
         
         if (result.success && result.data && result.data.length > 0) {
-            usersData = result.data; // Update the global variable
+            usersData = result.data; 
             
             if (typeof updateDashboardFromUsers === 'function') {
                 updateDashboardFromUsers(usersData);
             }
             
-            paginationState.users.currentPage = 1;
-            renderUsersTable(usersData);
+            // Use internal filter function if initialized, else simple render
+            if (typeof applyUserFiltersInternal === 'function') {
+                applyUserFiltersInternal(); 
+            } else {
+                paginationState.users.currentPage = 1;
+                renderUsersTable(usersData);
+            }
             
             const count = document.getElementById('usersRecordCount');
             if (count) count.textContent = usersData.length;
@@ -126,23 +142,40 @@ function renderUsersTable(data) {
         tbody.innerHTML = paginatedData.map(row => {
             const fullName = `${row.Lname}, ${row.Fname}`;
             const roleName = (typeof ACCOUNT_TYPE_MAP !== 'undefined' ? ACCOUNT_TYPE_MAP[row.AccountType] : row.AccountType) || row.AccountType;
+            
+            const isArchived = row.is_archived == 1;
+            const rowClass = isArchived ? 'user-archived' : '';
+            
+            let actionBtn = '';
+            if (isArchived) {
+                actionBtn = `
+                    <button class="actionBtn restoreUserBtn" title="Restore User" onclick="handleRestoreUserClick('${row.UserID}', '${escapeHtml(row.Username)}')">
+                        <i class="fas fa-trash-restore" style="color: #28a745;"></i> 
+                    </button>
+                `;
+            } else {
+                // Changed to FontAwesome Icon
+                actionBtn = `
+                    <button class="actionBtn deleteUserBtn" title="Archive User" onclick="handleArchiveUserClick('${row.UserID}', '${escapeHtml(row.Username)}')">
+                        <i class="fas fa-archive"></i>
+                    </button>
+                `;
+            }
 
             return `
-                <tr>
+                <tr class="${rowClass}">
                 <td><span style="font-weight:bold; color:#555;">${row.EmployeeID || '-'}</span></td>
-                    <td>${row.Username}</td>
-                    <td>${fullName}</td>
-                    <td><span class="statusBadge ${row.AccountType}">${roleName}</span></td>
-                    <td>${row.EmailAddress}</td>
-                    <td>${row.Shift}</td>
+                    <td>${escapeHtml(row.Username)}</td>
+                    <td>${escapeHtml(fullName)}</td>
+                    <td><span class="statusBadge ${row.AccountType}">${escapeHtml(roleName)}</span></td>
+                    <td>${escapeHtml(row.EmailAddress)}</td>
+                    <td>${escapeHtml(row.Shift)}</td>
                     <td>
                         <div class="actionButtons">
-                            <button class="actionBtn editUserBtn" onclick='handleEditUserClick(${JSON.stringify(row).replace(/'/g, "&apos;")})'>
+                            <button class="actionBtn editUserBtn" onclick='handleEditUserClick(${JSON.stringify(row).replace(/'/g, "&apos;")})' ${isArchived ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
                                 <img src="assets/icons/edit-icon.png" alt="Edit" />
                             </button>
-                            <button class="actionBtn deleteUserBtn" onclick="handleDeleteUserClick('${row.UserID}', '${row.Username}')">
-                                <img src="assets/icons/delete-icon.png" alt="Delete" />
-                            </button>
+                            ${actionBtn}
                         </div>
                     </td>
                 </tr>
@@ -163,12 +196,43 @@ function renderUsersTable(data) {
 // 3. MODAL HANDLERS
 // ==========================================
 
-function handleAddUserClick() {
+// --- ADD USER: Fetch List and Show Modal ---
+async function handleAddUserClick() {
     if(typeof hideFormMessage === 'function') hideFormMessage(true);
     document.getElementById('userModalTitle').textContent = 'Add User from Employee';
     document.getElementById('employeeCodeForm').style.display = 'block';
     document.getElementById('userDetailsDisplay').style.display = 'none';
     document.getElementById('employeeCodeForm').reset();
+    
+    // Get the datalist element
+    const datalist = document.getElementById('employeeList');
+    const input = document.getElementById('employeeCodeInput');
+    
+    if (datalist && input) { 
+        datalist.innerHTML = ''; // Clear previous options
+        input.placeholder = "Loading suggestions...";
+        
+        try {
+            const result = await apiCall('fetch_available_employees', {}, 'GET', 'user_actions.php');
+            
+            input.placeholder = "Type or select Employee Code (e.g., EMP-001)";
+            
+            if (result.success && result.data && result.data.length > 0) {
+                result.data.forEach(emp => {
+                    const option = document.createElement('option');
+                    // Value is what gets put into the input box
+                    option.value = emp.employee_code; 
+                    // Label helps the user identify the code
+                    option.textContent = `${emp.last_name}, ${emp.first_name} (${emp.position_name})`; 
+                    datalist.appendChild(option);
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            input.placeholder = "Error loading list. Type manually.";
+        }
+    }
+
     document.getElementById('userModal').style.display = 'flex';
 }
 
@@ -177,7 +241,7 @@ async function handleEmployeeCodeSubmit(e) {
     if(typeof hideFormMessage === 'function') hideFormMessage(true);
     
     const employeeCode = document.getElementById('employeeCodeInput').value.trim();
-    if (!employeeCode) return typeof showFormMessage === 'function' && showFormMessage('Enter Employee Code', 'error', true);
+    if (!employeeCode) return typeof showFormMessage === 'function' && showFormMessage('Please enter or select an Employee Code', 'error', true);
     
     const lookupBtn = document.getElementById('lookupEmployeeBtn');
     const originalText = lookupBtn.textContent;
@@ -187,7 +251,7 @@ async function handleEmployeeCodeSubmit(e) {
     try {
         const result = await apiCall('add_user_from_employee', { employeeCode: employeeCode }, 'POST', 'user_actions.php');
         if (result.success) {
-            if(typeof showFormMessage === 'function') showFormMessage('User added!', 'success', true);
+            if(typeof showFormMessage === 'function') showFormMessage('User added successfully!', 'success', true);
             document.getElementById('employeeCodeForm').reset();
             await fetchAndRenderUsers();
             setTimeout(() => {
@@ -205,6 +269,7 @@ async function handleEmployeeCodeSubmit(e) {
     }
 }
 
+// --- EDIT USER ---
 function handleEditUserClick(user) {
     if(typeof hideFormMessage === 'function') hideFormMessage(true);
     document.getElementById('userModalTitle').textContent = 'Change Password: ' + user.Username;
@@ -256,34 +321,103 @@ async function handlePasswordChangeSubmit(e) {
     }
 }
 
-let userToDeleteID = null;
-function handleDeleteUserClick(userId, username) {
-    userToDeleteID = userId;
-    document.getElementById('deleteUserText').textContent = `Delete user "${username}"?`;
+// --- ARCHIVE USER ---
+let userToArchiveID = null;
+
+function handleArchiveUserClick(userId, username) {
+    userToArchiveID = userId;
+    const modalText = document.getElementById('deleteUserText');
+    if(modalText) modalText.textContent = `Are you sure you want to archive user "${username}"? They will no longer be able to log in.`;
+    
+    const modalTitle = document.querySelector('#deleteUserModal h2');
+    if(modalTitle) modalTitle.textContent = "Archive User";
+    
+    // Change icon to archive box
+    const iconContainer = document.querySelector('#deleteUserModal .modalIcon');
+    if(iconContainer) iconContainer.innerHTML = '<i class="fas fa-archive" style="font-size: 40px; color: #dc3545;"></i>';
+
+    const confirmBtn = document.getElementById('confirmDeleteUserBtn');
+    if(confirmBtn) {
+        confirmBtn.textContent = "ARCHIVE";
+        confirmBtn.style.backgroundColor = '#dc3545'; // Red
+        confirmBtn.onclick = confirmUserArchive;
+    }
+
     document.getElementById('deleteUserModal').style.display = 'flex';
 }
 
-async function confirmUserDelete() {
-    if (!userToDeleteID) return;
+async function confirmUserArchive() {
+    if (!userToArchiveID) return;
     const btn = document.getElementById('confirmDeleteUserBtn');
     const originalText = btn.textContent;
     btn.disabled = true;
-    btn.textContent = 'DELETING...';
+    btn.textContent = 'ARCHIVING...';
     
     try {
-        const result = await apiCall('delete_user', { userID: userToDeleteID }, 'POST', 'user_actions.php');
+        const result = await apiCall('archive_user', { userID: userToArchiveID }, 'POST', 'user_actions.php');
+        
         if (result.success) {
             document.getElementById('deleteUserModal').style.display = 'none';
             await fetchAndRenderUsers();
-            showUserToast('User deleted successfully!');
+            showUserToast('User archived successfully!');
         } else {
-            alert(result.message || 'Failed.');
+            alert(result.message || 'Failed to archive user.');
         }
     } catch (error) { alert('Error occurred.'); } 
     finally {
         btn.disabled = false;
         btn.textContent = originalText;
-        userToDeleteID = null;
+        userToArchiveID = null;
+    }
+}
+
+// --- RESTORE USER ---
+let userToRestoreID = null;
+
+function handleRestoreUserClick(userId, username) {
+    userToRestoreID = userId;
+    const modalText = document.getElementById('deleteUserText');
+    if(modalText) modalText.textContent = `Are you sure you want to restore user "${username}"? They will be able to log in again.`;
+    
+    const modalTitle = document.querySelector('#deleteUserModal h2');
+    if(modalTitle) modalTitle.textContent = "Restore User";
+    
+    // Change icon to refresh/undo
+    const iconContainer = document.querySelector('#deleteUserModal .modalIcon');
+    if(iconContainer) iconContainer.innerHTML = '<i class="fas fa-trash-restore" style="font-size: 40px; color: #28a745;"></i>';
+
+    const confirmBtn = document.getElementById('confirmDeleteUserBtn');
+    if(confirmBtn) {
+        confirmBtn.textContent = "RESTORE";
+        confirmBtn.style.backgroundColor = '#28a745'; // Green
+        confirmBtn.onclick = confirmUserRestore; 
+    }
+
+    document.getElementById('deleteUserModal').style.display = 'flex';
+}
+
+async function confirmUserRestore() {
+    if (!userToRestoreID) return;
+    const btn = document.getElementById('confirmDeleteUserBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'RESTORING...';
+    
+    try {
+        const result = await apiCall('restore_user', { userID: userToRestoreID }, 'POST', 'user_actions.php');
+        
+        if (result.success) {
+            document.getElementById('deleteUserModal').style.display = 'none';
+            await fetchAndRenderUsers();
+            showUserToast('User restored successfully!');
+        } else {
+            alert(result.message || 'Failed to restore user.');
+        }
+    } catch (error) { alert('Error occurred.'); } 
+    finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        userToRestoreID = null;
     }
 }
 
@@ -291,39 +425,53 @@ async function confirmUserDelete() {
 // 5. FILTERS & INITIALIZATION
 // ==========================================
 
+// Global var to hold the filter logic so fetchAndRenderUsers can call it
+let applyUserFiltersInternal;
+
 function initUserFilters() {
     const searchInput = document.getElementById('usersSearchInput');
     const roleFilter = document.getElementById('usersRoleFilter');
     const shiftFilter = document.getElementById('usersShiftFilter');
+    const statusFilter = document.getElementById('usersStatusFilter'); // NEW
+    
     const refreshBtn = document.getElementById('usersRefreshBtn');
     const downloadBtn = document.getElementById('usersDownloadBtn');
 
-    function applyFilters() {
+    applyUserFiltersInternal = function() {
         const search = searchInput.value.toLowerCase();
         const role = roleFilter.value;
         const shift = shiftFilter.value;
+        const status = statusFilter ? statusFilter.value : '';
 
         const filtered = usersData.filter(row => {
             const matchS = !search || [row.Username, row.Fname, row.Lname, row.EmailAddress].some(val => val?.toLowerCase().includes(search));
             const matchR = !role || row.AccountType === role;
             const matchSh = !shift || row.Shift === shift;
-            return matchS && matchR && matchSh;
+            
+            const isArchived = row.is_archived == 1;
+            const rowStatus = isArchived ? 'Archived' : 'Active';
+            const matchSt = !status || rowStatus === status;
+
+            return matchS && matchR && matchSh && matchSt;
         });
 
         paginationState.users.currentPage = 1;
         renderUsersTable(filtered);
         return filtered;
-    }
+    };
 
-    if (searchInput) searchInput.oninput = applyFilters;
-    if (roleFilter) roleFilter.onchange = applyFilters;
-    if (shiftFilter) shiftFilter.onchange = applyFilters;
+    if (searchInput) searchInput.oninput = applyUserFiltersInternal;
+    if (roleFilter) roleFilter.onchange = applyUserFiltersInternal;
+    if (shiftFilter) shiftFilter.onchange = applyUserFiltersInternal;
+    if (statusFilter) statusFilter.onchange = applyUserFiltersInternal;
 
     if (refreshBtn) {
         refreshBtn.onclick = async () => {
             searchInput.value = '';
             roleFilter.value = '';
             shiftFilter.value = '';
+            if(statusFilter) statusFilter.value = '';
+            
             await fetchAndRenderUsers();
             showUserToast("User list refreshed!");
         };
@@ -331,26 +479,26 @@ function initUserFilters() {
 
     if (downloadBtn) {
         downloadBtn.onclick = () => {
-            const data = applyFilters();
+            const data = applyUserFiltersInternal();
             if (data.length === 0) return alert("No data.");
             
-            // MODIFIED: Added 'Employee ID' as the first column
-            const headers = ['Employee ID', 'Username', 'Name', 'Role', 'Email', 'Shift'];
+            const headers = ['Employee ID', 'Username', 'Name', 'Role', 'Email', 'Shift', 'Status'];
             
             const rows = data.map(r => [
-                r.EmployeeID || '-',  // Added this line
+                r.EmployeeID || '-', 
                 r.Username, 
                 `${r.Lname}, ${r.Fname}`, 
                 r.AccountType, 
                 r.EmailAddress, 
-                r.Shift
+                r.Shift,
+                r.is_archived == 1 ? 'Archived' : 'Active'
             ]);
             
             downloadUsersPDF(headers, rows, 'User Management Report', 'users_report');
         };
     }
 
-    // Bind Modal Events directly to prevent duplicates
+    // Modal Bindings
     const addBtn = document.getElementById('addUserBtn');
     if(addBtn) addBtn.onclick = handleAddUserClick;
 
@@ -359,9 +507,6 @@ function initUserFilters() {
 
     const passForm = document.getElementById('passwordChangeForm');
     if(passForm) passForm.onsubmit = handlePasswordChangeSubmit;
-
-    const delBtn = document.getElementById('confirmDeleteUserBtn');
-    if(delBtn) delBtn.onclick = confirmUserDelete;
 
     // Close Buttons
     ['closeUserModalBtn', 'cancelEmployeeCodeBtn', 'cancelPasswordChangeBtn'].forEach(id => {

@@ -1361,3 +1361,31 @@ td.text-right {
     height: 24px;
   }
 }
+.actionIconBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, opacity 0.2s;
+    line-height: 1;
+}
+
+.actionIconBtn:hover {
+    transform: scale(1.1);
+    opacity: 0.8;
+}
+
+.actionIconBtn:focus {
+    outline: none;
+}
+
+/* Ensure images inside buttons don't add extra layout shifts */
+.actionIconBtn img {
+    display: block;
+    width: 16px; 
+    height: 16px;
+    object-fit: contain;
+}

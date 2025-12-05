@@ -177,10 +177,22 @@ if (isset($_SESSION['UserID'])) {
         color: #007bff; /* Blue */
     }
     
-    .category-actions .btn-delete-category:hover {
-        color: #dc3545; /* Red */
+   .category-actions .btn-archive-category:hover {
+        color: #dc3545; 
     }
-
+    
+    /* Restore Button (Green) */
+    .category-actions .btn-restore-category {
+        color: #28a745; 
+        margin-left: 10px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+    }
+    .category-actions .btn-restore-category:hover {
+        color: #218838; 
+    }
     /* Footer for the category modal */
     .modal-footer {
         text-align: right; 
@@ -317,7 +329,7 @@ if (isset($_SESSION['UserID'])) {
             <option value="Out of Stock">Out of Stock</option>
             <option value="Low Stock">Low Stock</option>
             <option value="In Stock">In Stock</option>
-          </select>
+            <option value="Archived" style="color: red; font-weight: bold;">Archived</option> </select>
 
           <div class="searchBox">
             <input type="text" placeholder="Search" class="searchInput" id="searchInput" />
@@ -339,7 +351,6 @@ if (isset($_SESSION['UserID'])) {
         <table class="requestsTable">
           <thead>
                       <tr>
-                          <th class="sortable" data-sort="ItemID">ID</th>
                           <th class="sortable" data-sort="ItemName">Name</th>
                           <th class="sortable" data-sort="Category">Category</th>
                           <th class="sortable" data-sort="ItemQuantity">Quantity</th>
@@ -350,7 +361,7 @@ if (isset($_SESSION['UserID'])) {
                       </tr>
           </thead>
           <tbody id="requestsTableBody">
-            <tr><td colspan="8" style="text-align: center;">Loading...</td></tr>
+            <tr><td colspan="7" style="text-align: center;">Loading...</td></tr> 
           </tbody>
         </table>
       </div>
@@ -453,14 +464,19 @@ if (isset($_SESSION['UserID'])) {
                 <div class="form-group"> <label for="item-description">Description</label>
                     <textarea id="item-description" rows="3"></textarea>
                 </div>
-                 <div class="form-row"> <div class="form-group">
-                    <label for="item-quantity">Quantity</label>
-                    <input type="number" id="item-quantity" min="0" required>
-                </div>
-                <div class="form-group">
-                    <label for="stock-in-date">Stock In Date</label>
-                    <input type="date" id="stock-in-date" required>
-                </div>
+                 <div class="form-row"> 
+                    <div class="form-group">
+                        <label for="item-quantity">Quantity</label>
+                        <input type="number" id="item-quantity" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-threshold">Low Stock Threshold</label> 
+                        <input type="number" id="item-threshold" min="0" value="10" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stock-in-date">Stock In Date</label>
+                        <input type="date" id="stock-in-date" required>
+                    </div>
                 </div>
                 <button type="submit" class="submit-btn">ADD ITEM</button>
             </form>
@@ -525,6 +541,11 @@ if (isset($_SESSION['UserID'])) {
                     <label for="edit-item-description">Description</label>
                     <textarea id="edit-item-description" rows="3"></textarea>
                 </div>
+                
+                <div class="form-group">
+                    <label for="edit-item-threshold">Low Stock Threshold</label> 
+                    <input type="number" id="edit-item-threshold" min="0" required>
+                </div>
 
                 <div class="form-row form-row-align-bottom">
                     <div class="form-group form-group-static">
@@ -551,14 +572,29 @@ if (isset($_SESSION['UserID'])) {
         <button class="modal-close-btn" id="delete-modal-close-btn">&times;</button>
         <img src="assets/icons/warning-icon.png" alt="Warning" class="modal-icon" style="height: 50px; width: 50px; margin: 0 auto 20px;">
         
-        <h3>Are you sure you want to delete this item from the inventory?</h3>
+        <h3>Are you sure you want to archive this item?</h3>
         <p>
-            This action cannot be undone, and all related
-            records will be permanently removed.
+            This action will move the item to the archives. It will no longer appear in the active inventory list.
         </p>
         <div class="confirm-buttons">
             <button type="button" class="btn btn-delete-cancel" id="delete-cancel-btn">CANCEL</button>
-            <button type="button" class="btn btn-delete-confirm" id="delete-confirm-btn">YES, DELETE ITEM</button>
+            <button type="button" class="btn btn-delete-confirm" id="delete-confirm-btn">YES, ARCHIVE ITEM</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="restore-confirm-modal">
+    <div class="modal-content-confirm" style="max-width: 480px;">
+        <button class="modal-close-btn" id="restore-modal-close-btn">&times;</button>
+        <img src="assets/icons/refresh-icon.png" alt="Restore" class="modal-icon" style="height: 50px; width: 50px; margin: 0 auto 20px;">
+        
+        <h3>Restore Item?</h3>
+        <p>
+            This item will be moved back to the active inventory list.
+        </p>
+        <div class="confirm-buttons">
+            <button type="button" class="btn btn-delete-cancel" id="restore-cancel-btn">CANCEL</button>
+            <button type="button" class="btn btn-confirm" id="restore-confirm-btn">YES, RESTORE</button>
         </div>
     </div>
 </div>
@@ -636,13 +672,14 @@ if (isset($_SESSION['UserID'])) {
         
         <img src="assets/icons/warning-icon.png" alt="Warning" class="modal-icon" style="height: 50px; width: 50px; margin: 0 auto 20px;">
         
-        <h3>Delete Category?</h3>
+        <h3 id="cat-modal-title">Archive Category?</h3>
+        
         <p id="cat-del-confirm-text">
-            Are you sure you want to delete this category?
+            Are you sure you want to archive this category?
         </p>
         <div class="confirm-buttons">
             <button type="button" class="btn btn-delete-cancel" id="cat-del-cancel-btn">CANCEL</button>
-            <button type="button" class="btn btn-delete-confirm" id="cat-del-confirm-btn">YES, DELETE</button>
+            <button type="button" class="btn btn-delete-confirm" id="cat-del-confirm-btn">YES, ARCHIVE</button>
         </div>
     </div>
 </div>
@@ -653,7 +690,7 @@ if (isset($_SESSION['UserID'])) {
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         
-        // --- 1. Modal DOM Elements (Existing) ---
+        // --- 1. Modal DOM Elements ---
         const categoryModal = document.getElementById('manage-category-modal');
         const openCategoryModalBtn = document.getElementById('open-category-modal-btn');
         const closeCategoryModalBtn = document.getElementById('category-modal-close-btn');
@@ -666,7 +703,7 @@ if (isset($_SESSION['UserID'])) {
         const editCategoryIdInput = document.getElementById('edit-category-id-input');
         const editCategoryNameInput = document.getElementById('edit-category-name-input');
 
-        // --- 2. NEW Modal DOM Elements (Replacements for Alert/Confirm) ---
+        // --- 2. Message & Confirm Modals ---
         const categoryMessageModal = document.getElementById('category-message-modal');
         const categoryMessageText = document.getElementById('category-message-text');
         const categoryMessageIconContainer = document.getElementById('category-message-icon-container');
@@ -674,6 +711,7 @@ if (isset($_SESSION['UserID'])) {
 
         const categoryDeleteModal = document.getElementById('category-delete-confirm-modal');
         const catDelConfirmText = document.getElementById('cat-del-confirm-text');
+        const catModalTitle = document.getElementById('cat-modal-title');
         const catDelCloseBtn = document.getElementById('cat-del-close-btn');
         const catDelCancelBtn = document.getElementById('cat-del-cancel-btn');
         const catDelConfirmBtn = document.getElementById('cat-del-confirm-btn');
@@ -684,7 +722,7 @@ if (isset($_SESSION['UserID'])) {
         const newCategoryNameInput = document.getElementById('new-category-name');
 
         // --- 4. State Variables ---
-        let categoryIdToDelete = null; // Stores ID when trash icon is clicked
+        let categoryIdToArchive = null; 
         
         // --- Select Dropdowns to Update ---
         const allCategoryDropdowns = [
@@ -697,21 +735,16 @@ if (isset($_SESSION['UserID'])) {
         const API_URL = 'inventory_actions.php';
 
         // ============================================================
-        // === HELPER FUNCTIONS FOR NEW MODALS
+        // === HELPER FUNCTIONS
         // ============================================================
 
-        // Show a Success or Error Message Modal instead of alert()
         function showCategoryMessage(message, type = 'success') {
             categoryMessageText.textContent = message;
-            
             if (type === 'error') {
-                // Use a warning/error icon
                 categoryMessageIconContainer.innerHTML = '<img src="assets/icons/warning-icon.png" alt="Error" class="modal-icon" style="display: block; margin: 0 auto 20px; width: 60px; height: 60px;">';
             } else {
-                // Use success icon
                 categoryMessageIconContainer.innerHTML = '<img src="assets/icons/successful-icon.png" alt="Success" class="modal-icon" style="display: block; margin: 0 auto 20px; width: 80px; height: 80px;">';
             }
-            
             categoryMessageModal.classList.add('show-modal'); 
             categoryMessageModal.style.display = 'flex'; 
         }
@@ -723,26 +756,33 @@ if (isset($_SESSION['UserID'])) {
 
         categoryMessageOkayBtn.addEventListener('click', closeCategoryMessage);
 
-        // Show Delete Confirmation Modal
-        function showCategoryDeleteModal(id, name) {
-            categoryIdToDelete = id;
-            catDelConfirmText.textContent = `Are you sure you want to delete the category "${name}"? This cannot be undone.`;
+        function showCategoryArchiveModal(id, name) {
+            categoryIdToArchive = id;
+            if(catModalTitle) catModalTitle.textContent = "Archive Category?";
+            catDelConfirmText.textContent = `Are you sure you want to archive "${name}"? It will be hidden from the 'Add Item' list.`;
+            catDelConfirmBtn.textContent = "YES, ARCHIVE";
             categoryDeleteModal.style.display = 'flex';
         }
 
-        function closeCategoryDeleteModal() {
-            categoryIdToDelete = null;
+        function closeCategoryArchiveModal() {
+            categoryIdToArchive = null;
             categoryDeleteModal.style.display = 'none';
         }
 
-        catDelCloseBtn.addEventListener('click', closeCategoryDeleteModal);
-        catDelCancelBtn.addEventListener('click', closeCategoryDeleteModal);
+        catDelCloseBtn.addEventListener('click', closeCategoryArchiveModal);
+        catDelCancelBtn.addEventListener('click', closeCategoryArchiveModal);
+
+        function escapeHTML(str) {
+            if (typeof str !== 'string') return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+            });
+        }
 
         // ============================================================
         // === CORE LOGIC
         // ============================================================
 
-        // --- Open/Close Main Category Modal ---
         openCategoryModalBtn.addEventListener('click', () => {
             categoryModal.style.display = 'flex';
             loadCategories();
@@ -756,7 +796,6 @@ if (isset($_SESSION['UserID'])) {
             categoryModal.style.display = 'none';
         });
 
-        // --- Open/Close Edit Category Name Modal ---
         function openEditCategoryNameModal(id, name) {
             editCategoryIdInput.value = id;
             editCategoryNameInput.value = name;
@@ -770,7 +809,7 @@ if (isset($_SESSION['UserID'])) {
         editCategoryNameCloseBtn.addEventListener('click', closeEditCategoryNameModal);
         editCategoryNameCancelBtn.addEventListener('click', closeEditCategoryNameModal);
 
-        // --- Load Categories ---
+        // --- UPDATED: LOAD CATEGORIES (Active first, then Archived) ---
         async function loadCategories() {
             categoryListContainer.innerHTML = '<div class="spinner"></div>';
             try {
@@ -783,19 +822,22 @@ if (isset($_SESSION['UserID'])) {
                 if (categories.length === 0) {
                     categoryListContainer.innerHTML = '<p style="text-align:center; color: #777;">No categories found.</p>';
                 } else {
-                    categories.forEach(category => {
-                        const item = document.createElement('div');
-                        item.className = 'category-list-item';
-                        item.dataset.id = category.ItemCategoryID;
-                        item.innerHTML = `
-                            <span class="category-name">${escapeHTML(category.ItemCategoryName)}</span>
-                            <div class="category-actions">
-                                <button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                                <button class="btn-icon btn-delete-category" title="Delete"><i class="fas fa-trash-alt"></i></button>
-                            </div>
-                        `;
-                        categoryListContainer.appendChild(item);
-                    });
+                    // 1. Split into Active and Archived groups
+                    const activeCategories = categories.filter(c => c.is_archived == 0);
+                    const archivedCategories = categories.filter(c => c.is_archived == 1);
+
+                    // 2. Render Active Categories
+                    activeCategories.forEach(category => renderCategoryItem(category));
+
+                    // 3. Render Archived Categories (with a separator)
+                    if (archivedCategories.length > 0) {
+                        const separator = document.createElement('div');
+                        separator.textContent = "Archived";
+                        separator.style.cssText = "padding: 10px 5px; font-weight: bold; color: #888; border-top: 1px solid #eee; margin-top: 5px; font-size: 13px; text-transform: uppercase;";
+                        categoryListContainer.appendChild(separator);
+
+                        archivedCategories.forEach(category => renderCategoryItem(category));
+                    }
                 }
             } catch (error) {
                 console.error('Error loading categories:', error);
@@ -803,8 +845,39 @@ if (isset($_SESSION['UserID'])) {
             }
         }
 
-        // --- Refresh Dropdowns ---
-        async function refreshCategoryDropdowns() {
+        // Helper to render a single category item
+        function renderCategoryItem(category) {
+            const isArchived = category.is_archived == 1;
+            const item = document.createElement('div');
+            item.className = 'category-list-item';
+            item.dataset.id = category.ItemCategoryID;
+            
+            let buttonsHtml = '';
+            let nameStyle = '';
+
+            if (isArchived) {
+                // Archived Item Styling
+                nameStyle = 'text-decoration: line-through; color: #999;';
+                buttonsHtml = `<button class="btn-icon btn-restore-category" title="Restore"><i class="fas fa-trash-restore"></i></button>`;
+            } else {
+                // Active Item Styling
+                buttonsHtml = `
+                    <button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="btn-icon btn-archive-category" title="Archive"><i class="fas fa-archive"></i></button>
+                `;
+            }
+
+            item.innerHTML = `
+                <span class="category-name" style="${nameStyle}">${escapeHTML(category.ItemCategoryName)}</span>
+                <div class="category-actions">
+                    ${buttonsHtml}
+                </div>
+            `;
+            categoryListContainer.appendChild(item);
+        }
+
+        // --- REFRESH DROPDOWNS ---
+       async function refreshCategoryDropdowns() {
             try {
                 const response = await fetch(`${API_URL}?action=get_categories`);
                 if (!response.ok) throw new Error('Network response was not ok');
@@ -819,6 +892,11 @@ if (isset($_SESSION['UserID'])) {
                     const isFormDropdown = (dropdown.id === 'item-category' || dropdown.id === 'edit-item-category');
                     
                     categories.forEach(category => {
+                        // *** START CHANGE: Check for is_archived ***
+                        // If it's a form dropdown (Add/Edit Item) and the category is archived, SKIP IT
+                        if (isFormDropdown && category.is_archived == 1) return;
+                        // *** END CHANGE ***
+
                         const option = document.createElement('option');
                         if (isFormDropdown) {
                             option.value = category.ItemCategoryID;
@@ -838,8 +916,7 @@ if (isset($_SESSION['UserID'])) {
                  console.error('Error refreshing category dropdowns:', error);
             }
         }
-
-        // --- ADD Category Logic ---
+        // --- ADD Category ---
         addNewCategoryBtn.addEventListener('click', async () => {
             const newName = newCategoryNameInput.value.trim();
             if (!newName) {
@@ -855,28 +932,26 @@ if (isset($_SESSION['UserID'])) {
                     method: 'POST',
                     body: formData
                 });
-                
                 const result = await response.json();
 
                 if (result.success) {
                     newCategoryNameInput.value = ''; 
                     await loadCategories();
                     await refreshCategoryDropdowns();
-                    // Optional: Show success message or just silent update
-                    // showCategoryMessage('Category added successfully!', 'success');
                 } else {
                     showCategoryMessage(result.message || 'Failed to add category.', 'error');
                 }
             } catch (error) {
                 console.error('Error adding category:', error);
-                showCategoryMessage('An error occurred. Please try again.', 'error');
+                showCategoryMessage('An error occurred.', 'error');
             }
         });
 
-        // --- DELETE Category Logic (Event Delegation) ---
+        // --- CLICK DELEGATION ---
         categoryListContainer.addEventListener('click', (e) => {
             const editBtn = e.target.closest('.btn-edit-category');
-            const deleteBtn = e.target.closest('.btn-delete-category');
+            const archiveBtn = e.target.closest('.btn-archive-category');
+            const restoreBtn = e.target.closest('.btn-restore-category');
             const item = e.target.closest('.category-list-item');
 
             if (!item) return; 
@@ -884,53 +959,69 @@ if (isset($_SESSION['UserID'])) {
             const categoryId = item.dataset.id;
             const categoryName = item.querySelector('.category-name').textContent;
             
-            // Handle Edit Click
-            if (editBtn) {
-                openEditCategoryNameModal(categoryId, categoryName);
-            }
-            
-            // Handle Delete Click (Opens Modal instead of Confirm)
-            if (deleteBtn) {
-                showCategoryDeleteModal(categoryId, categoryName);
-            }
+            if (editBtn) openEditCategoryNameModal(categoryId, categoryName);
+            if (archiveBtn) showCategoryArchiveModal(categoryId, categoryName);
+            if (restoreBtn) restoreCategory(categoryId);
         });
 
-        // --- ACTUAL DELETE EXECUTION (When "Yes" is clicked in new modal) ---
+        // --- ARCHIVE ---
         catDelConfirmBtn.addEventListener('click', async () => {
-            if (!categoryIdToDelete) return;
+            if (!categoryIdToArchive) return;
 
             try {
                 const formData = new FormData();
-                formData.append('CategoryID', categoryIdToDelete);
+                formData.append('CategoryID', categoryIdToArchive);
 
-                const response = await fetch(`${API_URL}?action=delete_category`, {
+                const response = await fetch(`${API_URL}?action=archive_category`, {
                     method: 'POST',
                     body: formData
                 });
 
                 const result = await response.json();
-
-                // Close delete modal
-                closeCategoryDeleteModal();
+                closeCategoryArchiveModal();
 
                 if (result.success) {
                     await loadCategories();
                     await refreshCategoryDropdowns();
-                    showCategoryMessage('Category deleted successfully.', 'success');
+                    showCategoryMessage('Category archived successfully.', 'success');
                 } else {
-                    showCategoryMessage(result.message || 'Failed to delete category.', 'error');
+                    showCategoryMessage(result.message || 'Failed to archive category.', 'error');
                 }
             } catch (error) {
-                console.error('Error deleting category:', error);
-                closeCategoryDeleteModal();
-                showCategoryMessage('An error occurred. Please try again.', 'error');
+                console.error('Error archiving category:', error);
+                closeCategoryArchiveModal();
+                showCategoryMessage('An error occurred.', 'error');
             }
         });
 
-        // --- UPDATE Category Logic ---
+        // --- RESTORE ---
+        async function restoreCategory(id) {
+            try {
+                const formData = new FormData();
+                formData.append('CategoryID', id);
+
+                const response = await fetch(`${API_URL}?action=restore_category`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    await loadCategories();
+                    await refreshCategoryDropdowns();
+                    showCategoryMessage('Category restored successfully.', 'success');
+                } else {
+                    showCategoryMessage(result.message || 'Failed to restore.', 'error');
+                }
+            } catch (error) {
+                console.error('Error restoring:', error);
+                showCategoryMessage('An error occurred.', 'error');
+            }
+        }
+
+        // --- UPDATE ---
         editCategoryNameForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const categoryId = editCategoryIdInput.value;
             const newName = editCategoryNameInput.value.trim();
 
@@ -948,7 +1039,6 @@ if (isset($_SESSION['UserID'])) {
                     method: 'POST',
                     body: formData
                 });
-
                 const result = await response.json();
                 
                 if (result.success) {
@@ -961,18 +1051,9 @@ if (isset($_SESSION['UserID'])) {
                 }
             } catch (error) {
                 console.error('Error updating category:', error);
-                showCategoryMessage('An error occurred. Please try again.', 'error');
+                showCategoryMessage('An error occurred.', 'error');
             }
         });
-
-        // --- Utility Function ---
-        function escapeHTML(str) {
-            if (typeof str !== 'string') return '';
-            return str.replace(/[&<>"']/g, function(m) {
-                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
-            });
-        }
-        
     });
 </script>
 </body>

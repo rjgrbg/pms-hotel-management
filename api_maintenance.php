@@ -2,7 +2,7 @@
 // API Endpoint for Maintenance C.R.U.D.
 
 include('check_session.php');
-require_login(['maintenance_manager']);
+require_login(['maintenance_manager', 'admin']);
 require_once('db_connection.php');
 
 header('Content-Type: application/json');

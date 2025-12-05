@@ -1,38 +1,34 @@
 <?php
-// 1. Start the session with the same secure settings
+// inventory_actions.php
+
+// 1. Start session
 session_start([
   'cookie_httponly' => true,
   'cookie_secure' => isset($_SERVER['HTTPS']),
   'use_strict_mode' => true
 ]);
 
-// 2. Load the database connection
+// 2. Database connection
 require_once('db_connection.php');
 
-// 3. Check if the user is actually logged in.
+// 3. Auth Check
 if (!isset($_SESSION['UserID'])) {
   header('Content-Type: application/json');
   echo json_encode(['error' => 'User not authenticated.']);
   exit();
 }
 
-// Get the logged-in UserID
 $currentUserID = $_SESSION['UserID'];
-
-// 4. Determine which action to perform
 $action = $_GET['action'] ?? '';
 
-// We use a switch statement to route the request to the correct function
 try {
   switch ($action) {
+    // === ITEM ACTIONS ===
     case 'get_inventory':
       getInventory($conn);
       break;
     case 'get_history':
       getInventoryHistory($conn);
-      break;
-    case 'get_categories':
-      getCategories($conn);
       break;
     case 'add_item':
       addItem($conn, $_POST, $currentUserID);
@@ -43,21 +39,29 @@ try {
     case 'issue_item':
       issueItem($conn, $_POST, $currentUserID);
       break;
-    case 'delete_item':
-      deleteItem($conn, $_POST, $currentUserID);
+    case 'delete_item': 
+      archiveItem($conn, $_POST, $currentUserID);
+      break;
+    case 'restore_item':
+      restoreItem($conn, $_POST, $currentUserID);
       break;
     
-    // === ACTIONS FOR CATEGORY MANAGEMENT ===
+    // === CATEGORY ACTIONS ===
+    case 'get_categories':
+      getCategories($conn);
+      break;
     case 'add_category':
       addCategory($conn, $_POST);
       break;
     case 'update_category':
       updateCategory($conn, $_POST);
       break;
-    case 'delete_category':
-      deleteCategory($conn, $_POST);
+    case 'archive_category':
+      archiveCategory($conn, $_POST);
       break;
-    // === END OF NEW ACTIONS ===
+    case 'restore_category':
+      restoreCategory($conn, $_POST);
+      break;
     
     default:
       http_response_code(400);
@@ -68,35 +72,31 @@ try {
   echo json_encode(['error' => $e->getMessage()]);
 }
 
-// 5. Close the database connection
 $conn->close();
 
 // ======================================================
 // === ACTION FUNCTIONS ===
 // ======================================================
 
-/**
- * Fetches the main inventory list for the "Stocks" tab.
- */
 function getInventory($conn) {
-  // DamageItem has been removed from this query.
   $sql = "SELECT 
             i.ItemID, 
             i.ItemName, 
             ic.ItemCategoryName AS Category,
             i.ItemQuantity, 
+            i.LowStockThreshold,
             i.ItemDescription, 
             i.ItemStatus, 
             DATE_FORMAT(i.DateofStockIn, '%Y-%m-%d') AS DateofStockIn, 
-            ic.ItemCategoryID
+            ic.ItemCategoryID,
+            i.is_archived
           FROM pms_inventory i
           JOIN pms_itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
           ORDER BY i.ItemName";
   
   $result = $conn->query($sql);
-  if (!$result) {
-    throw new Exception("Error fetching inventory: " . $conn->error);
-  }
+  if (!$result) throw new Exception("Error fetching inventory: " . $conn->error);
+  
   $items = [];
   while ($row = $result->fetch_assoc()) {
     $items[] = $row;
@@ -105,10 +105,6 @@ function getInventory($conn) {
   echo json_encode($items);
 }
 
-/**
- * Fetches the inventory log for the "History" tab.
- * DamageItem has been removed from this query.
- */
 function getInventoryHistory($conn) {
   $sql = "SELECT 
             rt.InvLogID,
@@ -119,10 +115,10 @@ function getInventoryHistory($conn) {
             rt.NewQuantity,
             i.ItemStatus,
             CASE
-    WHEN rt.ActionType = 'Initial Stock In' OR rt.ActionType = 'Stock Added'
-    THEN DATE_FORMAT(i.DateofStockIn, '%Y-%m-%d')
-    ELSE NULL
-END AS DateofStockIn,
+                WHEN rt.ActionType = 'Initial Stock In' OR rt.ActionType = 'Stock Added'
+                THEN DATE_FORMAT(i.DateofStockIn, '%Y-%m-%d')
+                ELSE NULL
+            END AS DateofStockIn,
             rt.ActionType,
             CONCAT(u.Fname, ' ', u.Lname) AS PerformedBy,
             rt.DateofRelease
@@ -146,9 +142,8 @@ END AS DateofStockIn,
           ORDER BY rt.DateofRelease DESC, rt.InvLogID DESC";
 
   $result = $conn->query($sql);
-  if (!$result) {
-    throw new Exception("Error fetching history: ". $conn->error);
-  }
+  if (!$result) throw new Exception("Error fetching history: ". $conn->error);
+
   $logs = [];
   while ($row = $result->fetch_assoc()) {
     $logs[] = $row;
@@ -157,15 +152,12 @@ END AS DateofStockIn,
   echo json_encode($logs);
 }
 
-/**
- * Fetches the list of item categories to populate the dropdowns.
- */
 function getCategories($conn) {
-  $sql = "SELECT ItemCategoryID, ItemCategoryName FROM pms_itemcategory ORDER BY ItemCategoryName";
+  // Added is_archived to SELECT
+  $sql = "SELECT ItemCategoryID, ItemCategoryName, is_archived FROM pms_itemcategory ORDER BY ItemCategoryName";
   $result = $conn->query($sql);
-  if (!$result) {
-    throw new Exception("Error fetching categories: ". $conn->error);
-  }
+  if (!$result) throw new Exception("Error fetching categories: ". $conn->error);
+
   $categories = [];
   while ($row = $result->fetch_assoc()) {
     $categories[] = $row;
@@ -174,45 +166,34 @@ function getCategories($conn) {
   echo json_encode($categories);
 }
 
-/**
- * Adds a new item to the 'inventory' table.
- * DamageItem logic has been removed.
- */
 function addItem($conn, $data, $userID) {
-  // === SANITIZE AND STRIP INPUTS ===
-  $name = htmlspecialchars(trim($data['name'] ?? ''), ENT_QUOTES, 'UTF-8');
-  $description = htmlspecialchars(trim($data['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+  // *** REMOVED htmlspecialchars, KEPT trim ***
+  $name = trim($data['name'] ?? '');
+  $description = trim($data['description'] ?? '');
   $stockInDate = trim($data['stock_in_date'] ?? '');
   $categoryID = (int)($data['category_id'] ?? 0); 
   $quantity = (int)($data['quantity'] ?? 0);
+  $threshold = (int)($data['low_stock_threshold'] ?? 10);
 
-  // === VALIDATE INPUTS ===
-  if (empty($name)) {
-      throw new Exception("Item name is required.");
-  }
-  if ($categoryID <= 0) {
-      throw new Exception("Invalid category selected.");
-  }
-  if (empty($stockInDate)) {
-       throw new Exception("Stock in date is required.");
-  }
-  // === END VALIDATION ===
+  if (empty($name)) throw new Exception("Item name is required.");
+  if ($categoryID <= 0) throw new Exception("Invalid category selected.");
+  if (empty($stockInDate)) throw new Exception("Stock in date is required.");
+  if ($threshold < 0) throw new Exception("Threshold cannot be negative.");
 
   $status = 'In Stock';
   if ($quantity == 0) {
     $status = 'Out of Stock';
-  } elseif ($quantity <= 10) { 
+  } elseif ($quantity <= $threshold) { 
     $status = 'Low Stock';
   }
 
   $conn->begin_transaction();
 
-  // 1. Insert into 'inventory' table
   $stmt = $conn->prepare(
-    "INSERT INTO pms_inventory (ItemName, ItemCategoryID, ItemQuantity, ItemDescription, ItemStatus, DateofStockIn) 
-     VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT INTO pms_inventory (ItemName, ItemCategoryID, ItemQuantity, ItemDescription, ItemStatus, DateofStockIn, LowStockThreshold) 
+     VALUES (?, ?, ?, ?, ?, ?, ?)"
   );
-  $stmt->bind_param("siisss", $name, $categoryID, $quantity, $description, $status, $stockInDate);
+  $stmt->bind_param("siisssi", $name, $categoryID, $quantity, $description, $status, $stockInDate, $threshold);
   
   if (!$stmt->execute()) {
     $conn->rollback();
@@ -221,7 +202,6 @@ function addItem($conn, $data, $userID) {
 
   $newItemID = $conn->insert_id;
 
-  // 2. Insert into 'inventorylog' table
   $logReason = "Initial Stock In";
   $logStmt = $conn->prepare(
     "INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
@@ -239,39 +219,24 @@ function addItem($conn, $data, $userID) {
   echo json_encode(['success' => true, 'message' => 'Item added successfully.', 'new_item_id' => $newItemID]);
 }
 
-/**
- * Updates an existing item in the 'inventory' table.
- * Only allows positive stock adjustments.
- */
 function updateItem($conn, $data, $userID) {
   $itemID = (int)($data['item_id'] ?? 0);
-  
-  // === SANITIZE AND STRIP INPUTS ===
-  $name = htmlspecialchars(trim($data['name'] ?? ''), ENT_QUOTES, 'UTF-8');
-  $description = htmlspecialchars(trim($data['description'] ?? ''), ENT_QUOTES, 'UTF-8');
+  // *** REMOVED htmlspecialchars, KEPT trim ***
+  $name = trim($data['name'] ?? '');
+  $description = trim($data['description'] ?? '');
   $categoryID = (int)($data['category_id'] ?? 0);
   $stockAdjustment = (int)($data['stock_adjustment'] ?? 0);
+  $threshold = (int)($data['low_stock_threshold'] ?? 10);
 
-  // === VALIDATE INPUTS ===
-  if (empty($name)) {
-      throw new Exception("Item name is required.");
-  }
-  if ($categoryID <= 0) {
-      throw new Exception("Invalid category selected.");
-  }
-  if ($itemID <= 0) {
-      throw new Exception("Invalid item ID.");
-  }
-  // === END VALIDATION ===
+  if (empty($name)) throw new Exception("Item name is required.");
+  if ($categoryID <= 0) throw new Exception("Invalid category selected.");
+  if ($itemID <= 0) throw new Exception("Invalid item ID.");
+  if ($threshold < 0) throw new Exception("Threshold cannot be negative.");
   
-  // Enforce only positive stock adjustments
-  if ($stockAdjustment < 0) {
-      $stockAdjustment = 0;
-  }
+  if ($stockAdjustment < 0) $stockAdjustment = 0;
 
   $conn->begin_transaction();
 
-  // 1. Get the current quantity
   $currentQuantity = 0;
   $qtyStmt = $conn->prepare("SELECT ItemQuantity FROM pms_inventory WHERE ItemID = ?");
   $qtyStmt->bind_param("i", $itemID);
@@ -290,35 +255,31 @@ function updateItem($conn, $data, $userID) {
   }
   $qtyStmt->close();
 
-  // 2. Calculate new quantity and status
   $newQuantity = $currentQuantity + $stockAdjustment;
   $status = 'In Stock';
 
   if ($newQuantity <= 0) {
     $status = 'Out of Stock';
     $newQuantity = 0; 
-  } else if ($newQuantity <= 10) {
+  } else if ($newQuantity <= $threshold) {
     $status = 'Low Stock';
   }
 
-  // 3. Update the 'inventory' table
   $stmt = $conn->prepare(
     "UPDATE pms_inventory 
      SET ItemName = ?, ItemCategoryID = ?, ItemDescription = ?, 
-         ItemQuantity = ?, ItemStatus = ?
+         ItemQuantity = ?, ItemStatus = ?, LowStockThreshold = ?
      WHERE ItemID = ?"
   );
-  $stmt->bind_param("sisisi", $name, $categoryID, $description, $newQuantity, $status, $itemID);
+  $stmt->bind_param("sisisii", $name, $categoryID, $description, $newQuantity, $status, $threshold, $itemID);
   
   if (!$stmt->execute()) {
     $conn->rollback();
     throw new Exception("Error updating item: ". $stmt->error);
   }
 
-  // 4. If stock was changed, log it
   if ($stockAdjustment != 0) {
     $logReason = "Stock Added";
-    
     $logStmt = $conn->prepare(
       "INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
        VALUES (?, ?, ?, ?, NOW())"
@@ -336,72 +297,30 @@ function updateItem($conn, $data, $userID) {
   echo json_encode(['success' => true, 'message' => 'Item updated successfully.']);
 }
 
-/**
- * Deletes an item from the 'inventory' table.
- */
-function deleteItem($conn, $data, $userID) {
-  $itemID = (int)$data['item_id'];
-
-  if ($itemID <= 0) {
-      throw new Exception("Invalid item ID.");
-  }
-
-  $conn->begin_transaction();
-
-  // 1. Delete from 'inventorylog'
-  $logStmt = $conn->prepare("DELETE FROM pms_inventorylog WHERE ItemID = ?");
-  $logStmt->bind_param("i", $itemID);
-  if (!$logStmt->execute()) {
-    $conn->rollback();
-    throw new Exception("Error deleting item logs: ". $logStmt->error);
-  }
-
-  // 2. Delete from 'inventory'
-  $stmt = $conn->prepare("DELETE FROM pms_inventory WHERE ItemID = ?");
-  $stmt->bind_param("i", $itemID);
-  if (!$stmt->execute()) {
-    $conn->rollback();
-    throw new Exception("Error deleting item: ". $stmt->error);
-  }
-
-  $conn->commit();
-  header('Content-Type: application/json');
-  echo json_encode(['success' => true, 'message' => 'Item and all associated logs have been deleted.']);
-}
-
-
 function issueItem($conn, $data, $userID) {
   $itemID = (int)($data['item_id'] ?? 0);
   $stockAdjustment = (int)($data['stock_adjustment'] ?? 0);
   
-  // === SANITIZE AND STRIP INPUT ===
-  $logReason = htmlspecialchars(trim($data['log_reason'] ?? 'Item Issued'), ENT_QUOTES, 'UTF-8');
+  // *** REMOVED htmlspecialchars, KEPT trim ***
+  $logReason = trim($data['log_reason'] ?? 'Item Issued');
   
-  // Set default if it was just whitespace
-  if (empty($logReason)) {
-      $logReason = 'Item Issued';
-  }
-
-  // Security check: ensure stock adjustment is negative
-  if ($stockAdjustment >= 0) {
-    throw new Exception("Issue action requires a negative stock adjustment.");
-  }
-  
-  if ($itemID <= 0) {
-      throw new Exception("Invalid item ID.");
-  }
+  if (empty($logReason)) $logReason = 'Item Issued';
+  if ($stockAdjustment >= 0) throw new Exception("Issue action requires a negative stock adjustment.");
+  if ($itemID <= 0) throw new Exception("Invalid item ID.");
 
   $conn->begin_transaction();
 
-  // 1. Get the current quantity
   $currentQuantity = 0;
-  $qtyStmt = $conn->prepare("SELECT ItemQuantity FROM pms_inventory WHERE ItemID = ?");
+  $threshold = 10;
+
+  $qtyStmt = $conn->prepare("SELECT ItemQuantity, LowStockThreshold FROM pms_inventory WHERE ItemID = ?");
   $qtyStmt->bind_param("i", $itemID);
 
   if ($qtyStmt->execute()) {
     $result = $qtyStmt->get_result();
     if ($row = $result->fetch_assoc()) {
       $currentQuantity = (int)$row['ItemQuantity'];
+      $threshold = (int)$row['LowStockThreshold'];
     } else {
        $conn->rollback();
        throw new Exception("Item with ID $itemID not found.");
@@ -412,28 +331,21 @@ function issueItem($conn, $data, $userID) {
   }
   $qtyStmt->close();
   
-  // Check if there is enough stock to issue
   if ($currentQuantity < abs($stockAdjustment)) {
       $conn->rollback();
       throw new Exception("Not enough stock. Only $currentQuantity item(s) available.");
   }
 
-  // 2. Calculate new quantity and status
-  $newQuantity = $currentQuantity + $stockAdjustment; // e.g., 100 + (-5) = 95
+  $newQuantity = $currentQuantity + $stockAdjustment;
   $status = 'In Stock';
 
   if ($newQuantity <= 0) {
     $status = 'Out of Stock';
-  } else if ($newQuantity <= 10) { // Assuming 10 is the 'low stock' threshold
+  } else if ($newQuantity <= $threshold) { 
     $status = 'Low Stock';
   }
 
-  // 3. Update the 'inventory' table (quantity and status only)
-  $stmt = $conn->prepare(
-    "UPDATE pms_inventory 
-     SET ItemQuantity = ?, ItemStatus = ?
-     WHERE ItemID = ?"
-  );
+  $stmt = $conn->prepare("UPDATE pms_inventory SET ItemQuantity = ?, ItemStatus = ? WHERE ItemID = ?");
   $stmt->bind_param("isi", $newQuantity, $status, $itemID);
 
   if (!$stmt->execute()) {
@@ -441,7 +353,6 @@ function issueItem($conn, $data, $userID) {
     throw new Exception("Error updating item quantity: ". $stmt->error);
   }
 
-  // 4. Log the change
   $logStmt = $conn->prepare(
     "INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
      VALUES (?, ?, ?, ?, NOW())"
@@ -458,38 +369,62 @@ function issueItem($conn, $data, $userID) {
   echo json_encode(['success' => true, 'message' => 'Item issued successfully.']);
 }
 
+function archiveItem($conn, $data, $userID) {
+  $itemID = (int)$data['item_id'];
+  if ($itemID <= 0) throw new Exception("Invalid item ID.");
+
+  $conn->begin_transaction();
+  $stmt = $conn->prepare("UPDATE pms_inventory SET is_archived = 1 WHERE ItemID = ?");
+  $stmt->bind_param("i", $itemID);
+  if (!$stmt->execute()) {
+    $conn->rollback();
+    throw new Exception("Error archiving item: ". $stmt->error);
+  }
+  $conn->commit();
+  header('Content-Type: application/json');
+  echo json_encode(['success' => true, 'message' => 'Item has been archived successfully.']);
+}
+
+function restoreItem($conn, $data, $userID) {
+  $itemID = (int)$data['item_id'];
+  if ($itemID <= 0) throw new Exception("Invalid item ID.");
+
+  $conn->begin_transaction();
+  $stmt = $conn->prepare("UPDATE pms_inventory SET is_archived = 0 WHERE ItemID = ?");
+  $stmt->bind_param("i", $itemID);
+  if (!$stmt->execute()) {
+    $conn->rollback();
+    throw new Exception("Error restoring item: ". $stmt->error);
+  }
+  $conn->commit();
+  header('Content-Type: application/json');
+  echo json_encode(['success' => true, 'message' => 'Item has been restored successfully.']);
+}
 
 // ======================================================
-// === NEW CATEGORY MANAGEMENT FUNCTIONS (SANITIZED) ===
+// === CATEGORY FUNCTIONS ===
 // ======================================================
 
-/**
- * Adds a new category to the 'pms_itemcategory' table.
- */
 function addCategory($conn, $data) {
     header('Content-Type: application/json');
-    
-    // === SANITIZE AND STRIP INPUT ===
-    $name = htmlspecialchars(trim($data['CategoryName'] ?? ''), ENT_QUOTES, 'UTF-8');
+    // *** REMOVED htmlspecialchars, KEPT trim ***
+    $name = trim($data['CategoryName'] ?? '');
 
     if (empty($name)) {
         echo json_encode(['success' => false, 'message' => 'Category name cannot be empty.']);
         return;
     }
 
-    // Check for duplicates
     $checkStmt = $conn->prepare("SELECT 1 FROM pms_itemcategory WHERE ItemCategoryName = ?");
     $checkStmt->bind_param("s", $name);
     $checkStmt->execute();
-    $result = $checkStmt->get_result();
-    if ($result->num_rows > 0) {
+    if ($checkStmt->get_result()->num_rows > 0) {
         echo json_encode(['success' => false, 'message' => 'This category already exists.']);
         return;
     }
     $checkStmt->close();
 
-    // Insert new category
-    $stmt = $conn->prepare("INSERT INTO pms_itemcategory (ItemCategoryName) VALUES (?)");
+    $stmt = $conn->prepare("INSERT INTO pms_itemcategory (ItemCategoryName, is_archived) VALUES (?, 0)");
     $stmt->bind_param("s", $name);
     
     if ($stmt->execute()) {
@@ -500,33 +435,26 @@ function addCategory($conn, $data) {
     $stmt->close();
 }
 
-/**
- * Updates an existing category name in the 'pms_itemcategory' table.
- */
 function updateCategory($conn, $data) {
     header('Content-Type: application/json');
-    
-    // === SANITIZE AND STRIP INPUTS ===
     $id = (int)($data['CategoryID'] ?? 0);
-    $name = htmlspecialchars(trim($data['CategoryName'] ?? ''), ENT_QUOTES, 'UTF-8');
+    // *** REMOVED htmlspecialchars, KEPT trim ***
+    $name = trim($data['CategoryName'] ?? '');
 
     if ($id <= 0 || empty($name)) {
         echo json_encode(['success' => false, 'message' => 'Both Category ID and Name are required.']);
         return;
     }
 
-    // Check for duplicates (excluding itself)
     $checkStmt = $conn->prepare("SELECT 1 FROM pms_itemcategory WHERE ItemCategoryName = ? AND ItemCategoryID != ?");
     $checkStmt->bind_param("si", $name, $id);
     $checkStmt->execute();
-    $result = $checkStmt->get_result();
-    if ($result->num_rows > 0) {
+    if ($checkStmt->get_result()->num_rows > 0) {
         echo json_encode(['success' => false, 'message' => 'This category name is already in use.']);
         return;
     }
     $checkStmt->close();
 
-    // Update the category
     $stmt = $conn->prepare("UPDATE pms_itemcategory SET ItemCategoryName = ? WHERE ItemCategoryID = ?");
     $stmt->bind_param("si", $name, $id);
     
@@ -538,39 +466,42 @@ function updateCategory($conn, $data) {
     $stmt->close();
 }
 
-/**
- * Deletes a category from the 'pms_itemcategory' table.
- */
-function deleteCategory($conn, $data) {
+function archiveCategory($conn, $data) {
     header('Content-Type: application/json');
-    
     $id = (int)($data['CategoryID'] ?? 0);
+
     if ($id <= 0) {
         echo json_encode(['success' => false, 'message' => 'Category ID is required.']);
         return;
     }
 
-    // 1. Check if any inventory items use this category
-    $checkStmt = $conn->prepare("SELECT 1 FROM pms_inventory WHERE ItemCategoryID = ? LIMIT 1");
-    $checkStmt->bind_param("i", $id);
-    $checkStmt->execute();
-    $result = $checkStmt->get_result();
-    
-    if ($result->num_rows > 0) {
-        // Can't delete. Send a user-friendly error.
-        echo json_encode(['success' => false, 'message' => 'Cannot delete category. It is currently being used by inventory items.']);
-        return;
-    }
-    $checkStmt->close();
-
-    // 2. No items use it, so proceed with deletion
-    $stmt = $conn->prepare("DELETE FROM pms_itemcategory WHERE ItemCategoryID = ?");
+    $stmt = $conn->prepare("UPDATE pms_itemcategory SET is_archived = 1 WHERE ItemCategoryID = ?");
     $stmt->bind_param("i", $id);
 
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'message' => 'Category deleted successfully.']);
+        echo json_encode(['success' => true, 'message' => 'Category archived successfully.']);
     } else {
-        throw new Exception("Error deleting category: ". $stmt->error);
+        throw new Exception("Error archiving category: ". $stmt->error);
+    }
+    $stmt->close();
+}
+
+function restoreCategory($conn, $data) {
+    header('Content-Type: application/json');
+    $id = (int)($data['CategoryID'] ?? 0);
+
+    if ($id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Category ID is required.']);
+        return;
+    }
+
+    $stmt = $conn->prepare("UPDATE pms_itemcategory SET is_archived = 0 WHERE ItemCategoryID = ?");
+    $stmt->bind_param("i", $id);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Category restored successfully.']);
+    } else {
+        throw new Exception("Error restoring category: ". $stmt->error);
     }
     $stmt->close();
 }

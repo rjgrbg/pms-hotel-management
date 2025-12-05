@@ -1,6 +1,6 @@
 /**
  * INVENTORY MODULE JAVASCRIPT
- * Features: DB Filters (Categories), Toast, Landscape PDF, Dashboard Updates
+ * Features: Dynamic Filters (Based on Table Data), Toast, Landscape PDF, Dashboard Updates
  */
 
 // ==========================================
@@ -85,40 +85,26 @@ function downloadInventoryPDF(headers, data, title, filename) {
 }
 
 // =============================================
-// 2. DYNAMIC DROPDOWN POPULATION (DATABASE CONNECTION)
+// 2. DYNAMIC DROPDOWN POPULATION (FROM TABLE DATA)
 // =============================================
 
-async function fetchInventoryDropdowns() {
-    console.log("Fetching dropdown categories..."); // Debug log
-
-    try {
-        const response = await fetch('fetch_filters.php'); 
-        const data = await response.json();
-
-        console.log("Filter Data Received:", data); // Debug log
-
-        if (data.categories) {
-            // Populate "Items" Tab Filter
-            populateCategorySelect('inventoryCategoryFilter', data.categories);
-            
-            // Populate "History" Tab Filter
-            populateCategorySelect('invHistCategoryFilter', data.categories);
-        }
-    } catch (error) {
-        console.error('Error loading inventory categories:', error);
-    }
-}
-
-function populateCategorySelect(elementId, categories) {
-    const select = document.getElementById(elementId);
+// *** NEW: Populate Dropdown based on actual data arrays ***
+function populateAdminFilterDropdown(data, dropdownId) {
+    const select = document.getElementById(dropdownId);
     if (!select) return;
 
     // Save current selection
     const currentVal = select.value;
     
-    // Keep the first "Category" option, wipe the rest
-    select.innerHTML = `<option value="">Category</option>`;
+    // Extract unique categories, filter out empty/null, and sort alphabetically
+    const categories = [...new Set(data.map(item => item.Category))].filter(c => c).sort();
 
+    // Reset Dropdown (Keep first "Category" option)
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+
+    // Add Options
     categories.forEach(catName => {
         const option = document.createElement('option');
         option.value = catName; 
@@ -127,7 +113,15 @@ function populateCategorySelect(elementId, categories) {
     });
 
     // Restore selection if it still exists in the new list
-    if (currentVal) select.value = currentVal;
+    // If the category was removed (e.g., all items in it were deleted), it defaults back to ""
+    if (currentVal) {
+        const optionExists = Array.from(select.options).some(opt => opt.value === currentVal);
+        if (optionExists) {
+            select.value = currentVal;
+        } else {
+            select.value = "";
+        }
+    }
 }
 
 // =============================================
@@ -146,13 +140,19 @@ async function fetchAndRenderInventory() {
         inventoryDataList = result; 
         renderInventoryTable(inventoryDataList);
 
+        // *** NEW: Update Filter Dropdown with Active Data ***
+        populateAdminFilterDropdown(inventoryDataList, 'inventoryCategoryFilter');
+
         // Update Dashboard Stats
         try {
-            const totalItems = inventoryDataList.length;
-            const lowStock = inventoryDataList.filter(item => item.ItemStatus === 'Low Stock').length;
-            const outOfStock = inventoryDataList.filter(item => item.ItemStatus === 'Out of Stock').length;
+            // Count items (optionally filter out archived if your backend sends them but you don't show them)
+            const activeItems = inventoryDataList.filter(item => item.is_archived != 1);
             
-            // Assumes updateStatCard function exists globally
+            const totalItems = activeItems.length;
+            const lowStock = activeItems.filter(item => item.ItemStatus === 'Low Stock').length;
+            const outOfStock = activeItems.filter(item => item.ItemStatus === 'Out of Stock').length;
+            
+            // Assumes updateStatCard function exists globally (from admin.ui.js or similar)
             if (typeof updateStatCard === 'function') {
                 updateStatCard(3, totalItems); 
                 updateStatCard(4, lowStock); 
@@ -164,13 +164,17 @@ async function fetchAndRenderInventory() {
         inventoryDataList = [];
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No inventory items found.</td></tr>';
         document.getElementById('inventoryRecordCount').textContent = 0;
+        
+        // Clear filter if no data
+        populateAdminFilterDropdown([], 'inventoryCategoryFilter');
+        
         renderPaginationControls('inv-items-tab', 0, 1, () => {});
     } else {
         inventoryDataList = [];
         tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #c33;">Failed to load data</td></tr>`;
     }
     
-    // Initialize filters AFTER data is loaded
+    // Initialize filter listeners
     initInventoryFilters();
 }
 
@@ -185,10 +189,18 @@ async function fetchAndRenderInventoryHistory() {
     if (result && !result.error && Array.isArray(result) && result.length > 0) {
         inventoryHistoryDataList = result; 
         renderInventoryHistoryTable(inventoryHistoryDataList);
+        
+        // *** NEW: Update History Filter Dropdown with Active Data ***
+        populateAdminFilterDropdown(inventoryHistoryDataList, 'invHistCategoryFilter');
+
     } else if (result && Array.isArray(result) && result.length === 0) {
         inventoryHistoryDataList = [];
         tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history records found.</td></tr>';
         document.getElementById('invHistRecordCount').textContent = 0;
+        
+        // Clear filter if no data
+        populateAdminFilterDropdown([], 'invHistCategoryFilter');
+
         renderPaginationControls('inv-history-tab', 0, 1, () => {});
     } else {
         inventoryHistoryDataList = [];
@@ -209,8 +221,13 @@ function renderInventoryTable(data = inventoryDataList) {
     if (!tbody) return;
     
     const state = paginationState.inventory;
-    const totalPages = getTotalPages(data.length, state.itemsPerPage);
-    const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
+    
+    // Filter out archived items if necessary (Admin usually sees active items in main table)
+    // If you want to show archived items, remove this filter.
+    const activeData = data.filter(item => item.is_archived != 1); 
+
+    const totalPages = getTotalPages(activeData.length, state.itemsPerPage);
+    const paginatedData = paginateData(activeData, state.currentPage, state.itemsPerPage);
 
     if (paginatedData.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
@@ -220,7 +237,6 @@ function renderInventoryTable(data = inventoryDataList) {
                             row.ItemStatus === 'Low Stock' ? 'Low Stock' : 'Out of Stock';
             const statusClass = statusText.toLowerCase().replace(/ /g, '-');
             
-            // --- FIX: Escape HTML ---
             return `
                 <tr>
                 <td>${escapeHtml(row.ItemID)}</td>
@@ -236,7 +252,7 @@ function renderInventoryTable(data = inventoryDataList) {
     }
     
     const countEl = document.getElementById('inventoryRecordCount');
-    if(countEl) countEl.textContent = data.length;
+    if(countEl) countEl.textContent = activeData.length;
 
     renderPaginationControls('inv-items-tab', totalPages, state.currentPage, (page) => {
         state.currentPage = page;
@@ -270,7 +286,6 @@ function renderInventoryHistoryTable(data = inventoryHistoryDataList) {
                 quantityChangeText = '0';
             }
             
-            // --- FIX: Escape HTML ---
             return `
                 <tr>
                     <td>${escapeHtml(row.InvLogID)}</td>
@@ -295,13 +310,13 @@ function renderInventoryHistoryTable(data = inventoryHistoryDataList) {
         renderInventoryHistoryTable(data);
     });
 }
+
 // =============================================
 // 5. FILTER INITIALIZATION
 // =============================================
 
 function initInventoryFilters() {
-    // Call this here to ensure dropdowns are filled
-    fetchInventoryDropdowns();
+    // Note: Dropdowns are now populated inside fetchAndRenderInventory
 
     const searchInput = document.getElementById('inventorySearchInput');
     const categoryFilter = document.getElementById('inventoryCategoryFilter');
@@ -317,15 +332,45 @@ function initInventoryFilters() {
         const statusMap = { 'in-stock': 'In Stock', 'low-stock': 'Low Stock', 'out-of-stock': 'Out of Stock' };
         const status = statusMap[statusRaw] || statusRaw;
         
-        const filtered = inventoryDataList.filter(row => 
-            (row.ItemName.toLowerCase().includes(search) ||
-            row.Category.toLowerCase().includes(search) ||
-            (row.ItemDescription && row.ItemDescription.toLowerCase().includes(search))) &&
-            (category === "" || row.Category === category) &&
-            (!status || row.ItemStatus === status)
-        );
+        // Filter logic: Search + Category + Status + Non-Archived
+        const filtered = inventoryDataList.filter(row => {
+            const isArchived = row.is_archived == 1;
+            if (isArchived) return false; // Hide archived in main list
+
+            return (
+                (row.ItemName.toLowerCase().includes(search) ||
+                row.Category.toLowerCase().includes(search) ||
+                (row.ItemDescription && row.ItemDescription.toLowerCase().includes(search))) &&
+                (category === "" || row.Category === category) &&
+                (!status || row.ItemStatus === status)
+            );
+        });
         
         paginationState.inventory.currentPage = 1;
+        // Pass the already filtered list (or pass full list if render function handles logic, 
+        // but passing full list allows render to re-filter if needed. 
+        // Here we pass filtered to avoid double logic, but render expects raw data to paginate.
+        // Simplified: Let's pass the filtered list to a renderer that just paginates.)
+        
+        // NOTE: Our renderInventoryTable expects "data" and then slices it.
+        // It ALSO filters for archived. To avoid double filtering issues,
+        // we should adapt renderInventoryTable to just accept the final list to show.
+        // BUT for consistency with the rest of your app, let's just re-render:
+        
+        // We need to modify renderInventoryTable slightly to handle pre-filtered data 
+        // OR just handle the pagination manually here. 
+        // For simplicity with your existing structure:
+        
+        // We will override the render function's internal filtering by passing the filtered list
+        // AND telling the render function "Assume this data is already clean".
+        
+        // Actually, the easiest way is to let renderInventoryTable do pagination on whatever array we give it.
+        // But renderInventoryTable currently filters `activeData`.
+        // Let's rely on `renderInventoryTable` to filter archived, and we filter the rest here.
+        
+        // Wait, if we filter here, we pass a smaller array. 
+        // `renderInventoryTable` takes that smaller array, filters active (which are already active), 
+        // and paginates. This works fine.
         renderInventoryTable(filtered);
     }
 
@@ -339,9 +384,6 @@ function initInventoryFilters() {
             categoryFilter.value = '';
             statusFilter.value = '';
             
-            // Re-fetch dropdowns too
-            fetchInventoryDropdowns();
-            
             paginationState.inventory.currentPage = 1;
             fetchAndRenderInventory();
             showInventoryToast("Inventory refreshed successfully!");
@@ -350,8 +392,10 @@ function initInventoryFilters() {
 
     if (downloadBtn) {
         downloadBtn.onclick = () => {
+            // Download only active items
+            const activeData = inventoryDataList.filter(item => item.is_archived != 1);
             const headers = ['ID', 'Name', 'Category', 'Qty', 'Description', 'Status', 'Stock In Date'];
-            const tableData = inventoryDataList.map(row => [
+            const tableData = activeData.map(row => [
                 row.ItemID, row.ItemName, row.Category, row.ItemQuantity, 
                 row.ItemDescription || '', row.ItemStatus, row.DateofStockIn
             ]);
@@ -361,8 +405,6 @@ function initInventoryFilters() {
 }
 
 function initInventoryHistoryFilters() {
-    // Categories fetched by previous init function share the same data source
-    
     const searchInput = document.getElementById('invHistSearchInput');
     const categoryFilter = document.getElementById('invHistCategoryFilter');
     const actionFilter = document.getElementById('invHistActionFilter');
@@ -419,11 +461,13 @@ function initInventoryHistoryFilters() {
 // 6. INITIALIZATION
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
-    if(document.getElementById('inventory-page')) {
-        // 1. Fetch Dropdowns First
-        fetchInventoryDropdowns();
-        
-        // 2. Fetch Table Data
+    // Only init if we are on a page that actually has these elements
+    // or if the script is loaded specifically for admin inventory.
+    
+    // In admin.php, this script is included at the bottom.
+    // We can check if the tabs exist.
+    if(document.getElementById('inventoryTableBody')) {
+        // Fetch Table Data (Which also populates dropdowns now)
         fetchAndRenderInventory();
         fetchAndRenderInventoryHistory();
     }

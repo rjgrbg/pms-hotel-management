@@ -2,7 +2,7 @@
 // API Endpoint for Housekeeping C.R.U.D.
 
 include('check_session.php');
-require_login(['housekeeping_manager']);
+require_login(['housekeeping_manager', 'admin']);
 require_once('db_connection.php');
 
 header('Content-Type: application/json');

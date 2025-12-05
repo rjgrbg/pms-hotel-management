@@ -1,4 +1,4 @@
-// Wait for the DOM to be fully loaded
+
 function escapeHtml(text) {
     if (text === null || text === undefined) return '';
     return String(text)
@@ -8,9 +8,120 @@ function escapeHtml(text) {
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 }
+
 document.addEventListener('DOMContentLoaded', () => {
 
-    // --- START: Header/Sidebar/Logout Logic ---
+    // ======================================================
+    // === 1. INJECT TOAST CSS STYLES
+    // ======================================================
+    const style = document.createElement('style');
+    style.innerHTML = `
+    .toast-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #28a745;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 5px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+      z-index: 99999;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all 0.3s ease-in-out;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast-notification.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    `;
+    document.head.appendChild(style);
+
+    // ======================================================
+    // === 2. HELPER FUNCTIONS
+    // ======================================================
+
+    const showToast = (message, type = 'success') => {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.innerText = message;
+
+        if (type === 'error') {
+            toast.style.backgroundColor = '#dc3545';
+        } else {
+            toast.style.backgroundColor = '#28a745';
+        }
+
+        document.body.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    };
+
+    const showModal = (modal) => modal.style.display = 'flex';
+    const hideModal = (modal) => modal.style.display = 'none';
+
+    // OLD Message Box (Kept as fallback)
+    const messageBoxBackdrop = document.getElementById('messageBoxBackdrop');
+    const messageBoxTitle = document.getElementById('messageBoxTitle');
+    const messageBoxText = document.getElementById('messageBoxText');
+    const messageBoxClose = document.getElementById('messageBoxClose');
+
+    const showMessageBox = (title, text, isError = false) => {
+        messageBoxTitle.textContent = title;
+        messageBoxText.textContent = text;
+        messageBoxTitle.style.color = isError ? '#dc3545' : '#480C1B';
+        showModal(messageBoxBackdrop);
+    };
+
+    const handleFetchError = (message) => {
+        console.error(message);
+        showToast(message, 'error');
+    };
+
+    // --- NEW: Populate Filter Dropdown from Actual Data ---
+    const populateFilterDropdown = (data, dropdown) => {
+        if (!dropdown) return;
+        
+        const currentValue = dropdown.value;
+        
+        // Extract unique categories from the data items
+        const categories = [...new Set(data.map(item => item.Category))].filter(c => c).sort();
+
+        // Clear existing options (except the first "All Categories" option)
+        while (dropdown.options.length > 1) {
+            dropdown.remove(1);
+        }
+
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            dropdown.appendChild(option);
+        });
+        
+        // Restore selection if possible
+        dropdown.value = currentValue;
+    };
+
+    // --- DOM Element References ---
     const profileBtn = document.getElementById('profileBtn');
     const profileSidebar = document.getElementById('profile-sidebar');
     const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
@@ -21,58 +132,43 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
     const accountDetailsLink = document.getElementById('account-details-link');
 
-    // Show profile sidebar
     if (profileBtn) {
         profileBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             profileSidebar.classList.add('active');
         });
     }
-
-    // Hide profile sidebar
     if (sidebarCloseBtn) {
         sidebarCloseBtn.addEventListener('click', () => {
             profileSidebar.classList.remove('active');
         });
     }
-
-    // Hide profile sidebar when clicking outside
     document.addEventListener('click', (e) => {
         if (profileSidebar && !profileSidebar.contains(e.target) && !profileBtn.contains(e.target)) {
             profileSidebar.classList.remove('active');
         }
     });
-
-    // Show logout modal
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
             if(logoutModal) logoutModal.style.display = 'flex';
             profileSidebar.classList.remove('active');
         });
     }
-
-    // Hide logout modal (Close button)
     if (closeLogoutBtn) {
         closeLogoutBtn.addEventListener('click', () => {
             if(logoutModal) logoutModal.style.display = 'none';
         });
     }
-
-    // Hide logout modal (Cancel button)
     if (cancelLogoutBtn) {
         cancelLogoutBtn.addEventListener('click', () => {
             if(logoutModal) logoutModal.style.display = 'none';
         });
     }
-
-    // Confirm logout
     if (confirmLogoutBtn) {
         confirmLogoutBtn.addEventListener('click', () => {
             window.location.href = 'logout.php';
         });
     }
-
-    // Handle Account Details link click
     if (accountDetailsLink) {
         accountDetailsLink.addEventListener('click', (e) => {
             e.preventDefault();
@@ -80,23 +176,14 @@ document.addEventListener('DOMContentLoaded', () => {
             profileSidebar.classList.remove('active');
         });
     }
-    // --- END: Header/Sidebar/Logout Logic ---
 
-    // --- DOM Element References ---
     const inventoryTableBody = document.getElementById('inventoryTableBody');
     const categoryFilter = document.getElementById('categoryFilter');
     const searchInput = document.getElementById('searchInput');
     const itemDetailsContent = document.getElementById('itemDetailsContent');
     const doneBtn = document.getElementById('doneBtn');
     const cancelBtn = document.getElementById('cancelBtn');
-
-    // Message Box (Success)
-    const messageBoxBackdrop = document.getElementById('messageBoxBackdrop');
-    const messageBoxTitle = document.getElementById('messageBoxTitle');
-    const messageBoxText = document.getElementById('messageBoxText');
-    const messageBoxClose = document.getElementById('messageBoxClose');
     
-    // Confirmation Modal
     const confirmationModalBackdrop = document.getElementById('confirmationModalBackdrop');
     const confirmationModalBody = document.getElementById('confirmationModalBody');
     const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
@@ -107,51 +194,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let filteredInventory = [];
     let selectedItems = {}; 
 
-    // --- Utility Functions ---
-
-    // Show/Hide Modals
-    const showModal = (modal) => modal.style.display = 'flex';
-    const hideModal = (modal) => modal.style.display = 'none';
-
-    // Show Message Box
-    const showMessageBox = (title, text, isError = false) => {
-        messageBoxTitle.textContent = title;
-        messageBoxText.textContent = text;
-        messageBoxTitle.style.color = isError ? '#dc3545' : '#480C1B';
-        showModal(messageBoxBackdrop);
-    };
-
-    // Handle API Errors
-    const handleFetchError = (message) => {
-        console.error(message);
-        showMessageBox("Error", message, true);
-    };
-
     // --- Data Fetching ---
 
-    // Fetch Categories
     const fetchCategories = async () => {
         try {
             const response = await fetch('inventory_actions.php?action=get_categories');
             if (!response.ok) throw new Error('Network response was not ok');
-            const data = await response.json();
-            
-            if (data.error) throw new Error(data.error);
-
-            // Populate category filter
-            categoryFilter.innerHTML = '<option value="">All Categories</option>';
-            data.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.ItemCategoryName;
-                option.textContent = category.ItemCategoryName;
-                categoryFilter.appendChild(option);
-            });
+            // We fetch this to ensure categories exist, but we DO NOT populate the filter here anymore.
+            await response.json();
         } catch (error) {
             handleFetchError(`Failed to load categories: ${error.message}`);
         }
     };
 
-    // Fetch Inventory
     const fetchInventory = async () => {
         try {
             const response = await fetch('inventory_actions.php?action=get_inventory');
@@ -161,6 +216,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.error) throw new Error(data.error);
             
             allInventory = data;
+            
+            // *** NEW: Populate Filter using only ACTIVE (non-archived) items ***
+            const activeItems = allInventory.filter(item => item.is_archived != 1);
+            populateFilterDropdown(activeItems, categoryFilter);
+
             applyFiltersAndRender();
         } catch (error) {
             handleFetchError(`Failed to load inventory: ${error.message}`);
@@ -169,7 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Rendering ---
 
-    // Render Table
     const renderInventoryTable = () => {
         inventoryTableBody.innerHTML = '';
         
@@ -179,13 +238,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         filteredInventory.forEach(item => {
+            // HIDE archived items from table
+            if (item.is_archived == 1) return;
+
             const row = document.createElement('tr');
             
             if (selectedItems[item.ItemID]) {
                 row.classList.add('selected');
             }
 
-            // Apply status class based on stock
             let statusClass = '';
             if (item.ItemStatus === 'Out of Stock') {
                 statusClass = 'status-out-of-stock';
@@ -196,10 +257,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             row.innerHTML = `
-                <td>${item.ItemName}</td>
-                <td>${item.Category}</td>
-                <td>${item.ItemQuantity}</td>
-                <td><span class="status-badge ${statusClass}">${item.ItemStatus}</span></td>
+                <td>${escapeHtml(item.ItemName)}</td>
+                <td>${escapeHtml(item.Category)}</td>
+                <td>${escapeHtml(item.ItemQuantity)}</td>
+                <td><span class="status-badge ${statusClass}">${escapeHtml(item.ItemStatus)}</span></td>
                 <td>
                     <button class="action-btn issue-btn" data-item-id="${item.ItemID}" ${item.ItemQuantity <= 0 ? 'disabled' : ''}>
                         Issue
@@ -219,7 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // Apply Filters and Re-render
     const applyFiltersAndRender = () => {
         const category = categoryFilter.value;
         const search = searchInput.value.toLowerCase();
@@ -227,55 +287,53 @@ document.addEventListener('DOMContentLoaded', () => {
         filteredInventory = allInventory.filter(item => {
             const matchesCategory = !category || item.Category === category;
             const matchesSearch = !search || item.ItemName.toLowerCase().includes(search);
-            return matchesCategory && matchesSearch;
+            const notArchived = item.is_archived != 1; 
+            return matchesCategory && matchesSearch && notArchived;
         });
 
         renderInventoryTable();
     };
 
-    // Render Right-Side Details Panel
    const renderDetailsPanel = () => {
-    if (Object.keys(selectedItems).length === 0) {
-        itemDetailsContent.innerHTML = '<p class="placeholder-text">Select an item from the table to get started.</p>';
-        doneBtn.disabled = true;
-        return;
-    }
+        if (Object.keys(selectedItems).length === 0) {
+            itemDetailsContent.innerHTML = '<p class="placeholder-text">Select an item from the table to get started.</p>';
+            doneBtn.disabled = true;
+            return;
+        }
 
-    itemDetailsContent.innerHTML = '';
-    doneBtn.disabled = false;
+        itemDetailsContent.innerHTML = '';
+        doneBtn.disabled = false;
 
-    for (const itemID in selectedItems) {
-        const item = selectedItems[itemID];
-        const itemDiv = document.createElement('div');
-        itemDiv.className = 'details-item';
-        itemDiv.setAttribute('data-item-id', itemID);
-        
-        // --- SECURITY FIX: Apply escapeHtml() ---
-        itemDiv.innerHTML = `
-            <div class="item-info">
-                <span class="item-name">${escapeHtml(item.name)}</span>
-                <span class="item-category">${escapeHtml(item.category)}</span>
-            </div>
-            <div class="item-controls">
-                <button class="control-btn remove-btn">&times;</button>
-                <button class="control-btn decrease-btn" ${item.issueQty <= 0 ? 'disabled' : ''}>-</button>
-                <input type="number" class="quantity-input" value="${escapeHtml(item.issueQty)}" min="0" max="${escapeHtml(item.stock)}">
-                <button class="control-btn increase-btn" ${item.issueQty >= item.stock ? 'disabled' : ''}>+</button>
-            </div>
-        `;
+        for (const itemID in selectedItems) {
+            const item = selectedItems[itemID];
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'details-item';
+            itemDiv.setAttribute('data-item-id', itemID);
+            
+            itemDiv.innerHTML = `
+                <div class="item-info">
+                    <span class="item-name">${escapeHtml(item.name)}</span>
+                    <span class="item-category">${escapeHtml(item.category)}</span>
+                </div>
+                <div class="item-controls">
+                    <button class="control-btn remove-btn">&times;</button>
+                    <button class="control-btn decrease-btn" ${item.issueQty <= 0 ? 'disabled' : ''}>-</button>
+                    <input type="number" class="quantity-input" value="${escapeHtml(item.issueQty)}" min="0" max="${escapeHtml(item.stock)}">
+                    <button class="control-btn increase-btn" ${item.issueQty >= item.stock ? 'disabled' : ''}>+</button>
+                </div>
+            `;
 
-        itemDetailsContent.appendChild(itemDiv);
-    }
-};
+            itemDetailsContent.appendChild(itemDiv);
+        }
+    };
 
     // --- Event Handlers ---
 
-    // Table Row Click (triggered by the 'Issue' button)
     const handleRowClick = (item, row) => {
         const itemID = item.ItemID;
         
         if (item.ItemQuantity <= 0 && !selectedItems[itemID]) {
-             showMessageBox("Out of Stock", "This item is out of stock and cannot be issued.", true);
+             showToast("This item is out of stock.", "error");
              return;
         }
 
@@ -298,7 +356,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderDetailsPanel();
     };
 
-    // Details Panel Controls (Event Delegation)
     itemDetailsContent.addEventListener('click', (e) => {
         const target = e.target;
         const itemDiv = target.closest('.details-item');
@@ -341,7 +398,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Handle manual input in quantity field
     itemDetailsContent.addEventListener('change', (e) => {
         const target = e.target;
         if (target.classList.contains('quantity-input')) {
@@ -365,23 +421,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Filter/Search Listeners
     categoryFilter.addEventListener('change', applyFiltersAndRender);
     searchInput.addEventListener('input', applyFiltersAndRender);
 
-    // "Cancel" Button
     cancelBtn.addEventListener('click', () => {
         resetIssueProcess();
     });
 
-    // "Done" Button
     doneBtn.addEventListener('click', () => {
         const itemsToIssue = Object.entries(selectedItems)
             .filter(([id, item]) => item.issueQty > 0)
             .map(([id, item]) => ({ id, ...item }));
 
         if (itemsToIssue.length === 0) {
-            showMessageBox("No Items", "You have not set a quantity for any item.", true);
+            showToast("Please set a quantity for at least one item.", "error");
             return;
         }
 
@@ -390,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const itemEl = document.createElement('div');
             itemEl.className = 'confirm-item';
             itemEl.innerHTML = `
-                <span class="confirm-name">${item.name}</span>
+                <span class="confirm-name">${escapeHtml(item.name)}</span>
                 <span class="confirm-qty">QTY: ${item.issueQty}</span>
             `;
             confirmationModalBody.appendChild(itemEl);
@@ -401,7 +454,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Main Issuing Logic ---
 
-    // Reset Process
     const resetIssueProcess = () => {
         selectedItems = {};
         renderDetailsPanel();
@@ -409,7 +461,6 @@ document.addEventListener('DOMContentLoaded', () => {
         hideModal(confirmationModalBackdrop);
     };
 
-    // Confirmation Modal: "Confirm"
     confirmBtn.addEventListener('click', async () => {
         const itemsToIssue = Object.entries(selectedItems)
             .filter(([id, item]) => item.issueQty > 0)
@@ -448,38 +499,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const errors = results.filter(res => !res.success);
             const successes = itemsToIssue.filter((item, index) => results[index].success);
 
-            let title = "Process Complete";
-            let message = "";
-
-            if (successes.length > 0) {
-                message += "Successfully issued:\n" + successes.map(item => `- ${item.item_name} (Qty: ${-item.stock_adjustment})`).join('\n');
-            }
-
             if (errors.length > 0) {
-                message += "\n\nFailed to issue:\n" + errors.map(err => `- ${err.error || 'Unknown error'}`).join('\n');
-                title = "Error During Issue";
+                showToast("Some items failed to issue.", "error");
+            } else if (successes.length > 0) {
+                showToast("Items issued successfully!");
             }
-
-            showMessageBox(title, message, errors.length > 0);
             
             fetchInventory();
 
         } catch (error) {
-            showMessageBox("API Error", `A critical error occurred: ${error.message}`, true);
+            showToast("Critical error occurred while issuing items.", "error");
         }
         
         resetIssueProcess();
     });
 
-    // Confirmation Modal: "Cancel"
     cancelConfirmBtn.addEventListener('click', () => {
         hideModal(confirmationModalBackdrop);
     });
 
-    // Message Box: "OK"
-    messageBoxClose.addEventListener('click', () => {
-        hideModal(messageBoxBackdrop);
-    });
+    if (messageBoxClose) {
+        messageBoxClose.addEventListener('click', () => {
+            hideModal(messageBoxBackdrop);
+        });
+    }
     
     // --- Initial Load ---
     const initialize = async () => {

@@ -1109,64 +1109,74 @@ $conn->close();
         </div>
 
         <div class="tabContent active" id="user-management-tab">
-          <div class="controlsRow">
-            <div class="filterControls">
-              <select class="filterDropdown" id="usersRoleFilter">
-                <option value="">Role</option>
-                <option value="admin">Admin</option>
-                <option value="housekeeping_manager">Housekeeping Manager</option>
-                <option value="inventory_manager">Inventory Manager</option>
-                <option value="maintenance_manager">Maintenance Manager</option>
-                <option value="parking_manager">Parking Manager</option>
-                <option value="housekeeping_staff">Housekeeping Staff</option>
-                <option value="maintenance_staff">Maintenance Staff</option>
-              </select>
-              <select class="filterDropdown" id="usersShiftFilter">
-                <option value="">Shift</option>
-                <option value="Morning">Morning</option>
-                <option value="Afternoon">Afternoon</option>
-                <option value="Night">Night</option>
-              </select>
-              <div class="searchBox">
-                <input type="text" placeholder="Search Name or Username" class="searchInput" id="usersSearchInput" />
-                <button class="searchBtn">
-                  <img src="assets/icons/search-icon.png" alt="Search" />
-                </button>
-              </div>
-              <button class="refreshBtn" id="usersRefreshBtn">
-                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-              </button>
-              <button class="downloadBtn" id="usersDownloadBtn" title="Download User Data (CSV)">
-                <img src="assets/icons/download-icon.png" alt="Download" />
-              </button>
-              <button class="addRoomBtn" id="addUserBtn" title="Add New User">
-                <img src="assets/icons/add-user.png" alt="Add User" />
-              </button>
-            </div>
-          </div>
+  <div class="controlsRow">
+    <div class="filterControls">
+      
+      <select class="filterDropdown" id="usersRoleFilter">
+        <option value="">Role</option>
+        <option value="admin">Admin</option>
+        <option value="housekeeping_manager">Housekeeping Manager</option>
+        <option value="inventory_manager">Inventory Manager</option>
+        <option value="maintenance_manager">Maintenance Manager</option>
+        <option value="parking_manager">Parking Manager</option>
+        <option value="housekeeping_staff">Housekeeping Staff</option>
+        <option value="maintenance_staff">Maintenance Staff</option>
+      </select>
 
-          <div class="tableWrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee ID</th>
-                  <th>Username</th>
-                  <th>Full Name</th>
-                  <th>Role</th>
-                  <th>Email</th>
-                  <th>Shift</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="usersTableBody"></tbody>
-            </table>
-          </div>
+      <select class="filterDropdown" id="usersShiftFilter">
+        <option value="">Shift</option>
+        <option value="Morning">Morning</option>
+        <option value="Afternoon">Afternoon</option>
+        <option value="Night">Night</option>
+      </select>
 
-          <div class="pagination" id="user-management-tab-pagination">
-            <span class="paginationInfo">Display Records <span id="usersRecordCount">0</span></span>
-            <div class="paginationControls"></div>
-          </div>
-        </div>
+      <select class="filterDropdown" id="usersStatusFilter" style="font-weight: 500; color: #480c1b;">
+        <option value="">Status</option>
+        <option value="Active">Active</option>
+        <option value="Archived" style="color: red;">Archived</option>
+      </select>
+
+      <div class="searchBox">
+        <input type="text" placeholder="Search Name or Username" class="searchInput" id="usersSearchInput" />
+        <button class="searchBtn">
+          <img src="assets/icons/search-icon.png" alt="Search" />
+        </button>
+      </div>
+      
+      <button class="refreshBtn" id="usersRefreshBtn">
+        <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+      </button>
+      <button class="downloadBtn" id="usersDownloadBtn" title="Download User Data (CSV)">
+        <img src="assets/icons/download-icon.png" alt="Download" />
+      </button>
+      <button class="addRoomBtn" id="addUserBtn" title="Add New User">
+        <img src="assets/icons/add-user.png" alt="Add User" />
+      </button>
+    </div>
+  </div>
+
+  <div class="tableWrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Employee ID</th>
+          <th>Username</th>
+          <th>Full Name</th>
+          <th>Role</th>
+          <th>Email</th>
+          <th>Shift</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="usersTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="pagination" id="user-management-tab-pagination">
+    <span class="paginationInfo">Display Records <span id="usersRecordCount">0</span></span>
+    <div class="paginationControls"></div>
+  </div>
+</div>
 
         <div class="tabContent" id="user-logs-tab">
           <div class="controlsRow">
@@ -1305,7 +1315,7 @@ $conn->close();
     </div>
   </div>
 
-  <div class="modalBackdrop" id="userModal" style="display: none;">
+ <div class="modalBackdrop" id="userModal" style="display: none;">
     <div class="addUserModal">
       <button class="closeBtn" id="closeUserModalBtn">&times;</button>
       <h2 id="userModalTitle" >Add User from Employee</h2>
@@ -1314,12 +1324,16 @@ $conn->close();
       <form id="employeeCodeForm" style="display: block;">
         <div class="formGroup">
           <label for="employeeCodeInput">Employee Code *</label>
-          <input type="text" id="employeeCodeInput" name="employeeCode" required
-            placeholder="e.g., EMP-0001"
-            style="font-size: 16px; padding: 12px;" />
+          
+          <input type="text" id="employeeCodeInput" name="employeeCode" list="employeeList" required 
+                 placeholder="Type or select Employee Code (e.g., EMP-001)"
+                 style="font-size: 16px; padding: 12px; width: 100%; border: 1px solid #ddd; border-radius: 5px;">
+          
+          <datalist id="employeeList">
+              </datalist>
+          
           <small style="color: #e1e1e1ff; font-size: 12px; display: block; margin-top: 10px; text-align: center;">
-            Enter the Employee Code from the employees table. Only employees with these positions can be added:<br>
-            <strong>Administrator, Housekeeping Manager, House Keeping Staff, Maintenance Manager, Maintenance Staff, Inventory Manager, Parking Manager</strong>
+            You can type the code manually or select from the list of eligible employees.
           </small>
         </div>
 
@@ -1328,7 +1342,7 @@ $conn->close();
           <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn" style="background: #b99156ff;">ADD EMPLOYEE</button>
         </div>
       </form>
-
+      
       <div id="userDetailsDisplay" style="display: none;">
         <input type="hidden" id="editUserId" name="userID">
 
@@ -1377,22 +1391,22 @@ $conn->close();
         </form>
       </div>
     </div>
-  </div>
+</div>
 
-  <div class="modalBackdrop" id="deleteUserModal" style="display: none;">
+ <div class="modalBackdrop" id="deleteUserModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
       <div class="modalIcon">
-        <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
+        <i class="fas fa-archive" style="font-size: 40px; color: #d4af78;"></i> 
       </div>
-      <h2>Delete User</h2>
-      <p id="deleteUserText">Are you sure you want to delete this user?</p>
+      <h2>Archive User</h2>
+      <p id="deleteUserText">Are you sure you want to archive this user?</p>
       <div class="modalButtons">
         <button class="modalBtn cancelBtn" id="cancelDeleteUserBtn">CANCEL</button>
-        <button class="modalBtn confirmBtn" id="confirmDeleteUserBtn">DELETE</button>
+        <button class="modalBtn confirmBtn" id="confirmDeleteUserBtn">ARCHIVE</button>
       </div>
     </div>
-  </div>
+</div>
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeLogoutBtn">&times;</button>

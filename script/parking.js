@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let historyData = [];        // For 'History' tab
     let dashboardTableData = []; // Cache for dashboard table
     
+    // Fallback if PHP injection fails
     let userData = window.INJECTED_USER_DATA || { Fname: "Guest" };
 
     // Pagination State
@@ -22,11 +23,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const rowsPerPage = 10; 
 
     // Sorting State
-    let sortState = {
+   let sortState = {
         dashboard: { column: 'AreaName', direction: 'asc' }, 
-        slots: { column: 'SlotName', direction: 'asc' },
-        vehicleIn: { column: 'EntryTime', direction: 'desc' }, // This will now sort chronologically
-        history: { column: 'ExitDateTime', direction: 'desc' } // Fixed from 'ExitTime'
+        slots: { column: 'Status', direction: 'asc' }, // CHANGED: Default sort by Status to show Available first
+        vehicleIn: { column: 'EntryTime', direction: 'desc' },
+        history: { column: 'ExitDateTime', direction: 'desc' }
     };
 
     // Global variable to track which vehicle/slot is being actioned
@@ -34,7 +35,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentSlotName = null;
     let currentSessionID = null;
     
-    // === NEW DOM Elements for Management Modals ===
+    // === DOM Elements for Management Modals ===
+    
+    // Area Management Elements
+    const btnManageAreas = document.getElementById('btnManageAreas');
+    const manageAreasModal = document.getElementById('manageAreasModal');
+    const areaListContainer = document.getElementById('areaListContainer');
+    const btnSaveNewArea = document.getElementById('btnSaveNewArea');
+    const editAreaModal = document.getElementById('editAreaModal');
+    const editAreaForm = document.getElementById('editAreaForm');
+
+    // Slot Management Elements
+    const btnAddSlot = document.getElementById('btnAddSlot');
+    const manageSlotModal = document.getElementById('manageSlotModal');
+    const slotForm = document.getElementById('slotForm');
+
+    // Existing Type/Category Management Elements
     const manageTypesModal = document.getElementById('manage-types-modal');
     const openTypesModalBtn = document.getElementById('open-types-modal-btn');
     const addNewTypeBtn = document.getElementById('add-new-type-btn');
@@ -89,63 +105,61 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function createFormData(obj) {
+        const fd = new FormData();
+        for(const key in obj) fd.append(key, obj[key]);
+        return fd;
+    }
+
 
     // ========================================================
-// UTILITY & HELPER FUNCTIONS
-// ========================================================
-function showToast(message, type = 'success') {
-    let container = document.getElementById('toast-container');
-    if (!container) {
-        // Create container if it doesn't exist (Self-contained)
-        container = document.createElement('div');
-        container.id = 'toast-container';
-        container.style.position = 'fixed';
-        container.style.top = '20px';
-        container.style.right = '20px';
-        container.style.zIndex = '99999';
-        document.body.appendChild(container);
-    }
-    
-    const toast = document.createElement('div');
-    toast.textContent = message;
-    
-    // Colors based on type
-    const bgColor = type === 'success' ? '#28a745' : (type === 'error' ? '#dc3545' : '#17a2b8');
-    
-    // Apply Styles (Matching Maintenance/HK)
-    toast.style.backgroundColor = bgColor;
-    toast.style.color = 'white';
-    toast.style.padding = '12px 24px';
-    toast.style.marginBottom = '10px';
-    toast.style.borderRadius = '5px';
-    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)';
-    
-    // --- FONT STYLE FIX ---
-    toast.style.fontFamily = "'Segoe UI', sans-serif"; 
-    toast.style.fontSize = '14px';
-    // ----------------------
-    
-    toast.style.opacity = '0';
-    toast.style.transition = 'opacity 0.3s ease-in-out';
-    
-    container.appendChild(toast);
-    
-    // Trigger animation
-    requestAnimationFrame(() => {
-        toast.classList.add('show'); // Keep class for potential external overrides
-        toast.style.opacity = '1';
-    });
-    
-    setTimeout(() => {
-        toast.classList.remove('show');
+    // UTILITY & HELPER FUNCTIONS
+    // ========================================================
+    function showToast(message, type = 'success') {
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.style.position = 'fixed';
+            container.style.top = '20px';
+            container.style.right = '20px';
+            container.style.zIndex = '99999';
+            document.body.appendChild(container);
+        }
+        
+        const toast = document.createElement('div');
+        toast.textContent = message;
+        
+        const bgColor = type === 'success' ? '#28a745' : (type === 'error' ? '#dc3545' : '#17a2b8');
+        
+        toast.style.backgroundColor = bgColor;
+        toast.style.color = 'white';
+        toast.style.padding = '12px 24px';
+        toast.style.marginBottom = '10px';
+        toast.style.borderRadius = '5px';
+        toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.15)';
+        toast.style.fontFamily = "'Segoe UI', sans-serif"; 
+        toast.style.fontSize = '14px';
         toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease-in-out';
+        
+        container.appendChild(toast);
+        
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+            toast.style.opacity = '1';
+        });
+        
         setTimeout(() => {
-            if (container.contains(toast)) {
-                container.removeChild(toast);
-            }
-        }, 300); // Wait for transition
-    }, 3000);
-}
+            toast.classList.remove('show');
+            toast.style.opacity = '0';
+            setTimeout(() => {
+                if (container.contains(toast)) {
+                    container.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
 
     function escapeHTML(str) {
         if (typeof str !== 'string') return '';
@@ -158,13 +172,8 @@ function showToast(message, type = 'success') {
     }
 
     function sanitizeOnPaste(e) {
-        // Get pasted data
         let paste = (e.clipboardData || window.clipboardData).getData('text');
-        // Strip invalid characters (allow letters, numbers, spaces, and basic punctuation)
         let sanitized = paste.replace(/[^a-zA-Z0-9\s.,#-]/g, '');
-        
-        // This is a bit of a hack to insert the sanitized text
-        // We stop the default paste, then manually insert the sanitized text
         e.preventDefault();
         document.execCommand('insertText', false, sanitized);
     }
@@ -174,13 +183,11 @@ function showToast(message, type = 'success') {
     // ========================================================
     const showModal = (modal) => {
         if (modal) {
-            // Special handling for the main modal types
             if (modal.classList.contains('modal-overlay') || 
                 modal.classList.contains('modal-overlay-confirm') || 
                 modal.classList.contains('modal-overlay-success')) {
                 modal.classList.add('show-modal');
             } else if (modal.classList.contains('modalBackdrop')) {
-                // Handle the logout modal
                 modal.style.display = 'flex';
             }
         }
@@ -188,13 +195,11 @@ function showToast(message, type = 'success') {
     
     const hideModal = (modal) => {
         if (modal) {
-            // Special handling for the main modal types
             if (modal.classList.contains('modal-overlay') || 
                 modal.classList.contains('modal-overlay-confirm') || 
                 modal.classList.contains('modal-overlay-success')) {
                 modal.classList.remove('show-modal');
             } else if (modal.classList.contains('modalBackdrop')) {
-                // Handle the logout modal
                 modal.style.display = 'none';
             }
         }
@@ -263,16 +268,14 @@ function showToast(message, type = 'success') {
         // --- Generic Modal Close Buttons ---
         document.querySelectorAll('.modal-close-btn, .btn-okay, .btn-cancel, button[data-modal-id]').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                // Check if it's a "cancel" button inside a specific form modal
                 if(e.target.id === 'edit-category-name-cancel-btn') {
-                        e.preventDefault(); // prevent form submission
+                        e.preventDefault(); 
                 }
                 const modal = e.target.closest('.modal-overlay, .modal-overlay-confirm, .modal-overlay-success, .modalBackdrop');
                 if (modal) hideModal(modal);
             });
         });
         
-        // Close modal on overlay click
         document.querySelectorAll('.modal-overlay, .modal-overlay-confirm, .modal-overlay-success').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
@@ -283,7 +286,7 @@ function showToast(message, type = 'success') {
     }
 
     // ========================================================
-    // RENDER FUNCTIONS (FOR <table>)
+    // RENDER FUNCTIONS
     // ========================================================
     function renderEmptyState(tbody, colSpan, icon, title, message) {
         tbody.innerHTML = `
@@ -298,15 +301,7 @@ function showToast(message, type = 'success') {
             </tr>
         `;
     }
-function escapeHtml(text) {
-    if (text === null || text === undefined) return '';
-    return String(text)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
+
     function renderDashboard(data) {
         const cards = document.querySelectorAll('.summary-cards .card .card-value');
         if (data.cards) {
@@ -327,11 +322,11 @@ function escapeHtml(text) {
             const isFull = area.status === 'Full';
             return `
                 <tr class="${isFull ? 'full-row' : ''}">
-                    <td class="${isFull ? 'text-red' : ''}">${area.AreaName}</td>
+                    <td class="${isFull ? 'text-red' : ''}">${escapeHTML(area.AreaName)}</td>
                     <td class="${isFull ? 'text-red' : ''}">${isFull ? '-' : area.available}</td>
                     <td class="${isFull ? 'text-red' : ''}">${area.occupied}</td>
                     <td class="${isFull ? 'text-red' : ''}">${area.total}</td>
-                    <td class="${isFull ? 'text-red' : ''} text-right">${isFull ? 'Full' : ''}</td>
+                    <td class="${isFull ? 'text-red' : ''} text-right">${isFull ? 'Full' : 'Available'}</td>
                 </tr>
             `;
         }).join('');
@@ -339,132 +334,167 @@ function escapeHtml(text) {
     }
 
     function renderSlots(filteredData) {
-    const tbody = document.getElementById('slotsTableBody');
-    if (!tbody) return;
-    
-    const page = currentPages.slots;
-    const totalItems = filteredData.length;
-    setupPagination(totalItems, 'pagination-slots', page);
+        const tbody = document.getElementById('slotsTableBody');
+        if (!tbody) return;
+        
+        const page = currentPages.slots;
+        const totalItems = filteredData.length;
+        setupPagination(totalItems, 'pagination-slots', page);
 
-    if (totalItems === 0) {
-        renderEmptyState(tbody, 5, '🅿️', 'No Slots Found', 'Try adjusting your search or filter.');
-        return;
+        if (totalItems === 0) {
+            renderEmptyState(tbody, 5, '🅿️', 'No Slots Found', 'Try adjusting your search or filter.');
+            return;
+        }
+        
+        const startIndex = (page - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+        
+        tbody.innerHTML = paginatedData.map((slot) => {
+            const safeArea = escapeHTML(slot.AreaName);
+            const safeSlot = escapeHTML(slot.SlotName);
+            const safeVehicle = escapeHTML(slot.AllowedVehicle);
+            const safeId = escapeHTML(slot.SlotID);
+            const safeStatusClass = escapeHTML(slot.Status);
+            const isArchived = parseInt(slot.is_archived) === 1;
+            const isOccupied = slot.Status.toLowerCase() === 'occupied';
+
+            // Define Action Buttons based on Archive Status
+            let actionButtons = '';
+            let enterBtn = '';
+
+            if (isArchived) {
+                // RESTORE BUTTON (Green)
+                actionButtons = `
+                    <button class="actionIconBtn btn-restore-slot" data-id="${safeId}" title="Restore Slot">
+                        <i class="fas fa-trash-restore" style="color: #28a745; font-size: 16px;"></i>
+                    </button>
+                `;
+            } else {
+                // EDIT (Image) and ARCHIVE (Red Icon) Buttons
+                // Enter button is only for active slots
+                enterBtn = slot.Status === 'available' 
+                    ? `<button class="btn-enter" data-slot-id="${safeId}" data-slot-name="${safeSlot}" style="font-size: 12px; padding: 5px 10px;">Enter</button>`
+                    : `<button class="btn-enter-gray" disabled style="font-size: 12px; padding: 5px 10px;">Enter</button>`;
+                
+                const disabledStyle = isOccupied ? 'opacity: 0.5; cursor: not-allowed;' : '';
+                const disabledAttr = isOccupied ? 'disabled' : '';
+                const editTitle = isOccupied ? 'Cannot edit occupied slot' : 'Edit Slot';
+                const archiveTitle = isOccupied ? 'Cannot archive occupied slot' : 'Archive Slot';
+
+                actionButtons = `
+                    <button class="actionIconBtn btn-edit-slot" data-id="${safeId}" title="${editTitle}" ${disabledAttr} style="${disabledStyle}">
+                        <img src="assets/icons/edit-icon.png" alt="Edit" style="width: 16px; height: 16px; vertical-align: middle;">
+                    </button>
+                    <button class="actionIconBtn btn-archive-slot" data-id="${safeId}" title="${archiveTitle}" ${disabledAttr} style="${disabledStyle}">
+                        <i class="fas fa-archive" style="color: #dc3545; font-size: 16px;"></i>
+                    </button>
+                `;
+            }
+
+            const rowClass = isArchived ? 'archived-slot' : '';
+
+            return `
+                <tr class="${rowClass}">
+                    <td>${safeArea}</td>
+                    <td>${safeSlot}</td>
+                    <td>${safeVehicle}</td>
+                    <td>
+                        <span class="status-badge status-${safeStatusClass}">
+                            ${slot.Status === 'available' ? 'Available' : 'Occupied'}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display:flex; gap:5px; justify-content: flex-start; align-items:center;">
+                            ${enterBtn}
+                            ${actionButtons}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        updateSortHeaders('slots-tab', sortState.slots);
     }
-    
-    const startIndex = (page - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedData = filteredData.slice(startIndex, endIndex);
-    
-    tbody.innerHTML = paginatedData.map((slot) => {
-        // --- SECURITY FIX: Escape HTML ---
-        const safeArea = escapeHtml(slot.AreaName);
-        const safeSlot = escapeHtml(slot.SlotName);
-        const safeVehicle = escapeHtml(slot.AllowedVehicle);
-        const safeId = escapeHtml(slot.SlotID);
-        const safeStatusClass = escapeHtml(slot.Status);
-
-        return `
-            <tr>
-                <td>${safeArea}</td>
-                <td>${safeSlot}</td>
-                <td>${safeVehicle}</td>
-                <td>
-                    <span class="status-badge status-${safeStatusClass}">
-                        ${slot.Status === 'available' ? 'Available' : 'Occupied'}
-                    </span>
-                </td>
-                <td>
-                    ${slot.Status === 'available' 
-                        ? `<button class="btn-enter" data-slot-id="${safeId}" data-slot-name="${safeSlot}">Enter Vehicle</button>`
-                        : `<button class="btn-enter-gray" disabled>Enter Vehicle</button>`
-                    }
-                </td>
-            </tr>
-        `;
-    }).join('');
-
-    updateSortHeaders('slots-tab', sortState.slots);
-}
 
     function renderVehicleIn(filteredData) {
-    const tbody = document.getElementById('vehicleInTableBody');
-    if (!tbody) return;
+        const tbody = document.getElementById('vehicleInTableBody');
+        if (!tbody) return;
 
-    const page = currentPages.vehicleIn;
-    const totalItems = filteredData.length;
-    setupPagination(totalItems, 'pagination-vehicleIn', page);
+        const page = currentPages.vehicleIn;
+        const totalItems = filteredData.length;
+        setupPagination(totalItems, 'pagination-vehicleIn', page);
 
-    if (totalItems === 0) {
-        renderEmptyState(tbody, 9, '🚗', 'No Vehicles Parked', 'Available slots can be seen in the "Slots" tab.');
-        return;
+        if (totalItems === 0) {
+            renderEmptyState(tbody, 9, '🚗', 'No Vehicles Parked', 'Available slots can be seen in the "Slots" tab.');
+            return;
+        }
+
+        const startIndex = (page - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
+        tbody.innerHTML = paginatedData.map((vehicle) => {
+            return `
+                <tr>
+                    <td>${escapeHTML(vehicle.SlotName)}</td>
+                    <td>${escapeHTML(vehicle.PlateNumber)}</td>
+                    <td>${escapeHTML(vehicle.RoomNumber)}</td>
+                    <td>${escapeHTML(vehicle.GuestName)}</td>
+                    <td>${escapeHTML(vehicle.VehicleType)}</td>
+                    <td>${escapeHTML(vehicle.VehicleCategory)}</td>
+                    <td>${escapeHTML(vehicle.EnterTime)}</td>
+                    <td>${escapeHTML(vehicle.EnterDate)}</td>
+                    <td>
+                        <button class="exit-btn" data-slot-id="${escapeHTML(vehicle.SlotID)}" data-session-id="${escapeHTML(vehicle.SessionID)}">
+                            <img src="assets/images/parking.png" alt="Exit Vehicle" style="width: 24px; height: 24px;">
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        updateSortHeaders('vehicleIn-tab', sortState.vehicleIn);
     }
-
-    const startIndex = (page - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedData = filteredData.slice(startIndex, endIndex);
-
-    tbody.innerHTML = paginatedData.map((vehicle) => {
-        // --- SECURITY FIX: Escape HTML on all fields ---
-        return `
-            <tr>
-                <td>${escapeHtml(vehicle.SlotName)}</td>
-                <td>${escapeHtml(vehicle.PlateNumber)}</td>
-                <td>${escapeHtml(vehicle.RoomNumber)}</td>
-                <td>${escapeHtml(vehicle.GuestName)}</td>
-                <td>${escapeHtml(vehicle.VehicleType)}</td>
-                <td>${escapeHtml(vehicle.VehicleCategory)}</td>
-                <td>${escapeHtml(vehicle.EnterTime)}</td>
-                <td>${escapeHtml(vehicle.EnterDate)}</td>
-                <td>
-                    <button class="exit-btn" data-slot-id="${escapeHtml(vehicle.SlotID)}" data-session-id="${escapeHtml(vehicle.SessionID)}">
-                        <img src="assets/images/parking.png" alt="Exit Vehicle" style="width: 24px; height: 24px;">
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-    
-    updateSortHeaders('vehicleIn-tab', sortState.vehicleIn);
-}
 
     function renderHistory(filteredData) {
-    const tbody = document.getElementById('historyTableBody');
-    if (!tbody) return;
-    
-    const page = currentPages.history;
-    const totalItems = filteredData.length;
-    setupPagination(totalItems, 'pagination-history', page);
+        const tbody = document.getElementById('historyTableBody');
+        if (!tbody) return;
+        
+        const page = currentPages.history;
+        const totalItems = filteredData.length;
+        setupPagination(totalItems, 'pagination-history', page);
 
-    if (totalItems === 0) {
-        renderEmptyState(tbody, 9, '📜', 'No History Found', 'Vehicles that exit will appear here.');
-        return;
+        if (totalItems === 0) {
+            renderEmptyState(tbody, 9, '📜', 'No History Found', 'Vehicles that exit will appear here.');
+            return;
+        }
+
+        const startIndex = (page - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        const paginatedData = filteredData.slice(startIndex, endIndex);
+
+        tbody.innerHTML = paginatedData.map((vehicle) => {
+            return `
+                <tr>
+                    <td>${escapeHTML(vehicle.SlotName)}</td>
+                    <td>${escapeHTML(vehicle.PlateNumber)}</td>
+                    <td>${escapeHTML(vehicle.RoomNumber)}</td>
+                    <td>${escapeHTML(vehicle.GuestName)}</td>
+                    <td>${escapeHTML(vehicle.VehicleType)}</td>
+                    <td>${escapeHTML(vehicle.VehicleCategory)}</td>
+                    <td>${escapeHTML(vehicle.ParkingTime)}</td>
+                    <td>${escapeHTML(vehicle.EntryDateTime)}</td>
+                    <td>${escapeHTML(vehicle.ExitDateTime)}</td>
+                </tr>
+            `;
+        }).join('');
+        
+        updateSortHeaders('history-tab', sortState.history);
     }
 
-    const startIndex = (page - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    const paginatedData = filteredData.slice(startIndex, endIndex);
-
-    tbody.innerHTML = paginatedData.map((vehicle) => {
-        // --- SECURITY FIX: Escape all fields ---
-        return `
-            <tr>
-                <td>${escapeHtml(vehicle.SlotName)}</td>
-                <td>${escapeHtml(vehicle.PlateNumber)}</td>
-                <td>${escapeHtml(vehicle.RoomNumber)}</td>
-                <td>${escapeHtml(vehicle.GuestName)}</td>
-                <td>${escapeHtml(vehicle.VehicleType)}</td>
-                <td>${escapeHtml(vehicle.VehicleCategory)}</td>
-                <td>${escapeHtml(vehicle.ParkingTime)}</td>
-                <td>${escapeHtml(vehicle.EntryDateTime)}</td>
-                <td>${escapeHtml(vehicle.ExitDateTime)}</td>
-            </tr>
-        `;
-    }).join('');
-    
-    updateSortHeaders('history-tab', sortState.history);
-}
     // ========================================================
-    // PAGINATION LOGIC
+    // PAGINATION
     // ========================================================
     function setupPagination(totalItems, containerId, currentPage) {
         const paginationContainer = document.getElementById(containerId);
@@ -502,6 +532,7 @@ function escapeHtml(text) {
         });
         controlsDiv.appendChild(prevButton);
 
+        // Simple Pagination Logic
         const pageNumbers = [];
         if (totalPages <= 7) {
             for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
@@ -553,12 +584,9 @@ function escapeHtml(text) {
     }
 
     // ========================================================
-    // SORTING & PARSING LOGIC
+    // SORTING & PARSING
     // ========================================================
     
-    /**
-     * Parses "YYYY-MM-DD / H:MM AM/PM" format
-     */
     function parseDateWhen(dateStr, defaultVal) {
         if (!dateStr) return defaultVal;
         try {
@@ -568,13 +596,9 @@ function escapeHtml(text) {
         }
     }
 
-    /**
-     * Parses "YYYY-MM-DD" and "H:MM AM/PM" from vehicleIn table
-     */
     function parseVehicleInDate(dateStr, timeStr) {
         if (!dateStr || !timeStr) return null;
         try {
-            // Creates a date object from "2025-11-15 6:30 AM"
             return new Date(`${dateStr} ${timeStr}`).getTime();
         } catch (e) {
             return null;
@@ -586,30 +610,24 @@ function escapeHtml(text) {
             let valA = a[column];
             let valB = b[column];
 
-            // --- NEW: Handle combined EntryTime/EntryDate for vehicleIn ---
             if (column === 'EntryTime' && a.EnterDate) {
                 valA = parseVehicleInDate(a.EnterDate, a.EntryTime);
                 valB = parseVehicleInDate(b.EnterDate, b.EntryTime);
             } 
-            // --- End New ---
-
             else if (column === 'available' || column === 'occupied' || column === 'total') {
                 valA = parseFloat(valA) || 0;
                 valB = parseFloat(valB) || 0;
             }
 
             if (typeof valA === 'string') {
-                // Check for 'YYYY-MM-DD HH:MM:SS' (from history Entry/ExitDateTime)
                 if (valA && valA.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)) { 
                     valA = new Date(valA).getTime();
                     valB = valB ? new Date(valB).getTime() : null;
                 } 
-                // Check for 'YYYY-MM-DD / H:MM AM/PM' (old format, fallback)
                 else if (valA && valA.match(/^\d{4}-\d{2}-\d{2} \/ \d{1,2}:\d{2} [AP]M$/)) {
                     valA = parseDateWhen(valA, null); 
                     valB = parseDateWhen(valB, null);
                 }
-                // Default string sort
                 else {
                     valA = (valA || "").toLowerCase();
                     valB = (valB || "").toLowerCase();
@@ -625,11 +643,8 @@ function escapeHtml(text) {
             if (valB === null || valB === undefined) valB = direction === 'asc' ? Infinity : -Infinity;
 
             let comparison = 0;
-            if (valA > valB) {
-                comparison = 1;
-            } else if (valA < valB) {
-                comparison = -1;
-            }
+            if (valA > valB) comparison = 1;
+            else if (valA < valB) comparison = -1;
 
             return direction === 'asc' ? comparison : -comparison;
         });
@@ -644,12 +659,9 @@ function escapeHtml(text) {
         });
         
         let selector = `th[data-sort="${column}"]`;
-
-        // --- REVISED: Link EntryDate and EntryTime headers ---
         if (column === 'EntryTime' || column === 'EntryDate') {
             selector = 'th[data-sort="EntryTime"], th[data-sort="EntryDate"]';
         }
-        // --- End Revised ---
 
         tab.querySelectorAll(selector).forEach(th => {
             th.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
@@ -657,13 +669,12 @@ function escapeHtml(text) {
     }
 
     // ========================================================
-    // FILTER & SORT GETTERS (NEW DRY SECTION)
+    // FILTER HELPERS
     // ========================================================
 
     function getFilteredDashboard() {
         const filterArea = document.getElementById('areaFilterDashboard').value;
-        return dashboardTableData
-            .filter(area => filterArea === "all" || area.AreaName === filterArea);
+        return dashboardTableData.filter(area => filterArea === "all" || area.AreaName === filterArea);
     }
 
     function getFilteredSlots() {
@@ -673,7 +684,12 @@ function escapeHtml(text) {
         
         return slotsData
             .filter(s => filterArea === "all" || s.AreaName.includes(filterArea))
-            .filter(s => filterStatus === "all" || s.Status === filterStatus)
+            .filter(s => {
+                const isArchived = parseInt(s.is_archived) === 1;
+                if(filterStatus === 'archived') return isArchived;
+                if(isArchived) return false;
+                return filterStatus === "all" || s.Status === filterStatus;
+            })
             .filter(s => !searchTerm || s.SlotName.toLowerCase().includes(searchTerm));
     }
 
@@ -704,15 +720,17 @@ function escapeHtml(text) {
     }
 
     // ========================================================
-    // SEARCH, FILTER & DATA LOADING (REFACTORED)
+    // DATA LOADING & REFRESH
     // ========================================================
     async function performFilterAndSearch() {
-        
         const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
 
         if (activeTab === 'dashboard') {
-            // Use cache if available
             if (dashboardTableData.length === 0) {
+                // Show Loading
+                const tbody = document.getElementById('dashboardTableBody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Loading dashboard...</td></tr>';
+
                 const data = await fetchAPI('getDashboardData');
                 if (!data || !data.table) {
                     renderDashboard({ cards: {}, table: [] });
@@ -734,48 +752,45 @@ function escapeHtml(text) {
             renderDashboard({ cards: newCardTotals, table: filteredData });
         
         } else if (activeTab === 'slots') {
-            // Use cache if available
             if (slotsData.length === 0) { 
+                // Show Loading
+                const tbody = document.getElementById('slotsTableBody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;">Loading slots...</td></tr>';
+
                 const data = await fetchAPI('getAllSlots');
-                if (!data) {
-                    renderSlots([]);
-                    return;
-                }
+                if (!data) { renderSlots([]); return; }
                 slotsData = data.slots;
             }
-            
             let filteredData = getFilteredSlots();
             const { column, direction } = sortState.slots;
             sortData(filteredData, column, direction);
             renderSlots(filteredData);
 
         } else if (activeTab === 'vehicleIn') {
-            // Use cache if available
             if (vehiclesInData.length === 0) {
+                // Show Loading
+                const tbody = document.getElementById('vehicleInTableBody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">Loading vehicles...</td></tr>';
+
                 const data = await fetchAPI('getVehiclesIn');
-                if (!data) {
-                    renderVehicleIn([]);
-                    return;
-                }
+                if (!data) { renderVehicleIn([]); return; }
                 vehiclesInData = data.vehicles;
             }
-
             let filteredData = getFilteredVehiclesIn();
             const { column, direction } = sortState.vehicleIn;
             sortData(filteredData, column, direction);
             renderVehicleIn(filteredData);
 
         } else if (activeTab === 'history') {
-            // Use cache if available
             if (historyData.length === 0) {
+                // Show Loading
+                const tbody = document.getElementById('historyTableBody');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">Loading history...</td></tr>';
+
                 const data = await fetchAPI('getHistory');
-                if (!data) {
-                    renderHistory([]);
-                    return;
-                }
+                if (!data) { renderHistory([]); return; }
                 historyData = data.history;
             }
-            
             let filteredData = getFilteredHistory();
             const { column, direction } = sortState.history;
             sortData(filteredData, column, direction);
@@ -784,358 +799,227 @@ function escapeHtml(text) {
     }
 
     // ========================================================
-    // REFRESH & LOAD DROPDOWNS
+    // AREA MANAGEMENT LOGIC (NEW)
     // ========================================================
     
-    // This function loads the two dropdowns in the "Enter Vehicle" modal
-    async function loadEnterVehicleDropdowns() {
-        const typeSelect = document.getElementById('vehicleType');
-        const categorySelect = document.getElementById('categorySelect');
-        const currentType = typeSelect.value; // Store current selection
-        
-        typeSelect.innerHTML = '<option value="">Loading...</option>';
-        categorySelect.innerHTML = '<option value="">Select vehicle type first...</option>';
-        
-        const data = await fetchAPI('getVehicleTypes');
-        if (data && data.types) {
-            typeSelect.innerHTML = '<option value="">Select</option>';
-            data.types.forEach(type => {
-                typeSelect.innerHTML += `<option value="${type.VehicleTypeID}">${type.TypeName}</option>`;
-            });
-            typeSelect.value = currentType; // Re-select old value if still valid
+    if(btnManageAreas) {
+        btnManageAreas.addEventListener('click', () => {
+            showModal(manageAreasModal);
+            loadAreaList();
+        });
+    }
+
+    async function loadAreaList() {
+        areaListContainer.innerHTML = '<div class="spinner"></div>';
+        const data = await fetchAPI('getManageAreas'); // Using dashboard data which lists active areas
+        if(data && data.areas) {
+            if (data.areas.length === 0) {
+                areaListContainer.innerHTML = '<p style="text-align:center;">No areas found.</p>';
+            } else {
+                areaListContainer.innerHTML = data.areas.map(area => {
+                    const isArchived = parseInt(area.is_archived) === 1;
+                    return `
+                    <div class="category-list-item" style="${isArchived ? 'opacity:0.6;' : ''}">
+                        <span class="category-name" style="${isArchived ? 'text-decoration: line-through;' : ''}">${escapeHTML(area.AreaName)}</span>
+                        <div class="category-actions">
+                            ${!isArchived ?
+                                `<button class="btn-icon btn-edit-area" data-id="${area.AreaID}" data-name="${escapeHTML(area.AreaName)}"><i class="fas fa-pencil-alt"></i></button>
+                                 <button class="btn-icon btn-archive-area" data-id="${area.AreaID}" data-name="${escapeHTML(area.AreaName)}"><i class="fas fa-archive"></i></button>`
+                                :
+                                `<button class="btn-icon btn-restore-area" data-id="${area.AreaID}" data-name="${escapeHTML(area.AreaName)}" style="color: #28a745;"><i class="fas fa-trash-restore"></i></button>`
+                            }
+                        </div>
+                    </div>
+                `}).join('');
+            }
         }
     }
 
-    // This function reloads ALL dropdowns and lists related to types/categories
-    async function refreshAllParkingDropdowns() {
-        // 1. Refresh "Enter Vehicle" modal dropdowns
-        await loadEnterVehicleDropdowns();
-        
-        // 2. Refresh "Manage Types" modal list
-        await loadVehicleTypesList();
-        
-        // 3. Refresh "Manage Categories" modal dropdown
-        await loadVehicleTypesDropdownForManager();
-        
-        // 4. Clear the categories list (it will reload on type select)
-        categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">Please select a vehicle type above.</p>';
-    }
-
-    // ========================================================
-    // EVENT LISTENERS (SPECIFIC TO PARKING)
-    // ========================================================
-
-    // Listener for the "Vehicle Type" dropdown in the "Enter Vehicle" modal
-    document.getElementById('vehicleType').addEventListener('change', async (e) => {
-        const vehicleTypeID = e.target.value;
-        const categorySelect = document.getElementById('categorySelect');
-        if (!vehicleTypeID) {
-            categorySelect.innerHTML = '<option value="">Select vehicle type first...</option>';
-            return;
-        }
-        categorySelect.innerHTML = '<option value="">Loading...</option>';
-        const data = await fetchAPI('getVehicleCategories', {}, `vehicleTypeID=${vehicleTypeID}`);
-        if (data && data.categories) {
-            categorySelect.innerHTML = '<option value="">Select</option>';
-            data.categories.forEach(cat => {
-                categorySelect.innerHTML += `<option value="${cat.VehicleCategoryID}">${cat.CategoryName}</option>`;
-            });
-        }
-    });
-
-
-    function setupParkingListeners() {
-        // Filter/Search Listeners
-        document.querySelectorAll('.filterDropdown').forEach(el => {
-            el.addEventListener('change', () => {
-                currentPages.slots = 1;
-                currentPages.vehicleIn = 1;
-                currentPages.history = 1;
-                // --- FIXED: Clear all caches on filter change ---
-                slotsData = [];
-                vehiclesInData = [];
-                historyData = [];
-                dashboardTableData = [];
-                // --- End Fixed ---
+    if(btnSaveNewArea) {
+        btnSaveNewArea.addEventListener('click', async () => {
+            const name = document.getElementById('newAreaName').value.trim();
+            if(!name) return showToast('Enter area name', 'error');
+            const res = await fetchAPI('addArea', { method: 'POST', body: createFormData({AreaName: name}) });
+            if(res && res.success) {
+                showToast(res.message);
+                document.getElementById('newAreaName').value = '';
+                loadAreaList();
+                loadFilterDropdowns(); // Refresh dropdowns
+                dashboardTableData = []; // Clear cache
                 performFilterAndSearch();
-            });
+            }
         });
+    }
 
-        document.querySelectorAll('.searchInput').forEach(el => {
-            el.addEventListener('input', () => {
-                const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
-                currentPages.slots = 1;
-                currentPages.vehicleIn = 1;
-                currentPages.history = 1;
-                
-                // --- REFACTORED: Use new getter functions ---
-                if (activeTab === 'slots') {
-                    let filtered = getFilteredSlots();
-                    sortData(filtered, sortState.slots.column, sortState.slots.direction);
-                    renderSlots(filtered);
+    if(areaListContainer) {
+        areaListContainer.addEventListener('click', async (e) => {
+            const btnEdit = e.target.closest('.btn-edit-area');
+            const btnArchive = e.target.closest('.btn-archive-area');
+            const btnRestore = e.target.closest('.btn-restore-area');
+
+            if(btnEdit) {
+                document.getElementById('editAreaId').value = btnEdit.dataset.id;
+                document.getElementById('editAreaName').value = btnEdit.dataset.name;
+                showModal(editAreaModal);
+            }
+
+            if(btnArchive) {
+                if(confirm(`Archive area "${btnArchive.dataset.name}"? This will also archive all slots in it.`)) {
+                    const res = await fetchAPI('archiveArea', { method: 'POST', body: createFormData({AreaID: btnArchive.dataset.id}) });
+                    if(res && res.success) {
+                        showToast(res.message);
+                        loadAreaList();
+                        loadFilterDropdowns();
+                        dashboardTableData = []; // Clear cache
+                        slotsData = []; // Clear slots cache as they might be archived
+                        performFilterAndSearch();
+                    }
                 }
-                if (activeTab === 'vehicleIn') {
-                    let filtered = getFilteredVehiclesIn();
-                    sortData(filtered, sortState.vehicleIn.column, sortState.vehicleIn.direction);
-                    renderVehicleIn(filtered);
+            }
+
+            if(btnRestore) {
+                if(confirm(`Restore area "${btnRestore.dataset.name}"?`)) {
+                    const res = await fetchAPI('restoreArea', { method: 'POST', body: createFormData({AreaID: btnRestore.dataset.id}) });
+                    if(res && res.success) {
+                        showToast(res.message);
+                        loadAreaList();
+                        loadFilterDropdowns();
+                        dashboardTableData = [];
+                        slotsData = [];
+                        performFilterAndSearch();
+                    }
                 }
-                if (activeTab === 'history') {
-                    let filtered = getFilteredHistory();
-                    sortData(filtered, sortState.history.column, sortState.history.direction);
-                    renderHistory(filtered);
-                }
-                // --- End Refactored ---
-            });
+            }
         });
-        
-        // Refresh Buttons
-        document.querySelectorAll('.refreshBtn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const controlsRow = btn.closest('.controlsRow');
-                controlsRow.querySelectorAll('.filterDropdown').forEach(sel => sel.value = 'all');
-                controlsRow.querySelectorAll('.searchInput').forEach(inp => inp.value = '');
-                
-                // --- FIXED: Clear all caches on refresh ---
-                slotsData = []; 
-                vehiclesInData = [];
-                historyData = [];
+    }
+
+    if(editAreaForm) {
+        editAreaForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editAreaId').value;
+            const name = document.getElementById('editAreaName').value;
+            const res = await fetchAPI('updateArea', { method: 'POST', body: createFormData({AreaID: id, AreaName: name}) });
+            if(res && res.success) {
+                showToast(res.message);
+                hideModal(editAreaModal);
+                loadAreaList();
+                loadFilterDropdowns();
                 dashboardTableData = []; 
-                // --- End Fixed ---
-
                 performFilterAndSearch();
-                showToast('Data refreshed!');
-            });
-        });
-
-        // Download History Button
-        const downloadBtn = document.getElementById('downloadBtnHistory');
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', () => {
-                // Use getter to ensure filters are applied
-                let filteredData = getFilteredHistory();
-                
-                const { column, direction } = sortState.history;
-                sortData(filteredData, column, direction);
-
-                if (filteredData.length === 0) {
-                    showToast('No data to download.', 'error');
-                    return;
-                }
-
-                try {
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF();
-                    doc.setFontSize(18);
-                    doc.text("Parking History Report", 14, 22);
-                    doc.setFontSize(11);
-                    doc.setTextColor(100);
-                    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
-                    
-                    const head = [[
-                        'Slot', 'Plate #', 'Room', 'Name', 
-                        'Vehicle Type', 'Category', 'Parking Time', 'Entry', 'Exit'
-                    ]];
-                    const body = filteredData.map(v => [
-                        v.SlotName, v.PlateNumber, v.RoomNumber, v.GuestName,
-                        v.VehicleType, v.VehicleCategory, v.ParkingTime,
-                        v.EntryDateTime, v.ExitDateTime
-                    ]);
-
-                    doc.autoTable({
-                        head: head, body: body, startY: 35,
-                        headStyles: { fillColor: [72, 12, 27] }, // #480c1b
-                        styles: { fontSize: 8, cellPadding: 2 },
-                        alternateRowStyles: { fillColor: [245, 245, 245] },
-                        // --- FIXED columnStyles ---
-                        columnStyles: {
-                            0: { cellWidth: 15 }, // Slot
-                            1: { cellWidth: 20 }, // Plate #
-                            2: { cellWidth: 12 }, // Room
-                            3: { cellWidth: 20 }, // Name
-                            4: { cellWidth: 25 }, // Vehicle Type
-                            5: { cellWidth: 20 }, // Category
-                            6: { cellWidth: 20 }, // Parking Time
-                            7: { cellWidth: 30 }, // Entry
-                            8: { cellWidth: 30 }  // Exit
-                        }
-                    });
-                    doc.save('Parking-History-Report.pdf');
-                } catch (e) {
-                    console.error("Error generating PDF:", e);
-                    showToast('Error generating PDF. See console.', 'error');
-                }
-            });
-        }
-        
-        // Download Active (Vehicle In) Report Button
-        const downloadBtnActive = document.getElementById('downloadBtnActive');
-        if (downloadBtnActive) {
-            downloadBtnActive.addEventListener('click', () => {
-                // Use getter to ensure filters are applied
-                let filteredData = getFilteredVehiclesIn();
-                
-                const { column, direction } = sortState.vehicleIn; 
-                sortData(filteredData, column, direction);
-
-                if (filteredData.length === 0) {
-                    showToast('No data to download.', 'error');
-                    return;
-                }
-
-                try {
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF();
-                    
-                    doc.setFontSize(18);
-                    doc.text("Active Parking Report", 14, 22); 
-                    doc.setFontSize(11);
-                    doc.setTextColor(100);
-                    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
-
-                    const head = [[
-                        'Slot Number', 'Plate #', 'Room', 'Name',
-                        'Vehicle Type', 'Category', 'Enter Time', 'Enter Date'
-                    ]];
-                    
-                    const body = filteredData.map(v => [
-                        v.SlotName, v.PlateNumber, v.RoomNumber, v.GuestName,
-                        v.VehicleType, v.VehicleCategory, v.EnterTime, v.EnterDate 
-                    ]);
-
-                    doc.autoTable({
-                        head: head, body: body, startY: 35,
-                        headStyles: { fillColor: [72, 12, 27] }, // #480c1b
-                        styles: { fontSize: 8, cellPadding: 2 },
-                        alternateRowStyles: { fillColor: [245, 245, 245] },
-                        // --- FIXED columnStyles ---
-                        columnStyles: {
-                            0: { cellWidth: 15 }, // Slot
-                            1: { cellWidth: 20 }, // Plate #
-                            2: { cellWidth: 12 }, // Room
-                            3: { cellWidth: 33 }, // Name
-                            4: { cellWidth: 25 }, // Vehicle Type
-                            5: { cellWidth: 25 }, // Category
-                            6: { cellWidth: 25 }, // Enter Time
-                            7: { cellWidth: 25 }  // Enter Date
-                        }
-                    });
-                    
-                    doc.save('Active-Parking-Report.pdf'); 
-                } catch (e) {
-                    console.error("Error generating PDF:", e);
-                    showToast('Error generating PDF. See console.', 'error');
-                }
-            });
-        }
-        
-        // === Enter/Exit Vehicle Logic ===
-        
-        document.body.addEventListener('click', (e) => {
-            const enterButton = e.target.closest('.btn-enter');
-            if (enterButton) {
-                currentSlotID = enterButton.dataset.slotId;
-                currentSlotName = enterButton.dataset.slotName;
-                document.getElementById('slotNumberTitle').textContent = currentSlotName;
-                document.getElementById('enter-vehicle-form').reset();
-                loadEnterVehicleDropdowns(); // Load dropdowns for this modal
-                showModal(document.getElementById('enterVehicleModal'));
             }
         });
-        
-        const enterVehicleForm = document.getElementById('enter-vehicle-form');
-        if (enterVehicleForm) {
-            enterVehicleForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                if (!document.getElementById('guestName').value || !document.getElementById('plateNumber').value || !document.getElementById('vehicleType').value || !document.getElementById('categorySelect').value) {
-                    showToast('Please fill out all required fields.', 'error');
-                    return;
-                }
-                hideModal(document.getElementById('enterVehicleModal'));
-                showModal(document.getElementById('confirmModal'));
-            });
-        }
-        
-        const btnConfirmEnter = document.getElementById('btnConfirmEnter');
-        if (btnConfirmEnter) {
-            btnConfirmEnter.addEventListener('click', async () => {
-                
-                const formData = new FormData();
-                formData.append('action', 'enterVehicle');
-                formData.append('slotID', currentSlotID);
-                formData.append('plateNumber', document.getElementById('plateNumber').value.toUpperCase());
-                formData.append('guestName', document.getElementById('guestName').value);
-                formData.append('roomNumber', document.getElementById('roomNumber').value);
-                formData.append('vehicleTypeID', document.getElementById('vehicleType').value);
-                formData.append('vehicleCategoryID', document.getElementById('categorySelect').value);
+    }
 
-                const result = await fetchAPI('enterVehicle', {
-                    method: 'POST',
-                    body: formData
-                });
-                hideModal(document.getElementById('confirmModal'));
-                if (result && result.success) {
-                    showModal(document.getElementById('successModal'));
-                    showToast(result.message || 'Vehicle parked successfully!');
-                    // --- FIXED: Clear all caches ---
-                    slotsData = []; 
-                    vehiclesInData = [];
-                    historyData = [];
-                    dashboardTableData = [];
-                    performFilterAndSearch();
-                }
-                currentSlotID = null;
-                currentSlotName = null;
-            });
-        }
+    // ========================================================
+    // SLOT MANAGEMENT LOGIC (NEW)
+    // ========================================================
+    
+    // Add Slot Button
+    if(btnAddSlot) {
+        btnAddSlot.addEventListener('click', async () => {
+            document.getElementById('slotModalTitle').textContent = 'Add Slot';
+            document.getElementById('slotIdInput').value = '';
+            document.getElementById('slotNameInput').value = '';
+            await loadSlotDropdowns();
+            showModal(manageSlotModal);
+        });
+    }
 
-        document.body.addEventListener('click', (e) => {
-            const exitButton = e.target.closest('.exit-btn');
-            if (exitButton) {
-                currentSlotID = exitButton.dataset.slotId;
-                currentSessionID = exitButton.dataset.sessionId;
-                const vehicle = vehiclesInData.find(v => v.SessionID === currentSessionID);
-                if (!vehicle) return; 
-                document.getElementById('exitSlotNumber').textContent = vehicle.SlotName;
-                document.getElementById('exitPlate').textContent = vehicle.PlateNumber;
-                document.getElementById('exitVehicle').textContent = vehicle.VehicleCategory;
-                document.getElementById('exitDateTime').textContent = vehicle.EnterDate + ' / ' + vehicle.EnterTime;
-                showModal(document.getElementById('exitModal'));
+    // Delegated Edit/Archive buttons in Slots Table
+    const slotsTableBody = document.getElementById('slotsTableBody');
+    if(slotsTableBody) {
+        slotsTableBody.addEventListener('click', async (e) => {
+            const btnEdit = e.target.closest('.btn-edit-slot');
+            const btnArchive = e.target.closest('.btn-archive-slot');
+            const btnRestore = e.target.closest('.btn-restore-slot');
+
+            if(btnEdit) {
+                const slot = slotsData.find(s => s.SlotID == btnEdit.dataset.id);
+                if(slot) {
+                    document.getElementById('slotModalTitle').textContent = 'Edit Slot';
+                    document.getElementById('slotIdInput').value = slot.SlotID;
+                    document.getElementById('slotNameInput').value = slot.SlotName;
+                    await loadSlotDropdowns();
+                    // Set selected values
+                    document.getElementById('slotAreaSelect').value = slot.AreaID;
+                    document.getElementById('slotTypeSelect').value = slot.AllowedVehicleTypeID;
+                    showModal(manageSlotModal);
+                }
+            }
+
+            if(btnArchive) {
+                if(confirm('Archive this slot?')) {
+                    const res = await fetchAPI('archiveSlot', { method: 'POST', body: createFormData({SlotID: btnArchive.dataset.id}) });
+                    if(res && res.success) {
+                        showToast(res.message);
+                        slotsData = []; // Clear cache
+                        performFilterAndSearch();
+                    }
+                }
+            }
+
+            if(btnRestore) {
+                if(confirm('Restore this slot?')) {
+                    const res = await fetchAPI('restoreSlot', { method: 'POST', body: createFormData({SlotID: btnRestore.dataset.id}) });
+                    if(res && res.success) {
+                        showToast(res.message);
+                        slotsData = []; // Clear cache
+                        performFilterAndSearch();
+                    }
+                }
             }
         });
+    }
 
-        const btnConfirmExit = document.getElementById('btnConfirmExit');
-        if (btnConfirmExit) {
-            btnConfirmExit.addEventListener('click', async () => {
-                if (!currentSlotID || !currentSessionID) return;
-                const formData = new FormData();
-                formData.append('action', 'exitVehicle');
-                formData.append('sessionID', currentSessionID);
-                formData.append('slotID', currentSlotID);
-                const result = await fetchAPI('exitVehicle', {
-                    method: 'POST',
-                    body: formData
-                });
-                hideModal(document.getElementById('exitModal'));
-                if (result && result.success) {
-                    showToast(result.message || 'Vehicle exited successfully!');
-                    // --- FIXED: Clear all caches ---
-                    slotsData = [];
-                    vehiclesInData = [];
-                    historyData = [];
-                    dashboardTableData = [];
-                    performFilterAndSearch();
-                }
-                currentSlotID = null;
-                currentSessionID = null;
-            });
+    async function loadSlotDropdowns() {
+        const areaSelect = document.getElementById('slotAreaSelect');
+        const typeSelect = document.getElementById('slotTypeSelect');
+        
+        areaSelect.innerHTML = '<option value="">Loading...</option>';
+        typeSelect.innerHTML = '<option value="">Loading...</option>';
+
+        // Load Areas
+        const areasData = await fetchAPI('getParkingAreas');
+        if (areasData && areasData.areas) {
+            areaSelect.innerHTML = areasData.areas.map(a => `<option value="${a.AreaID}">${escapeHTML(a.AreaName)}</option>`).join('');
+        }
+
+        // Load Types
+        const typesData = await fetchAPI('getVehicleTypes');
+        if (typesData && typesData.types) {
+            // Only show active types in dropdown
+            const activeTypes = typesData.types.filter(t => t.is_archived == 0);
+            typeSelect.innerHTML = activeTypes.map(t => `<option value="${t.VehicleTypeID}">${escapeHTML(t.TypeName)}</option>`).join('');
         }
     }
-    
+
+    if(slotForm) {
+        slotForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('slotIdInput').value;
+            const action = id ? 'updateSlot' : 'addSlot';
+            const formData = createFormData({
+                SlotID: id,
+                AreaID: document.getElementById('slotAreaSelect').value,
+                SlotName: document.getElementById('slotNameInput').value,
+                AllowedVehicleTypeID: document.getElementById('slotTypeSelect').value
+            });
+
+            const res = await fetchAPI(action, { method: 'POST', body: formData });
+            if(res && res.success) {
+                showToast(res.message);
+                hideModal(manageSlotModal);
+                slotsData = []; // Clear cache
+                performFilterAndSearch();
+            }
+        });
+    }
+
     // ========================================================
-    // === NEW LISTENERS FOR MANAGEMENT MODALS ===
+    // TYPES & CATEGORIES MANAGEMENT (Existing Logic)
     // ========================================================
     
-    // --- 1. Manage Types Modal ---
+    // Manage Types Modal
     openTypesModalBtn.addEventListener('click', () => {
         showModal(manageTypesModal);
         loadVehicleTypesList();
@@ -1152,15 +1036,21 @@ function escapeHtml(text) {
             typesListContainer.innerHTML = '<p style="text-align:center; color: #777;">No vehicle types found. Add one above.</p>';
             return;
         }
-        typesListContainer.innerHTML = data.types.map(type => `
-            <div class="category-list-item" data-id="${type.VehicleTypeID}" data-name="${type.TypeName}">
-                <span class="category-name">${escapeHTML(type.TypeName)}</span>
+        typesListContainer.innerHTML = data.types.map(type => {
+            const isArchived = type.is_archived == 1;
+            return `
+            <div class="category-list-item" data-id="${type.VehicleTypeID}" data-name="${type.TypeName}" style="${isArchived ? 'opacity:0.6;' : ''}">
+                <span class="category-name" style="${isArchived ? 'text-decoration: line-through;' : ''}">${escapeHTML(type.TypeName)}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="btn-icon btn-delete-category" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                    ${!isArchived ? 
+                        `<button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                         <button class="btn-icon btn-delete-category" title="Archive"><i class="fas fa-archive"></i></button>` // Using btn-delete-category class for logic simplicity
+                        :
+                        `<button class="btn-icon btn-restore-category" title="Restore" style="color: #28a745;"><i class="fas fa-trash-restore"></i></button>`
+                    }
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     }
     
     addNewTypeBtn.addEventListener('click', async () => {
@@ -1177,13 +1067,14 @@ function escapeHtml(text) {
         if (result && result.success) {
             showToast(result.message);
             newTypeNameInput.value = '';
-            refreshAllParkingDropdowns(); // This will also reload the list
+            refreshAllParkingDropdowns();
         }
     });
 
     typesListContainer.addEventListener('click', async (e) => {
         const editBtn = e.target.closest('.btn-edit-category');
-        const deleteBtn = e.target.closest('.btn-delete-category');
+        const deleteBtn = e.target.closest('.btn-delete-category'); // Acts as Archive
+        const restoreBtn = e.target.closest('.btn-restore-category');
         const item = e.target.closest('.category-list-item');
         if (!item) return;
 
@@ -1195,12 +1086,25 @@ function escapeHtml(text) {
         }
         
         if (deleteBtn) {
-            if (!confirm(`Are you sure you want to delete "${name}"?\nThis cannot be undone.`)) {
+            if (!confirm(`Archive type "${name}"?\nThis cannot be undone.`)) {
                 return;
             }
             const formData = new FormData();
             formData.append('TypeID', id);
-            const result = await fetchAPI('deleteVehicleType', { method: 'POST', body: formData });
+            const result = await fetchAPI('archiveVehicleType', { method: 'POST', body: formData });
+            if (result && result.success) {
+                showToast(result.message);
+                refreshAllParkingDropdowns();
+            }
+        }
+
+        if (restoreBtn) {
+            if (!confirm(`Restore type "${name}"?`)) {
+                return;
+            }
+            const formData = new FormData();
+            formData.append('TypeID', id);
+            const result = await fetchAPI('restoreVehicleType', { method: 'POST', body: formData });
             if (result && result.success) {
                 showToast(result.message);
                 refreshAllParkingDropdowns();
@@ -1208,7 +1112,7 @@ function escapeHtml(text) {
         }
     });
 
-    // --- 2. Manage Categories Modal ---
+    // Manage Categories Modal
     openCategoriesModalBtn.addEventListener('click', () => {
         showModal(manageCategoriesModal);
         loadVehicleTypesDropdownForManager();
@@ -1221,7 +1125,7 @@ function escapeHtml(text) {
         if (data && data.types) {
             categoryManagerTypeSelect.innerHTML = '<option value="">Select a Vehicle Type</option>';
             data.types.forEach(type => {
-                categoryManagerTypeSelect.innerHTML += `<option value="${type.VehicleTypeID}">${type.TypeName}</option>`;
+                categoryManagerTypeSelect.innerHTML += `<option value="${type.VehicleTypeID}">${type.TypeName} ${type.is_archived == 1 ? '(Archived)' : ''}</option>`;
             });
         }
     }
@@ -1246,15 +1150,21 @@ function escapeHtml(text) {
             categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">No categories found for this type. Add one above.</p>';
             return;
         }
-        categoriesListContainer.innerHTML = data.categories.map(cat => `
-            <div class="category-list-item" data-id="${cat.VehicleCategoryID}" data-name="${cat.CategoryName}">
-                <span class="category-name">${escapeHTML(cat.CategoryName)}</span>
+        categoriesListContainer.innerHTML = data.categories.map(cat => {
+            const isArchived = cat.is_archived == 1;
+            return `
+            <div class="category-list-item" data-id="${cat.VehicleCategoryID}" data-name="${cat.CategoryName}" style="${isArchived ? 'opacity:0.6;' : ''}">
+                <span class="category-name" style="${isArchived ? 'text-decoration: line-through;' : ''}">${escapeHTML(cat.CategoryName)}</span>
                 <div class="category-actions">
-                    <button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="btn-icon btn-delete-category" title="Delete"><i class="fas fa-trash-alt"></i></button>
+                    ${!isArchived ? 
+                        `<button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
+                         <button class="btn-icon btn-delete-category" title="Archive"><i class="fas fa-archive"></i></button>`
+                        :
+                        `<button class="btn-icon btn-restore-category" title="Restore" style="color: #28a745;"><i class="fas fa-trash-restore"></i></button>`
+                    }
                 </div>
             </div>
-        `).join('');
+        `}).join('');
     }
     
     addNewCategoryBtn.addEventListener('click', async () => {
@@ -1277,14 +1187,15 @@ function escapeHtml(text) {
         if (result && result.success) {
             showToast(result.message);
             newCategoryNameInput.value = '';
-            await loadVehicleCategoriesList(typeID); // Reload just this list
-            await refreshAllParkingDropdowns(); // Reload all other dropdowns
+            await loadVehicleCategoriesList(typeID);
+            await refreshAllParkingDropdowns();
         }
     });
 
     categoriesListContainer.addEventListener('click', async (e) => {
         const editBtn = e.target.closest('.btn-edit-category');
         const deleteBtn = e.target.closest('.btn-delete-category');
+        const restoreBtn = e.target.closest('.btn-restore-category');
         const item = e.target.closest('.category-list-item');
         if (!item) return;
 
@@ -1296,24 +1207,39 @@ function escapeHtml(text) {
         }
         
         if (deleteBtn) {
-            if (!confirm(`Are you sure you want to delete "${name}"?\nThis cannot be undone.`)) {
+            if (!confirm(`Are you sure you want to archive "${name}"?\nThis cannot be undone.`)) {
                 return;
             }
             const formData = new FormData();
             formData.append('CategoryID', id);
-            const result = await fetchAPI('deleteVehicleCategory', { method: 'POST', body: formData });
+            const result = await fetchAPI('archiveVehicleCategory', { method: 'POST', body: formData });
             if (result && result.success) {
                 showToast(result.message);
                 const typeID = categoryManagerTypeSelect.value;
-                await loadVehicleCategoriesList(typeID); // Reload just this list
-                await refreshAllParkingDropdowns(); // Reload all other dropdowns
+                await loadVehicleCategoriesList(typeID);
+                await refreshAllParkingDropdowns();
+            }
+        }
+
+        if (restoreBtn) {
+            if (!confirm(`Restore category "${name}"?`)) {
+                return;
+            }
+            const formData = new FormData();
+            formData.append('CategoryID', id);
+            const result = await fetchAPI('restoreVehicleCategory', { method: 'POST', body: formData });
+            if (result && result.success) {
+                showToast(result.message);
+                const typeID = categoryManagerTypeSelect.value;
+                await loadVehicleCategoriesList(typeID);
+                await refreshAllParkingDropdowns();
             }
         }
     });
 
-    // --- 3. Generic Edit Name Modal ---
+    // Generic Edit Name Modal
     function openEditNameModal(type, id, name) {
-        editTypeInput.value = type; // 'vehicleType' or 'vehicleCategory'
+        editTypeInput.value = type;
         editIdInput.value = id;
         editNameInput.value = name;
         editNameTitle.textContent = `Edit ${type === 'vehicleType' ? 'Type' : 'Category'} Name`;
@@ -1342,34 +1268,138 @@ function escapeHtml(text) {
             action = 'updateVehicleCategory';
             formData.append('CategoryID', id);
             formData.append('CategoryName', name);
-        } else {
-            return; // Should not happen
         }
 
         const result = await fetchAPI(action, { method: 'POST', body: formData });
         if (result && result.success) {
             showToast(result.message);
             hideModal(editNameModal);
-            refreshAllParkingDropdowns(); // Reload everything
+            refreshAllParkingDropdowns();
         }
     });
 
+    // ========================================================
+    // REFRESH & LOAD DROPDOWNS
+    // ========================================================
+    
+    async function loadEnterVehicleDropdowns() {
+        const typeSelect = document.getElementById('vehicleType');
+        const categorySelect = document.getElementById('categorySelect');
+        const currentType = typeSelect.value; 
+        
+        typeSelect.innerHTML = '<option value="">Loading...</option>';
+        categorySelect.innerHTML = '<option value="">Select vehicle type first...</option>';
+        
+        const data = await fetchAPI('getVehicleTypes');
+        if (data && data.types) {
+            typeSelect.innerHTML = '<option value="">Select</option>';
+            data.types.forEach(type => {
+                // Only show active types
+                if(type.is_archived == 0) {
+                    typeSelect.innerHTML += `<option value="${type.VehicleTypeID}">${type.TypeName}</option>`;
+                }
+            });
+            typeSelect.value = currentType;
+        }
+    }
 
-    // ========================================================
-    // SORTING EVENT LISTENERS (REFACTORED)
-    // ========================================================
-    function setupSortListeners() {
+    async function refreshAllParkingDropdowns() {
+        await loadEnterVehicleDropdowns();
+        await loadVehicleTypesList();
+        await loadVehicleTypesDropdownForManager();
+        categoriesListContainer.innerHTML = '<p style="text-align:center; color: #777;">Please select a vehicle type above.</p>';
+    }
+
+    // Listener for "Vehicle Type" dropdown in "Enter Vehicle" modal
+    document.getElementById('vehicleType').addEventListener('change', async (e) => {
+        const vehicleTypeID = e.target.value;
+        const categorySelect = document.getElementById('categorySelect');
+        if (!vehicleTypeID) {
+            categorySelect.innerHTML = '<option value="">Select vehicle type first...</option>';
+            return;
+        }
+        categorySelect.innerHTML = '<option value="">Loading...</option>';
+        const data = await fetchAPI('getVehicleCategories', {}, `vehicleTypeID=${vehicleTypeID}`);
+        if (data && data.categories) {
+            categorySelect.innerHTML = '<option value="">Select</option>';
+            data.categories.forEach(cat => {
+                if(cat.is_archived == 0) {
+                    categorySelect.innerHTML += `<option value="${cat.VehicleCategoryID}">${cat.CategoryName}</option>`;
+                }
+            });
+        }
+    });
+
+    function setupParkingListeners() {
+        document.querySelectorAll('.filterDropdown').forEach(el => {
+            el.addEventListener('change', () => {
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                slotsData = [];
+                vehiclesInData = [];
+                historyData = [];
+                dashboardTableData = [];
+                performFilterAndSearch();
+            });
+        });
+
+        document.querySelectorAll('.searchInput').forEach(el => {
+            el.addEventListener('input', () => {
+                const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                
+                if (activeTab === 'slots') {
+                    let filtered = getFilteredSlots();
+                    sortData(filtered, sortState.slots.column, sortState.slots.direction);
+                    renderSlots(filtered);
+                }
+                if (activeTab === 'vehicleIn') {
+                    let filtered = getFilteredVehiclesIn();
+                    sortData(filtered, sortState.vehicleIn.column, sortState.vehicleIn.direction);
+                    renderVehicleIn(filtered);
+                }
+                if (activeTab === 'history') {
+                    let filtered = getFilteredHistory();
+                    sortData(filtered, sortState.history.column, sortState.history.direction);
+                    renderHistory(filtered);
+                }
+            });
+        });
+        
+        document.querySelectorAll('.refreshBtn').forEach(btn => {
+            btn.addEventListener('click', async () => { // Make async
+                const controlsRow = btn.closest('.controlsRow');
+                
+                // 1. Reset Filter UI values
+                controlsRow.querySelectorAll('.filterDropdown').forEach(sel => sel.value = 'all');
+                controlsRow.querySelectorAll('.searchInput').forEach(inp => inp.value = '');
+                
+                // 2. Clear Data Cache
+                slotsData = []; 
+                vehiclesInData = [];
+                historyData = [];
+                dashboardTableData = []; 
+
+                // 3. Re-fetch Data
+                // We reload filter options (in case areas changed) and then the table data
+                await loadFilterDropdowns(); 
+                await performFilterAndSearch();
+                
+                showToast('Data refreshed!');
+            });
+        });
+
+        // Setup Sorting
         document.querySelectorAll('th.sortable').forEach(th => {
             th.addEventListener('click', () => {
                 let column = th.dataset.sort;
                 const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
                 if (!sortState[activeTab]) return;
 
-                // --- NEW: Consolidate EntryDate/EntryTime clicks ---
-                if (column === 'EntryDate') {
-                    column = 'EntryTime'; // Consolidate to 'EntryTime' for sorting
-                }
-                // --- End New ---
+                if (column === 'EntryDate') column = 'EntryTime';
                 
                 const currentSort = sortState[activeTab];
                 let direction = 'asc';
@@ -1381,103 +1411,241 @@ function escapeHtml(text) {
                 currentPages.vehicleIn = 1;
                 currentPages.history = 1;
                 
-                // --- REFACTORED: Simplified sorting ---
-                const filterAndSortData = (tab) => {
-                    let filteredData = [];
-                    if (tab === 'dashboard') {
-                        filteredData = getFilteredDashboard();
-                        const newCardTotals = filteredData.reduce((acc, area) => {
-                            acc.occupied += parseFloat(area.occupied) || 0;
-                            acc.available += parseFloat(area.available) || 0;
-                            acc.total += parseFloat(area.total) || 0;
-                            return acc;
-                        }, { occupied: 0, available: 0, total: 0 });
-                        sortData(filteredData, column, direction);
-                        renderDashboard({ cards: newCardTotals, table: filteredData });
-                    
-                    } else if (tab === 'slots') {
-                        filteredData = getFilteredSlots();
-                        sortData(filteredData, column, direction);
-                        renderSlots(filteredData);
-                    
-                    } else if (tab === 'vehicleIn') {
-                        filteredData = getFilteredVehiclesIn();
-                        sortData(filteredData, column, direction);
-                        renderVehicleIn(filteredData);
-                    
-                    } else if (tab === 'history') {
-                        filteredData = getFilteredHistory();
-                        sortData(filteredData, column, direction);
-                        renderHistory(filteredData);
-                    }
-                };
-                // --- End Refactored ---
-
-                filterAndSortData(activeTab);
+                performFilterAndSearch(); // This will trigger re-render with sort
             });
         });
-    }
-    
-    // ========================================================
-    // Parking Selection for Rooms
-    // ========================================================
-async function loadGuestRoomsDropdown() {
-    const roomSelect = document.getElementById('roomNumber');
-    if (!roomSelect) return; // Safety check
 
-    roomSelect.innerHTML = '<option value="">Loading rooms...</option>';
-    
-    // Calls the 'getGuests' endpoint (which now returns only room numbers)
-    const data = await fetchAPI('getGuests'); 
-    
-    // Check for 'data.rooms'
-    if (data && data.rooms && data.rooms.length > 0) {
-        roomSelect.innerHTML = '<option value="">Select Room</option>';
+        // Download Buttons
+        const downloadBtn = document.getElementById('downloadBtnHistory');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => {
+                let filteredData = getFilteredHistory();
+                const { column, direction } = sortState.history;
+                sortData(filteredData, column, direction);
+
+                if (filteredData.length === 0) {
+                    showToast('No data to download.', 'error');
+                    return;
+                }
+
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    doc.setFontSize(18);
+                    doc.text("Parking History Report", 14, 22);
+                    doc.setFontSize(11);
+                    doc.setTextColor(100);
+                    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+                    
+                    const head = [[ 'Slot', 'Plate #', 'Room', 'Name', 'Type', 'Category', 'Duration', 'Entry', 'Exit' ]];
+                    const body = filteredData.map(v => [ v.SlotName, v.PlateNumber, v.RoomNumber, v.GuestName, v.VehicleType, v.VehicleCategory, v.ParkingTime, v.EntryDateTime, v.ExitDateTime ]);
+
+                    doc.autoTable({
+                        head: head, body: body, startY: 35,
+                        headStyles: { fillColor: [72, 12, 27] },
+                        styles: { fontSize: 8, cellPadding: 2 },
+                        alternateRowStyles: { fillColor: [245, 245, 245] }
+                    });
+                    doc.save('Parking-History-Report.pdf');
+                } catch (e) {
+                    console.error("Error generating PDF:", e);
+                    showToast('Error generating PDF. See console.', 'error');
+                }
+            });
+        }
         
-        data.rooms.forEach(room => {
-            const roomNumber = room.room_num; 
-            
-            if (roomNumber) {
-                roomSelect.innerHTML += `<option value="${escapeHTML(roomNumber)}">
-                    ${escapeHTML(roomNumber)}
-                </option>`;
+        const downloadBtnActive = document.getElementById('downloadBtnActive');
+        if (downloadBtnActive) {
+            downloadBtnActive.addEventListener('click', () => {
+                let filteredData = getFilteredVehiclesIn();
+                const { column, direction } = sortState.vehicleIn; 
+                sortData(filteredData, column, direction);
+
+                if (filteredData.length === 0) {
+                    showToast('No data to download.', 'error');
+                    return;
+                }
+
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+                    doc.setFontSize(18);
+                    doc.text("Active Parking Report", 14, 22); 
+                    doc.setFontSize(11);
+                    doc.setTextColor(100);
+                    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+
+                    const head = [[ 'Slot', 'Plate #', 'Room', 'Name', 'Type', 'Category', 'Enter Time', 'Enter Date' ]];
+                    const body = filteredData.map(v => [ v.SlotName, v.PlateNumber, v.RoomNumber, v.GuestName, v.VehicleType, v.VehicleCategory, v.EnterTime, v.EnterDate ]);
+
+                    doc.autoTable({
+                        head: head, body: body, startY: 35,
+                        headStyles: { fillColor: [72, 12, 27] },
+                        styles: { fontSize: 8, cellPadding: 2 },
+                        alternateRowStyles: { fillColor: [245, 245, 245] }
+                    });
+                    doc.save('Active-Parking-Report.pdf'); 
+                } catch (e) {
+                    console.error("Error generating PDF:", e);
+                    showToast('Error generating PDF. See console.', 'error');
+                }
+            });
+        }
+        
+        // Enter Vehicle (Global Listener)
+        document.body.addEventListener('click', (e) => {
+            const enterButton = e.target.closest('.btn-enter');
+            if (enterButton) {
+                currentSlotID = enterButton.dataset.slotId;
+                currentSlotName = enterButton.dataset.slotName;
+                document.getElementById('slotNumberTitle').textContent = currentSlotName;
+                document.getElementById('enter-vehicle-form').reset();
+                loadEnterVehicleDropdowns();
+                showModal(document.getElementById('enterVehicleModal'));
             }
         });
-    } else {
-        // Fallback if no rooms are found or API fails
-        roomSelect.innerHTML = '<option value="">No rooms found</option>';
-        roomSelect.innerHTML += '<option value="WALK-IN">Walk-in / Other</option>';
-    }
-}
+        
+        const enterVehicleForm = document.getElementById('enter-vehicle-form');
+        if (enterVehicleForm) {
+            enterVehicleForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (!document.getElementById('guestName').value || !document.getElementById('plateNumber').value || !document.getElementById('vehicleType').value || !document.getElementById('categorySelect').value) {
+                    showToast('Please fill out all required fields.', 'error');
+                    return;
+                }
+                hideModal(document.getElementById('enterVehicleModal'));
+                showModal(document.getElementById('confirmModal'));
+            });
+        }
+        
+        const btnConfirmEnter = document.getElementById('btnConfirmEnter');
+        if (btnConfirmEnter) {
+            btnConfirmEnter.addEventListener('click', async () => {
+                const formData = new FormData();
+                formData.append('action', 'enterVehicle');
+                formData.append('slotID', currentSlotID);
+                formData.append('plateNumber', document.getElementById('plateNumber').value.toUpperCase());
+                formData.append('guestName', document.getElementById('guestName').value);
+                formData.append('roomNumber', document.getElementById('roomNumber').value);
+                formData.append('vehicleTypeID', document.getElementById('vehicleType').value);
+                formData.append('vehicleCategoryID', document.getElementById('categorySelect').value);
 
+                const result = await fetchAPI('enterVehicle', { method: 'POST', body: formData });
+                hideModal(document.getElementById('confirmModal'));
+                if (result && result.success) {
+                    showModal(document.getElementById('successModal'));
+                    showToast(result.message || 'Vehicle parked successfully!');
+                    slotsData = []; vehiclesInData = []; historyData = []; dashboardTableData = [];
+                    performFilterAndSearch();
+                }
+                currentSlotID = null;
+                currentSlotName = null;
+            });
+        }
+
+        // Exit Vehicle (Global Listener)
+        document.body.addEventListener('click', (e) => {
+            const exitButton = e.target.closest('.exit-btn');
+            if (exitButton) {
+                currentSlotID = exitButton.dataset.slotId;
+                currentSessionID = exitButton.dataset.sessionId;
+                const vehicle = vehiclesInData.find(v => v.SessionID == currentSessionID); // Loose equality
+                if (!vehicle) return; 
+                document.getElementById('exitSlotNumber').textContent = vehicle.SlotName;
+                document.getElementById('exitPlate').textContent = vehicle.PlateNumber;
+                document.getElementById('exitVehicle').textContent = vehicle.VehicleCategory;
+                document.getElementById('exitDateTime').textContent = vehicle.EnterDate + ' / ' + vehicle.EnterTime;
+                showModal(document.getElementById('exitModal'));
+            }
+        });
+
+        const btnConfirmExit = document.getElementById('btnConfirmExit');
+        if (btnConfirmExit) {
+            btnConfirmExit.addEventListener('click', async () => {
+                if (!currentSlotID || !currentSessionID) return;
+                const formData = new FormData();
+                formData.append('action', 'exitVehicle');
+                formData.append('sessionID', currentSessionID);
+                formData.append('slotID', currentSlotID);
+                const result = await fetchAPI('exitVehicle', { method: 'POST', body: formData });
+                hideModal(document.getElementById('exitModal'));
+                if (result && result.success) {
+                    showToast(result.message || 'Vehicle exited successfully!');
+                    slotsData = []; vehiclesInData = []; historyData = []; dashboardTableData = [];
+                    performFilterAndSearch();
+                }
+                currentSlotID = null;
+                currentSessionID = null;
+            });
+        }
+    }
+    
     // ========================================================
-    // INITIALIZE ON PAGE LOAD
+    // INITIALIZE
     // ========================================================
     
     async function loadFilterDropdowns() {
         const data = await fetchAPI('getParkingAreas');
         if (data && data.areas) {
-            const areaFilterOptions = data.areas.map(a => `<option value="${a.AreaName}">${a.AreaName}</option>`).join('');
-            const allAreaFilters = document.querySelectorAll('.filterDropdown[id^="areaFilter"]');
-            allAreaFilters.forEach(select => {
+            const areaFilterOptions = data.areas.map(a => `<option value="${escapeHTML(a.AreaName)}">${escapeHTML(a.AreaName)}</option>`).join('');
+            document.querySelectorAll('.filterDropdown[id^="areaFilter"]').forEach(select => {
                 select.innerHTML = `<option value="all">All Areas</option>${areaFilterOptions}`;
             });
         }
     }
     
+    async function loadGuestRoomsDropdown() {
+        const roomSelect = document.getElementById('roomNumber');
+        if (!roomSelect) return;
+
+        roomSelect.innerHTML = '<option value="">Loading rooms...</option>';
+        const data = await fetchAPI('getGuests'); 
+        if (data && data.rooms && data.rooms.length > 0) {
+            roomSelect.innerHTML = '<option value="">Select Room</option>';
+            data.rooms.forEach(room => {
+                roomSelect.innerHTML += `<option value="${escapeHTML(room.room_num)}">${escapeHTML(room.room_num)}</option>`;
+            });
+        } else {
+            roomSelect.innerHTML = '<option value="">No rooms found</option>';
+        }
+        roomSelect.innerHTML += '<option value="WALK-IN">Walk-in / Other</option>';
+    }
+    
     function initializeApp() {
         setupUIListeners();
-        setupParkingListeners();
-        setupSortListeners(); 
+        setupParkingListeners(); // Filter/Search listeners
+        // Note: setupSortListeners is called inside render functions implicitly via performFilterAndSearch logic if we wanted dynamic sort
+        // but here we attach listeners once.
+        // Let's attach sort listeners once here.
+        document.querySelectorAll('th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                let column = th.dataset.sort;
+                const activeTab = document.querySelector('.tabBtn.active').getAttribute('data-tab');
+                if (!sortState[activeTab]) return;
+
+                if (column === 'EntryDate') column = 'EntryTime';
+                
+                const currentSort = sortState[activeTab];
+                let direction = 'asc';
+                if (currentSort.column === column) {
+                    direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+                }
+                sortState[activeTab] = { column, direction };
+                currentPages.slots = 1;
+                currentPages.vehicleIn = 1;
+                currentPages.history = 1;
+                
+                performFilterAndSearch();
+            });
+        });
         
-        // Attach sanitization listener to all relevant inputs
         document.querySelectorAll('.sanitize-on-paste').forEach(input => {
             input.addEventListener('paste', sanitizeOnPaste);
         });
 
         loadFilterDropdowns();
         performFilterAndSearch();
-        loadGuestRoomsDropdown()
+        loadGuestRoomsDropdown();
     }
     
     initializeApp();
