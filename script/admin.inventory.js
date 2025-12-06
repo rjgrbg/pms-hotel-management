@@ -51,37 +51,16 @@ function showInventoryToast(message) {
     }, 3000);
 }
 
-// --- PDF EXPORT FUNCTION ---
+// --- PDF EXPORT FUNCTION (DEPRECATED - Now using download-utils.js) ---
+// This function is kept for backwards compatibility but downloads now use downloadData()
 function downloadInventoryPDF(headers, data, title, filename) {
-    if (!window.jspdf) {
-        alert("PDF Library not loaded.");
-        return;
+    // Redirect to new download utility
+    if (typeof downloadData === 'function') {
+        downloadData(headers, data, title, filename);
+    } else {
+        console.error('Download utility not loaded');
+        alert('Download feature is not available. Please refresh the page.');
     }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
-
-    // Header
-    doc.setFontSize(18);
-    doc.setTextColor(72, 12, 27); // #480c1b
-    doc.text(title, 14, 20);
-    
-    // Date
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-
-    // Table
-    doc.autoTable({
-        head: [headers],
-        body: data,
-        startY: 35,
-        theme: 'grid',
-        styles: { fontSize: 10, cellPadding: 3, overflow: 'linebreak', textColor: 50 },
-        headStyles: { fillColor: '#480c1b', textColor: '#ffffff', fontStyle: 'bold', halign: 'center' },
-        columnStyles: { 4: { cellWidth: 60 } }
-    });
-
-    doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 // =============================================
@@ -399,7 +378,7 @@ function initInventoryFilters() {
                 row.ItemID, row.ItemName, row.Category, row.ItemQuantity, 
                 row.ItemDescription || '', row.ItemStatus, row.DateofStockIn
             ]);
-            downloadInventoryPDF(headers, tableData, "Inventory List", "inventory_list");
+            downloadData(headers, tableData, "Inventory List", "inventory_list");
         };
     }
 }
@@ -452,7 +431,7 @@ function initInventoryHistoryFilters() {
                 row.QuantityChange, row.NewQuantity, row.ItemStatus, 
                 row.DateofStockIn || 'N/A', row.PerformedBy
             ]);
-            downloadInventoryPDF(headers, tableData, "Inventory History Logs", "inventory_history");
+            downloadData(headers, tableData, "Inventory History Logs", "inventory_history");
         };
     }
 }

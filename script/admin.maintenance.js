@@ -160,29 +160,15 @@ function populateMTSelect(elementId, data, defaultText) {
     if (currentVal) select.value = currentVal;
 }
 
+// DEPRECATED - Now using download-utils.js
+// This function is kept for backwards compatibility but downloads now use downloadData()
 function downloadMTPDF(headers, data, title, filename) {
-    if (!window.jspdf) {
-        alert("PDF Library not loaded.");
-        return;
+    if (typeof downloadData === 'function') {
+        downloadData(headers, data, title, filename);
+    } else {
+        console.error('Download utility not loaded');
+        alert('Download feature is not available. Please refresh the page.');
     }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4');
-    doc.setFontSize(18);
-    doc.setTextColor(72, 12, 27); 
-    doc.text(title, 14, 20);
-    doc.setFontSize(11);
-    doc.setTextColor(100); 
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-    doc.autoTable({
-        head: [headers],
-        body: data,
-        startY: 35,
-        theme: 'grid',
-        styles: { fontSize: 10, cellPadding: 3, overflow: 'linebreak', textColor: 50 },
-        headStyles: { fillColor: '#480c1b', textColor: '#ffffff', fontStyle: 'bold', halign: 'center' },
-        columnStyles: { 0: { cellWidth: 'auto' }, 1: { cellWidth: 'auto' } }
-    });
-    doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 // ==========================================
@@ -282,7 +268,7 @@ function initMTRequestFilters() {
                 row.floor, row.room, row.date, row.requestTime, row.lastMaintenance, 
                 typeof formatStatus === 'function' ? formatStatus(row.status) : row.status, row.staff
             ]);
-            downloadMTPDF(headers, tableData, "Maintenance Requests", "maintenance_requests");
+            downloadData(headers, tableData, "Maintenance Requests", "maintenance_requests");
         };
     }
 }
@@ -411,7 +397,7 @@ function initMTHistoryFilters() {
                 row.floor, row.room, row.issueType, row.date, row.requestedTime, 
                 row.completedTime, row.staff, row.status, row.remarks || ''
             ]);
-            downloadMTPDF(headers, tableData, "Maintenance History Logs", "maintenance_history");
+            downloadData(headers, tableData, "Maintenance History Logs", "maintenance_history");
         };
     }
 }

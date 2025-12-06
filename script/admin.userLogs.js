@@ -39,51 +39,15 @@ function showLogsToast(message) {
     }, 3000);
 }
 
-// --- LANDSCAPE PDF GENERATOR ---
+// --- LANDSCAPE PDF GENERATOR (DEPRECATED - Now using download-utils.js) ---
+// This function is kept for backwards compatibility but downloads now use downloadData()
 function downloadLogsPDF(headers, data, title, filename) {
-    if (!window.jspdf) {
-        alert("PDF Library not loaded. Please check your script tags.");
-        return;
+    if (typeof downloadData === 'function') {
+        downloadData(headers, data, title, filename);
+    } else {
+        console.error('Download utility not loaded');
+        alert('Download feature is not available. Please refresh the page.');
     }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
-
-    // Header Title
-    doc.setFontSize(18);
-    doc.setTextColor(72, 12, 27); // Custom Color #480c1b
-    doc.text(title, 14, 20);
-    
-    // Date
-    doc.setFontSize(11);
-    doc.setTextColor(100); 
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-
-    // Table Generation
-    doc.autoTable({
-        head: [headers],
-        body: data,
-        startY: 35,
-        theme: 'grid',
-        styles: { 
-            fontSize: 9, 
-            cellPadding: 3, 
-            overflow: 'linebreak', 
-            textColor: 50 
-        },
-        headStyles: { 
-            fillColor: '#480c1b', // Custom Header Background
-            textColor: '#ffffff', // White Text
-            fontStyle: 'bold', 
-            halign: 'center' 
-        },
-        // Action Column Bold
-        columnStyles: {
-            5: { fontStyle: 'bold' }
-        }
-    });
-
-    doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 // ==========================================
@@ -240,7 +204,7 @@ function initUserLogsFilters() {
                 ];
             });
 
-            downloadLogsPDF(headers, body, 'User Logs Report', 'user_logs');
+            downloadData(headers, body, 'User Logs Report', 'user_logs');
         };
     }
 }
