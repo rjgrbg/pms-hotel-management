@@ -152,25 +152,18 @@ function handleRefreshHistory() {
     applyHistoryFiltersAndRender();
 }
 
-/**
- * Downloads the *filtered* history data as a PDF
- */
-function downloadHistoryPDF() {
-    if (filteredHistory.length === 0) {
-        alert("No history data to export based on current filters.");
+
+// Initialize download button handler
+function initHistoryDownload() {
+  const downloadBtn = document.getElementById('historyDownloadBtn');
+  if (downloadBtn) {
+    downloadBtn.onclick = () => {
+      if (filteredHistory.length === 0) {
+        alert('No data available to download');
         return;
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    // Define the headers
-    const headers = [
-        ['Floor', 'Room', 'Task', 'Date', 'Requested', 'Completed', 'Staff', 'Status', 'Remarks']
-    ];
-
-    // Map the filtered data to match the headers
-    const bodyData = filteredHistory.map(h => [
+      }
+      const headers = ['Floor', 'Room', 'Task', 'Date', 'Requested Time', 'Completed Time', 'Staff', 'Status', 'Remarks'];
+      const tableData = filteredHistory.map(h => [
         h.floor ?? 'N/A',
         h.room ?? 'N/A',
         h.issueType ?? 'N/A',
@@ -180,28 +173,12 @@ function downloadHistoryPDF() {
         h.staff ?? 'N/A',
         h.status ?? 'N/A',
         h.remarks ?? ''
-    ]);
-
-    // Add a title
-    doc.setFontSize(18);
-    doc.text("Housekeeping History Report", 14, 22);
-
-    // Add the table
-    doc.autoTable({
-        startY: 30,
-        head: headers,
-        body: bodyData,
-        theme: 'striped',
-        headStyles: { fillColor: [41, 128, 185] },
-        didParseCell: (data) => {
-            // Truncate remarks
-            if (data.column.dataKey === 8) { // 8 is the index for Remarks
-                if (data.cell.raw) {
-                    data.cell.text = data.cell.raw.substring(0, 30) + (data.cell.raw.length > 30 ? '...' : '');
-                }
-            }
-        }
-    });
-
-    doc.save(`housekeeping-history-${new Date().toISOString().split('T')[0]}.pdf`);
+      ]);
+      if (typeof downloadData === 'function') {
+        downloadData(headers, tableData, 'Housekeeping History Report', 'housekeeping-history');
+      } else {
+        alert('Download utility not available. Please refresh the page.');
+      }
+    };
+  }
 }

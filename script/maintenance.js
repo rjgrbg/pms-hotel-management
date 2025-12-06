@@ -74,6 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
   applyRequestFiltersAndRender();
   applyHistoryFiltersAndRender(); 
   
+  // Initialize download buttons
+  if (typeof initRequestsDownload === 'function') initRequestsDownload();
+  if (typeof initHistoryDownload === 'function') initHistoryDownload();
+  
   setupEventListeners();
 });
 
@@ -107,7 +111,6 @@ function setupEventListeners() {
         saveRequestFiltersToSession(); 
     });
     document.getElementById('refreshBtn')?.addEventListener('click', resetRequestFilters);
-    document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsPDF);
 
     // --- History Filters & Actions ---
     document.getElementById('floorFilterHistory')?.addEventListener('change', () => {
@@ -122,7 +125,6 @@ function setupEventListeners() {
     
     document.getElementById('historySearchInput')?.addEventListener('input', applyHistoryFiltersAndRender); 
     document.getElementById('historyRefreshBtn')?.addEventListener('click', resetHistoryFilters); 
-    document.getElementById('historyDownloadBtn')?.addEventListener('click', downloadHistoryPDF); 
 
     // --- Issue Type Modal ---
     document.getElementById('closeIssueTypeModalBtn')?.addEventListener('click', hideIssueTypeModal);
@@ -690,78 +692,6 @@ async function resetHistoryFilters() {
     }
 }
 
-// ===== REQUESTS PDF DOWNLOAD =====
-function downloadRequestsPDF() {
-    if (filteredRequests.length === 0) {
-        alert("No request data to export based on current filters.");
-        return;
-    }
-    
-    if (!window.jspdf) { alert("PDF Library not loaded."); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
-
-    doc.setFontSize(18);
-    doc.setTextColor(72, 12, 27); // #480c1b
-    doc.text("Maintenance Requests Report", 14, 22);
-    
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-
-    const headers = [['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff In Charge']];
-    const bodyData = filteredRequests.map(req => [
-        req.floor ?? 'N/A', req.room ?? 'N/A', req.date ?? 'N/A',
-        req.requestTime ?? 'N/A', req.lastMaintenance ?? 'N/A',
-        req.status ?? 'N/A', req.staff ?? 'N/A'
-    ]);
-
-    doc.autoTable({
-        startY: 35, head: headers, body: bodyData, theme: 'grid',
-        headStyles: { fillColor: '#480c1b', textColor: '#ffffff', fontStyle: 'bold', halign: 'center' },
-        styles: { fontSize: 10, cellPadding: 3 },
-        columnStyles: { 4: { cellWidth: 35 }, 6: { cellWidth: 35 } }
-    });
-
-    doc.save('maintenance-requests.pdf');
-}
-
-// ===== HISTORY PDF DOWNLOAD (Added) =====
-function downloadHistoryPDF() {
-    if (filteredHistory.length === 0) {
-        alert("No history data to export based on current filters.");
-        return;
-    }
-    
-    if (!window.jspdf) { alert("PDF Library not loaded."); return; }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); 
-
-    doc.setFontSize(18);
-    doc.setTextColor(72, 12, 27); 
-    doc.text("Maintenance History Report", 14, 22);
-    
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-
-    // Assuming filteredHistory has fields like: floor, room, issueType, date, requestedTime, completedTime, staff, status, remarks
-    const headers = [['Floor', 'Room', 'Issue Type', 'Date', 'Req Time', 'Comp Time', 'Staff', 'Status', 'Remarks']];
-    const bodyData = filteredHistory.map(hist => [
-        hist.floor, hist.room, hist.issueType, hist.date,
-        hist.requestedTime, hist.completedTime, hist.staff,
-        hist.status, hist.remarks
-    ]);
-
-    doc.autoTable({
-        startY: 35, head: headers, body: bodyData, theme: 'grid',
-        headStyles: { fillColor: '#480c1b', textColor: '#ffffff', fontStyle: 'bold', halign: 'center' },
-        styles: { fontSize: 9, cellPadding: 3 },
-        columnStyles: { 8: { cellWidth: 50 } } // Remarks wider
-    });
-
-    doc.save('maintenance-history.pdf');
-}
 
 // =======================================================
 // ===== HISTORY TAB RENDER LOGIC =====

@@ -371,21 +371,18 @@ function resetRequestFilters() {
     applyRequestFiltersAndRender();
 }
 
-// ===== REQUESTS PDF DOWNLOAD =====
-function downloadRequestsPDF() {
-    if (filteredRequests.length === 0) {
-        alert("No request data to export based on current filters.");
+
+// Initialize download button handler
+function initRequestsDownload() {
+  const downloadBtn = document.getElementById('downloadBtnRequests');
+  if (downloadBtn) {
+    downloadBtn.onclick = () => {
+      if (filteredRequests.length === 0) {
+        alert('No data available to download');
         return;
-    }
-    
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    const headers = [
-        ['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff In Charge']
-    ];
-
-    const bodyData = filteredRequests.map(req => [
+      }
+      const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff'];
+      const tableData = filteredRequests.map(req => [
         req.floor ?? 'N/A',
         req.room ?? 'N/A',
         req.date ?? 'N/A',
@@ -393,23 +390,12 @@ function downloadRequestsPDF() {
         req.lastMaintenance ?? 'N/A',
         req.status ?? 'N/A',
         req.staff ?? 'N/A'
-    ]);
-
-    doc.setFontSize(18);
-    doc.text("Maintenance Requests Report", 14, 22);
-
-    doc.autoTable({
-        startY: 30,
-        head: headers,
-        body: bodyData,
-        theme: 'striped',
-        headStyles: { fillColor: [41, 128, 185] }, 
-        styles: { fontSize: 8 },
-        columnStyles: {
-            4: { cellWidth: 30 }, 
-            6: { cellWidth: 30 }
-        }
-    });
-
-    doc.save('maintenance-requests.pdf');
+      ]);
+      if (typeof downloadData === 'function') {
+        downloadData(headers, tableData, 'Maintenance Requests Report', 'maintenance-requests');
+      } else {
+        alert('Download utility not available. Please refresh the page.');
+      }
+    };
+  }
 }

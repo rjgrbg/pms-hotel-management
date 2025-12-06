@@ -87,6 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof applyRequestFiltersAndRender === 'function') applyRequestFiltersAndRender();
   if (typeof applyHistoryFiltersAndRender === 'function') applyHistoryFiltersAndRender();
   
+  // Initialize download buttons
+  if (typeof initRequestsDownload === 'function') initRequestsDownload();
+  if (typeof initHistoryDownload === 'function') initHistoryDownload();
+  
   // ----- TAB NAVIGATION -----
   document.querySelectorAll('.tabBtn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -189,7 +193,6 @@ function setupRequestsTabListeners() {
   document.getElementById('roomFilter')?.addEventListener('change', applyRequestFiltersAndRender);
   document.getElementById('searchInput')?.addEventListener('input', applyRequestFiltersAndRender);
   document.getElementById('refreshBtn')?.addEventListener('click', handleRefreshRequests);
-  document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsPDF);
 
   document.getElementById('requestsTableBody')?.addEventListener('click', (e) => {
     if (e.target.closest('.assign-staff-btn')) {
@@ -219,7 +222,6 @@ function setupHistoryTabListeners() {
   
   document.getElementById('historySearchInput')?.addEventListener('input', applyHistoryFiltersAndRender);
   document.getElementById('historyRefreshBtn')?.addEventListener('click', handleRefreshHistory);
-  document.getElementById('historyDownloadBtn')?.addEventListener('click', downloadHistoryPDF);
 }
 
 // ===================================
@@ -609,117 +611,6 @@ async function handleRefreshHistory() {
   }
 }
 
-// ===== PDF DOWNLOAD FUNCTIONS =====
-function downloadRequestsPDF() {
-    if (filteredRequests.length === 0) {
-        showToast("No request data to export based on current filters.", 'error');
-        return;
-    }
-
-    if (!window.jspdf) { 
-        showToast("PDF Library not loaded.", 'error'); 
-        return; 
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); 
-
-    doc.setFontSize(18);
-    doc.setTextColor(72, 12, 27);
-    doc.text("Housekeeping Requests Report", 14, 22);
-    
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-
-    const headers = [['Floor', 'Room', 'Date', 'Request Time', 'Last Clean', 'Status', 'Staff In Charge']];
-    
-    const bodyData = filteredRequests.map(req => [
-        req.floor ?? 'N/A',
-        req.room ?? 'N/A',
-        req.date ?? 'N/A',
-        req.requestTime ?? 'N/A',
-        req.lastClean ?? 'N/A',
-        req.status ?? 'N/A',
-        req.staff ?? 'N/A'
-    ]);
-
-    doc.autoTable({
-        startY: 35, 
-        head: headers, 
-        body: bodyData, 
-        theme: 'grid',
-        headStyles: { 
-            fillColor: '#480c1b',
-            textColor: '#ffffff', 
-            fontStyle: 'bold', 
-            halign: 'center' 
-        },
-        styles: { fontSize: 10, cellPadding: 3 },
-        columnStyles: { 
-            4: { cellWidth: 35 },
-            6: { cellWidth: 40 }
-        }
-    });
-
-    doc.save(`housekeeping-requests-${new Date().toISOString().split('T')[0]}.pdf`);
-    showToast('PDF downloaded successfully!', 'success');
-}
-
-function downloadHistoryPDF() {
-    if (filteredHistory.length === 0) {
-        showToast("No history data to export based on current filters.", 'error');
-        return;
-    }
-    
-    if (!window.jspdf) { 
-        showToast("PDF Library not loaded.", 'error'); 
-        return; 
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF('l', 'mm', 'a4'); 
-
-    doc.setFontSize(18);
-    doc.setTextColor(72, 12, 27);
-    doc.text("Housekeeping History Report", 14, 22);
-    
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
-
-    const headers = [['Room', 'Task', 'Staff', 'Date', 'Completed Time', 'Status']];
-    
-    const bodyData = filteredHistory.map(hist => [
-        hist.room ?? 'N/A',
-        hist.taskType ?? 'Cleaning',
-        hist.staffName ?? 'N/A',
-        hist.date ?? 'N/A',
-        hist.completedTime ?? 'N/A',
-        hist.status ?? 'Completed'
-    ]);
-
-    doc.autoTable({
-        startY: 35, 
-        head: headers, 
-        body: bodyData, 
-        theme: 'grid',
-        headStyles: { 
-            fillColor: '#480c1b',
-            textColor: '#ffffff', 
-            fontStyle: 'bold', 
-            halign: 'center' 
-        },
-        styles: { fontSize: 10, cellPadding: 3 },
-        columnStyles: { 
-            1: { cellWidth: 40 },
-            2: { cellWidth: 40 }
-        } 
-    });
-
-    doc.save(`housekeeping-history-${new Date().toISOString().split('T')[0]}.pdf`);
-    showToast('History PDF downloaded successfully!', 'success');
-}
 
 // ===== HELPER FUNCTIONS =====
 function escapeHtml(text) {
