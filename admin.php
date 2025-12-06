@@ -576,7 +576,7 @@ $conn->close();
 
         <section class="dashboardSection">
           <h2 class="sectionTitle">Users</h2>
-          <div class="statsGrid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+          <div class="statsGrid">
             <div class="statCard">
               <div class="statCardHeader">
                 <div class="statCardIcon burgundy"><i class="fas fa-users"></i></div>
