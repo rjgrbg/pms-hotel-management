@@ -147,6 +147,7 @@ body {
   letter-spacing: 2px;
   margin-bottom: 8px;
   font-weight: 700;
+  text-transform: uppercase;
 }
 
 .pageDescription {
@@ -355,6 +356,35 @@ tbody tr:hover {
   background-color: #f5f5f5;
 }
 
+/* ===== TABLE COLUMN ALIGNMENT ===== */
+/* Center align Floor and Room columns */
+table th:nth-child(1),
+table td:nth-child(1),
+table th:nth-child(2),
+table td:nth-child(2) {
+  text-align: center;
+  width: 80px;
+}
+
+/* Center align Date, Time, and Status columns */
+table th:nth-child(3),
+table td:nth-child(3),
+table th:nth-child(4),
+table td:nth-child(4),
+table th:nth-child(5),
+table td:nth-child(5),
+table th:nth-child(6),
+table td:nth-child(6) {
+  text-align: center;
+}
+
+/* Center align Action column */
+table th:last-child,
+table td:last-child {
+  text-align: center;
+  width: 100px;
+}
+
 /* Column width control for appliances table */
 .appliancesTable th:nth-child(1),
 .appliancesTable td:nth-child(1) {
@@ -410,24 +440,50 @@ tbody tr:hover {
   font-size: 11px;
   font-weight: 600;
   text-align: center;
-  color: #fff;
   white-space: nowrap;
+  border: 1px solid;
 }
 
-.statusBadge.pending {
-  background-color: #ff9500;
+/* Available / Cleaned / Repaired / Completed */
+.statusBadge.available,
+.statusBadge.cleaned,
+.statusBadge.repaired,
+.statusBadge.completed {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
 }
 
-.statusBadge.maintenance {
-  background-color: #ff9500;
+/* Needs Cleaning / Dirty */
+.statusBadge.needs-cleaning,
+.statusBadge.dirty {
+  background-color: #e8d4f8;
+  border-color: #d4b5f0;
+  color: #5a2a7a;
 }
 
+/* Needs Maintenance / Maintenance / Urgent */
+.statusBadge.needs-maintenance,
+.statusBadge.maintenance,
 .statusBadge.urgent {
-  background-color: #c9302c;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
 }
 
-.statusBadge.repaired {
-  background-color: #5cb85c;
+/* Pending / In Progress */
+.statusBadge.pending,
+.statusBadge.in-progress {
+  background-color: #fff3cd;
+  border-color: #ffeaa7;
+  color: #856404;
+}
+
+/* Cancelled */
+.statusBadge.cancelled {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
 }
 
 /* Action Buttons */
@@ -1101,61 +1157,7 @@ tbody tr:hover {
     gap: 15px;
   }
 }
-/* ===== STATUS BADGES (Copied from admin.css) ===== */
-.statusBadge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  text-align: center;
-  color: #fff;
-  white-space: nowrap;
-}
 
-/* Green Badges */
-.statusBadge.available,
-.statusBadge.cleaned,
-.statusBadge.repaired,
-.statusBadge.vacant,
-.statusBadge.stocked,
-.statusBadge.in-stock,
-.statusBadge.inspected { /* 'Inspected' might be a status */
-  background-color: #5cb85c;
-  color: #fff;
-}
-
-/* Orange/Yellow Badges */
-.statusBadge.occupied,
-.statusBadge.pending,
-.statusBadge.low-stock,
-.statusBadge.in-progress { /* 'In Progress' is used */
-  background-color: #d4af78;
-  color: #fff;
-}
-
-/* Blue Badges */
-.statusBadge.reserved {
-  background-color: #007bff;
-  color: #fff;
-}
-
-/* Purple Badges */
-.statusBadge.needs-cleaning,
-.statusBadge.dirty {
-  background-color: #9b59b6;
-  color: #fff;
-}
-
-/* Red Badges */
-.statusBadge.maintenance,
-.statusBadge.needs-maintenance, /* <-- ADD THIS LINE */
-.statusBadge.request,
-.statusBadge.urgent,
-.statusBadge.out-of-stock {
-  background-color: #c9302c;
-  color: #fff;
-}
 
 /* --- Assign Staff Button Styles --- */
 
@@ -1168,17 +1170,7 @@ tbody tr:hover {
     border-color: #ccc;  /* Ensure border also looks disabled */
     opacity: 0.7;          /* Add opacity for a more "faded" look */
 }
-/* --- New Room Status Badges --- */
-.statusBadge.pending {
-  background-color: #d4af78; /* Gold */
-  color: #480c1b;
-  font-weight: 600;
-}
 
-.statusBadge.in-progress {
-  background-color: #007bff; /* Blue */
-  color: #fff;
-}
 
 /* --- New Staff Modal Styles --- */
 .staffListStatus.on-duty {
@@ -1237,18 +1229,7 @@ tbody tr:hover {
 }
 /* --- Add this to your maintenance.css file --- */
 
-/* Statuses for History Tab */
-.statusBadge.completed {
-  background-color: #d4edda;
-  border-color: #c3e6cb;
-  color: #155724;
-}
 
-.statusBadge.cancelled {
-  background-color: #f8d7da;
-  border-color: #f5c6cb;
-  color: #721c24;
-}
 
 /* ====================================================== */
 /* NEW: THEMED MODAL STYLES (Dark Red & Gold) */

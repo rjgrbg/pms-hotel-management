@@ -337,7 +337,7 @@ $conn->close();
             <div class="modalIcon">
                 <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
             </div>
-            <h2 style="color: #FFA237; text-align: center; font-size: 20px;">Are you sure you want to logout?</h2>
+            <h2 style="color: #d4af78; text-align: center; font-size: 20px;">Are you sure you want to logout?</h2>
             <p style="color: #d8d8d8ff; text-align: center; font-size: 13px;">You will be logged out from your account and redirected to the login page.</p>
             <div class="modalButtons">
                 <button class="modalBtn cancelBtn" id="cancelLogoutBtn">CANCEL</button>
@@ -538,7 +538,7 @@ $conn->close();
     <div class="modalBackdrop" id="editRoomStatusModal" style="display: none;">
         <div class="addItemModal"> <button class="closeBtn" id="closeEditRoomStatusBtn" style="color: white;">×</button>
             <div class="modalIconHeader">
-                <i class="fas fa-bed" style="font-size: 48px; color: #FFA237;"></i>
+                <i class="fas fa-bed" style="font-size: 48px; color: #d4af78;"></i>
             </div>
             <h2 id="editRoomStatusModalTitle" style="color: white;">Edit Room Status</h2>
             

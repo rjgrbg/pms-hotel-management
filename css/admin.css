@@ -481,8 +481,7 @@ body {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1000px; /* Ensures columns don't squish too much */
-  table-layout: auto; /* Let browser calculate best widths */
+  table-layout: fixed; /* Fixed layout for consistent column widths */
 }
 
 thead {
@@ -498,6 +497,7 @@ th {
   border: none;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  vertical-align: middle;
 }
 
 td {
@@ -505,6 +505,7 @@ td {
   border-bottom: 1px solid #f0f0f0;
   font-size: 12px;
   color: #333;
+  vertical-align: middle;
 }
 
 tbody tr:nth-child(odd) {
@@ -515,7 +516,7 @@ tbody tr:hover {
   background-color: #f0f0f0;
 }
 
-/* Status Badge */
+/* Status Badge - Lighter Colors */
 .statusBadge {
   display: inline-block;
   padding: 6px 12px;
@@ -523,105 +524,117 @@ tbody tr:hover {
   font-size: 11px;
   font-weight: 600;
   text-align: center;
-  color: #fff;
   white-space: nowrap;
+  border: 1px solid;
 }
 
+/* Available / Cleaned / In Stock / Vacant / Completed */
+.statusBadge.available,
+.statusBadge.cleaned,
+.statusBadge.in-stock,
+.statusBadge.vacant,
+.statusBadge.stocked,
+.statusBadge.repaired,
+.statusBadge.completed {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+/* Needs Cleaning / Dirty */
+.statusBadge.needs-cleaning,
 .statusBadge.dirty {
-  background-color: #9b59b6;
+  background-color: #e8d4f8;
+  border-color: #d4b5f0;
+  color: #5a2a7a;
 }
 
-.statusBadge.request {
-  background-color: #c9302c;
-}
-
-.statusBadge.cleaned {
-  background-color: #5cb85c;
-}
-
-.statusBadge.pending {
-  background-color: #ff9500;
-}
-
+/* Needs Maintenance / Request / Urgent */
+.statusBadge.needs-maintenance,
+.statusBadge.request,
 .statusBadge.urgent {
-  background-color: #c9302c;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
 }
 
-.statusBadge.repaired {
-  background-color: #5cb85c;
+/* Pending / In Progress */
+.statusBadge.pending,
+.statusBadge.in-progress {
+  background-color: #fff3cd;
+  border-color: #ffeaa7;
+  color: #856404;
 }
 
-/* ===== STATUS BADGES ===== */
-.statusBadge.available {
-  background-color: #5cb85c;
-  color: #fff;
-}
-
-.statusBadge.occupied {
-  background-color: #ff9500;
-  color: #fff;
-}
-
+/* Occupied / Reserved */
+.statusBadge.occupied,
 .statusBadge.reserved {
-  background-color: #007bff;
-  color: #fff;
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+  color: #0c5460;
 }
 
-.statusBadge.needs-cleaning {
-  background-color: #9b59b6;
-  color: #fff;
-}
-
-.statusBadge.needs-maintenance {
-  background-color: #c9302c;
-  color: #fff;
-}
-
-.statusBadge.in-stock {
-  background-color: #5cb85c;
-}
-
+/* Low Stock */
 .statusBadge.low-stock {
-  background-color: #ff9500;
+  background-color: #ffe5cc;
+  border-color: #ffd4a3;
+  color: #8a5000;
 }
 
+/* Out of Stock */
 .statusBadge.out-of-stock {
-  background-color: #ff0800;
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
 }
 
-.statusBadge.vacant {
-  background-color: #5cb85c;
+/* Cancelled */
+.statusBadge.cancelled {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
 }
-
-.statusBadge.stocked {
-  background-color: #5cb85c;
-}
-/* ===== USER BADGES ===== */
-.statusBadge.admin{
-  background-color: #480c1b; 
+/* ===== USER ROLE BADGES (Lighter Colors) ===== */
+.statusBadge.admin {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
 }
 
 .statusBadge.housekeeping_manager {
-    background-color: #007bff; /* Blue - Standard for Service/Cleaning */
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+  color: #0c5460;
 }
 
 .statusBadge.maintenance_manager {
-    background-color: #d4af78; /* Gold - Standard for Caution/Work-in-progress */
+  background-color: #fff3cd;
+  border-color: #ffeaa7;
+  color: #856404;
 }
 
 .statusBadge.parking_manager {
-    background-color: #5cb85c; /* Green - Standard for Availability/Logistics */
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
 }
+
 .statusBadge.inventory_manager {
-    background-color: #9b59b6; /* Purple - Standard for Inventory/Stock */
+  background-color: #e8d4f8;
+  border-color: #d4b5f0;
+  color: #5a2a7a;
 }
 
 .statusBadge.housekeeping_staff {
-    background-color: #17a2b8; /* Teal - Standard for Support/Assistance */
+  background-color: #d1ecf1;
+  border-color: #bee5eb;
+  color: #0c5460;
 }
 
 .statusBadge.maintenance_staff {
-    background-color: #ffc107; /* Yellow - Standard for Maintenance/Repairs */
+  background-color: #ffe5cc;
+  border-color: #ffd4a3;
+  color: #8a5000;
 }
 
 /* ===== ACTION BADGES ===== */
@@ -693,14 +706,454 @@ tbody tr:hover {
   background-color: #c9a066;
 }
 
-/* ===== ROOMS ACTION ALIGNMENT ===== */
-#rooms-page .tableWrapper table th:last-child,
-#rooms-page .tableWrapper table td:last-child {
+/* ===== TABLE COLUMN ALIGNMENT (ALL PAGES) ===== */
+
+/* Center all table headers and cells by default */
+table th,
+table td {
   text-align: center;
+}
+
+/* Housekeeping Requests Table - All columns centered */
+#hk-requests-tab table th:nth-child(1),
+#hk-requests-tab table td:nth-child(1) {
+  width: 8%;
+}
+
+#hk-requests-tab table th:nth-child(2),
+#hk-requests-tab table td:nth-child(2) {
+  width: 8%;
+}
+
+#hk-requests-tab table th:nth-child(3),
+#hk-requests-tab table td:nth-child(3) {
+  width: 10%;
+}
+
+#hk-requests-tab table th:nth-child(4),
+#hk-requests-tab table td:nth-child(4) {
+  width: 13%;
+}
+
+#hk-requests-tab table th:nth-child(5),
+#hk-requests-tab table td:nth-child(5) {
+  width: 18%;
+}
+
+#hk-requests-tab table th:nth-child(6),
+#hk-requests-tab table td:nth-child(6) {
+  width: 15%;
+}
+
+#hk-requests-tab table th:nth-child(7),
+#hk-requests-tab table td:nth-child(7) {
+  width: 28%;
+}
+
+/* Housekeeping History Table - All columns centered */
+#hk-history-tab table th:nth-child(1),
+#hk-history-tab table td:nth-child(1) {
+  width: 7%;
+}
+
+#hk-history-tab table th:nth-child(2),
+#hk-history-tab table td:nth-child(2) {
+  width: 7%;
+}
+
+#hk-history-tab table th:nth-child(3),
+#hk-history-tab table td:nth-child(3) {
+  width: 15%;
+}
+
+#hk-history-tab table th:nth-child(4),
+#hk-history-tab table td:nth-child(4) {
+  width: 10%;
+}
+
+#hk-history-tab table th:nth-child(5),
+#hk-history-tab table td:nth-child(5) {
+  width: 13%;
+}
+
+#hk-history-tab table th:nth-child(6),
+#hk-history-tab table td:nth-child(6) {
+  width: 13%;
+}
+
+#hk-history-tab table th:nth-child(7),
+#hk-history-tab table td:nth-child(7) {
+  width: 15%;
+}
+
+#hk-history-tab table th:nth-child(8),
+#hk-history-tab table td:nth-child(8) {
+  width: 12%;
+}
+
+#hk-history-tab table th:nth-child(9),
+#hk-history-tab table td:nth-child(9) {
+  width: 8%;
+}
+
+/* Maintenance Requests Table - All columns centered */
+#mt-requests-tab table th:nth-child(1),
+#mt-requests-tab table td:nth-child(1) {
+  width: 8%;
+}
+
+#mt-requests-tab table th:nth-child(2),
+#mt-requests-tab table td:nth-child(2) {
+  width: 8%;
+}
+
+#mt-requests-tab table th:nth-child(3),
+#mt-requests-tab table td:nth-child(3) {
+  width: 10%;
+}
+
+#mt-requests-tab table th:nth-child(4),
+#mt-requests-tab table td:nth-child(4) {
+  width: 13%;
+}
+
+#mt-requests-tab table th:nth-child(5),
+#mt-requests-tab table td:nth-child(5) {
+  width: 18%;
+}
+
+#mt-requests-tab table th:nth-child(6),
+#mt-requests-tab table td:nth-child(6) {
+  width: 15%;
+}
+
+#mt-requests-tab table th:nth-child(7),
+#mt-requests-tab table td:nth-child(7) {
+  width: 28%;
+}
+
+/* Maintenance History Table - All columns centered */
+#mt-history-tab table th:nth-child(1),
+#mt-history-tab table td:nth-child(1) {
+  width: 7%;
+}
+
+#mt-history-tab table th:nth-child(2),
+#mt-history-tab table td:nth-child(2) {
+  width: 7%;
+}
+
+#mt-history-tab table th:nth-child(3),
+#mt-history-tab table td:nth-child(3) {
+  width: 15%;
+}
+
+#mt-history-tab table th:nth-child(4),
+#mt-history-tab table td:nth-child(4) {
+  width: 10%;
+}
+
+#mt-history-tab table th:nth-child(5),
+#mt-history-tab table td:nth-child(5) {
+  width: 13%;
+}
+
+#mt-history-tab table th:nth-child(6),
+#mt-history-tab table td:nth-child(6) {
+  width: 13%;
+}
+
+#mt-history-tab table th:nth-child(7),
+#mt-history-tab table td:nth-child(7) {
+  width: 15%;
+}
+
+#mt-history-tab table th:nth-child(8),
+#mt-history-tab table td:nth-child(8) {
+  width: 12%;
+}
+
+#mt-history-tab table th:nth-child(9),
+#mt-history-tab table td:nth-child(9) {
+  width: 8%;
+}
+
+/* Parking History Table - All columns centered */
+#parking-page table th:nth-child(1),
+#parking-page table td:nth-child(1) {
+  width: 10%;
+}
+
+#parking-page table th:nth-child(2),
+#parking-page table td:nth-child(2) {
+  width: 10%;
+}
+
+#parking-page table th:nth-child(3),
+#parking-page table td:nth-child(3) {
+  width: 8%;
+}
+
+#parking-page table th:nth-child(4),
+#parking-page table td:nth-child(4) {
+  width: 15%;
+}
+
+#parking-page table th:nth-child(5),
+#parking-page table td:nth-child(5) {
+  width: 12%;
+}
+
+#parking-page table th:nth-child(6),
+#parking-page table td:nth-child(6) {
+  width: 10%;
+}
+
+#parking-page table th:nth-child(7),
+#parking-page table td:nth-child(7) {
+  width: 12%;
+}
+
+#parking-page table th:nth-child(8),
+#parking-page table td:nth-child(8) {
+  width: 13%;
+}
+
+#parking-page table th:nth-child(9),
+#parking-page table td:nth-child(9) {
+  width: 10%;
+}
+
+/* Inventory Items Table - All columns centered */
+#inv-items-tab table th:nth-child(1),
+#inv-items-tab table td:nth-child(1) {
+  width: 8%;
+}
+
+#inv-items-tab table th:nth-child(2),
+#inv-items-tab table td:nth-child(2) {
+  width: 15%;
+}
+
+#inv-items-tab table th:nth-child(3),
+#inv-items-tab table td:nth-child(3) {
+  width: 18%;
+}
+
+#inv-items-tab table th:nth-child(4),
+#inv-items-tab table td:nth-child(4) {
+  width: 10%;
+}
+
+#inv-items-tab table th:nth-child(5),
+#inv-items-tab table td:nth-child(5) {
+  width: 20%;
+}
+
+#inv-items-tab table th:nth-child(6),
+#inv-items-tab table td:nth-child(6) {
+  width: 12%;
+}
+
+#inv-items-tab table th:nth-child(7),
+#inv-items-tab table td:nth-child(7) {
+  width: 17%;
+}
+
+/* Inventory History Table - All columns centered */
+#inv-history-tab table th:nth-child(1),
+#inv-history-tab table td:nth-child(1) {
+  width: 8%;
+}
+
+#inv-history-tab table th:nth-child(2),
+#inv-history-tab table td:nth-child(2) {
+  width: 13%;
+}
+
+#inv-history-tab table th:nth-child(3),
+#inv-history-tab table td:nth-child(3) {
+  width: 15%;
+}
+
+#inv-history-tab table th:nth-child(4),
+#inv-history-tab table td:nth-child(4) {
+  width: 9%;
+}
+
+#inv-history-tab table th:nth-child(5),
+#inv-history-tab table td:nth-child(5) {
+  width: 9%;
+}
+
+#inv-history-tab table th:nth-child(6),
+#inv-history-tab table td:nth-child(6) {
+  width: 9%;
+}
+
+#inv-history-tab table th:nth-child(7),
+#inv-history-tab table td:nth-child(7) {
+  width: 12%;
+}
+
+#inv-history-tab table th:nth-child(8),
+#inv-history-tab table td:nth-child(8) {
+  width: 13%;
+}
+
+#inv-history-tab table th:nth-child(9),
+#inv-history-tab table td:nth-child(9) {
+  width: 12%;
+}
+
+/* Rooms Table - All columns centered */
+#rooms-page table th:nth-child(1),
+#rooms-page table td:nth-child(1) {
+  width: 10%;
+}
+
+#rooms-page table th:nth-child(2),
+#rooms-page table td:nth-child(2) {
+  width: 10%;
+}
+
+#rooms-page table th:nth-child(3),
+#rooms-page table td:nth-child(3) {
+  width: 25%;
+}
+
+#rooms-page table th:nth-child(4),
+#rooms-page table td:nth-child(4) {
+  width: 18%;
+}
+
+#rooms-page table th:nth-child(5),
+#rooms-page table td:nth-child(5) {
+  width: 15%;
+}
+
+#rooms-page table th:nth-child(6),
+#rooms-page table td:nth-child(6) {
+  width: 22%;
+}
+
+/* User Management Table - All columns centered */
+#user-management-tab table th:nth-child(1),
+#user-management-tab table td:nth-child(1) {
+  width: 12%;
+}
+
+#user-management-tab table th:nth-child(2),
+#user-management-tab table td:nth-child(2) {
+  width: 15%;
+}
+
+#user-management-tab table th:nth-child(3),
+#user-management-tab table td:nth-child(3) {
+  width: 18%;
+}
+
+#user-management-tab table th:nth-child(4),
+#user-management-tab table td:nth-child(4) {
+  width: 18%;
+}
+
+#user-management-tab table th:nth-child(5),
+#user-management-tab table td:nth-child(5) {
+  width: 20%;
+}
+
+#user-management-tab table th:nth-child(6),
+#user-management-tab table td:nth-child(6) {
+  width: 10%;
+}
+
+#user-management-tab table th:nth-child(7),
+#user-management-tab table td:nth-child(7) {
+  width: 7%;
+}
+
+/* User Logs Table - All columns centered */
+#user-logs-tab table th:nth-child(1),
+#user-logs-tab table td:nth-child(1) {
+  width: 8%;
+}
+
+#user-logs-tab table th:nth-child(2),
+#user-logs-tab table td:nth-child(2) {
+  width: 12%;
+}
+
+#user-logs-tab table th:nth-child(3),
+#user-logs-tab table td:nth-child(3) {
+  width: 12%;
+}
+
+#user-logs-tab table th:nth-child(4),
+#user-logs-tab table td:nth-child(4) {
+  width: 12%;
+}
+
+#user-logs-tab table th:nth-child(5),
+#user-logs-tab table td:nth-child(5) {
+  width: 14%;
+}
+
+#user-logs-tab table th:nth-child(6),
+#user-logs-tab table td:nth-child(6) {
+  width: 10%;
+}
+
+#user-logs-tab table th:nth-child(7),
+#user-logs-tab table td:nth-child(7) {
+  width: 10%;
+}
+
+#user-logs-tab table th:nth-child(8),
+#user-logs-tab table td:nth-child(8) {
+  width: 12%;
+}
+
+#user-logs-tab table th:nth-child(9),
+#user-logs-tab table td:nth-child(9) {
+  width: 10%;
+}
+
+#user-logs-tab table th:nth-child(10),
+#user-logs-tab table td:nth-child(10) {
+  width: 10%;
+}
+
+/* ===== ROOMS PAGE SPECIFIC STYLES ===== */
+/* Use fixed table layout for consistent column widths */
+#rooms-page table {
+  table-layout: fixed;
+  min-width: 900px;
+}
+
+/* Ensure all cells are vertically centered */
+#rooms-page table th,
+#rooms-page table td {
   vertical-align: middle;
+  padding: 14px 12px;
+}
+
+/* Prevent text wrapping in status badges */
+#rooms-page table td:nth-child(6) .statusBadge {
   white-space: nowrap;
-  padding-left: 12px;
-  padding-right: 12px;
+}
+
+/* Remove text overflow for rooms table to show full content */
+#rooms-page table td {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
+}
+
+/* Specific handling for Room Name to allow wrapping if needed */
+#rooms-page table td:nth-child(3) {
+  word-wrap: break-word;
 }
 
 #rooms-page .tableWrapper table td:last-child {
@@ -762,6 +1215,86 @@ tbody tr:hover {
 }
 
 #manage-users-page .tableWrapper table td:last-child {
+  text-align: center;
+}
+
+/* ===== ACTION DROPDOWN MENU ===== */
+.action-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-dots-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 16px;
+  color: #666;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.action-dots-btn:hover {
+  background: #f5f5f5;
+  color: #480c1b;
+}
+
+.dropdown-menu {
+  position: fixed;
+  background: #ffffff !important;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 140px;
+  z-index: 9999;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: #ffffff !important;
+  color: #333 !important;
+  font-size: 13px;
+  font-family: 'Segoe UI', sans-serif;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background: #f8f8f8 !important;
+}
+
+.dropdown-item.delete {
+  color: #dc3545 !important;
+}
+
+.dropdown-item.delete:hover {
+  background: #fff5f5 !important;
+}
+
+.dropdown-item i {
+  font-size: 13px;
+  width: 14px;
   text-align: center;
 }
 
@@ -2003,10 +2536,7 @@ input[readonly]:focus {
   font-weight: 600;
 }
 
-.statusBadge.in-progress {
-  background-color: #007bff; /* Blue */
-  color: #fff;
-}
+
 
 /* --- New Staff Modal Styles --- */
 .staffListStatus.on-duty {
@@ -2064,18 +2594,7 @@ input[readonly]:focus {
     line-height: 1.3; /* Improves readability for wrapped labels */
 }
 
-/* Statuses for History Tab */
-.statusBadge.completed {
-  background-color: #d4edda;
-  border-color: #c3e6cb;
-  color: #155724;
-}
 
-.statusBadge.cancelled {
-  background-color: #f8d7da;
-  border-color: #f5c6cb;
-  color: #721c24;
-}
 
 /* Success Toast Notification */
 .toast-success {

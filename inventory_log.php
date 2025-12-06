@@ -121,7 +121,8 @@ if (isset($_SESSION['UserID'])) {
     </div>
     
     <div class="main-container">
-        <h1 class="page-title">Inventory Log</h1>
+        <h1 class="page-title">INVENTORY LOG</h1>
+        <p class="page-description">Track and manage inventory items issued to staff members</p>
         
         <div class="inventory-log-container">
             
@@ -130,7 +131,7 @@ if (isset($_SESSION['UserID'])) {
                     <div class="filter-controls">
                         <select class="filter-dropdown" id="categoryFilter">
                             <option value="">All Categories</option>
-                            </select>
+                        </select>
                         <div class="search-box">
                             <input type="text" placeholder="Search Item Name..." class="search-input" id="searchInput">
                             <i class="fas fa-search search-icon"></i>
@@ -150,16 +151,17 @@ if (isset($_SESSION['UserID'])) {
                             </tr>
                         </thead>
                         <tbody id="inventoryTableBody">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
             </div>
 
             <div class="item-details-section">
-                <h2 class="details-title">Issue Items</h2>
+                <h2 class="details-title">ISSUE ITEMS</h2>
+                <p class="details-description">Select items and adjust quantities to issue from inventory</p>
                 <div class="item-details-content" id="itemDetailsContent">
-                    <p class="placeholder-text">Select an item from the table to get started.</p>
-                    </div>
+                    <p class="placeholder-text">No items selected</p>
+                </div>
                 <div class="details-actions">
                     <button class="action-btn-outline" id="cancelBtn">CANCEL</button>
                     <button class="action-btn-confirm" id="doneBtn" disabled>DONE</button>
@@ -180,13 +182,14 @@ if (isset($_SESSION['UserID'])) {
     <div class="confirmation-modal-backdrop" id="confirmationModalBackdrop">
         <div class="confirmation-modal-content">
             <div class="confirmation-modal-header">
-                ITEM DETAILS
+                <h2 class="confirmModalTitle">ITEM DETAILS</h2>
+                <p class="confirmModalDescription">Review the items you are about to issue</p>
             </div>
             <div class="confirmation-modal-body" id="confirmationModalBody">
-                </div>
+            </div>
             <div class="confirmation-modal-actions">
-                <button class="action-btn-outline" id="cancelConfirmBtn">CANCEL</button>
-                <button class="action-btn-confirm" id="confirmBtn">CONFIRM</button>
+                <button class="modalBtn cancelBtn" id="cancelConfirmBtn">CANCEL</button>
+                <button class="modalBtn confirmBtn" id="confirmBtn">CONFIRM</button>
             </div>
         </div>
     </div>

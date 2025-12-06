@@ -320,13 +320,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tbody.innerHTML = data.table.map(area => {
             const isFull = area.status === 'Full';
+            const statusClass = isFull ? 'occupied' : 'available';
+            const statusText = isFull ? 'Full' : 'Available';
             return `
                 <tr class="${isFull ? 'full-row' : ''}">
-                    <td class="${isFull ? 'text-red' : ''}">${escapeHTML(area.AreaName)}</td>
-                    <td class="${isFull ? 'text-red' : ''}">${isFull ? '-' : area.available}</td>
-                    <td class="${isFull ? 'text-red' : ''}">${area.occupied}</td>
-                    <td class="${isFull ? 'text-red' : ''}">${area.total}</td>
-                    <td class="${isFull ? 'text-red' : ''} text-right">${isFull ? 'Full' : 'Available'}</td>
+                    <td>${escapeHTML(area.AreaName)}</td>
+                    <td>${isFull ? '-' : area.available}</td>
+                    <td>${area.occupied}</td>
+                    <td>${area.total}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
                 </tr>
             `;
         }).join('');
@@ -360,35 +362,36 @@ document.addEventListener('DOMContentLoaded', () => {
             const isOccupied = slot.Status.toLowerCase() === 'occupied';
 
             // Define Action Buttons based on Archive Status
-            let actionButtons = '';
-            let enterBtn = '';
+            let dropdownMenu = '';
 
             if (isArchived) {
-                // RESTORE BUTTON (Green)
-                actionButtons = `
-                    <button class="actionIconBtn btn-restore-slot" data-id="${safeId}" title="Restore Slot">
-                        <i class="fas fa-trash-restore" style="color: #28a745; font-size: 16px;"></i>
-                    </button>
+                // RESTORE OPTION
+                dropdownMenu = `
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item btn-restore-slot" data-id="${safeId}">
+                            <i class="fas fa-trash-restore"></i> Restore
+                        </button>
+                    </div>
                 `;
             } else {
-                // EDIT (Image) and ARCHIVE (Red Icon) Buttons
-                // Enter button is only for active slots
-                enterBtn = slot.Status === 'available' 
-                    ? `<button class="btn-enter" data-slot-id="${safeId}" data-slot-name="${safeSlot}" style="font-size: 12px; padding: 5px 10px;">Enter</button>`
-                    : `<button class="btn-enter-gray" disabled style="font-size: 12px; padding: 5px 10px;">Enter</button>`;
+                // ENTER, EDIT, and ARCHIVE OPTIONS
+                const isAvailable = slot.Status === 'available';
+                const enterDisabled = !isAvailable ? 'disabled' : '';
+                const editDisabled = isOccupied ? 'disabled' : '';
+                const archiveDisabled = isOccupied ? 'disabled' : '';
                 
-                const disabledStyle = isOccupied ? 'opacity: 0.5; cursor: not-allowed;' : '';
-                const disabledAttr = isOccupied ? 'disabled' : '';
-                const editTitle = isOccupied ? 'Cannot edit occupied slot' : 'Edit Slot';
-                const archiveTitle = isOccupied ? 'Cannot archive occupied slot' : 'Archive Slot';
-
-                actionButtons = `
-                    <button class="actionIconBtn btn-edit-slot" data-id="${safeId}" title="${editTitle}" ${disabledAttr} style="${disabledStyle}">
-                        <img src="assets/icons/edit-icon.png" alt="Edit" style="width: 16px; height: 16px; vertical-align: middle;">
-                    </button>
-                    <button class="actionIconBtn btn-archive-slot" data-id="${safeId}" title="${archiveTitle}" ${disabledAttr} style="${disabledStyle}">
-                        <i class="fas fa-archive" style="color: #dc3545; font-size: 16px;"></i>
-                    </button>
+                dropdownMenu = `
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item btn-enter" data-slot-id="${safeId}" data-slot-name="${safeSlot}" ${enterDisabled}>
+                            <i class="fas fa-car-side"></i> Enter Vehicle
+                        </button>
+                        <button class="dropdown-item btn-edit-slot" data-id="${safeId}" ${editDisabled}>
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="dropdown-item delete btn-archive-slot" data-id="${safeId}" ${archiveDisabled}>
+                            <i class="fas fa-archive"></i> Archive
+                        </button>
+                    </div>
                 `;
             }
 
@@ -405,9 +408,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         </span>
                     </td>
                     <td>
-                        <div style="display:flex; gap:5px; justify-content: flex-start; align-items:center;">
-                            ${enterBtn}
-                            ${actionButtons}
+                        <div class="action-dropdown">
+                            <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            ${dropdownMenu}
                         </div>
                     </td>
                 </tr>
@@ -818,16 +823,31 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 areaListContainer.innerHTML = data.areas.map(area => {
                     const isArchived = parseInt(area.is_archived) === 1;
+                    const dropdownMenu = !isArchived ? `
+                        <div class="dropdown-menu">
+                            <button class="dropdown-item btn-edit-area" data-id="${area.AreaID}" data-name="${escapeHTML(area.AreaName)}">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="dropdown-item delete btn-archive-area" data-id="${area.AreaID}" data-name="${escapeHTML(area.AreaName)}">
+                                <i class="fas fa-archive"></i> Archive
+                            </button>
+                        </div>
+                    ` : `
+                        <div class="dropdown-menu">
+                            <button class="dropdown-item btn-restore-area" data-id="${area.AreaID}" data-name="${escapeHTML(area.AreaName)}">
+                                <i class="fas fa-trash-restore"></i> Restore
+                            </button>
+                        </div>
+                    `;
+                    
                     return `
                     <div class="category-list-item" style="${isArchived ? 'opacity:0.6;' : ''}">
                         <span class="category-name" style="${isArchived ? 'text-decoration: line-through;' : ''}">${escapeHTML(area.AreaName)}</span>
-                        <div class="category-actions">
-                            ${!isArchived ?
-                                `<button class="btn-icon btn-edit-area" data-id="${area.AreaID}" data-name="${escapeHTML(area.AreaName)}"><i class="fas fa-pencil-alt"></i></button>
-                                 <button class="btn-icon btn-archive-area" data-id="${area.AreaID}" data-name="${escapeHTML(area.AreaName)}"><i class="fas fa-archive"></i></button>`
-                                :
-                                `<button class="btn-icon btn-restore-area" data-id="${area.AreaID}" data-name="${escapeHTML(area.AreaName)}" style="color: #28a745;"><i class="fas fa-trash-restore"></i></button>`
-                            }
+                        <div class="action-dropdown">
+                            <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
+                            ${dropdownMenu}
                         </div>
                     </div>
                 `}).join('');
@@ -1038,16 +1058,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         typesListContainer.innerHTML = data.types.map(type => {
             const isArchived = type.is_archived == 1;
+            const dropdownMenu = !isArchived ? `
+                <div class="dropdown-menu">
+                    <button class="dropdown-item btn-edit-category">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="dropdown-item delete btn-delete-category">
+                        <i class="fas fa-archive"></i> Archive
+                    </button>
+                </div>
+            ` : `
+                <div class="dropdown-menu">
+                    <button class="dropdown-item btn-restore-category">
+                        <i class="fas fa-trash-restore"></i> Restore
+                    </button>
+                </div>
+            `;
+            
             return `
             <div class="category-list-item" data-id="${type.VehicleTypeID}" data-name="${type.TypeName}" style="${isArchived ? 'opacity:0.6;' : ''}">
                 <span class="category-name" style="${isArchived ? 'text-decoration: line-through;' : ''}">${escapeHTML(type.TypeName)}</span>
-                <div class="category-actions">
-                    ${!isArchived ? 
-                        `<button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                         <button class="btn-icon btn-delete-category" title="Archive"><i class="fas fa-archive"></i></button>` // Using btn-delete-category class for logic simplicity
-                        :
-                        `<button class="btn-icon btn-restore-category" title="Restore" style="color: #28a745;"><i class="fas fa-trash-restore"></i></button>`
-                    }
+                <div class="action-dropdown">
+                    <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    ${dropdownMenu}
                 </div>
             </div>
         `}).join('');
@@ -1152,16 +1187,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         categoriesListContainer.innerHTML = data.categories.map(cat => {
             const isArchived = cat.is_archived == 1;
+            const dropdownMenu = !isArchived ? `
+                <div class="dropdown-menu">
+                    <button class="dropdown-item btn-edit-category">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="dropdown-item delete btn-delete-category">
+                        <i class="fas fa-archive"></i> Archive
+                    </button>
+                </div>
+            ` : `
+                <div class="dropdown-menu">
+                    <button class="dropdown-item btn-restore-category">
+                        <i class="fas fa-trash-restore"></i> Restore
+                    </button>
+                </div>
+            `;
+            
             return `
             <div class="category-list-item" data-id="${cat.VehicleCategoryID}" data-name="${cat.CategoryName}" style="${isArchived ? 'opacity:0.6;' : ''}">
                 <span class="category-name" style="${isArchived ? 'text-decoration: line-through;' : ''}">${escapeHTML(cat.CategoryName)}</span>
-                <div class="category-actions">
-                    ${!isArchived ? 
-                        `<button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                         <button class="btn-icon btn-delete-category" title="Archive"><i class="fas fa-archive"></i></button>`
-                        :
-                        `<button class="btn-icon btn-restore-category" title="Restore" style="color: #28a745;"><i class="fas fa-trash-restore"></i></button>`
-                    }
+                <div class="action-dropdown">
+                    <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    ${dropdownMenu}
                 </div>
             </div>
         `}).join('');
@@ -1626,4 +1676,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     initializeApp();
+});
+
+// ========================================================
+// DROPDOWN MENU TOGGLE FUNCTION
+// ========================================================
+function toggleActionDropdown(event) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    const dropdown = button.nextElementSibling;
+    const isOpen = dropdown.classList.contains('show');
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+    
+    // Toggle current dropdown
+    if (!isOpen) {
+        // Get button position
+        const rect = button.getBoundingClientRect();
+        const dropdownHeight = 120; // Approximate height of dropdown
+        const spaceBelow = window.innerHeight - rect.bottom;
+        
+        // Position dropdown
+        if (spaceBelow < dropdownHeight) {
+            // Open upward
+            dropdown.style.bottom = (window.innerHeight - rect.top) + 'px';
+            dropdown.style.top = 'auto';
+        } else {
+            // Open downward
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            dropdown.style.bottom = 'auto';
+        }
+        dropdown.style.left = (rect.right - 160) + 'px'; // Align to right of button (160px = min-width)
+        
+        dropdown.classList.add('show');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('.action-dropdown')) {
+        document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
 });
