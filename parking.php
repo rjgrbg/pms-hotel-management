@@ -287,10 +287,16 @@ if (isset($_SESSION['UserID'])) {
                     <select class="filterDropdown" id="areaFilterDashboard">
                         <option value="all">All Areas</option>
                     </select>
+                    <div class="searchBox">
+                        <input type="text" placeholder="Search Area..." class="searchInput" id="searchDashboard" />
+                        <button class="searchBtn">
+                            <img src="assets/icons/search-icon.png" alt="Search" />
+                        </button>
+                    </div>
                     <button class="refreshBtn" id="refreshBtnDashboard">
                         <img src="assets/icons/refresh-icon.png" alt="Refresh" />
                     </button>
-                    <button class="add-btn" id="btnManageAreas" style="margin-left: 10px; background-color: #480c1b; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+                    <button class="add-btn" id="btnManageAreas" style="background-color: #480c1b; color: white; border: none; padding: 10px 14px; border-radius: 5px; cursor: pointer;">
                         <i class="fas fa-map-marker-alt"></i> Manage Areas
                     </button>
                 </div>
@@ -298,16 +304,31 @@ if (isset($_SESSION['UserID'])) {
             
             <div class="summary-cards">
                 <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon burgundy">
+                            <i class="fas fa-car"></i>
+                        </div>
+                    </div>
+                    <div class="card-value">0</div>
                     <div class="card-label">Occupied</div>
-                    <div class="card-value">0</div> 
                 </div>
                 <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon green">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </div>
+                    <div class="card-value">0</div>
                     <div class="card-label">Available</div>
-                    <div class="card-value">0</div> 
                 </div>
                 <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon blue">
+                            <i class="fas fa-parking"></i>
+                        </div>
+                    </div>
+                    <div class="card-value">0</div>
                     <div class="card-label">Total</div>
-                    <div class="card-value">0</div> 
                 </div>
             </div>
 
@@ -350,7 +371,7 @@ if (isset($_SESSION['UserID'])) {
                     <button class="refreshBtn" id="refreshBtnSlots">
                         <img src="assets/icons/refresh-icon.png" alt="Refresh" />
                     </button>
-                    <button class="add-btn" id="btnAddSlot" style="margin-left: 10px; background-color: #480c1b; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">
+                    <button class="add-btn" id="btnAddSlot" style="background-color: #480c1b; color: white; border: none; padding: 10px 14px; border-radius: 5px; cursor: pointer;">
                         <i class="fas fa-plus"></i> Add Slot
                     </button>
                 </div>
@@ -376,7 +397,7 @@ if (isset($_SESSION['UserID'])) {
 
         <div class="tabContent" id="vehicleIn-tab">
             <div class="controlsRow">
-                 <div class="filterControls">
+                <div class="filterControls">
                     <select class="filterDropdown" id="areaFilterVehicleIn">
                         <option value="all">All Areas</option>
                     </select>
@@ -567,6 +588,7 @@ if (isset($_SESSION['UserID'])) {
                 </div>
                 <button class="modal-close-btn" data-modal-id="manage-types-modal">&times;</button>
             </div>
+            <p class="modal-description">Create and manage vehicle types for parking slots</p>
             <div class="modal-body">
                 <div class="form-group">
                     <label for="new-type-name">Add New Type</label>
@@ -598,6 +620,7 @@ if (isset($_SESSION['UserID'])) {
                 </div>
                 <button class="modal-close-btn" data-modal-id="manage-categories-modal">&times;</button>
             </div>
+            <p class="modal-description">Organize vehicles by creating categories for each type</p>
             <div class="modal-body">
                 <div class="form-group">
                     <label for="category-manager-type-select">First, select a Vehicle Type:</label>
@@ -616,7 +639,7 @@ if (isset($_SESSION['UserID'])) {
                 <div class="form-group form-group-vertical" style="margin-top: 15px;">
                     <label>Existing Categories (for selected type)</label>
                     <div class="category-list-container" id="categories-list-container">
-                        <p style="text-align:center; color: #777;">Please select a vehicle type above.</p>
+                        <p style="text-align:center; color: #dcc8b0;">Please select a vehicle type above.</p>
                     </div>
                 </div>
             </div>
@@ -657,12 +680,13 @@ if (isset($_SESSION['UserID'])) {
                 <div class="modal-title"><i class="fas fa-map-marker-alt modal-icon-fa"></i> <h2>Manage Areas</h2></div>
                 <button class="modal-close-btn" data-modal-id="manageAreasModal">&times;</button>
             </div>
+            <p class="modal-description">Create and manage parking areas for your facility</p>
             <div class="modal-body">
                 <div class="form-group">
                     <label>Add New Area</label>
                     <div class="add-category-wrapper">
-                        <input type="text" id="newAreaName" placeholder="Area Name (e.g., Basement 1)">
-                        <button type="button" class="submit-btn" id="btnSaveNewArea">ADD</button>
+                        <input type="text" id="newAreaName" placeholder="Area Name (e.g., Basement 1)" class="area-input">
+                        <button type="button" class="submit-btn area-add-btn" id="btnSaveNewArea">ADD</button>
                     </div>
                 </div>
                 <hr class="category-divider">
@@ -680,6 +704,7 @@ if (isset($_SESSION['UserID'])) {
                 <div class="modal-title"><i class="fas fa-parking modal-icon-fa"></i> <h2 id="slotModalTitle">Add Slot</h2></div>
                 <button class="modal-close-btn" data-modal-id="manageSlotModal">&times;</button>
             </div>
+            <p class="modal-description" id="slotModalDescription">Create a new parking slot for your facility</p>
             <div class="modal-body">
                 <form id="slotForm">
                     <input type="hidden" id="slotIdInput">

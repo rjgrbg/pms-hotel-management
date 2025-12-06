@@ -345,6 +345,10 @@ if (isset($_SESSION['UserID'])) {
           <button class="downloadBtn" id="downloadBtnRequests">
             <img src="assets/icons/download-icon.png" alt="Download" />
           </button>
+          
+          <button class="addItemBtn" id="addItemBtn">
+            <img src="assets/icons/add.png" alt="Add Item" />
+          </button>
         </div>
       </div>
       <div class="tableWrapper">
@@ -423,11 +427,7 @@ if (isset($_SESSION['UserID'])) {
       </div>
     </div>
   </div>
-  
-<button class="add-item-btn" id="addItemBtn">
-    ADD ITEM
-    <i class="fas fa-plus"></i>
-</button>
+
 
 <div class="modal-overlay" id="add-item-modal">
     <div class="modal-content">

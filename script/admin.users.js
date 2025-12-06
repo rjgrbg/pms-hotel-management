@@ -146,19 +146,25 @@ function renderUsersTable(data) {
             const isArchived = row.is_archived == 1;
             const rowClass = isArchived ? 'user-archived' : '';
             
-            let actionBtn = '';
+            let dropdownMenu = '';
             if (isArchived) {
-                actionBtn = `
-                    <button class="actionBtn restoreUserBtn" title="Restore User" onclick="handleRestoreUserClick('${row.UserID}', '${escapeHtml(row.Username)}')">
-                        <i class="fas fa-trash-restore" style="color: #28a745;"></i> 
-                    </button>
+                dropdownMenu = `
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item" onclick="handleRestoreUserClick('${row.UserID}', '${escapeHtml(row.Username)}')">
+                            <i class="fas fa-trash-restore"></i> Restore
+                        </button>
+                    </div>
                 `;
             } else {
-                // Changed to FontAwesome Icon
-                actionBtn = `
-                    <button class="actionBtn deleteUserBtn" title="Archive User" onclick="handleArchiveUserClick('${row.UserID}', '${escapeHtml(row.Username)}')">
-                        <i class="fas fa-archive"></i>
-                    </button>
+                dropdownMenu = `
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item" onclick='handleEditUserClick(${JSON.stringify(row).replace(/'/g, "&apos;")})'>
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="dropdown-item delete" onclick="handleArchiveUserClick('${row.UserID}', '${escapeHtml(row.Username)}')">
+                            <i class="fas fa-archive"></i> Archive
+                        </button>
+                    </div>
                 `;
             }
 
@@ -171,11 +177,11 @@ function renderUsersTable(data) {
                     <td>${escapeHtml(row.EmailAddress)}</td>
                     <td>${escapeHtml(row.Shift)}</td>
                     <td>
-                        <div class="actionButtons">
-                            <button class="actionBtn editUserBtn" onclick='handleEditUserClick(${JSON.stringify(row).replace(/'/g, "&apos;")})' ${isArchived ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : ''}>
-                                <img src="assets/icons/edit-icon.png" alt="Edit" />
+                        <div class="action-dropdown">
+                            <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
+                                <i class="fas fa-ellipsis-v"></i>
                             </button>
-                            ${actionBtn}
+                            ${dropdownMenu}
                         </div>
                     </td>
                 </tr>
@@ -519,6 +525,53 @@ function initUserFilters() {
         if(el) el.onclick = () => document.getElementById('deleteUserModal').style.display = 'none';
     });
 }
+
+// ==========================================
+// 6. DROPDOWN TOGGLE FUNCTION
+// ==========================================
+
+window.toggleActionDropdown = function(event) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    const dropdown = button.nextElementSibling;
+    const isOpen = dropdown.classList.contains('show');
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+    
+    // Toggle current dropdown
+    if (!isOpen) {
+        // Get button position
+        const rect = button.getBoundingClientRect();
+        const dropdownHeight = 100; // Approximate height of dropdown
+        const spaceBelow = window.innerHeight - rect.bottom;
+        
+        // Position dropdown
+        if (spaceBelow < dropdownHeight) {
+            // Open upward
+            dropdown.style.bottom = (window.innerHeight - rect.top) + 'px';
+            dropdown.style.top = 'auto';
+        } else {
+            // Open downward
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            dropdown.style.bottom = 'auto';
+        }
+        dropdown.style.left = (rect.right - 140) + 'px'; // Align to right of button (140px = min-width)
+        
+        dropdown.classList.add('show');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('.action-dropdown')) {
+        document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('manage-users-page')) {

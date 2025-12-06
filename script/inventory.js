@@ -8,6 +8,50 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
+// Dropdown toggle function
+window.toggleActionDropdown = function(event) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    const dropdown = button.nextElementSibling;
+    const isOpen = dropdown.classList.contains('show');
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+    
+    // Toggle current dropdown
+    if (!isOpen) {
+        // Get button position
+        const rect = button.getBoundingClientRect();
+        const dropdownHeight = 80; // Approximate height of dropdown
+        const spaceBelow = window.innerHeight - rect.bottom;
+        
+        // Position dropdown
+        if (spaceBelow < dropdownHeight) {
+            // Open upward
+            dropdown.style.bottom = (window.innerHeight - rect.top) + 'px';
+            dropdown.style.top = 'auto';
+        } else {
+            // Open downward
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            dropdown.style.bottom = 'auto';
+        }
+        dropdown.style.left = (rect.right - 120) + 'px'; // Align to right of button
+        
+        dropdown.classList.add('show');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('.action-dropdown')) {
+        document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   // ======================================================
   // === 1. INJECT TOAST CSS STYLES
@@ -533,21 +577,35 @@ document.addEventListener('DOMContentLoaded', () => {
         
         let actionButtons = '';
         
-        // --- UPDATED: Use Icon Buttons & correct classes ---
+        // Three-dot dropdown menu
         if (isArchived) {
             actionButtons = `
-                <button class="actionIconBtn restore-btn" data-id="${item.ItemID}" title="Restore">
-                    <i class="fas fa-trash-restore" style="color: #28a745;"></i>
-                </button>
+                <div class="action-dropdown">
+                    <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item restore-btn" data-id="${item.ItemID}">
+                            <i class="fas fa-trash-restore"></i> Restore
+                        </button>
+                    </div>
+                </div>
             `;
         } else {
             actionButtons = `
-                <button class="actionIconBtn edit-btn" data-id="${item.ItemID}" title="Edit">
-                    <img src="assets/icons/edit-icon.png" alt="Edit" style="width: 16px; height: 16px;">
-                </button>
-                <button class="actionIconBtn delete-btn" data-id="${item.ItemID}" title="Archive">
-                    <i class="fas fa-archive" style="color: #dc3545;"></i>
-                </button>
+                <div class="action-dropdown">
+                    <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
+                        <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item edit-btn" data-id="${item.ItemID}">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="dropdown-item delete delete-btn" data-id="${item.ItemID}">
+                            <i class="fas fa-archive"></i> Archive
+                        </button>
+                    </div>
+                </div>
             `;
         }
 
