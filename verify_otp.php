@@ -52,7 +52,7 @@ if ($entered_otp == $_SESSION['otp']) { // Use == for loose comparison as types 
     // If it was for username recovery, fetch the username
     if ($_SESSION['otp_type'] === 'username') {
         $email = $_SESSION['otp_email'];
-        $sql = "SELECT Username FROM users WHERE EmailAddress = ?";
+        $sql = "SELECT Username FROM pms_users WHERE EmailAddress = ?";
         if ($stmt = $conn->prepare($sql)) {
             $stmt->bind_param("s", $email);
             if ($stmt->execute()) {

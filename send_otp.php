@@ -28,8 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['email']) || !isset($
     exit;
 }
 
+// --- STRIP & VALIDATE ---
 $email = filter_var(trim($_POST['email']), FILTER_VALIDATE_EMAIL);
-$type = $_POST['type']; // 'username' or 'password'
+$type = trim($_POST['type'] ?? ''); // <-- REFINEMENT: Added trim()
 
 if (!$email) {
     $response['message'] = 'Invalid email address.';
@@ -42,17 +43,26 @@ if ($type !== 'username' && $type !== 'password') {
      exit;
 }
 
-// --- MODIFIED BLOCK: Check if email exists in database ---
-$sql = "SELECT UserID FROM users WHERE EmailAddress = ?";
+// --- Connect to DB (Required after validation) ---
+$conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+if ($conn === null) {
+    error_log("DB Connection Error (send_otp.php)");
+    http_response_code(500);
+    $response['message'] = 'Database connection error. Please try again later.';
+    echo json_encode($response);
+    exit;
+}
+
+// --- Check if email exists in database ---
+$sql = "SELECT UserID FROM pms_users WHERE EmailAddress = ?";
 if ($stmt = $conn->prepare($sql)) {
+    // --- SECURE: Use prepared statement ---
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $stmt->store_result();
 
     if ($stmt->num_rows === 0) {
-        // **THIS IS THE CHANGE**
-        // Now, we explicitly tell the user the email is not found
-        // and stop the script.
+        // Explicitly tell user the email is not found
         $response['success'] = false;
         $response['message'] = 'This email is not registered with an account.';
         echo json_encode($response);
@@ -74,7 +84,6 @@ if ($stmt = $conn->prepare($sql)) {
 
 
 // --- Generate and Store OTP ---
-// This code will only run if the email was found.
 $otp = random_int(100000, 999999); // Generate a 6-digit OTP
 $otp_expiry = time() + 600; // OTP valid for 10 minutes
 
@@ -89,23 +98,26 @@ $mail = new PHPMailer(true);
 
 try {
     // Server settings
-    // $mail->SMTPDebug = SMTP::DEBUG_SERVER; // Enable verbose debug output for testing
     $mail->isSMTP();
     $mail->Host       = 'smtp.gmail.com';
     $mail->SMTPAuth   = true;
     $mail->Username   = GMAIL_EMAIL;
     $mail->Password   = GMAIL_APP_PASSWORD;
-    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS; // Use SSL/TLS
-    $mail->Port       = 465;                      // TCP port for SSL/TLS
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+    $mail->Port       = 465;
 
     // Recipients
     $mail->setFrom(GMAIL_EMAIL, EMAIL_FROM_NAME);
-    $mail->addAddress($email); // Add recipient
+    $mail->addAddress($email); // Add recipient (already validated)
 
     // Content
     $mail->isHTML(true);
     $subject = ($type === 'username') ? 'Recover Your Username - Celestia Hotel' : 'Reset Your Password - Celestia Hotel';
     $mail->Subject = $subject;
+    
+    // --- SANITIZE (Implicit) ---
+    // PHPMailer's <b> tag is safe. $otp is system-generated, so it's also safe.
+    // No explicit sanitization is needed here.
     $mail->Body    = "Dear User,<br><br>Your One-Time Password (OTP) for account recovery is: <b>$otp</b><br><br>This code will expire in 10 minutes.<br><br>If you did not request this, please ignore this email.<br><br>Sincerely,<br>The Celestia Hotel Team";
     $mail->AltBody = "Your One-Time Password (OTP) is: $otp. It expires in 10 minutes.";
 
@@ -114,8 +126,8 @@ try {
     $response['message'] = 'An OTP has been sent to your email address.';
 
 } catch (Exception $e) {
-    error_log("Mailer Error: {$mail->ErrorInfo}");
-    $response['message'] = "Message could not be sent. Please try again later."; // Generic error for user
+    // Temporary: Show the actual technical error to the user
+    $response['message'] = "Debug Error: " . $mail->ErrorInfo;
     http_response_code(500);
 }
 

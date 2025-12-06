@@ -195,8 +195,15 @@ body {
   font-size: 32px;
   color: #333;
   letter-spacing: 2px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.pageDescription {
+  font-size: 14px;
+  color: #666;
   margin-bottom: 30px;
-  font-weight: 400;
+  line-height: 1.5;
 }
 
 .pagePlaceholder {
@@ -213,7 +220,7 @@ body {
 
 .sectionTitle {
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 400;
   color: #333;
   margin-bottom: 20px;
   text-transform: uppercase;
@@ -225,37 +232,135 @@ body {
 /* Stats Grid */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
 }
 
 .statCard {
   background-color: #fff;
-  border-radius: 8px;
-  padding: 25px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  transition: all 0.2s;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .statCard:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
 }
 
-.statLabel {
-  font-size: 13px;
-  font-weight: 500;
-  color: #666;
-  margin-bottom: 15px;
-  text-transform: capitalize;
+.statCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+  min-height: 48px;
+}
+
+.statCardIcon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.statCardIcon.burgundy {
+  background-color: rgba(72, 12, 27, 0.1);
+  color: #480c1b;
+}
+
+.statCardIcon.gold {
+  background-color: rgba(212, 175, 120, 0.15);
+  color: #d4af78;
+}
+
+.statCardIcon.green {
+  background-color: rgba(92, 184, 92, 0.1);
+  color: #5cb85c;
+}
+
+.statCardIcon.blue {
+  background-color: rgba(0, 123, 255, 0.1);
+  color: #007bff;
+}
+
+.statCardBadge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.statCardBadge.increase {
+  background-color: rgba(92, 184, 92, 0.15);
+  color: #5cb85c;
+}
+
+.statCardBadge.active {
+  background-color: rgba(0, 123, 255, 0.15);
+  color: #007bff;
+}
+
+.statCardBadge.resources {
+  background-color: rgba(92, 184, 92, 0.15);
+  color: #5cb85c;
 }
 
 .statValue {
-  font-size: 40px;
+  font-size: 48px;
   font-weight: 700;
+  color: #2d2d2d;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: #666;
+  margin-bottom: 20px;
+  text-transform: capitalize;
+}
+
+.statCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.statCardLink {
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+
+.statCardLink:hover {
   color: #480c1b;
-  margin-bottom: 5px;
+}
+
+.statCardLink::after {
+  content: '→';
+  font-size: 16px;
+  transition: transform 0.2s;
+}
+
+.statCardLink:hover::after {
+  transform: translateX(4px);
 }
 
 .statSubtext {
@@ -363,16 +468,21 @@ body {
 
 /* ===== TABLES ===== */
 .tableWrapper {
+  width: 100%;
   background-color: #fff;
-  border-radius: 0;
-  overflow: hidden;
+  border-radius: 8px;
+  overflow: hidden; /* Keeps corners rounded */
+  overflow-x: auto; /* Horizontal scroll if needed */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   margin-bottom: 20px;
+  border: 1px solid #eaeaea;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  min-width: 1000px; /* Ensures columns don't squish too much */
+  table-layout: auto; /* Let browser calculate best widths */
 }
 
 thead {
@@ -418,7 +528,7 @@ tbody tr:hover {
 }
 
 .statusBadge.dirty {
-  background-color: #ff6b35;
+  background-color: #9b59b6;
 }
 
 .statusBadge.request {
@@ -462,7 +572,7 @@ tbody tr:hover {
   color: #fff;
 }
 
-.statusBadge.maintenance {
+.statusBadge.needs-maintenance {
   background-color: #c9302c;
   color: #fff;
 }
@@ -476,7 +586,7 @@ tbody tr:hover {
 }
 
 .statusBadge.out-of-stock {
-  background-color: #c9302c;
+  background-color: #ff0800;
 }
 
 .statusBadge.vacant {
@@ -496,7 +606,7 @@ tbody tr:hover {
 }
 
 .statusBadge.maintenance_manager {
-    background-color: #ff9500; /* Orange - Standard for Caution/Work-in-progress */
+    background-color: #d4af78; /* Gold - Standard for Caution/Work-in-progress */
 }
 
 .statusBadge.parking_manager {
@@ -580,7 +690,7 @@ tbody tr:hover {
 }
 
 .statusChangeBtn:hover {
-  background-color: #e68600;
+  background-color: #c9a066;
 }
 
 /* ===== ROOMS ACTION ALIGNMENT ===== */
@@ -1041,34 +1151,182 @@ tbody tr:hover {
   color: #c93;
 }
 
-/* ===== USER MODAL ===== */
+/* Modal styling */
 .addUserModal {
   background: #480c1b;
+  padding: 30px;
   border-radius: 12px;
-  padding: 40px;
-  max-width: 450px;
+  max-width: 600px;
   width: 90%;
-  position: relative;
-  animation: slideIn 0.3s ease;
   max-height: 90vh;
   overflow-y: auto;
-}
-
-.addUserModal .closeBtn {
-  color: #fff;
-  font-size: 30px;
-  top: 15px;
-  right: 15px;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
 }
 
 .addUserModal h2 {
-  color: #d49801;
-  font-size: 24px;
-  margin-bottom: 30px;
-  font-weight: 600;
-  letter-spacing: 1px;
+  color: #D4AF78;
   text-align: center;
+  margin-top: 30px;
+}
+
+.userProfileSection {
+  text-align: center;
+  padding: 20px;
+
+  border-radius: 10px;
+  margin-bottom: 25px;
+  color: white;
+}
+
+.profileAvatar {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 15px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.profileAvatar img {
+  width: 50px;
+  height: 50px;
+  opacity: 0.8;
+}
+
+.editUserName {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0 0 5px 0;
+}
+
+.editUserEmployeeId {
+  font-size: 13px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: white;
+  text-align: center;
+  font-size: 13px;
+}
+
+.formGroup input,
+.formGroup select,
+.formGroup textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.formGroup input:focus,
+.formGroup select:focus,
+.formGroup textarea:focus {
+  outline: none;
+  border-color: #c0c0c0;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.modalButtons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.modalBtn {
+  padding: 12px 30px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cancelBtn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.cancelBtn:hover {
+  background: #e0e0e0;
+}
+
+.confirmBtn {
+  background: #b3905b;
+  color: white;
+}
+
+.confirmBtn:hover {
+  transform: translateY(-2px);
+}
+
+.confirmBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.formMessage {
+  padding: 12px 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.formMessage.error {
+  background: #fee;
+  color: #c33;
+  border: 1px solid #fcc;
+}
+
+.formMessage.success {
+  background: #efe;
+  color: #3c3;
+  border: 1px solid #cfc;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.infoGrid label {
+  font-size: 11px;
+  color: #ffffff;
+  display: block;
+  margin-bottom: 3px;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.infoGrid div div {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e7e7e7;
 }
 
 /* Employee ID Form */
@@ -1553,17 +1811,37 @@ tbody tr:hover {
 .addRoomBtn:focus,
 .modalBtn:focus,
 .actionBtn:focus,
-.paginationBtn:focus {
-  outline: 2px solid #d4af78;
-  outline-offset: 2px;
+.paginationBtn:focus,
+.logoutBtn:focus,
+.subTabBtn:focus,
+.statusChangeBtn:focus,
+.editBtn:focus,
+.deleteBtn:focus,
+.editUserBtn:focus,
+.deleteUserBtn:focus,
+.searchBtn:focus,
+.closeBtn:focus,
+.cancelBtn:focus,
+.confirmBtn:focus {
+  outline: none;
 }
 
 .navLink:focus-visible,
 .tabBtn:focus-visible,
 .filterDropdown:focus-visible,
-.searchInput:focus-visible {
-  outline: 2px solid #d4af78;
-  outline-offset: 2px;
+.searchInput:focus-visible,
+.subTabBtn:focus-visible {
+  outline: none;
+}
+
+button:focus,
+button:active,
+a:focus,
+a:active,
+select:focus,
+input:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Screen reader only */
@@ -1698,7 +1976,126 @@ tbody tr:hover {
 .visible {
   display: block !important;
 }
-
+input[readonly],
+input[readonly]:focus {
+  background-color: #f3f4f6; /* A light gray */
+  border-color: #d1d5db; /* A matching border */
+  color: #6b7281; /* A muted text color */
+  cursor: not-allowed;
+  box-shadow: none;
+}
 
 /* ===== END OF CSS ===== */
- 
+
+/* --- Assign Staff Button Styles --- */
+.assignBtn:disabled {
+    background: #e0e0e0;    /* Light gray background */
+    color: #9e9e9e;         /* Muted gray text */
+    cursor: not-allowed;
+    border-color: #ccc;     /* Ensure border also looks disabled */
+    opacity: 0.7;           /* Add opacity for a more "faded" look */
+}
+
+/* --- New Room Status Badges --- */
+.statusBadge.pending {
+  background-color: #d4af78; /* Gold */
+  color: #480c1b;
+  font-weight: 600;
+}
+
+.statusBadge.in-progress {
+  background-color: #007bff; /* Blue */
+  color: #fff;
+}
+
+/* --- New Staff Modal Styles --- */
+.staffListStatus.on-duty {
+    background-color: #5cb85c; /* Green */
+    color: #fff;
+}
+
+.staffListStatus.offline {
+    background-color: #9e9e9e; /* Gray */
+    color: #fff;
+}
+
+.staffListStatus.assigned {
+    background-color: #ffc107; /* Yellow */
+    color: #333;
+}
+
+/* Add a confirmation button to the staff modal */
+/* Note: This assumes a modal with class .staffSelectionModal exists */
+.staffSelectionModal .modalButtons {
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+    justify-content: flex-end; /* Align buttons to the right */
+}
+
+/* Ensure 'Assign' button is styled */
+.modalBtn.confirmBtn#confirmStaffAssignBtn {
+    background-color: #28a745;
+    color: white;
+}
+
+.modalBtn.confirmBtn#confirmStaffAssignBtn:disabled {
+    background-color: #e0e0e0;
+    color: #9e9e9e;
+    cursor: not-allowed;
+}
+
+/* Styles for the new checkbox groups in the modal */
+.formGroup.checkboxGroup {
+    display: flex;
+    align-items: center; /* Vertically aligns the checkbox and label */
+    margin-bottom: 10px; /* Adds spacing between rows */
+}
+
+.formGroup.checkboxGroup input[type="checkbox"] {
+    margin-right: 10px; /* Adds spacing between checkbox and label */
+    width: auto;
+    flex-shrink: 0; /* Prevents checkbox from shrinking */
+}
+
+.formGroup.checkboxGroup label {
+    margin-bottom: 0; /* Resets any default bottom margin */
+    font-weight: normal;
+    line-height: 1.3; /* Improves readability for wrapped labels */
+}
+
+/* Statuses for History Tab */
+.statusBadge.completed {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.statusBadge.cancelled {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+/* Success Toast Notification */
+.toast-success {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: #28a745; /* Green */
+    color: white;
+    padding: 12px 24px;
+    border-radius: 5px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+    z-index: 10000;
+    font-family: sans-serif;
+    font-size: 14px;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast-visible {
+    opacity: 1;
+    transform: translateY(0);
+}

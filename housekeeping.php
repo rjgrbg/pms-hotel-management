@@ -1,541 +1,611 @@
 <?php
-// 1. Start the session with the same secure settings
+// 1. Cache Control Headers
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
 
-// 2. Cache Control Headers
-header('Cache-Control: no-cache, no-store, must-revalidate'); // HTTP 1.1.
-header('Pragma: no-cache'); // HTTP 1.0.
-header('Expires: 0'); // Proxies.
-
-// 3. Check Login Status and Role (ONLY manager allowed)
+// 2. Check Login Status and Role
+// check_session.php already includes session_start()
 include('check_session.php');
-require_login(['housekeeping_manager']); // *** MODIFIED: Only allow manager ***
+// *** MODIFIED: Only allow housekeeping_manager ***
+require_login(['housekeeping_manager']);
 
-// ======================================================
-// === PHP Logic Orchestration (REQUIRED FILES) ===
-// ======================================================
-
-// 1. Load the database configuration and connection ($conn is now available)
+// 3. Load database and user data
 require_once('db_connection.php');
-
-// 2. Load the user data function to get current user info for header
-require_once('User.php');
+require_once('user.php');
 $userData = getUserData($conn);
 $Fname = htmlspecialchars($userData['Name']);
 $Accounttype = htmlspecialchars($userData['Accounttype']);
 
-// 3. Fetch Rooms that need cleaning
-$roomsNeedingCleaning = [];
-$sql_rooms = "SELECT RoomID, FloorNumber, RoomNumber, LastClean
-              FROM room
-              WHERE RoomStatus = 'Needs Cleaning'
-              ORDER BY FloorNumber, RoomNumber ASC";
+// ===== HELPER FUNCTIONS FOR DATE FORMATTING =====
+function formatDbDateForDisplay($date) {
+    if (!$date) return 'N/A';
+    try {
+        return date('m.d.Y', strtotime($date));
+    } catch (Exception $e) {
+        return 'N/A';
+    }
+}
+
+function formatDbDateTimeForDisplay($datetime) {
+    if (!$datetime) return 'Never';
+    try {
+        return date('g:iA/m.d.Y', strtotime($datetime));
+    } catch (Exception $e) {
+        return 'Never';
+    }
+}
+// ===== END OF HELPER FUNCTIONS =====
+
+
+// ===== 4. Fetch ALL Rooms and their status (MODIFIED FOR SINGLE DB) =====
+$allRoomsStatus = [];
+$sql_rooms = "SELECT
+                r.room_id as RoomID,
+                r.floor_num as FloorNumber,
+                r.room_num as RoomNumber,
+                rs.LastClean,
+                
+                -- Determine the most accurate current status
+                CASE 
+                    WHEN active_task.Status IS NOT NULL THEN active_task.Status
+                    WHEN rs.RoomStatus = 'Needs Cleaning' THEN 'Needs Cleaning'
+                    ELSE COALESCE(rs.RoomStatus, 'Available') 
+                END as RoomStatus,
+                
+                active_task.DateRequested as TaskRequestDate,
+                active_task.TaskID, 
+                
+                -- Get assigned staff member's name
+                u.Fname,
+                u.Lname,
+                u.Mname
+              FROM
+                tbl_rooms r
+              LEFT JOIN
+                pms_room_status rs ON r.room_num = rs.RoomNumber
+              LEFT JOIN (
+                -- Subquery to find the *single* latest active task per room
+                SELECT 
+                    ht.TaskID,
+                    ht.RoomID, 
+                    ht.Status, 
+                    ht.DateRequested, 
+                    ht.AssignedUserID,
+                    ROW_NUMBER() OVER(PARTITION BY ht.RoomID ORDER BY ht.DateRequested DESC) as rn
+                FROM 
+                    pms_housekeeping_tasks ht
+                WHERE 
+                    ht.Status IN ('Pending', 'In Progress')
+              ) AS active_task ON active_task.RoomID = r.room_id AND active_task.rn = 1
+              LEFT JOIN
+                pms_users u ON u.UserID = active_task.AssignedUserID
+              WHERE
+                r.is_archived = 0
+              ORDER BY
+                r.floor_num, r.room_num ASC";
+
 if ($result_rooms = $conn->query($sql_rooms)) {
     while ($row = $result_rooms->fetch_assoc()) {
-        $roomsNeedingCleaning[] = [
+        
+        $requestDate = 'N/A';
+        $requestTime = 'N/A';
+        
+        if (in_array($row['RoomStatus'], ['Needs Cleaning', 'Pending', 'In Progress']) && $row['TaskRequestDate']) {
+            $requestDate = formatDbDateForDisplay($row['TaskRequestDate']);
+            $requestTime = date('g:i A', strtotime($row['TaskRequestDate']));
+        }
+
+        $staffName = 'Not Assigned';
+        if (!empty($row['Fname'])) {
+            $staffName = trim(
+                htmlspecialchars($row['Fname']) .
+                (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+                ' ' .
+                htmlspecialchars($row['Lname'])
+            );
+        }
+
+        $allRoomsStatus[] = [
             'id' => $row['RoomID'],
+            'taskId' => $row['TaskID'],
             'floor' => $row['FloorNumber'],
             'room' => $row['RoomNumber'],
-            'lastCleaned' => $row['LastClean'] ? date('Y-m-d g:i A', strtotime($row['LastClean'])) : 'Never',
-            'date' => date('Y-m-d'),
-            'requestTime' => date('g:i A'),
-            'status' => 'needs-cleaning',
-            'staff' => 'Not Assigned'
+            'lastClean' => formatDbDateTimeForDisplay($row['LastClean']),
+            'date' => $requestDate,
+            'requestTime' => $requestTime,
+            'status' => $row['RoomStatus'],
+            'staff' => $staffName
         ];
     }
     $result_rooms->free();
 } else {
-    error_log("Error fetching rooms needing cleaning: " . $conn->error);
+    error_log("Error fetching all room statuses: " . $conn->error);
 }
 
-// 4. Fetch Housekeeping Staff
+// 5. Fetch Housekeeping Staff
 $housekeepingStaff = [];
-$sql_staff = "SELECT UserID, Fname, Lname, Mname FROM users WHERE AccountType = 'housekeeping_staff'";
+$sql_staff = "SELECT 
+                u.UserID, 
+                u.Fname, 
+                u.Lname, 
+                u.Mname,
+                CASE 
+                    -- 1. If they are already assigned to a room in PMS, keep status as 'Assigned'
+                    WHEN u.AvailabilityStatus = 'Assigned' THEN 'Assigned'
+                    
+                    -- 2. If they have a valid clock-in today (and no clock-out), they are 'Available'
+                    WHEN a.attendance_id IS NOT NULL AND a.time_out IS NULL THEN 'Available'
+                    
+                    -- 3. Otherwise, they are 'Offline'
+                    ELSE 'Offline'
+                END as AvailabilityStatus
+              FROM 
+                pms_users u
+              -- Join Employees to link User to Employee Record
+              JOIN 
+                employees e ON u.EmployeeID = e.employee_code
+              -- Join Attendance: Find any ACTIVE session (No time_out) from Today or Yesterday
+              LEFT JOIN 
+                attendance a ON e.employee_id = a.employee_id 
+                AND a.time_out IS NULL 
+                AND a.date >= DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+              WHERE 
+                u.AccountType = 'housekeeping_staff' GROUP BY u.UserID";
+
 if ($result_staff = $conn->query($sql_staff)) {
     while ($row = $result_staff->fetch_assoc()) {
+        
+        $availability = $row['AvailabilityStatus'];
+
+        // --- MODIFICATION: Filter to ONLY show Available staff ---
+        if ($availability !== 'Available') {
+            continue; // Skip this row if they are Offline or Assigned
+        }
+        // ---------------------------------------------------------
+
         $staffName = trim(
             htmlspecialchars($row['Fname']) .
             (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
             ' ' .
             htmlspecialchars($row['Lname'])
         );
+
         $housekeepingStaff[] = [
             'id' => $row['UserID'],
             'name' => $staffName,
-            'assigned' => false
+            'availability' => $availability 
         ];
     }
     $result_staff->free();
 } else {
-    error_log("Error fetching housekeeping staff: " . $conn->error);
+    error_log("Error fetching housekeeping staff: ". $conn->error);
 }
 
-// 5. Fetch Linens & Amenities Types (Sample Data)
-$linensTypes = ['Bed Sheets', 'Towels', 'Pillowcases', 'Blankets', 'Bathrobes'];
-$amenitiesTypes = ['Toiletries', 'Mini Bar', 'Coffee/Tea', 'Slippers', 'Dental Kit'];
-
-// 6. Fetch Linens & Amenities Items (Sample Data)
-$linensAmenitiesItems = [
-    [
-        'id' => 1,
-        'roomId' => 1,
-        'floor' => 1,
-        'room' => 101,
-        'type' => 'Bed Sheets',
-        'item' => 'Queen Size Bed Sheets',
-        'category' => 'linens',
-        'lastCleaned' => '2024-11-01 10:00 AM',
-        'remarks' => 'Good condition'
-    ],
-    [
-        'id' => 2,
-        'roomId' => 1,
-        'floor' => 1,
-        'room' => 101,
-        'type' => 'Towels',
-        'item' => 'Bath Towels (2pcs)',
-        'category' => 'linens',
-        'lastCleaned' => '2024-10-28 2:30 PM',
-        'remarks' => 'Recently replaced'
-    ],
-    [
-        'id' => 3,
-        'roomId' => 1,
-        'floor' => 1,
-        'room' => 101,
-        'type' => 'Toiletries',
-        'item' => 'Shampoo & Conditioner',
-        'category' => 'amenities',
-        'lastCleaned' => '2024-11-01 10:00 AM',
-        'remarks' => 'Refilled'
-    ],
-    [
-        'id' => 4,
-        'roomId' => 2,
-        'floor' => 2,
-        'room' => 201,
-        'type' => 'Bed Sheets',
-        'item' => 'King Size Bed Sheets',
-        'category' => 'linens',
-        'lastCleaned' => '2024-10-30 9:00 AM',
-        'remarks' => 'Good condition'
-    ],
-    [
-        'id' => 5,
-        'roomId' => 2,
-        'floor' => 2,
-        'room' => 201,
-        'type' => 'Mini Bar',
-        'item' => 'Beverages & Snacks',
-        'category' => 'amenities',
-        'lastCleaned' => '2024-11-01 11:30 AM',
-        'remarks' => 'Restocked'
-    ],
-    [
-        'id' => 6,
-        'roomId' => 3,
-        'floor' => 2,
-        'room' => 202,
-        'type' => 'Bathrobes',
-        'item' => 'Cotton Bathrobes (2pcs)',
-        'category' => 'linens',
-        'lastCleaned' => '2024-10-29 3:15 PM',
-        'remarks' => 'Clean'
-    ]
-];
-
-// 7. Fetch all rooms for dropdowns
+// 6. Fetch all rooms for dropdowns (MODIFIED FOR SINGLE DB)
 $allRooms = [];
-$sql_all_rooms = "SELECT RoomID, FloorNumber, RoomNumber FROM room ORDER BY FloorNumber, RoomNumber";
+$sql_all_rooms = "SELECT room_id, floor_num, room_num FROM tbl_rooms WHERE is_archived = 0 ORDER BY floor_num, room_num";
 if ($result_all_rooms = $conn->query($sql_all_rooms)) {
     while ($row = $result_all_rooms->fetch_assoc()) {
         $allRooms[] = [
-            'id' => $row['RoomID'],
-            'floor' => $row['FloorNumber'],
-            'room' => $row['RoomNumber']
+            'id' => $row['room_id'],
+            'floor' => $row['floor_num'],
+            'room' => $row['room_num']
         ];
     }
     $result_all_rooms->free();
 }
 
-// 8. Close the DB connection
-$conn->close();
+// 7. Fetch History Data (MODIFIED FOR SINGLE DB)
+$historyData = [];
+$sql_history = "SELECT 
+                    ht.TaskID, 
+                    r.floor_num as FloorNumber, 
+                    r.room_num as RoomNumber, 
+                    ht.TaskType,
+                    ht.DateRequested, 
+                    ht.DateCompleted, 
+                    u.Fname, 
+                    u.Lname, 
+                    u.Mname, 
+                    ht.Status, 
+                    ht.Remarks 
+                FROM 
+                    pms_housekeeping_tasks ht
+                JOIN 
+                    tbl_rooms r ON ht.RoomID = r.room_id
+                LEFT JOIN 
+                    pms_users u ON ht.AssignedUserID = u.UserID 
+               WHERE 
+                    ht.Status IN ('In Progress', 'Completed', 'Cancelled')
+                ORDER BY 
+                    -- 1. Primary Sort: Custom Status Priority
+                    CASE 
+                        WHEN ht.Status = 'In Progress' THEN 1
+                        WHEN ht.Status = 'Completed'   THEN 2
+                        WHEN ht.Status = 'Cancelled'   THEN 3
+                    END ASC,
+                    -- 2. Secondary Sort: By Date
+                    ht.DateCompleted DESC,
+                    ht.DateRequested DESC";
+if ($result_history = $conn->query($sql_history)) {
+    while ($row = $result_history->fetch_assoc()) {
+        $staffName = 'N/A';
+        if ($row['Fname']) {
+            $staffName = trim(
+                htmlspecialchars($row['Fname']) .
+                (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+                ' ' .
+                htmlspecialchars($row['Lname'])
+            );
+        }
+        
+        $historyData[] = [
+            'id' => $row['TaskID'],
+            'floor' => $row['FloorNumber'],
+            'room' => $row['RoomNumber'],
+            'issueType' => $row['TaskType'],
+            'date' => formatDbDateForDisplay($row['DateRequested']),
+            'requestedTime' => date('g:i A', strtotime($row['DateRequested'])),
+            'completedTime' => $row['DateCompleted'] ? date('g:i A', strtotime($row['DateCompleted'])) : 'N/A',
+            'staff' => $staffName,
+            'status' => $row['Status'],
+            'remarks' => $row['Remarks']
+        ];
+    }
+    $result_history->free();
+} else {
+    error_log("Error fetching housekeeping history: " . $conn->error);
+}
 
+// 8. Close database connection
+$conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Celestia Hotel - Housekeeping Management</title>
-  <link rel="stylesheet" href="css/housekeeping.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-</head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Celestia Hotel - Housekeeping Management</title>
+    <link rel="stylesheet" href="css/housekeeping.css">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <style>
+        /* This style block is new and required */
+
+        /* By default, hide the error message paragraph */
+        #editRoomStatusModal .modalSubtext.error-message {
+            display: none;
+            color: #d9534f; /* Red color for error */
+            font-weight: 500;
+            margin-bottom: 25px;
+        }
+
+        /* When the modal has the 'error-view' class... */
+        
+        /* 1. HIDE the normal form elements */
+        #editRoomStatusModal.error-view #editRoomStatusForm .formRow,
+        #editRoomStatusModal.error-view #submitEditRoomStatusBtn {
+            display: none;
+        }
+
+        /* 2. HIDE the normal subtext */
+        #editRoomStatusModal.error-view .modalSubtext.normal-message {
+            display: none;
+        }
+
+        /* 3. SHOW the error message */
+        #editRoomStatusModal.error-view .modalSubtext.error-message {
+            display: block;
+        }
+    </style>
+    </head>
 <body>
-  <header class="header">
-    <div class="headerLeft">
-      <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" />
-      <span class="hotelName">THE CELESTIA HOTEL</span>
-    </div>
-
-    <img src="assets/icons/profile-icon.png" alt="Profile" class="profileIcon" id="profileBtn" />
-    <aside class="profile-sidebar" id="profile-sidebar">
-      <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
-      <div class="profile-header">
-        <div class="profile-pic-container">
-          <i class="fas fa-user-tie"></i>
+    <header class="header">
+        <div class="headerLeft">
+            <img src="assets/images/celestia-logo.png" alt="Logo" class="headerLogo" />
+            <span class="hotelName">THE CELESTIA HOTEL</span>
         </div>
-        <h3><?php echo $Fname; ?></h3>
-        <p><?php echo ucfirst($Accounttype); ?></p>
-      </div>
+        <img src="assets/icons/profile-icon.png" alt="Profile" class="profileIcon" id="profileBtn" />
+        
+        <aside class="profile-sidebar" id="profile-sidebar">
+            <button class="sidebar-close-btn" id="sidebar-close-btn">&times;</button>
+            <div class="profile-header">
+                <div class="profile-pic-container"><i class="fas fa-user-tie"></i></div>
+                <h3><?php echo $Fname; ?></h3>
+                <p><?php echo ucfirst(str_replace('_', ' ', $Accounttype)); ?></p>
+            </div>
+            <nav class="profile-nav">
+              
+            </nav>
+            <div class="profile-footer">
+                <a href="#" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt" style="margin-right: 10px;"></i> Logout
+                </a>
+            </div>
+        </aside>
+    </header>
 
-      <nav class="profile-nav">
-        <a href="#" id="account-details-link">
-          <i class="fas fa-user-edit" style="margin-right: 10px;"></i> Account Details
-        </a>
-      </nav>
-
-      <div class="profile-footer">
-        <a href="#" id="logoutBtn">
-          <i class="fas fa-sign-out-alt" style="margin-right: 10px;"></i> Logout
-        </a>
-      </div>
-    </aside>
-  </header>
-
-  <div class="modalBackdrop" id="logoutModal" style="display: none;">
-    <div class="logoutModal">
-      <button class="closeBtn" id="closeLogoutBtn">×</button>
-      <div class="modalIcon">
-        <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
-      </div>
-      <h2>Are you sure you want to logout?</h2>
-      <p>You will be logged out from your account and redirected to the login page.</p>
-      <div class="modalButtons">
-        <button class="modalBtn cancelBtn" id="cancelLogoutBtn">CANCEL</button>
-        <button class="modalBtn confirmBtn" id="confirmLogoutBtn">YES, LOGOUT</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="mainContainer">
-    <h1 class="pageTitle">HOUSEKEEPING</h1>
-    <div class="tabNavigation">
-      <button class="tabBtn active" data-tab="requests">
-        <img src="assets/icons/requests-icon.png" alt="Requests" class="tabIcon" />
-        Requests
-      </button>
-      <button class="tabBtn" data-tab="history">
-        <img src="assets/icons/history-icon.png" alt="History" class="tabIcon" />
-        History
-      </button>
-      <button class="tabBtn" data-tab="linens">
-        <img src="assets/icons/linens.png" alt="Linens" class="tabIcon" />
-        Linens & Amenities
-      </button>
+    <div class="modalBackdrop" id="logoutModal" style="display: none;">
+        <div class="logoutModal">
+            <button class="closeBtn" id="closeLogoutBtn">×</button>
+            <div class="modalIcon">
+                <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
+            </div>
+            <h2 style="color: #FFA237; text-align: center; font-size: 20px;">Are you sure you want to logout?</h2>
+            <p style="color: #d8d8d8ff; text-align: center; font-size: 13px;">You will be logged out from your account and redirected to the login page.</p>
+            <div class="modalButtons">
+                <button class="modalBtn cancelBtn" id="cancelLogoutBtn">CANCEL</button>
+                <button class="modalBtn confirmBtn" id="confirmLogoutBtn">YES, LOGOUT</button>
+            </div>
+        </div>
     </div>
 
-    <!-- REQUESTS TAB -->
-    <div class="tabContent active" id="requests-tab">
-      <div class="controlsRow">
-        <div class="filterControls">
-          <select class="filterDropdown" id="floorFilter">
-            <option value="">Floor</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-          </select>
+    <div class="mainContainer">
+        <h1 class="pageTitle">HOUSEKEEPING</h1>
+        <p class="pageDescription">Manage room cleaning requests, track staff assignments, and view cleaning history</p>
 
-          <select class="filterDropdown" id="roomFilter">
-            <option value="">Room</option>
-          </select>
-
-          <div class="searchBox">
-            <input type="text" placeholder="Search Room Number..." class="searchInput" id="searchInput" />
-            <button class="searchBtn">
-              <img src="assets/icons/search-icon.png" alt="Search" />
+        <div class="tabNavigation">
+            <button class="tabBtn active" data-tab="requests">
+                <img src="assets/icons/requests-icon.png" alt="Requests" class="tabIcon" />
+                Requests
             </button>
-          </div>
+            <button class="tabBtn" data-tab="history">
+                <img src="assets/icons/history-icon.png" alt="History" class="tabIcon" />
+                History
+            </button>
+            </div>
 
-          <button class="refreshBtn" id="refreshBtn">
-            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-          </button>
+        <div class="tabContent active" id="requests-tab">
+            <div class="controlsRow">
+                <div class="filterControls">
+                    <select class="filterDropdown" id="floorFilter">
+                        <option value="">Floor</option>
+                    </select>
+                    <select class="filterDropdown" id="roomFilter">
+                        <option value="">Room</option>
+                    </select>
+                    <div class="searchBox">
+                        <input type="text" placeholder="Search Room Number..." class="searchInput" id="searchInput" />
+                        <button class="searchBtn">
+                            <img src="assets/icons/search-icon.png" alt="Search" />
+                        </button>
+                    </div>
+                    <button class="refreshBtn" id="refreshBtn">
+                        <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+                    </button>
+                    <button class="downloadBtn" id="downloadBtnRequests">
+                        <img src="assets/icons/download-icon.png" alt="Download" />
+                    </button>
+                </div>
+            </div>
 
-          <button class="downloadBtn" id="downloadBtnRequests">
-            <img src="assets/icons/download-icon.png" alt="Download" />
-          </button>
+            <div class="tableWrapper">
+                <table class="requestsTable">
+                    <thead>
+                        <tr>
+                            <th>Floor</th>
+                            <th>Room</th>
+                            <th>Date</th>
+                            <th>Request Time</th>
+                            <th>Last Clean</th>
+                            <th>Status</th>
+                            <th>Staff In Charge</th>
+                            <th>ACTIONS</th> </tr>
+                    </thead>
+                    <tbody id="requestsTableBody"></tbody>
+                </table>
+            </div>
+            <div class="pagination">
+                <span class="paginationInfo">Display Records <span id="requestsRecordCount">0</span></span>
+                <div class="paginationControls" id="requestsPaginationControls"></div>
+            </div>
         </div>
-      </div>
 
-      <div class="tableWrapper">
-        <table class="requestsTable">
-          <thead>
-            <tr>
-              <th>Floor</th>
-              <th>Room</th>
-              <th>Date</th>
-              <th>Request Time</th>
-              <th>Last Cleaned</th>
-              <th>Status</th>
-              <th>Staff In Charge</th>
-            </tr>
-          </thead>
-          <tbody id="requestsTableBody">
-          </tbody>
-        </table>
-      </div>
-      <div class="pagination">
-        <span class="paginationInfo">Display Records <span id="requestsRecordCount">0</span></span>
-        <div class="paginationControls" id="requestsPaginationControls">
-        </div>
-      </div>
-    </div>
-
-    <!-- HISTORY TAB -->
-    <div class="tabContent" id="history-tab">
-      <div class="controlsRow">
-        <div class="filterControls">
-          <select class="filterDropdown" id="floorFilterHistory">
+        <div class="tabContent" id="history-tab">
+           <div class="controlsRow">
+    <div class="filterControls">
+        <select class="filterDropdown" id="floorFilterHistory">
             <option value="">Floor</option>
-          </select>
-          <select class="filterDropdown" id="roomFilterHistory">
+        </select>
+        <select class="filterDropdown" id="roomFilterHistory">
             <option value="">Room</option>
-          </select>
-          <select class="filterDropdown" id="dateFilterHistory">
-            <option value="">Calendar</option>
-          </select>
-          <div class="searchBox">
+        </select>
+        
+        <div style="display: flex; align-items: center; gap: 5px; background: white; border-radius: 5px; border: 1px solid #ddd; padding: 0 5px;">
+            <input type="date" id="startDateFilterHistory" title="Start Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+            <span style="color: #666;">-</span>
+            <input type="date" id="endDateFilterHistory" title="End Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+        </div>
+
+        <div class="searchBox">
             <input type="text" placeholder="Search" class="searchInput" id="historySearchInput" />
             <button class="searchBtn">
-              <img src="assets/icons/search-icon.png" alt="Search" />
+                <img src="assets/icons/search-icon.png" alt="Search" />
             </button>
-          </div>
-          <button class="refreshBtn" id="historyRefreshBtn">
+        </div>
+        <button class="refreshBtn" id="historyRefreshBtn">
             <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-          </button>
-          <button class="downloadBtn" id="historyDownloadBtn">
+        </button>
+        <button class="downloadBtn" id="historyDownloadBtn">
             <img src="assets/icons/download-icon.png" alt="Download" />
-          </button>
-        </div>
-      </div>
-
-      <div class="tableWrapper">
-        <table class="historyTable">
-          <thead>
-            <tr>
-              <th>Floor</th>
-              <th>Room</th>
-              <th>Guest</th>
-              <th>Date</th>
-              <th>Requested Time</th>
-              <th>Completed Time</th>
-              <th>Staff In Charge</th>
-              <th>Status</th>
-              <th>Remarks</th>
-            </tr>
-          </thead>
-          <tbody id="historyTableBody">
-            <tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">History data not implemented yet.</td></tr>
-          </tbody>
-        </table>
-
-        <div class="pagination">
-          <span class="paginationInfo">Display Records <span id="historyRecordCount">0</span></span>
-          <div class="paginationControls" id="historyPaginationControls">
-          </div>
-        </div>
-      </div>
-    </div>
-
-  <!-- LINENS & AMENITIES TAB -->
-    <div class="tabContent" id="linens-tab">
-      <div class="linensSubTabs">
-        <button class="subTabBtn active" data-subtab="linens">
-          LINENS
         </button>
-        <button class="subTabBtn" data-subtab="amenities">
-          AMENITIES
-        </button>
-      </div>
-
-      <div class="controlsRow">
-        <div class="filterControls">
-          <select class="filterDropdown" id="floorFilterLinens">
-            <option value="">Floor</option>
-          </select>
-          <select class="filterDropdown" id="roomFilterLinens">
-            <option value="">Room</option>
-          </select>
-          <select class="filterDropdown" id="statusFilterLinens">
-            <option value="">Status</option>
-          </select>
-          <div class="searchBox">
-            <input type="text" placeholder="Search" class="searchInput" id="linensSearchInput" />
-            <button class="searchBtn">
-              <img src="assets/icons/search-icon.png" alt="Search" />
-            </button>
-          </div>
-          <button class="refreshBtn" id="linensRefreshBtn">
-            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-          </button>
-          <button class="downloadBtn" id="linensDownloadBtn">
-            <img src="assets/icons/download-icon.png" alt="Download" />
-          </button>
-          <button class="addItemBtnInline" id="addItemBtn">
-            <img src="assets/icons/add.png" alt="Add" />
-          </button>
-        </div>
-      </div>
-
-      <div class="tableWrapper">
-        <table class="linensTable">
-          <thead>
-            <tr>
-              <th>FLOOR</th>
-              <th>ROOM</th>
-              <th>TYPES</th>
-              <th>ITEMS</th>
-              <th>TIME/DATE</th>
-              <th>STATUS</th>
-              <th>REMARKS</th>
-              <th>ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody id="linensTableBody">
-          </tbody>
-        </table>
-      </div>
-      <div class="pagination">
-        <span class="paginationInfo">Display Records <span id="linensRecordCount">0</span></span>
-        <div class="paginationControls" id="linensPaginationControls">
-        </div>
-      </div>
     </div>
-  </div>
-
-  <!-- Staff Selection Modal -->
-  <div class="modalBackdrop" id="staffModal" style="display: none;">
-    <div class="staffSelectionModal">
-      <button class="closeBtn" id="closeStaffModalBtn">×</button>
-      <h2>SELECT STAFF MEMBER</h2>
-      <p class="modalSubtext">Showing available Housekeeping Staff</p>
-      <div class="searchBox modalSearchBox">
-        <input type="text" placeholder="Search staff..." class="searchInput" id="staffModalSearchInput" />
-        <button class="searchBtn">
-          <img src="assets/icons/search-icon.png" alt="Search" />
-        </button>
-      </div>
-
-      <div class="staffList" id="staffList">
-      </div>
-
-      <div class="modalButtons">
-        <button class="modalBtn cancelBtn" id="cancelStaffBtn">CLOSE</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Add/Edit Item Modal -->
-  <div class="modalBackdrop" id="addItemModal" style="display: none;">
-    <div class="addItemModal">
-      <button class="closeBtn" id="closeAddItemBtn">×</button>
-      <div class="modalIconHeader">
-        <i class="fas fa-broom" style="font-size: 48px; color: #FFA237;"></i>
-      </div>
-      <h2 id="addItemModalTitle">Add Item</h2>
-      <p class="modalSubtext">Please fill out the item details carefully before submitting. Ensure that all information is accurate to help track usage, replacements, and maintain proper housekeeping records.</p>
-      
-      <form id="addItemForm">
-        <input type="hidden" id="itemId" value="">
-        <div class="formRow">
-          <div class="formGroup">
-            <label>Floor</label>
-            <select class="formInput" id="itemFloor" required>
-              <option value="">Select Floor</option>
-            </select>
-          </div>
-          <div class="formGroup">
-            <label>Room</label>
-            <select class="formInput" id="itemRoom" required>
-              <option value="">Select Room</option>
-            </select>
-          </div>
-        </div>
-        <div class="formRow">
-          <div class="formGroup">
-            <label>Item</label>
-            <input type="text" class="formInput" id="itemName" placeholder="Enter item name" required>
-          </div>
-        </div>
-        <div class="formRow">
-          <div class="formGroup">
-            <label>Type</label>
-            <input type="text" class="formInput" id="itemType" placeholder="Enter type" required>
-          </div>
-          <div class="formGroup">
-            <label>Last Replaced</label>
-            <input type="date" class="formInput" id="itemLastReplaced">
-          </div>
+</div>
+            
+            <div class="tableWrapper">
+                <table class="historyTable">
+                    <thead>
+                        <tr>
+                            <th>Floor</th>
+                            <th>Room</th>
+                            <th>Task</th>
+                            <th>Date</th>
+                            <th>Requested Time</th>
+                            <th>Completed Time</th>
+                            <th>Staff In Charge</th>
+                            <th>Status</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody"></tbody>
+                </table>
+            </div>
+            <div class="pagination">
+                <span class="paginationInfo">Display Records <span id="historyRecordCount">0</span></span>
+                <div class="paginationControls" id="historyPaginationControls"></div>
+            </div>
         </div>
 
-        <div class="modalButtons">
-          <button type="button" class="modalBtn cancelBtn" id="cancelAddItemBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="submitItemBtn">ADD ITEM</button>
         </div>
-      </form>
+
+    <div class="modalBackdrop" id="staffModal" style="display: none;">
+        <div class="staffSelectionModal">
+            <button class="closeBtn" id="closeStaffModalBtn">×</button>
+            <h2>SELECT STAFF MEMBER</h2>
+            <p class="modalSubtext">Showing available Housekeeping Staff</p>
+            <div class="searchBox modalSearchBox">
+                <input type="text" placeholder="Search staff..." class="searchInput" id="staffModalSearchInput" />
+                <button class="searchBtn">
+                    <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+            </div>
+            <div class="staffList" id="staffList"></div>
+            <div class="modalButtons">
+    <button class="modalBtn cancelBtn" id="cancelStaffBtn">CANCEL</button>
+    <button class="modalBtn confirmBtn" id="confirmStaffAssignBtn" disabled>ASSIGN STAFF</button>
+</div>
+        </div>
     </div>
-  </div>
 
-  <!-- Confirmation Modal -->
-  <div class="modalBackdrop" id="confirmModal" style="display: none;">
-    <div class="confirmModal">
-      <h2 id="confirmModalTitle">Are you sure you want to add this item?</h2>
-      <p class="modalSubtext" id="confirmModalText">Please review the details before confirming. Once added, the item will be recorded and visible in the maintenance records.</p>
-      <div class="modalButtons">
-        <button class="modalBtn cancelBtn" id="cancelConfirmBtn">CANCEL</button>
-        <button class="modalBtn confirmBtn" id="confirmActionBtn">YES, ADD ITEM</button>
-      </div>
+    <div class="modalBackdrop" id="taskTypeModal" style="display: none;">
+        <div class="addItemModal">
+            <button class="closeBtn" id="closeTaskTypeModalBtn" style="color: #bababa" >×</button>
+            <div class="modalIconHeader">
+                <i class="fas fa-broom" style="font-size: 48px; color: #FFA237;"></i>
+            </div>
+            <h2 style="color: #ffffffff">Select Task Types</h2>
+            <p class="modalSubtext" style="color: #bababa">Select all relevant tasks for the request in Room <strong id="taskTypeModalRoomNumber">---</strong>.</p>
+            
+            <form id="taskTypeForm">
+                <input type="hidden" id="taskTypeRoomId" value="">
+                
+                <div class="formGroup checkboxGroup" style="width: 100%; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 10px;">
+                    <input type="checkbox" id="task_select_all">
+                    <label for="task_select_all" style="font-weight: 700; color: #d4d4d4ff;">SELECT ALL</label>
+                </div>
+
+                <div class="formRow" id="taskTypeCheckboxContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px 15px; max-height: 250px; overflow-y: auto;">
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="task_general" name="taskType[]" value="General Cleaning">
+                        <label for="task_general" style="color: #bababa">General Cleaning</label>
+                    </div>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="task_linen" name="taskType[]" value="Bed and Linen Care">
+                        <label for="task_linen" style="color: #bababa">Bed and Linen Care</label>
+                    </div>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="task_bathroom" name="taskType[]" value="Bathroom Cleaning">
+                        <label for="task_bathroom" style="color: #bababa">Bathroom Cleaning</label>
+                    </div>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="task_restock" name="taskType[]" value="Restocking Supplies">
+                        <label for="task_restock"style="color: #bababa">Restocking Supplies</label>
+                    </div>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="task_trash" name="taskType[]" value="Trash Removal">
+                        <label for="task_trash"style="color: #bababa">Trash Removal</label>
+                    </div>
+                    <div class="formGroup checkboxGroup">
+                        <input type="checkbox" id="task_windows" name="taskType[]" value="Window & Curtains Care">
+                        <label for="task_windows" style="color: #bababa">Window & Curtains Care</label>
+                    </div>
+                </div>
+                
+                <div class="modalButtons">
+                    <button type="button" class="modalBtn cancelBtn" id="cancelTaskTypeBtn">CANCEL</button>
+                    <button type="submit" class="modalBtn confirmBtn" id="confirmTaskTypeBtn">NEXT</button>
+                </div>
+            </form>
+        </div>
     </div>
-  </div>
 
-  <!-- Success Modal -->
-  <div class="modalBackdrop" id="successModal" style="display: none;">
-    <div class="successModal">
-      <button class="closeBtn" id="closeSuccessBtn">×</button>
-      <div class="modalIconHeader">
-        <i class="fas fa-check-circle" style="font-size: 80px; color: #28a745;"></i>
-      </div>
-      <h2 id="successModalMessage">Item Added Successfully</h2>
-      <div class="modalButtons">
-        <button class="modalBtn okayBtn" id="okaySuccessBtn">OKAY</button>
-      </div>
+    <div class="modalBackdrop" id="editRoomStatusModal" style="display: none;">
+        <div class="addItemModal"> <button class="closeBtn" id="closeEditRoomStatusBtn" style="color: white;">×</button>
+            <div class="modalIconHeader">
+                <i class="fas fa-bed" style="font-size: 48px; color: #FFA237;"></i>
+            </div>
+            <h2 id="editRoomStatusModalTitle" style="color: white;">Edit Room Status</h2>
+            
+            <p class="modalSubtext normal-message" style="color: white;">
+                Update the status for Room <strong id="editRoomStatusRoomNumber">---</strong>.
+            </p>
+            <p class="modalSubtext error-message" id="editRoomStatusErrorMessage">
+                </p>
+            <form id="editRoomStatusForm">
+                <input type="hidden" id="editRoomStatusRoomId" value="">
+                <div class="formRow">
+                    <div class="formGroup">
+                        <label style="color: white;">Room Status</label>
+                        <select class="formInput" id="editRoomStatusSelect" required>
+                            <option value="Available">Available</option>
+                            <option value="Needs Cleaning">Needs Cleaning</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modalButtons">
+                    <button type="button" class="modalBtn cancelBtn" id="cancelEditRoomStatusBtn">CANCEL</button>
+                    <button type="submit" class="modalBtn confirmBtn" id="submitEditRoomStatusBtn">UPDATE STATUS</button>
+                </div>
+            </form>
+        </div>
     </div>
-  </div>
-
-  <!-- Delete Confirmation Modal -->
-  <div class="modalBackdrop" id="deleteModal" style="display: none;">
-    <div class="confirmModal deleteConfirmModal">
-      <button class="closeBtn" id="closeDeleteBtn">×</button>
-      <div class="modalIconHeader">
-        <i class="fas fa-exclamation-triangle" style="font-size: 64px; color: #FFA237;"></i>
-      </div>
-      <h2>Are you sure you want to delete this item from the room's housekeeping list?</h2>
-      <p class="modalSubtext">This action cannot be undone, and all related records will be permanently removed.</p>
-      <div class="modalButtons">
-        <button class="modalBtn cancelBtn" id="cancelDeleteBtn">CANCEL</button>
-        <button class="modalBtn confirmBtn deleteBtn" id="confirmDeleteBtn">YES, DELETE</button>
-      </div>
+    
+    <div class="modalBackdrop" id="confirmModal" style="display: none;">
+        <div class="confirmModal">
+            <h2 id="confirmModalTitle">Are you sure?</h2>
+            <p class="modalSubtext" id="confirmModalText">Please review the details before confirming.</p>
+            <div class="modalButtons">
+                <button class="modalBtn cancelBtn" id="cancelConfirmBtn">CANCEL</button>
+                <button class="modalBtn confirmBtn" id="confirmActionBtn">YES, CONFIRM</button>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <script>
-    // Make PHP data available to the JS file
-    const initialRequestsData = <?php echo json_encode($roomsNeedingCleaning); ?>;
-    const availableStaffData = <?php echo json_encode($housekeepingStaff); ?>;
-    const initialLinensAmenitiesData = <?php echo json_encode($linensAmenitiesItems); ?>;
-    const allRoomsData = <?php echo json_encode($allRooms); ?>;
-    const linensTypesData = <?php echo json_encode($linensTypes); ?>;
-    const amenitiesTypesData = <?php echo json_encode($amenitiesTypes); ?>;
-  </script>
+    <div class="modalBackdrop" id="successModal" style="display: none;">
+        <div class="successModal">
+            <button class="closeBtn" id="closeSuccessBtn">×</button>
+            <div class="modalIconHeader">
+                <i class="fas fa-check-circle" style="font-size: 80px; color: #28a745;"></i>
+            </div>
+            <h2 id="successModalMessage">Success!</h2>
+            <div class="modalButtons">
+                <button class="modalBtn okayBtn" id="okaySuccessBtn">OKAY</button>
+            </div>
+        </div>
+    </div>
 
-  <script src="script/housekeeping.js"></script>
-</body>
+    <script>
+        // Pass PHP data to JavaScript as global variables
+        const initialRequestsData = <?php echo json_encode($allRoomsStatus); ?>;
+        // *** MODIFIED: Variable name ***
+        const availableStaffData = <?php echo json_encode($housekeepingStaff); ?>;
+        const initialHistoryData = <?php echo json_encode($historyData); ?>;
+        const allRoomsData = <?php echo json_encode($allRooms); ?>;
+    </script>
+
+    <script src="script/download-utils.js?v=<?php echo time(); ?>"></script>
+    <script src="script/housekeeping.pagination.js?v=<?php echo time(); ?>"></script>
+    <script src="script/housekeeping.utils.js?v=<?php echo time(); ?>"></script>
+    <script src="script/housekeeping.ui.js?v=<?php echo time(); ?>"></script>
+    <script src="script/housekeeping.requests.js?v=<?php echo time(); ?>"></script>
+    <script src="script/housekeeping.history.js?v=<?php echo time(); ?>"></script>
+    <script src="script/housekeeping.js?v=<?php echo time(); ?>"></script>
+
+    </body>
 </html>

@@ -7,59 +7,388 @@ require_login(['admin']);
 
 // --- Fetch User Data from Database ---
 include('db_connection.php'); // Ensure DB connection is included
-
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
 $formattedName = 'Admin'; // Default name
 $Accounttype = 'Administrator'; // Default type
 
 if (isset($_SESSION['UserID'])) {
-    $userId = $_SESSION['UserID'];
-    $sql = "SELECT Fname, Mname, Lname, AccountType FROM users WHERE UserID = ?";
-    
-    if ($stmt = $conn->prepare($sql)) {
-        $stmt->bind_param("i", $userId);
-        if ($stmt->execute()) {
-            $result = $stmt->get_result();
-            if ($user = $result->fetch_assoc()) {
-                // Fetch names and sanitize for display
-                $Lname = htmlspecialchars($user['Lname'] ?? 'Admin');
-                $Fname = htmlspecialchars($user['Fname'] ?? '');
-                $Mname = htmlspecialchars($user['Mname'] ?? '');
-                $Accounttype = htmlspecialchars($user['AccountType'] ?? 'Administrator'); // Fetch AccountType as well
+  $userId = $_SESSION['UserID'];
+  $sql = "SELECT Fname, Mname, Lname, AccountType FROM pms_users WHERE UserID = ?";
 
-                // Format the name: Lname, Fname M.
-                $formattedName = $Lname;
-                if (!empty($Fname)) {
-                    $formattedName .= ', ' . $Fname;
-                    if (!empty($Mname)) {
-                        // Add middle initial with a period if Mname exists
-                        $formattedName .= ' ' . strtoupper(substr($Mname, 0, 1)) . '.';
-                    }
-                }
-            } else {
-                 error_log("No user found with UserID: " . $userId);
-            }
-        } else {
-            error_log("Error executing user query: " . $stmt->error);
+  if ($stmt = $conn->prepare($sql)) {
+    $stmt->bind_param("i", $userId);
+    if ($stmt->execute()) {
+      $result = $stmt->get_result();
+      if ($user = $result->fetch_assoc()) {
+        // Fetch names and sanitize for display
+        $Lname = htmlspecialchars($user['Lname'] ?? 'Admin');
+        $Fname = htmlspecialchars($user['Fname'] ?? '');
+        $Mname = htmlspecialchars($user['Mname'] ?? '');
+        $Accounttype = htmlspecialchars($user['AccountType'] ?? 'Administrator'); // Fetch AccountType as well
+
+        // Format the name: Fname M. Lname
+        $formattedName = $Fname; // Start with Fname
+        if (!empty($Mname)) {
+          $formattedName .= ' ' . strtoupper(substr($Mname, 0, 1)) . '.'; // Add M.
         }
-        $stmt->close();
+        if (!empty($Lname)) {
+          if (!empty(trim($formattedName))) { // Add space only if Fname or Mname was present
+            $formattedName .= ' ' . $Lname; // Add Lname
+          } else {
+            $formattedName = $Lname; // Only Lname is available
+          }
+        }
+
+        if (empty(trim($formattedName))) {
+          $formattedName = 'Admin'; // Fallback to default
+        }
+      } else {
+        error_log("No user found with UserID: " . $userId);
+      }
     } else {
-         error_log("Error preparing user query: " . $conn->error);
+      error_log("Error executing user query: " . $stmt->error);
     }
-    $conn->close(); // Close connection after fetching
+    $stmt->close();
+  } else {
+    error_log("Error preparing user query: " . $conn->error);
+  }
+  // DO NOT CLOSE $conn HERE, we need it for other queries
 } else {
-     error_log("UserID not found in session for admin.php");
+  error_log("UserID not found in session for admin.php");
 }
 // --- End Fetch User Data ---
 
+// ===== HELPER FUNCTIONS FOR DATE FORMATTING =====
+function formatDbDateForDisplay($date)
+{
+  if (!$date) return 'N/A';
+  try {
+    return date('m.d.Y', strtotime($date));
+  } catch (Exception $e) {
+    return 'N/A';
+  }
+}
+
+function formatDbDateTimeForDisplay($datetime)
+{
+  if (!$datetime) return 'Never';
+  try {
+    return date('g:iA/m.d.Y', strtotime($datetime));
+  } catch (Exception $e) {
+    return 'Never';
+  }
+}
+// ===== END OF HELPER FUNCTIONS =====
+
+
+// ===== 4. Fetch Housekeeping Room Status =====
+$hkRoomsStatus = [];
+$sql_hk_rooms = "SELECT
+                r.room_id as RoomID,
+                r.floor_num as FloorNumber,
+                r.room_num as RoomNumber,
+                rs.LastClean,
+                
+                -- Determine the most accurate current status
+                CASE 
+                    WHEN active_task.Status IS NOT NULL THEN active_task.Status
+                    WHEN rs.RoomStatus = 'Needs Cleaning' THEN 'Needs Cleaning'
+                    ELSE COALESCE(rs.RoomStatus, 'Available') 
+                END as RoomStatus,
+                
+                active_task.DateRequested as TaskRequestDate,
+                active_task.TaskID, 
+                
+                -- Get assigned staff member's name
+                u.Fname,
+                u.Lname,
+                u.Mname
+              FROM
+                tbl_rooms r
+              LEFT JOIN
+                pms_room_status rs ON r.room_num = rs.RoomNumber
+              LEFT JOIN (
+                -- Subquery to find the *single* latest active task per room
+                SELECT 
+                    ht.TaskID,
+                    ht.RoomID, 
+                    ht.Status, 
+                    ht.DateRequested, 
+                    ht.AssignedUserID,
+                    ROW_NUMBER() OVER(PARTITION BY ht.RoomID ORDER BY ht.DateRequested DESC) as rn
+                FROM 
+                    pms_housekeeping_tasks ht
+                WHERE 
+                    ht.Status IN ('Pending', 'In Progress')
+              ) AS active_task ON active_task.RoomID = r.room_id AND active_task.rn = 1
+              LEFT JOIN
+                pms_users u ON u.UserID = active_task.AssignedUserID
+              WHERE
+                r.is_archived = 0
+              ORDER BY
+                r.floor_num, r.room_num ASC";
+
+if ($result_hk_rooms = $conn->query($sql_hk_rooms)) {
+  while ($row = $result_hk_rooms->fetch_assoc()) {
+    $requestDate = 'N/A';
+    $requestTime = 'N/A';
+    if (in_array($row['RoomStatus'], ['Needs Cleaning', 'Pending', 'In Progress']) && $row['TaskRequestDate']) {
+      $requestDate = formatDbDateForDisplay($row['TaskRequestDate']);
+      $requestTime = date('g:i A', strtotime($row['TaskRequestDate']));
+    }
+    $staffName = 'Not Assigned';
+    if (!empty($row['Fname'])) {
+      $staffName = trim(
+        htmlspecialchars($row['Fname']) .
+          (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+          ' ' .
+          htmlspecialchars($row['Lname'])
+      );
+    }
+    $hkRoomsStatus[] = [
+      'id' => $row['RoomID'],
+      'taskId' => $row['TaskID'],
+      'floor' => $row['FloorNumber'],
+      'room' => $row['RoomNumber'],
+      'lastClean' => formatDbDateTimeForDisplay($row['LastClean']),
+      'date' => $requestDate,
+      'requestTime' => $requestTime,
+      'status' => $row['RoomStatus'],
+      'staff' => $staffName
+    ];
+  }
+  $result_hk_rooms->free();
+} else {
+  error_log("Admin Error fetching HK room statuses: " . $conn->error);
+}
+
+// ===== 5. Fetch Housekeeping History Data =====
+$hkHistoryData = [];
+$sql_hk_history = "SELECT 
+                    ht.TaskID, 
+                    r.floor_num as FloorNumber, 
+                    r.room_num as RoomNumber, 
+                    ht.TaskType,
+                    ht.DateRequested, 
+                    ht.DateCompleted, 
+                    u.Fname, 
+                    u.Lname, 
+                    u.Mname, 
+                    ht.Status, 
+                    ht.Remarks 
+                FROM 
+                    pms_housekeeping_tasks ht
+                JOIN 
+                    tbl_rooms r ON ht.RoomID = r.room_id
+                LEFT JOIN 
+                    pms_users u ON ht.AssignedUserID = u.UserID 
+                WHERE 
+                    ht.Status IN ('In Progress', 'Completed', 'Cancelled')
+                ORDER BY 
+                    -- 1. Primary Sort: Custom Status Priority
+                    CASE 
+                        WHEN ht.Status = 'In Progress' THEN 1
+                        WHEN ht.Status = 'Completed'   THEN 2
+                        WHEN ht.Status = 'Cancelled'   THEN 3
+                    END ASC,
+                    -- 2. Secondary Sort: By Date
+                    ht.DateCompleted DESC,
+                    ht.DateRequested DESC";
+
+if ($result_hk_history = $conn->query($sql_hk_history)) {
+  while ($row = $result_hk_history->fetch_assoc()) {
+    $staffName = 'N/A';
+    if ($row['Fname']) {
+      $staffName = trim(
+        htmlspecialchars($row['Fname']) .
+          (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+          ' ' .
+          htmlspecialchars($row['Lname'])
+      );
+    }
+    $hkHistoryData[] = [
+      'id' => $row['TaskID'],
+      'floor' => $row['FloorNumber'],
+      'room' => $row['RoomNumber'],
+      'issueType' => $row['TaskType'],
+      'date' => formatDbDateForDisplay($row['DateRequested']),
+      'requestedTime' => date('g:i A', strtotime($row['DateRequested'])),
+      'completedTime' => $row['DateCompleted'] ? date('g:i A', strtotime($row['DateCompleted'])) : 'N/A',
+      'staff' => $staffName,
+      'status' => $row['Status'],
+      'remarks' => $row['Remarks']
+    ];
+  }
+  $result_hk_history->free();
+} else {
+  error_log("Admin Error fetching HK history: " . $conn->error);
+}
+
+
+// ===== 6. Fetch Maintenance Room Status =====
+$mtRoomsStatus = [];
+$sql_mt_rooms = "SELECT
+                r.room_id as RoomID,
+                r.floor_num as FloorNumber,
+                r.room_num as RoomNumber,
+                rs.LastMaintenance,
+                
+                -- Determine the most accurate current status
+                CASE 
+                    WHEN active_req.Status IS NOT NULL THEN active_req.Status
+                    WHEN rs.RoomStatus = 'Maintenance' THEN 'Needs Maintenance'
+                    ELSE COALESCE(rs.RoomStatus, 'Available') 
+                END as RoomStatus,
+                
+                active_req.DateRequested as MaintenanceRequestDate,
+                active_req.RequestID, 
+                
+                -- Get assigned staff member's name
+                u.Fname,
+                u.Lname,
+                u.Mname
+              FROM
+                tbl_rooms r
+              LEFT JOIN
+                pms_room_status rs ON r.room_num = rs.RoomNumber
+              LEFT JOIN (
+                -- Subquery to find the *single* latest active request per room
+                SELECT 
+                    mr.RequestID,
+                    mr.RoomID, 
+                    mr.Status, 
+                    mr.DateRequested, 
+                    mr.AssignedUserID,
+                    ROW_NUMBER() OVER(PARTITION BY mr.RoomID ORDER BY mr.DateRequested DESC) as rn
+                FROM 
+                    pms_maintenance_requests mr
+                WHERE 
+                    mr.Status IN ('Pending', 'In Progress')
+              ) AS active_req ON active_req.RoomID = r.room_id AND active_req.rn = 1
+              LEFT JOIN
+                pms_users u ON u.UserID = active_req.AssignedUserID
+              WHERE
+                r.is_archived = 0
+              ORDER BY
+                r.floor_num, r.room_num ASC";
+
+if ($result_mt_rooms = $conn->query($sql_mt_rooms)) {
+  while ($row = $result_mt_rooms->fetch_assoc()) {
+    $requestDate = 'N/A';
+    $requestTime = 'N/A';
+    if (in_array($row['RoomStatus'], ['Needs Maintenance', 'Pending', 'In Progress']) && $row['MaintenanceRequestDate']) {
+      $requestDate = formatDbDateForDisplay($row['MaintenanceRequestDate']);
+      $requestTime = date('g:i A', strtotime($row['MaintenanceRequestDate']));
+    }
+    $staffName = 'Not Assigned';
+    if (!empty($row['Fname'])) {
+      $staffName = trim(
+        htmlspecialchars($row['Fname']) .
+          (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+          ' ' .
+          htmlspecialchars($row['Lname'])
+      );
+    }
+    $mtRoomsStatus[] = [
+      'id' => $row['RoomID'],
+      'requestId' => $row['RequestID'],
+      'floor' => $row['FloorNumber'],
+      'room' => $row['RoomNumber'],
+      'lastMaintenance' => formatDbDateTimeForDisplay($row['LastMaintenance']),
+      'date' => $requestDate,
+      'requestTime' => $requestTime,
+      'status' => $row['RoomStatus'],
+      'staff' => $staffName
+    ];
+  }
+  $result_mt_rooms->free();
+} else {
+  error_log("Admin Error fetching MT room statuses: " . $conn->error);
+}
+
+// 7. Fetch Maintenance History Data
+$mtHistoryData = [];
+$sql_mt_history = "SELECT 
+                    mr.RequestID, 
+                    r.floor_num as FloorNumber, 
+                    r.room_num as RoomNumber, 
+                    mr.IssueType, 
+                    mr.DateRequested, 
+                    mr.DateCompleted, 
+                    u.Fname, 
+                    u.Lname, 
+                    u.Mname, 
+                    mr.Status, 
+                    mr.Remarks 
+                FROM 
+                    pms_maintenance_requests mr 
+                JOIN 
+                    tbl_rooms r ON mr.RoomID = r.room_id
+                LEFT JOIN 
+                    pms_users u ON mr.AssignedUserID = u.UserID 
+                WHERE 
+                    mr.Status IN ('Completed', 'Cancelled', 'In Progress')
+                ORDER BY 
+                    -- 1. Primary Sort: Custom Status Priority
+                    CASE 
+                        WHEN mr.Status = 'In Progress' THEN 1
+                        WHEN mr.Status = 'Completed'   THEN 2
+                        WHEN mr.Status = 'Cancelled'   THEN 3
+                    END ASC,
+                    -- 2. Secondary Sort: By Date
+                    mr.DateCompleted DESC,
+                    mr.DateRequested DESC";
+
+if ($result_mt_history = $conn->query($sql_mt_history)) {
+  while ($row = $result_mt_history->fetch_assoc()) {
+    $staffName = 'N/A';
+    if ($row['Fname']) {
+      $staffName = trim(
+        htmlspecialchars($row['Fname']) .
+          (empty($row['Mname']) ? '' : ' ' . strtoupper(substr(htmlspecialchars($row['Mname']), 0, 1)) . '.') .
+          ' ' .
+          htmlspecialchars($row['Lname'])
+      );
+    }
+    $mtHistoryData[] = [
+      'id' => $row['RequestID'],
+      'floor' => $row['FloorNumber'],
+      'room' => $row['RoomNumber'],
+      'issueType' => $row['IssueType'],
+      'date' => formatDbDateForDisplay($row['DateRequested']),
+      'requestedTime' => date('g:i A', strtotime($row['DateRequested'])),
+      'completedTime' => $row['DateCompleted'] ? date('g:i A', strtotime($row['DateCompleted'])) : 'N/A',
+      'staff' => $staffName,
+      'status' => $row['Status'],
+      'remarks' => $row['Remarks']
+    ];
+  }
+  $result_mt_history->free();
+} else {
+  error_log("Admin Error fetching MT history: " . $conn->error);
+}
+
+
+// 8. Close database connection
+$conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Celestia Hotel - Admin Dashboard</title>
   <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
+
 <body>
   <header class="header">
     <div class="headerLeft">
@@ -75,8 +404,10 @@ if (isset($_SESSION['UserID'])) {
           <div class="profileAvatar">
             <img src="assets/icons/profile-icon.png" alt="Profile" />
           </div>
-          <h3 class="profileName"><?php echo $formattedName; // Use the name fetched from DB ?></h3>
-          <p class="profileRole"><?php echo ucfirst($Accounttype); // Use AccountType fetched from DB ?></p>
+          <h3 class="profileName"><?php echo $formattedName; // Use the name fetched from DB 
+                                  ?></h3>
+          <p class="profileRole"><?php echo ucfirst($Accounttype); // Use AccountType fetched from DB 
+                                  ?></p>
         </div>
 
         <nav class="sidebarNav">
@@ -117,13 +448,13 @@ if (isset($_SESSION['UserID'])) {
                 Rooms
               </a>
             </li>
-             <li>
-              <a href="#manage-users" class="navLink" data-page="manage-users"> 
+            <li>
+              <a href="#manage-users" class="navLink" data-page="manage-users">
                 <img src="assets/icons/users-icon.png" alt="Manage Users" class="navIcon" />
                 Manage Users
               </a>
             </li>
-             </ul>
+          </ul>
         </nav>
 
         <button class="logoutBtn" id="logoutBtn">Logout</button>
@@ -133,25 +464,40 @@ if (isset($_SESSION['UserID'])) {
     <main class="mainContent">
       <div class="page active" id="dashboard-page">
         <h1 class="pageTitle">ADMIN DASHBOARD</h1>
+        <p class="pageDescription">Overview of hotel operations, staff management, and key metrics</p>
 
         <section class="dashboardSection">
           <h2 class="sectionTitle">Housekeeping and Maintenance</h2>
           <div class="statsGrid">
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon burgundy"><i class="fas fa-door-open"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Total Rooms</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#rooms" class="statCardLink navLink" data-page="rooms">View all</a>
+              </div>
             </div>
             <div class="statCard">
-              <h3 class="statLabel">Occupied</h3>
+              <div class="statCardHeader">
+                <div class="statCardIcon blue"><i class="fas fa-broom"></i></div>
+              </div>
               <p class="statValue">0</p>
-            </div>
-            <div class="statCard">
               <h3 class="statLabel">Needs Cleaning</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#housekeeping" class="statCardLink navLink" data-page="housekeeping">Manage</a>
+              </div>
             </div>
             <div class="statCard">
-              <h3 class="statLabel">Maintenance Requests</h3>
+              <div class="statCardHeader">
+                <div class="statCardIcon gold"><i class="fas fa-tools"></i></div>
+              </div>
               <p class="statValue">0</p>
+              <h3 class="statLabel">Maintenance Requests</h3>
+              <div class="statCardFooter">
+                <a href="#maintenance" class="statCardLink navLink" data-page="maintenance">Manage</a>
+              </div>
             </div>
           </div>
         </section>
@@ -160,16 +506,34 @@ if (isset($_SESSION['UserID'])) {
           <h2 class="sectionTitle">Inventory</h2>
           <div class="statsGrid">
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon green"><i class="fas fa-boxes"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Total Items</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#inventory" class="statCardLink navLink" data-page="inventory">View all</a>
+              </div>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon gold"><i class="fas fa-exclamation-triangle"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Low Stock</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#inventory" class="statCardLink navLink" data-page="inventory">Manage</a>
+              </div>
             </div>
             <div class="statCard">
-              <h3 class="statLabel">Out of Stock</h3>
+              <div class="statCardHeader">
+                <div class="statCardIcon burgundy"><i class="fas fa-times-circle"></i></div>
+              </div>
               <p class="statValue">0</p>
+              <h3 class="statLabel">Out of Stock</h3>
+              <div class="statCardFooter">
+                <a href="#inventory" class="statCardLink navLink" data-page="inventory">Manage</a>
+              </div>
             </div>
           </div>
         </section>
@@ -178,51 +542,93 @@ if (isset($_SESSION['UserID'])) {
           <h2 class="sectionTitle">Parking</h2>
           <div class="statsGrid">
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon blue"><i class="fas fa-parking"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Total Slots</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#parking" class="statCardLink navLink" data-page="parking">View all</a>
+              </div>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon burgundy"><i class="fas fa-car"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Occupied</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#parking" class="statCardLink navLink" data-page="parking">Manage</a>
+              </div>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon green"><i class="fas fa-check-circle"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Vacant</h3>
-              <p class="statValue">0</p>
-            </div>
-            <div class="statCard">
-              <h3 class="statLabel">Reserved</h3>
-              <p class="statValue">0</p>
+              <div class="statCardFooter">
+                <a href="#parking" class="statCardLink navLink" data-page="parking">View all</a>
+              </div>
             </div>
           </div>
         </section>
 
         <section class="dashboardSection">
           <h2 class="sectionTitle">Users</h2>
-          <div class="statsGrid">
+          <div class="statsGrid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon burgundy"><i class="fas fa-users"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Total Employees</h3>
-              <p class="statValue">0</p>
-              <p class="statSubtext"></p>
+              <div class="statCardFooter">
+                <a href="#manage-users" class="statCardLink navLink" data-page="manage-users">View all</a>
+              </div>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon burgundy"><i class="fas fa-user-shield"></i></div>
+              </div>
+              <p class="statValue">0</p>
+              <h3 class="statLabel">Admin</h3>
+            </div>
+            <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon blue"><i class="fas fa-broom"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Housekeeping</h3>
-              <p class="statValue">0</p>
             </div>
             <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon gold"><i class="fas fa-wrench"></i></div>
+              </div>
+              <p class="statValue">0</p>
               <h3 class="statLabel">Maintenance</h3>
-              <p class="statValue">0</p>
             </div>
             <div class="statCard">
-              <h3 class="statLabel">Parking</h3>
+              <div class="statCardHeader">
+                <div class="statCardIcon green"><i class="fas fa-parking"></i></div>
+              </div>
               <p class="statValue">0</p>
+              <h3 class="statLabel">Parking</h3>
+            </div>
+            <div class="statCard">
+              <div class="statCardHeader">
+                <div class="statCardIcon green"><i class="fas fa-box"></i></div>
+              </div>
+              <p class="statValue">0</p>
+              <h3 class="statLabel">Inventory</h3>
             </div>
           </div>
         </section>
       </div>
 
-      <!-- HOUSEKEEPING PAGE -->
       <div class="page" id="housekeeping-page">
         <h1 class="pageTitle">HOUSEKEEPING</h1>
+        <p class="pageDescription">Manage room cleaning requests, track staff assignments, and view cleaning history</p>
 
         <div class="tabNavigation">
           <button class="tabBtn active" data-hk-tab="hk-requests">
@@ -231,32 +637,19 @@ if (isset($_SESSION['UserID'])) {
           <button class="tabBtn" data-hk-tab="hk-history">
             History
           </button>
-          <button class="tabBtn" data-hk-tab="hk-linens-amenities">
-            Linens & Amenities
-          </button>
         </div>
 
-        <!-- REQUESTS TAB -->
         <div class="tabContent active" id="hk-requests-tab">
           <div class="controlsRow">
             <div class="filterControls">
-              <select class="filterDropdown" id="floorFilter">
+              <select class="filterDropdown" id="hkfloorFilter">
                 <option value="">Floor</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
               </select>
-              <select class="filterDropdown" id="roomFilter">
+              <select class="filterDropdown" id="hkroomFilter">
                 <option value="">Room</option>
-                <option value="101">101</option>
-                <option value="102">102</option>
-              </select>
-              <select class="filterDropdown" id="statusFilter">
-                <option value="">Status</option>
-                <option value="dirty">Dirty / Unoccupied</option>
-                <option value="request">Request Clean / Occupied</option>
               </select>
               <div class="searchBox">
-                <input type="text" placeholder="Search" class="searchInput" id="hkSearchInput" />
+                <input type="text" placeholder="Search Room Number..." class="searchInput" id="hkSearchInput" />
                 <button class="searchBtn">
                   <img src="assets/icons/search-icon.png" alt="Search" />
                 </button>
@@ -276,40 +669,41 @@ if (isset($_SESSION['UserID'])) {
                 <tr>
                   <th>Floor</th>
                   <th>Room</th>
-                  <th>Guest</th>
                   <th>Date</th>
                   <th>Request Time</th>
-                  <th>Last Cleaned</th>
+                  <th>Last Clean</th>
                   <th>Status</th>
                   <th>Staff In Charge</th>
                 </tr>
               </thead>
               <tbody id="hkTableBody">
-                 </tbody>
+              </tbody>
             </table>
           </div>
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="hkRecordCount">0</span></span>
-            <div class="paginationControls">
-              </div>
+            <div class="paginationControls" id="hk-requests-tab-pagination">
+            </div>
           </div>
         </div>
 
-        <!-- HISTORY TAB -->
         <div class="tabContent" id="hk-history-tab">
           <div class="controlsRow">
             <div class="filterControls">
               <select class="filterDropdown" id="floorFilterHkHist">
                 <option value="">Floor</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
               </select>
               <select class="filterDropdown" id="roomFilterHkHist">
                 <option value="">Room</option>
-                <option value="101">101</option>
-                <option value="102">102</option>
               </select>
+              
+              <div style="display: flex; align-items: center; gap: 5px; background: white; border-radius: 5px; border: 1px solid #ddd; padding: 0 5px;">
+                  <input type="date" id="startDateFilterHkHist" title="Start Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+                  <span style="color: #666;">-</span>
+                  <input type="date" id="endDateFilterHkHist" title="End Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+              </div>
+              
               <div class="searchBox">
                 <input type="text" placeholder="Search" class="searchInput" id="hkHistSearchInput" />
                 <button class="searchBtn">
@@ -331,7 +725,7 @@ if (isset($_SESSION['UserID'])) {
                 <tr>
                   <th>Floor</th>
                   <th>Room</th>
-                  <th>Guest</th>
+                  <th>Task</th>
                   <th>Date</th>
                   <th>Requested Time</th>
                   <th>Completed Time</th>
@@ -341,153 +735,21 @@ if (isset($_SESSION['UserID'])) {
                 </tr>
               </thead>
               <tbody id="hkHistTableBody">
-                 </tbody>
+              </tbody>
             </table>
           </div>
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="hkHistRecordCount">0</span></span>
-            <div class="paginationControls">
-               </div>
-          </div>
-        </div>
-
-        <!-- LINENS & AMENITIES TAB (COMBINED) -->
-        <div class="tabContent" id="hk-linens-amenities-tab">
-          
-          <!-- Sub-tab navigation for Linens and Amenities -->
-          <div class="subTabNavigation">
-            <button class="subTabBtn active" data-hk-subtab="linens">
-              Linens
-            </button>
-            <button class="subTabBtn" data-hk-subtab="amenities">
-              Amenities
-            </button>
-          </div>
-
-          <!-- LINENS SUB-TAB -->
-          <div class="subTabContent active" id="linens-subtab">
-            <div class="controlsRow">
-              <div class="filterControls">
-                <select class="filterDropdown" id="floorFilterLinens">
-                  <option value="">Floor</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                </select>
-                <select class="filterDropdown" id="roomFilterLinens">
-                  <option value="">Room</option>
-                  <option value="101">101</option>
-                  <option value="102">102</option>
-                </select>
-                <select class="filterDropdown" id="statusFilterLinens">
-                  <option value="">Status</option>
-                  <option value="cleaned">Cleaned</option>
-                  <option value="pending">Pending</option>
-                </select>
-                <div class="searchBox">
-                  <input type="text" placeholder="Search" class="searchInput" id="linensSearchInput" />
-                  <button class="searchBtn">
-                    <img src="assets/icons/search-icon.png" alt="Search" />
-                  </button>
-                </div>
-                <button class="refreshBtn" id="linensRefreshBtn">
-                  <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-                </button>
-                <button class="downloadBtn" id="linensDownloadBtn">
-                  <img src="assets/icons/download-icon.png" alt="Download" />
-                </button>
-              </div>
-            </div>
-
-            <div class="tableWrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Floor</th>
-                    <th>Room</th>
-                    <th>Types</th>
-                    <th>Items</th>
-                    <th>Time/Date</th>
-                    <th>Status</th>
-                    <th>Remarks</th>
-                  </tr>
-                </thead>
-                <tbody id="hkLinensTableBody">
-                   </tbody>
-              </table>
-            </div>
-
-            <div class="pagination">
-              <span class="paginationInfo">Display Records <span id="hkLinensRecordCount">0</span></span>
-              <div class="paginationControls">
-                 </div>
-            </div>
-          </div>
-
-          <!-- AMENITIES SUB-TAB -->
-          <div class="subTabContent" id="amenities-subtab">
-            <div class="controlsRow">
-              <div class="filterControls">
-                <select class="filterDropdown" id="floorFilterAmenities">
-                  <option value="">Floor</option>
-                  <option value="1">1</option>
-                  <option value="2">2</option>
-                </select>
-                <select class="filterDropdown" id="roomFilterAmenities">
-                  <option value="">Room</option>
-                  <option value="101">101</option>
-                  <option value="102">102</option>
-                </select>
-                <select class="filterDropdown" id="statusFilterAmenities">
-                  <option value="">Status</option>
-                  <option value="stocked">Stocked</option>
-                  <option value="pending">Pending</option>
-                </select>
-                <div class="searchBox">
-                  <input type="text" placeholder="Search" class="searchInput" id="amenitiesSearchInput" />
-                  <button class="searchBtn">
-                    <img src="assets/icons/search-icon.png" alt="Search" />
-                  </button>
-                </div>
-                <button class="refreshBtn" id="amenitiesRefreshBtn">
-                  <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-                </button>
-                <button class="downloadBtn" id="amenitiesDownloadBtn">
-                  <img src="assets/icons/download-icon.png" alt="Download" />
-                </button>
-              </div>
-            </div>
-
-            <div class="tableWrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Floor</th>
-                    <th>Room</th>
-                    <th>Types</th>
-                    <th>Items</th>
-                    <th>Time/Date</th>
-                    <th>Status</th>
-                    <th>Remarks</th>
-                  </tr>
-                </thead>
-                <tbody id="hkAmenitiesTableBody">
-                   </tbody>
-              </table>
-            </div>
-
-            <div class="pagination">
-              <span class="paginationInfo">Display Records <span id="hkAmenitiesRecordCount">0</span></span>
-              <div class="paginationControls">
-                 </div>
+            <div class="paginationControls" id="hk-history-tab-pagination">
             </div>
           </div>
         </div>
       </div>
 
-      <!-- MAINTENANCE PAGE -->
       <div class="page" id="maintenance-page">
         <h1 class="pageTitle">MAINTENANCE</h1>
+        <p class="pageDescription">Monitor maintenance requests, assign technicians, and review completed repairs</p>
 
         <div class="tabNavigation">
           <button class="tabBtn active" data-mt-tab="mt-requests">
@@ -496,33 +758,19 @@ if (isset($_SESSION['UserID'])) {
           <button class="tabBtn" data-mt-tab="mt-history">
             History
           </button>
-          <button class="tabBtn" data-mt-tab="mt-appliances">
-            Appliances
-          </button>
         </div>
 
-        <!-- REQUESTS TAB -->
         <div class="tabContent active" id="mt-requests-tab">
           <div class="controlsRow">
             <div class="filterControls">
               <select class="filterDropdown" id="mtFloorFilter">
                 <option value="">Floor</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
               </select>
               <select class="filterDropdown" id="mtRoomFilter">
                 <option value="">Room</option>
-                <option value="101">101</option>
-                <option value="102">102</option>
-              </select>
-              <select class="filterDropdown" id="mtStatusFilter">
-                <option value="">Status</option>
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
-                <option value="repaired">Repaired</option>
               </select>
               <div class="searchBox">
-                <input type="text" placeholder="Search" class="searchInput" id="mtSearchInput" />
+                <input type="text" placeholder="Search Room Number..." class="searchInput" id="mtSearchInput" />
                 <button class="searchBtn">
                   <img src="assets/icons/search-icon.png" alt="Search" />
                 </button>
@@ -542,41 +790,41 @@ if (isset($_SESSION['UserID'])) {
                 <tr>
                   <th>Floor</th>
                   <th>Room</th>
-                  <th>Issue Type</th>
                   <th>Date</th>
-                  <th>Requested Time</th>
-                  <th>Completed Time</th>
+                  <th>Request Time</th>
+                  <th>Last Maintenance</th>
                   <th>Status</th>
                   <th>Staff In Charge</th>
-                  <th>Remarks</th>
                 </tr>
               </thead>
               <tbody id="mtRequestsTableBody">
-                </tbody>
+              </tbody>
             </table>
           </div>
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="mtRequestsRecordCount">0</span></span>
-            <div class="paginationControls">
-              </div>
+            <div class="paginationControls" id="mt-requests-tab-pagination">
+            </div>
           </div>
         </div>
 
-        <!-- HISTORY TAB -->
         <div class="tabContent" id="mt-history-tab">
           <div class="controlsRow">
             <div class="filterControls">
               <select class="filterDropdown" id="mtFloorFilterHist">
                 <option value="">Floor</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
               </select>
               <select class="filterDropdown" id="mtRoomFilterHist">
                 <option value="">Room</option>
-                <option value="101">101</option>
-                <option value="102">102</option>
               </select>
+              
+              <div style="display: flex; align-items: center; gap: 5px; background: white; border-radius: 5px; border: 1px solid #ddd; padding: 0 5px;">
+                  <input type="date" id="startDateFilterMtHist" title="Start Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+                  <span style="color: #666;">-</span>
+                  <input type="date" id="endDateFilterMtHist" title="End Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+              </div>
+              
               <div class="searchBox">
                 <input type="text" placeholder="Search" class="searchInput" id="mtHistSearchInput" />
                 <button class="searchBtn">
@@ -598,123 +846,47 @@ if (isset($_SESSION['UserID'])) {
                 <tr>
                   <th>Floor</th>
                   <th>Room</th>
-                  <th>Issue Type</th>
+                  <th>Type</th>
                   <th>Date</th>
                   <th>Requested Time</th>
                   <th>Completed Time</th>
-                  <th>Status</th>
                   <th>Staff In Charge</th>
+                  <th>Status</th>
                   <th>Remarks</th>
                 </tr>
               </thead>
               <tbody id="mtHistTableBody">
-                </tbody>
+              </tbody>
             </table>
           </div>
 
           <div class="pagination">
             <span class="paginationInfo">Display Records <span id="mtHistRecordCount">0</span></span>
-            <div class="paginationControls">
-              </div>
-          </div>
-        </div>
-
-        <!-- APPLIANCES TAB -->
-        <div class="tabContent" id="mt-appliances-tab">
-          <div class="controlsRow">
-            <div class="filterControls">
-              <select class="filterDropdown" id="appFloorFilter">
-                <option value="">Floor</option>
-                <option value="1">1</option>
-                <option value="2">2</option>
-              </select>
-              <select class="filterDropdown" id="appRoomFilter">
-                <option value="">Room</option>
-                <option value="101">101</option>
-                <option value="102">102</option>
-              </select>
-              <select class="filterDropdown" id="appTypeFilter">
-                <option value="">Type</option>
-                <option value="Electric">Electric</option>
-                <option value="Water System">Water System</option>
-                <option value="HVAC">HVAC</option>
-              </select>
-              <div class="searchBox">
-                <input type="text" placeholder="Search" class="searchInput" id="appliancesSearchInput" />
-                <button class="searchBtn">
-                  <img src="assets/icons/search-icon.png" alt="Search" />
-                </button>
-              </div>
-              <button class="refreshBtn" id="appliancesRefreshBtn">
-                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-              </button>
-              <button class="downloadBtn" id="appliancesDownloadBtn">
-                <img src="assets/icons/download-icon.png" alt="Download" />
-              </button>
+            <div class="paginationControls" id="mt-history-tab-pagination">
             </div>
-          </div>
-
-          <div class="tableWrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Floor</th>
-                  <th>Room</th>
-                  <th>Installed Date</th>
-                  <th>Types</th>
-                  <th>Items</th>
-                  <th>Last Maintained</th>
-                  <th>Remarks</th>
-                </tr>
-              </thead>
-              <tbody id="mtAppliancesTableBody">
-                </tbody>
-            </table>
-          </div>
-
-          <div class="pagination">
-            <span class="paginationInfo">Display Records <span id="mtAppliancesRecordCount">0</span></span>
-            <div class="paginationControls">
-              </div>
           </div>
         </div>
       </div>
 
-      <!-- PARKING PAGE -->
       <div class="page" id="parking-page">
-        <h1 class="pageTitle">PARKING</h1>
+        <h1 class="pageTitle">PARKING HISTORY</h1>
+        <p class="pageDescription">View parking slot usage, guest vehicle records, and parking activity logs</p>
 
         <div class="controlsRow">
           <div class="filterControls">
-            <select class="filterDropdown" id="parkingLevelFilter">
-              <option value="">Level</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-            </select>
-            <select class="filterDropdown" id="parkingBlockFilter">
-              <option value="">Block</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-              <option value="D">D</option>
-            </select>
-            <select class="filterDropdown" id="parkingStatusFilter">
-              <option value="">Status</option>
-              <option value="occupied">Occupied</option>
-              <option value="vacant">Vacant</option>
-              <option value="reserved">Reserved</option>
+            <select class="filterDropdown" id="parkingAreaFilter">
+              <option value="all">All Areas</option>
             </select>
             <div class="searchBox">
-              <input type="text" placeholder="Search" class="searchInput" id="parkingSearchInput" />
+              <input type="text" placeholder="Search Plate, Name, Room..." class="searchInput" id="parkingHistorySearchInput" />
               <button class="searchBtn">
                 <img src="assets/icons/search-icon.png" alt="Search" />
               </button>
             </div>
-            <button class="refreshBtn" id="parkingRefreshBtn">
+            <button class="refreshBtn" id="parkingHistoryRefreshBtn">
               <img src="assets/icons/refresh-icon.png" alt="Refresh" />
             </button>
-            <button class="downloadBtn" id="parkingDownloadBtn">
+            <button class="downloadBtn" id="parkingHistoryDownloadBtn">
               <img src="assets/icons/download-icon.png" alt="Download" />
             </button>
           </div>
@@ -724,171 +896,161 @@ if (isset($_SESSION['UserID'])) {
           <table>
             <thead>
               <tr>
+                <th>Slot Number</th>
                 <th>Plate #</th>
                 <th>Room</th>
                 <th>Name</th>
                 <th>Vehicle Type</th>
-                <th>Entry Time</th>
-                <th>Exit Time</th>
-                <th>Slot Number</th>
-                <th>Status</th>
+                <th>Category</th>
+                <th>Parking Time</th>
+                <th>Enter Time/Date</th>
+                <th>Exit Time/Date</th>
               </tr>
             </thead>
-            <tbody id="parkingTableBody">
-              </tbody>
+            <tbody id="parkingHistoryTableBody">
+            </tbody>
           </table>
         </div>
 
-        <div class="pagination">
-          <span class="paginationInfo">Display Records <span id="parkingRecordCount">0</span></span>
+        <div class="pagination" id="parking-page-pagination">
+          <span class="paginationInfo">Display Records <span id="parkingHistoryRecordCount">0</span></span>
           <div class="paginationControls">
-             </div>
+          </div>
         </div>
       </div>
 
-      <!-- INVENTORY PAGE WITH HISTORY TAB -->
-<div class="page" id="inventory-page">
-  <h1 class="pageTitle">INVENTORY</h1>
+      <div class="page" id="inventory-page">
+        <h1 class="pageTitle">INVENTORY</h1>
+        <p class="pageDescription">Track hotel supplies, manage stock levels, and monitor inventory transactions</p>
 
-  <!-- Tab Navigation -->
-  <div class="tabNavigation">
-    <button class="tabBtn active" data-inv-tab="inv-items">
-      Items
-    </button>
-    <button class="tabBtn" data-inv-tab="inv-history">
-      History
-    </button>
-  </div>
-
-  <!-- ITEMS TAB -->
-  <div class="tabContent active" id="inv-items-tab">
-    <div class="controlsRow">
-      <div class="filterControls">
-        <select class="filterDropdown" id="inventoryCategoryFilter">
-          <option value="">Category</option>
-          <option value="Cleaning solution">Cleaning solution</option>
-          <option value="Electrical">Electrical</option>
-          <option value="Bathroom Supplies">Bathroom Supplies</option>
-          <option value="Linens">Linens</option>
-          <option value="Cleaning Equipment">Cleaning Equipment</option>
-        </select>
-        <select class="filterDropdown" id="inventoryStatusFilter">
-          <option value="">Status</option>
-          <option value="in-stock">In Stock</option>
-          <option value="low-stock">Low Stock</option>
-          <option value="out-of-stock">Out of Stock</option>
-        </select>
-        <div class="searchBox">
-          <input type="text" placeholder="Search" class="searchInput" id="inventorySearchInput" />
-          <button class="searchBtn">
-            <img src="assets/icons/search-icon.png" alt="Search" />
+        <div class="tabNavigation">
+          <button class="tabBtn active" data-inv-tab="inv-items">
+            Items
+          </button>
+          <button class="tabBtn" data-inv-tab="inv-history">
+            History
           </button>
         </div>
-        <button class="refreshBtn" id="inventoryRefreshBtn">
-          <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-        </button>
-        <button class="downloadBtn" id="inventoryDownloadBtn">
-          <img src="assets/icons/download-icon.png" alt="Download" />
-        </button>
-      </div>
-    </div>
 
-    <div class="tableWrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Quantity</th>
-            <th>Description</th>
-            <th>Status</th>
-            <th>Damage</th>
-            <th>Stock In Date</th>
-            <th>Stock Out Date</th>
-          </tr>
-        </thead>
-        <tbody id="inventoryTableBody"></tbody>
-      </table>
-    </div>
+        <div class="tabContent active" id="inv-items-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="inventoryCategoryFilter">
+                 <option value="">Category</option>
+              </select>
+              <select class="filterDropdown" id="inventoryStatusFilter">
+                <option value="">Status</option>
+                <option value="in-stock">In Stock</option>
+                <option value="low-stock">Low Stock</option>
+                <option value="out-of-stock">Out of Stock</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="inventorySearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="inventoryRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="inventoryDownloadBtn">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
+            </div>
+          </div>
 
-    <div class="pagination">
-      <span class="paginationInfo">Display Records <span id="inventoryRecordCount">0</span></span>
-      <div class="paginationControls"></div>
-    </div>
-  </div>
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Quantity</th>
+                  <th>Description</th>
+                  <th>Status</th>
+                  <th>Stock In Date</th>
+                </tr>
+              </thead>
+              <tbody id="inventoryTableBody"></tbody>
+            </table>
+          </div>
 
-  <!-- HISTORY TAB -->
-  <div class="tabContent" id="inv-history-tab">
-    <div class="controlsRow">
-      <div class="filterControls">
-        <select class="filterDropdown" id="invHistCategoryFilter">
-          <option value="">Category</option>
-          <option value="Cleaning solution">Cleaning solution</option>
-          <option value="Electrical">Electrical</option>
-          <option value="Bathroom Supplies">Bathroom Supplies</option>
-          <option value="Linens">Linens</option>
-          <option value="Cleaning Equipment">Cleaning Equipment</option>
-        </select>
-        <select class="filterDropdown" id="invHistActionFilter">
-          <option value="">Action</option>
-          <option value="Stock In">Stock In</option>
-          <option value="Stock Out">Stock Out</option>
-        </select>
-        <div class="searchBox">
-          <input type="text" placeholder="Search" class="searchInput" id="invHistSearchInput" />
-          <button class="searchBtn">
-            <img src="assets/icons/search-icon.png" alt="Search" />
-          </button>
+          <div class="pagination" id="inv-items-tab-pagination">
+            <span class="paginationInfo">Display Records <span id="inventoryRecordCount">0</span></span>
+            <div class="paginationControls"></div>
+          </div>
         </div>
-        <button class="refreshBtn" id="invHistRefreshBtn">
-          <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-        </button>
-        <button class="downloadBtn" id="invHistDownloadBtn">
-          <img src="assets/icons/download-icon.png" alt="Download" />
-        </button>
+
+        <div class="tabContent" id="inv-history-tab">
+          <div class="controlsRow">
+            <div class="filterControls">
+              <select class="filterDropdown" id="invHistCategoryFilter">
+                <option value="">Category</option>
+              </select>
+              <select class="filterDropdown" id="invHistActionFilter">
+                <option value="">Action</option>
+                <option value="Initial Stock In">Initial Stock In</option>
+                <option value="Stock Added">Stock Added</option>
+                <option value="Item Issued">Item Issued</option>
+              </select>
+              <div class="searchBox">
+                <input type="text" placeholder="Search" class="searchInput" id="invHistSearchInput" />
+                <button class="searchBtn">
+                  <img src="assets/icons/search-icon.png" alt="Search" />
+                </button>
+              </div>
+              <button class="refreshBtn" id="invHistRefreshBtn">
+                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+              </button>
+              <button class="downloadBtn" id="invHistDownloadBtn">
+                <img src="assets/icons/download-icon.png" alt="Download" />
+              </button>
+            </div>
+          </div>
+
+          <div class="tableWrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Log ID</th>
+                  <th>Name</th>
+                  <th>Category</th>
+                  <th>Old Qty</th>
+                  <th>Change</th>
+                  <th>New Qty</th>
+                  <th>Status</th>
+                  <th>Stock In</th>
+                  <th>Performed By</th>
+                </tr>
+              </thead>
+              <tbody id="invHistTableBody"></tbody>
+            </table>
+          </div>
+
+          <div class="pagination" id="inv-history-tab-pagination">
+            <span class="paginationInfo">Display Records <span id="invHistRecordCount">0</span></span>
+            <div class="paginationControls"></div>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <div class="tableWrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Category</th>
-            <th>Quantity</th>
-            <th>Action</th>
-            <th>Transaction Date</th>
-            <th>Performed By</th>
-            <th>Remarks</th>
-          </tr>
-        </thead>
-        <tbody id="invHistTableBody"></tbody>
-      </table>
-    </div>
-
-    <div class="pagination">
-      <span class="paginationInfo">Display Records <span id="invHistRecordCount">0</span></span>
-      <div class="paginationControls"></div>
-    </div>
-  </div>
-</div>
-      
-      <!-- ROOMS PAGE -->
       <div class="page" id="rooms-page">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-          <h1 class="pageTitle" style="margin-bottom: 0;">ROOMS</h1>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+          <div>
+            <h1 class="pageTitle" style="margin-bottom: 8px;">ROOMS</h1>
+            <p class="pageDescription" style="margin-bottom: 0;">Manage room information, availability status, and room configurations</p>
+          </div>
         </div>
 
         <div class="controlsRow">
           <div class="filterControls">
             <select class="filterDropdown" id="roomsFloorFilter">
               <option value="">Floor</option>
-              </select>
+            </select>
             <select class="filterDropdown" id="roomsRoomFilter">
               <option value="">Room</option>
-              </select>
+            </select>
             <select class="filterDropdown" id="roomsTypeFilter">
               <option value="">Room Type</option>
               <option value="Standard Room">Standard Room</option>
@@ -899,10 +1061,8 @@ if (isset($_SESSION['UserID'])) {
             <select class="filterDropdown" id="roomsStatusFilter">
               <option value="">Status</option>
               <option value="Available">Available</option>
-              <option value="Occupied">Occupied</option>
-              <option value="Reserved">Reserved</option>
               <option value="Needs Cleaning">Needs Cleaning</option>
-              <option value="Maintenance">Maintenance</option>
+              <option value="Needs Maintenance">Needs Maintenance</option>
             </select>
             <div class="searchBox">
               <input type="text" placeholder="Search" class="searchInput" id="roomsSearchInput" />
@@ -916,9 +1076,6 @@ if (isset($_SESSION['UserID'])) {
             <button class="downloadBtn" id="roomsDownloadBtn">
               <img src="assets/icons/download-icon.png" alt="Download" />
             </button>
-            <button class="addRoomBtn" id="addRoomBtn">
-              <img src="assets/icons/add-rooms.png" alt="Add-rooms" />
-          </button>
           </div>
         </div>
 
@@ -928,32 +1085,33 @@ if (isset($_SESSION['UserID'])) {
               <tr>
                 <th>Floor</th>
                 <th>Room</th>
+                <th>Room Name</th>
                 <th>Type</th>
                 <th>No. Guests</th>
-                <th>Rate</th>
                 <th>Status</th>
-                <th>Actions</th>
+
               </tr>
             </thead>
             <tbody id="roomsTableBody">
-              </tbody>
+            </tbody>
           </table>
         </div>
 
-        <div class="pagination">
+        <div class="pagination" id="rooms-page-pagination">
           <span class="paginationInfo">Display Records <span id="roomsRecordCount">0</span></span>
           <div class="paginationControls">
-            </div>
+          </div>
         </div>
       </div>
 
-      <!-- MANAGE USERS PAGE -->
       <div class="page" id="manage-users-page">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-          <h1 class="pageTitle" style="margin-bottom: 0;">MANAGE USERS</h1>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px;">
+          <div>
+            <h1 class="pageTitle" style="margin-bottom: 8px;">MANAGE USERS</h1>
+            <p class="pageDescription" style="margin-bottom: 0;">Add, edit, and manage staff accounts, roles, and access permissions</p>
+          </div>
         </div>
 
-        <!-- Tab Navigation for User Management and User Logs -->
         <div class="tabNavigation">
           <button class="tabBtn active" data-user-tab="user-management">
             User Management
@@ -963,67 +1121,76 @@ if (isset($_SESSION['UserID'])) {
           </button>
         </div>
 
-        <!-- User Management Tab -->
         <div class="tabContent active" id="user-management-tab">
-          <div class="controlsRow">
-            <div class="filterControls">
-              <select class="filterDropdown" id="usersRoleFilter">
-                <option value="">Role</option>
-                <option value="admin">Admin</option>
-                <option value="housekeeping_manager">Housekeeping Manager</option>
-                <option value="inventory_manager">Inventory Manager</option>
-                <option value="maintenance_manager">Maintenance Manager</option>
-                <option value="parking_manager">Parking Manager</option>
-                <option value="housekeeping_staff">Housekeeping Staff</option>
-                <option value="maintenance_staff">Maintenance Staff</option>
-              </select>
-              <select class="filterDropdown" id="usersShiftFilter">
-                <option value="">Shift</option>
-                <option value="Morning">Morning</option>
-                <option value="Afternoon">Afternoon</option>
-                <option value="Night">Night</option>
-              </select>
-              <div class="searchBox">
-                <input type="text" placeholder="Search Name or Username" class="searchInput" id="usersSearchInput" />
-                <button class="searchBtn">
-                  <img src="assets/icons/search-icon.png" alt="Search" />
-                </button>
-              </div>
-              <button class="refreshBtn" id="usersRefreshBtn">
-                <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-              </button>
-              <button class="downloadBtn" id="usersDownloadBtn" title="Download User Data (CSV)">
-                <img src="assets/icons/download-icon.png" alt="Download" />
-              </button>
-              <button class="addRoomBtn" id="addUserBtn" title="Add New User">
-                <img src="assets/icons/add-user.png" alt="Add User" />
-              </button>
-            </div>
-          </div>
+  <div class="controlsRow">
+    <div class="filterControls">
+      
+      <select class="filterDropdown" id="usersRoleFilter">
+        <option value="">Role</option>
+        <option value="admin">Admin</option>
+        <option value="housekeeping_manager">Housekeeping Manager</option>
+        <option value="inventory_manager">Inventory Manager</option>
+        <option value="maintenance_manager">Maintenance Manager</option>
+        <option value="parking_manager">Parking Manager</option>
+        <option value="housekeeping_staff">Housekeeping Staff</option>
+        <option value="maintenance_staff">Maintenance Staff</option>
+      </select>
 
-          <div class="tableWrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Full Name</th>
-                  <th>Role</th>
-                  <th>Email</th>
-                  <th>Shift</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="usersTableBody"></tbody>
-            </table>
-          </div>
+      <select class="filterDropdown" id="usersShiftFilter">
+        <option value="">Shift</option>
+        <option value="Morning">Morning</option>
+        <option value="Afternoon">Afternoon</option>
+        <option value="Night">Night</option>
+      </select>
 
-          <div class="pagination">
-            <span class="paginationInfo">Display Records <span id="usersRecordCount">0</span></span>
-            <div class="paginationControls"></div>
-          </div>
-        </div>
+      <select class="filterDropdown" id="usersStatusFilter" style="font-weight: 500; color: #480c1b;">
+        <option value="">Status</option>
+        <option value="Active">Active</option>
+        <option value="Archived" style="color: red;">Archived</option>
+      </select>
 
-        <!-- User Logs Tab -->
+      <div class="searchBox">
+        <input type="text" placeholder="Search Name or Username" class="searchInput" id="usersSearchInput" />
+        <button class="searchBtn">
+          <img src="assets/icons/search-icon.png" alt="Search" />
+        </button>
+      </div>
+      
+      <button class="refreshBtn" id="usersRefreshBtn">
+        <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+      </button>
+      <button class="downloadBtn" id="usersDownloadBtn" title="Download User Data (CSV)">
+        <img src="assets/icons/download-icon.png" alt="Download" />
+      </button>
+      <button class="addRoomBtn" id="addUserBtn" title="Add New User">
+        <img src="assets/icons/add-user.png" alt="Add User" />
+      </button>
+    </div>
+  </div>
+
+  <div class="tableWrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Employee ID</th>
+          <th>Username</th>
+          <th>Full Name</th>
+          <th>Role</th>
+          <th>Email</th>
+          <th>Shift</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="usersTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="pagination" id="user-management-tab-pagination">
+    <span class="paginationInfo">Display Records <span id="usersRecordCount">0</span></span>
+    <div class="paginationControls"></div>
+  </div>
+</div>
+
         <div class="tabContent" id="user-logs-tab">
           <div class="controlsRow">
             <div class="filterControls">
@@ -1063,11 +1230,9 @@ if (isset($_SESSION['UserID'])) {
               <thead>
                 <tr>
                   <th>Log ID</th>
-                  <th>User ID</th>
                   <th>Last Name</th>
                   <th>First Name</th>
                   <th>Middle Name</th>
-                  <th>Account Type</th>
                   <th>Role</th>
                   <th>Shift</th>
                   <th>Username</th>
@@ -1080,7 +1245,7 @@ if (isset($_SESSION['UserID'])) {
             </table>
           </div>
 
-          <div class="pagination">
+          <div class="pagination" id="user-logs-tab-pagination">
             <span class="paginationInfo">Display Records <span id="logsRecordCount">0</span></span>
             <div class="paginationControls"></div>
           </div>
@@ -1089,74 +1254,65 @@ if (isset($_SESSION['UserID'])) {
     </main>
   </div>
 
-  <!-- ROOM MODAL -->
   <div class="modalBackdrop" id="roomModal" style="display: none;">
     <div class="roomModal">
       <button class="closeBtn" id="closeRoomModalBtn">&times;</button>
-      <h2 id="roomModalTitle">Add New Room</h2>
+      <h2 id="roomModalTitle">Edit Room Status</h2>
       <div id="roomFormMessage" class="formMessage" style="display:none;"></div>
-      
+
       <form id="roomForm">
         <div class="formGrid">
           <div class="formGroup">
-            <label for="roomFloor">Floor *</label>
-            <select id="roomFloor" name="roomFloor" required>
+            <label for="roomFloor">Floor</label>
+            <select id="roomFloor" name="roomFloor" required disabled>
               <option value="">Select Floor</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
+
               <option value="5">5</option>
             </select>
           </div>
           <div class="formGroup">
-            <label for="roomNumber">Room Number *</label>
-            <input type="text" id="roomNumber" name="roomNumber" required placeholder="e.g., 101" />
+            <label for="roomNumber">Room Number</label>
+            <input type="text" id="roomNumber" name="roomNumber" required placeholder="e.g., 101" readonly />
           </div>
         </div>
-        
+
         <div class="formGroup">
-          <label for="roomType">Room Type *</label>
-          <select id="roomType" name="roomType" required>
+          <label for="roomType">Room Type</label>
+          <select id="roomType" name="roomType" required disabled>
             <option value="">Select Type</option>
-            <option value="Standard Room">Standard Room</option>
-            <option value="Deluxe Room">Deluxe Room</option>
-            <option value="Suite">Suite</option>
+
             <option value="Penthouse Suite">Penthouse Suite</option>
           </select>
         </div>
-        
+
         <div class="formGroup">
           <label for="roomGuests">Guest Capacity</label>
-          <input type="text" id="roomGuests" name="roomGuests" readonly />
+          <input type="text" id="roomGuests" name="roomGuests" readonly disabled />
         </div>
-        
+
         <div class="formGroup">
-          <label for="roomRate">Rate (per night) *</label>
-          <input type="number" id="roomRate" name="roomRate" required step="0.01" placeholder="e.g., 120.00" />
+          <label for="roomRate">Rate (per night)</label>
+          <input type="number" id="roomRate" name="roomRate" required step="0.01" placeholder="e.g., 120.00" disabled />
         </div>
-        
+
         <div class="formGroup">
           <label for="roomStatus">Status *</label>
           <select id="roomStatus" name="roomStatus" required>
             <option value="">Select Status</option>
             <option value="Available">Available</option>
-            <option value="Occupied">Occupied</option>
-            <option value="Reserved">Reserved</option>
             <option value="Needs Cleaning">Needs Cleaning</option>
-            <option value="Maintenance">Maintenance</option>
+            <option value="Needs Maintenance">Needs Maintenance</option>
           </select>
         </div>
-        
+
         <div class="modalButtons">
           <button type="button" class="modalBtn cancelBtn" id="cancelRoomBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="saveRoomBtn">SAVE ROOM</button>
+          <button type="submit" class="modalBtn confirmBtn" id="saveRoomBtn">SAVE STATUS</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- DELETE ROOM MODAL -->
   <div class="modalBackdrop" id="deleteRoomModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeDeleteModalBtn">&times;</button>
@@ -1172,129 +1328,98 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
 
-  <!-- USER MODAL -->
-  <div class="modalBackdrop" id="userModal" style="display: none;">
+ <div class="modalBackdrop" id="userModal" style="display: none;">
     <div class="addUserModal">
       <button class="closeBtn" id="closeUserModalBtn">&times;</button>
-      <h2 id="userModalTitle">Add New User</h2>
+      <h2 id="userModalTitle" >Add User from Employee</h2>
       <div id="userFormMessage" class="formMessage" style="display:none;"></div>
-      
-      <!-- Employee ID Lookup Form (for adding) -->
-      <form id="employeeIdForm" style="display: block;">
+
+      <form id="employeeCodeForm" style="display: block;">
         <div class="formGroup">
-          <label for="employeeId">Employee ID *</label>
-          <input type="text" id="employeeId" name="employeeId" required placeholder="Enter Employee ID" />
+          <label for="employeeCodeInput">Employee Code *</label>
+          
+          <input type="text" id="employeeCodeInput" name="employeeCode" list="employeeList" required 
+                 placeholder="Type or select Employee Code (e.g., EMP-001)"
+                 style="font-size: 16px; padding: 12px; width: 100%; border: 1px solid #ddd; border-radius: 5px;">
+          
+          <datalist id="employeeList">
+              </datalist>
+          
+          <small style="color: #e1e1e1ff; font-size: 12px; display: block; margin-top: 10px; text-align: center;">
+            You can type the code manually or select from the list of eligible employees.
+          </small>
         </div>
+
         <div class="modalButtons">
-          <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeIdBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn">ADD EMPLOYEE</button>
+          <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeCodeBtn">CANCEL</button>
+          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn" style="background: #b99156ff;">ADD EMPLOYEE</button>
         </div>
       </form>
-
-      <!-- Full User Edit Form (for editing) -->
-      <form id="userEditForm" style="display: none;">
+      
+      <div id="userDetailsDisplay" style="display: none;">
         <input type="hidden" id="editUserId" name="userID">
-        
+
         <div class="userProfileSection">
           <div class="profileAvatar">
             <img src="assets/icons/profile-icon.png" alt="Profile" />
           </div>
-          <h3 id="editUserFullName" class="editUserName"></h3>
-          <p id="editUserEmployeeId" class="editUserEmployeeId"></p>
+          <h3 id="displayFullName" class="editUserName">User Full Name</h3>
+          <p class="editUserEmployeeId" style="color: white;">Employee Code: <span id="displayEmployeeCode">------</span></p>
         </div>
 
-        <div class="formGrid">
-          <div class="formGroup">
-            <label for="userFname">First Name *</label>
-            <input type="text" id="userFname" name="fname" required />
+        <div class="infoGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; border-radius: 8px;">
+          <div>
+            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Email</label>
+            <div id="displayEmail" style="font-size: 14px; font-weight: 500;">-</div>
           </div>
-          <div class="formGroup">
-            <label for="userLname">Last Name *</label>
-            <input type="text" id="userLname" name="lname" required />
+          <div>
+            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Account Type</label>
+            <div id="displayAccountType" style="font-size: 14px; font-weight: 500;">-</div>
           </div>
-        </div>
-        
-        <div class="formGroup">
-          <label for="userMname">Middle Name (Optional)</label>
-          <input type="text" id="userMname" name="mname" />
-        </div>
-        
-        <div class="formGroup">
-          <label for="userEmail">Email Address *</label>
-          <input type="email" id="userEmail" name="email" required />
-        </div>
-        
-        <div class="formGroup">
-          <label for="userUsername">Username *</label>
-          <input type="text" id="userUsername" name="username" required />
-        </div>
-        
-        <div class="formGroup">
-          <label for="userAccountType">Account Type *</label>
-          <select id="userAccountType" name="accountType" required>
-            <option value="">Select Role</option>
-            <option value="admin">Administrator</option>
-            <option value="housekeeping_manager">Housekeeping Manager</option>
-            <option value="maintenance_manager">Maintenance Manager</option>
-            <option value="inventory_manager">Inventory Manager</option>
-            <option value="parking_manager">Parking Manager</option>
-            <option value="housekeeping_staff">Housekeeping Staff</option>
-            <option value="maintenance_staff">Maintenance Staff</option>
-          </select>
+          <div>
+            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Shift</label>
+            <div id="displayShift" style="font-size: 14px; font-weight: 500;">-</div>
+          </div>
+          <div>
+            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Username</label>
+            <div id="displayUsername" style="font-size: 14px; font-weight: 500;">-</div>
+          </div>
         </div>
 
-        <div class="formGroup">
-          <label for="userShift">Shift *</label>
-          <select id="userShift" name="shift" required>
-            <option value="">Select Shift</option>
-            <option value="Day">Day</option>
-            <option value="Morning">Morning</option>
-            <option value="Afternoon">Afternoon</option>
-            <option value="Night">Night</option>
-          </select>
-        </div>
+        <form id="passwordChangeForm">
+          <div class="formGroup">
+            <label for="newPassword" style="text-align: left;">New Password *</label>
+            <input type="password" id="newPassword" name="password" required
+              placeholder="Enter new password"
+              style="border: 2px solid #efefefff;" />
+            <small style="color: #c6c6c6ff; font-size: 11px; display: block; margin-top: 5px;">
+              All other user information is read-only and comes from the employees table.
+            </small>
+          </div>
 
-        <div class="formGrid">
-          <div class="formGroup">
-            <label for="userBirthday">Birthday *</label>
-            <input type="date" id="userBirthday" name="birthday" required />
+          <div class="modalButtons">
+            <button type="button" class="modalBtn cancelBtn" id="cancelPasswordChangeBtn">CANCEL</button>
+            <button type="submit" class="modalBtn confirmBtn" id="savePasswordBtn" style="background:#D4AF78;">UPDATE PASSWORD</button>
           </div>
-          <div class="formGroup">
-            <label for="userContact">Contact *</label>
-            <input type="text" id="userContact" name="contact" required />
-          </div>
-        </div>
-        
-        <div class="formGroup">
-          <label for="userAddress">Address *</label>
-          <textarea id="userAddress" name="address" rows="3" required></textarea>
-        </div>
-        
-        <div class="modalButtons">
-          <button type="button" class="modalBtn cancelBtn" id="cancelUserEditBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="saveUserBtn">UPDATE USER</button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
-  </div>
+</div>
 
-  <!-- DELETE USER MODAL -->
-  <div class="modalBackdrop" id="deleteUserModal" style="display: none;">
+ <div class="modalBackdrop" id="deleteUserModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
       <div class="modalIcon">
-        <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
+        <i class="fas fa-archive" style="font-size: 40px; color: #d4af78;"></i> 
       </div>
-      <h2>Delete User</h2>
-      <p id="deleteUserText">Are you sure you want to delete this user?</p>
+      <h2>Archive User</h2>
+      <p id="deleteUserText">Are you sure you want to archive this user?</p>
       <div class="modalButtons">
         <button class="modalBtn cancelBtn" id="cancelDeleteUserBtn">CANCEL</button>
-        <button class="modalBtn confirmBtn" id="confirmDeleteUserBtn">DELETE</button>
+        <button class="modalBtn confirmBtn" id="confirmDeleteUserBtn">ARCHIVE</button>
       </div>
     </div>
-  </div>
-
-  <!-- LOGOUT MODAL -->
+</div>
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeLogoutBtn">&times;</button>
@@ -1310,7 +1435,29 @@ if (isset($_SESSION['UserID'])) {
     </div>
   </div>
 
+  <script>
+    // Pass PHP data to JavaScript
+    const initialHkRequestsData = <?php echo json_encode($hkRoomsStatus ?? []); ?>;
+    const initialHkHistoryData = <?php echo json_encode($hkHistoryData ?? []); ?>;
+    const initialMtRequestsData = <?php echo json_encode($mtRoomsStatus ?? []); ?>;
+    const initialMtHistoryData = <?php echo json_encode($mtHistoryData ?? []); ?>;
+  </script>
+
   <script src="script/shared-data.js"></script>
+  <script src="script/download-utils.js"></script>
+  <script src="script/admin.config.js"></script>
+  <script src="script/admin.utils.js"></script>
+  <script src="script/admin.pagination.js"></script>
+  <script src="script/admin.dashboard.js"></script>
+  <script src="script/admin.ui.js"></script>
+  <script src="script/admin.rooms.js"></script>
+  <script src="script/admin.users.js"></script>
+  <script src="script/admin.userLogs.js"></script>
+  <script src="script/admin.housekeeping.js"></script>
+  <script src="script/admin.maintenance.js"></script>
+  <script src="script/admin.parking.js"></script>
+  <script src="script/admin.inventory.js"></script>
   <script src="script/admin.js"></script>
 </body>
+
 </html>

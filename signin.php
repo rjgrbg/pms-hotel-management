@@ -1,213 +1,127 @@
 <?php
+// pms-hotel-management/signin.php
 
 // Set headers to prevent caching and ensure JSON/text response on error
-
-// Use application/json for potential AJAX calls later
-
 header('Content-Type: application/json');
-
 header('Cache-Control: no-cache, must-revalidate');
-
 header('Expires: Mon, 26 Jul 1997 05:00:00 GMT'); // Date in the past
 
-
-
-// Start session immediately, as it's needed for successful login
-
-// Add session configuration for better security
-
+// Start session immediately
 session_start([
-
-    'cookie_httponly' => true, // Prevents client-side script access
-
-    'cookie_secure' => isset($_SERVER['HTTPS']), // Send cookie only over HTTPS if available
-
-    'use_strict_mode' => true // Prevent session fixation attacks
-
+    'cookie_httponly' => true,
+    'cookie_secure' => isset($_SERVER['HTTPS']),
+    'use_strict_mode' => true
 ]);
 
-
-
-include('db_connection.php'); // Assumes this file correctly establishes $conn
-
-
-
-// --- 1. Centralize Redirection Links ---
-
-$redirect_map = [
-
-    'admin'           => 'admin.php',
-
-    'housekeeping_manager' => 'housekeeping.php',
-
-    'housekeeping_staff'   => 'inventory_log.php',
-
-    'maintenance_manager'  => 'maintenance.php',
-
-    'maintenance_staff'    => 'inventory_log.php',
-
-    'parking_manager'      => 'parking.php',
+// --- Database Connection (Using the correct function-based method) ---
+try {
+    require_once 'db_connection.php'; 
+    $conn = get_db_connection('b9wkqgu32onfqy0dvyva'); 
     
-    'inventory_manager'    => 'inventory.php',
+    if ($conn === null) {
+        throw new Exception('get_db_connection("pms") returned null.');
+    }
+    if ($conn->connect_error) {
+         throw new Exception('Connection failed: '. $conn->connect_error);
+    }
 
-    'default'              => 'index.php' // Fallback page
-
-];
-
-// ********************************
-
-
-
-// --- Initialize response array ---
+} catch (Exception $e) {
+    error_log('Login DB Error: ' . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'Database connection failed. Please check server logs.']);
+    exit();
+}
+// ---------------------------
 
 $response = ['success' => false, 'message' => 'Invalid request method.', 'redirect' => null];
 
-
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    // Use trim() to clean up whitespace from user input
-
+    
+    // --- STRIPPING INPUTS ---
     $username = trim($_POST['username'] ?? '');
-
-    $password = $_POST['password'] ?? '';
-
-    // Removed: $remember_me = isset($_POST['remember_me']) && $_POST['remember_me'] === 'on';
-
-
-
+    $password = trim($_POST['password'] ?? ''); // <-- REFINEMENT: Added trim()
+    
     if (empty($username) || empty($password)) {
-
         $response['message'] = "Both username and password are required.";
-
     } else {
-
-        // --- Use prepared statements consistently for security ---
-
-        $sql = "SELECT UserID, Password, AccountType FROM users WHERE Username = ?";
-
-
+        // --- SECURE SQL (Prepared Statement) ---
+        $sql = "SELECT UserID, Password, AccountType FROM pms_users WHERE Username = ?";
 
         if ($stmt = $conn->prepare($sql)) {
-
             $stmt->bind_param("s", $username);
 
-
-
             if ($stmt->execute()) {
+                
+                // Get the result as an object
+                $result = $stmt->get_result();
+                $user = $result->fetch_assoc();
+                
+                // We MUST close the first statement *immediately* after fetching
+                // This prevents database lock errors before the next query.
+                $stmt->close();
 
-                $stmt->store_result();
+                // --- SECURE PASSWORD CHECK ---
+                if ($user && password_verify($password, $user['Password'])) {
+                    // SUCCESSFUL LOGIN
+                    session_regenerate_id(true); // Prevents session fixation
 
+                    // Use the $user array we already fetched
+                    $_SESSION['UserID'] = $user['UserID'];
+                    $_SESSION['UserName'] = $username;
+                    $_SESSION['UserType'] = $user['AccountType'];
+                    $_SESSION['login_time'] = time();
 
+                    // --- LOGGING BLOCK ---
+                    $log_error = null;
+                    try {
+                        // This query will now work!
+                        $log_sql = "INSERT INTO pms_user_logs (UserID, ActionType) VALUES (?, 'Logged In')";
+                        if ($log_stmt = $conn->prepare($log_sql)) {
+                            // Use the UserID from the $user array
+                            $log_stmt->bind_param("i", $user['UserID']); 
+                            if (!$log_stmt->execute()) {
+                                $log_error = "Log Execute Error: " . $log_stmt->error;
+                            }
+                            $log_stmt->close();
+                        } else {
+                            $log_error = "Log Prepare Error: " . $conn->error;
+                        }
+                    } catch (Exception $e) {
+                        $log_error = "Log Exception: " . $e->getMessage();
+                    }
+                    // --- END OF LOGGING BLOCK ---
 
-                if ($stmt->num_rows === 1) { // Ensure exactly one user is found
+                    $response['success'] = true;
+                    $response['message'] = 'Login successful.';
+                    $response['redirect'] = 'index.php'; // Redirect target
 
-                    $stmt->bind_result($id, $hashed_password, $user_type);
-
-                    $stmt->fetch();
-
-
-
-                    // --- Verify password ---
-
-                    if (password_verify($password, $hashed_password)) {
-
-                        // SUCCESSFUL LOGIN
-
-
-
-                        // Regenerate session ID upon successful login to prevent session fixation
-
-                        session_regenerate_id(true);
-
-
-
-                        $_SESSION['UserID'] = $id;
-
-                        $_SESSION['UserName'] = $username; // Store username
-
-                        $_SESSION['UserType'] = $user_type;
-
-                        // Add a timestamp for session timeout management
-
-                        $_SESSION['login_time'] = time();
-
-
-
-                        // Removed: Remember Me Handling Block
-
-
-
-                        // --- Set success response and redirect URL ---
-
-                        $response['success'] = true;
-
-                        $response['message'] = 'Login successful.';
-
-                        $response['redirect'] = $redirect_map[$user_type] ?? $redirect_map['default'];
-
-
-
-                    } else {
-
-                        // INCORRECT PASSWORD
-
-                        $response['message'] = "Incorrect username or password.";
-
+                    if ($log_error !== null) {
+                        $response['log_error'] = $log_error;
+                        error_log($log_error); // Also write to server log
                     }
 
                 } else {
-
-                    // NO USER FOUND or MULTIPLE USERS FOUND 
-
+                    // NO USER FOUND or INCORRECT PASSWORD
                     $response['message'] = "Incorrect username or password.";
-
                 }
-
             } else {
-
-                // --- Execution failed ---
-
                 $response['message'] = "Database error: Failed to execute query.";
-
-                error_log("Signin query execution failed: " . $stmt->error); // Log the specific error
-
+                error_log("Signin query execution failed: " . $stmt->error);
+                if ($stmt) {
+                    $stmt->close();
+                }
             }
-
-            $stmt->close();
-
         } else {
-
-            // --- Preparation failed ---
-
             $response['message'] = "Database error: Could not prepare statement.";
-
-            error_log("Signin statement preparation failed: " . $conn->error); // Log the specific error
-
+            error_log("Signin statement preparation failed: " . $conn->error);
         }
-
     }
-
 } else {
-
-    // Invalid request method (already set in $response initialization)
-
-    http_response_code(405); // Method Not Allowed
-
+    // Not a POST request
+    http_response_code(405);
+    $response['message'] = 'Invalid request method. Only POST is allowed.';
 }
 
-
-
-// --- Close connection ---
-
 $conn->close();
-
-
-
-// --- Send JSON response ---
-
 echo json_encode($response);
-
-exit(); // Ensure script stops here
-
+exit();
 ?>

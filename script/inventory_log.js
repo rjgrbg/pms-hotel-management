@@ -1,380 +1,534 @@
-// Wait for the DOM to be fully loaded
+
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
+    // ======================================================
+    // === 1. INJECT TOAST CSS STYLES
+    // ======================================================
+    const style = document.createElement('style');
+    style.innerHTML = `
+    .toast-notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #28a745;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 5px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+      z-index: 99999;
+      opacity: 0;
+      transform: translateY(-20px);
+      transition: all 0.3s ease-in-out;
+      font-family: 'Segoe UI', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast-notification.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    `;
+    document.head.appendChild(style);
+
+    // ======================================================
+    // === 2. HELPER FUNCTIONS
+    // ======================================================
+
+    const showToast = (message, type = 'success') => {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.innerText = message;
+
+        if (type === 'error') {
+            toast.style.backgroundColor = '#dc3545';
+        } else {
+            toast.style.backgroundColor = '#28a745';
+        }
+
+        document.body.appendChild(toast);
+
+        requestAnimationFrame(() => {
+            toast.classList.add('show');
+        });
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    };
+
+    const showModal = (modal) => modal.style.display = 'flex';
+    const hideModal = (modal) => modal.style.display = 'none';
+
+    // OLD Message Box (Kept as fallback)
+    const messageBoxBackdrop = document.getElementById('messageBoxBackdrop');
+    const messageBoxTitle = document.getElementById('messageBoxTitle');
+    const messageBoxText = document.getElementById('messageBoxText');
+    const messageBoxClose = document.getElementById('messageBoxClose');
+
+    const showMessageBox = (title, text, isError = false) => {
+        messageBoxTitle.textContent = title;
+        messageBoxText.textContent = text;
+        messageBoxTitle.style.color = isError ? '#dc3545' : '#480C1B';
+        showModal(messageBoxBackdrop);
+    };
+
+    const handleFetchError = (message) => {
+        console.error(message);
+        showToast(message, 'error');
+    };
+
+    // --- NEW: Populate Filter Dropdown from Actual Data ---
+    const populateFilterDropdown = (data, dropdown) => {
+        if (!dropdown) return;
+        
+        const currentValue = dropdown.value;
+        
+        // Extract unique categories from the data items
+        const categories = [...new Set(data.map(item => item.Category))].filter(c => c).sort();
+
+        // Clear existing options (except the first "All Categories" option)
+        while (dropdown.options.length > 1) {
+            dropdown.remove(1);
+        }
+
+        categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = cat;
+            dropdown.appendChild(option);
+        });
+        
+        // Restore selection if possible
+        dropdown.value = currentValue;
+    };
+
     // --- DOM Element References ---
+    const profileBtn = document.getElementById('profileBtn');
+    const profileSidebar = document.getElementById('profile-sidebar');
+    const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const logoutModal = document.getElementById('logoutModal');
+    const closeLogoutBtn = document.getElementById('closeLogoutBtn');
+    const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
+    const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+    const accountDetailsLink = document.getElementById('account-details-link');
+
+    if (profileBtn) {
+        profileBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileSidebar.classList.add('active');
+        });
+    }
+    if (sidebarCloseBtn) {
+        sidebarCloseBtn.addEventListener('click', () => {
+            profileSidebar.classList.remove('active');
+        });
+    }
+    document.addEventListener('click', (e) => {
+        if (profileSidebar && !profileSidebar.contains(e.target) && !profileBtn.contains(e.target)) {
+            profileSidebar.classList.remove('active');
+        }
+    });
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', () => {
+            if(logoutModal) logoutModal.style.display = 'flex';
+            profileSidebar.classList.remove('active');
+        });
+    }
+    if (closeLogoutBtn) {
+        closeLogoutBtn.addEventListener('click', () => {
+            if(logoutModal) logoutModal.style.display = 'none';
+        });
+    }
+    if (cancelLogoutBtn) {
+        cancelLogoutBtn.addEventListener('click', () => {
+            if(logoutModal) logoutModal.style.display = 'none';
+        });
+    }
+    if (confirmLogoutBtn) {
+        confirmLogoutBtn.addEventListener('click', () => {
+            window.location.href = 'logout.php';
+        });
+    }
+    if (accountDetailsLink) {
+        accountDetailsLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            alert("Account details cannot be edited from this page.");
+            profileSidebar.classList.remove('active');
+        });
+    }
+
     const inventoryTableBody = document.getElementById('inventoryTableBody');
     const categoryFilter = document.getElementById('categoryFilter');
     const searchInput = document.getElementById('searchInput');
     const itemDetailsContent = document.getElementById('itemDetailsContent');
     const doneBtn = document.getElementById('doneBtn');
     const cancelBtn = document.getElementById('cancelBtn');
-    const logoutIcon = document.querySelector('.logout-icon');
-
-    // Message Box (Success)
-    const messageBoxBackdrop = document.getElementById('messageBoxBackdrop');
-    const messageBoxTitle = document.getElementById('messageBoxTitle');
-    const messageBoxText = document.getElementById('messageBoxText');
-    const messageBoxClose = document.getElementById('messageBoxClose');
     
-    // Confirmation Modal
     const confirmationModalBackdrop = document.getElementById('confirmationModalBackdrop');
     const confirmationModalBody = document.getElementById('confirmationModalBody');
     const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
     const confirmBtn = document.getElementById('confirmBtn');
 
-    // Logout Modal
-    const logoutModalBackdrop = document.getElementById('logoutModalBackdrop');
-    const cancelLogoutBtn = document.getElementById('cancelLogoutBtn');
-    const confirmLogoutBtn = document.getElementById('confirmLogoutBtn');
+    // --- Application State ---
+    let allInventory = [];
+    let filteredInventory = [];
+    let selectedItems = {}; 
 
-    // --- State Variables ---
-    let itemsToIssue = {}; // Stores { itemId: quantity }
-    let currentFilteredData = []; // Stores the data currently being shown in the main table
+    // --- Data Fetching ---
 
-    // --- Helper Functions ---
-
-    /**
-     * Shows a modal backdrop by setting its display to 'flex'.
-     * @param {HTMLElement} backdropElement - The backdrop element to show.
-     */
-    function showModal(backdropElement) {
-        if (backdropElement) {
-            backdropElement.style.display = 'flex';
+    const fetchCategories = async () => {
+        try {
+            const response = await fetch('inventory_actions.php?action=get_categories');
+            if (!response.ok) throw new Error('Network response was not ok');
+            // We fetch this to ensure categories exist, but we DO NOT populate the filter here anymore.
+            await response.json();
+        } catch (error) {
+            handleFetchError(`Failed to load categories: ${error.message}`);
         }
-    }
+    };
 
-    /**
-     * Hides a modal backdrop by setting its display to 'none'.
-     * @param {HTMLElement} backdropElement - The backdrop element to hide.
-     */
-    function hideModal(backdropElement) {
-        if (backdropElement) {
-            backdropElement.style.display = 'none';
+    const fetchInventory = async () => {
+        try {
+            const response = await fetch('inventory_actions.php?action=get_inventory');
+            if (!response.ok) throw new Error('Network response was not ok');
+            const data = await response.json();
+
+            if (data.error) throw new Error(data.error);
+            
+            allInventory = data;
+            
+            // *** NEW: Populate Filter using only ACTIVE (non-archived) items ***
+            const activeItems = allInventory.filter(item => item.is_archived != 1);
+            populateFilterDropdown(activeItems, categoryFilter);
+
+            applyFiltersAndRender();
+        } catch (error) {
+            handleFetchError(`Failed to load inventory: ${error.message}`);
         }
-    }
+    };
 
-    /**
-     * Shows a custom message box with a title and text.
-     * @param {string} title - The title for the message box.
-     * @param {string} text - The text content for the message box.
-     */
-    function showMessageBox(title, text) {
-        messageBoxTitle.textContent = title;
-        messageBoxText.textContent = text; // Using textContent preserves line breaks with <pre>
-        showModal(messageBoxBackdrop);
-    }
+    // --- Rendering ---
 
-    // --- Initialization ---
-
-    /**
-     * Populates the category filter dropdown from the data.
-     */
-    function populateCategories() {
-        // Use inventoryData from shared-data.js
-        const categories = [...new Set(inventoryData.map(item => item.category))];
-        categories.sort();
-        categories.forEach(category => {
-            const option = document.createElement('option');
-            option.value = category;
-            option.textContent = category;
-            categoryFilter.appendChild(option);
-        });
-    }
-
-    /**
-     * Renders the main inventory table based on the provided data.
-     * @param {Array} data - The array of inventory items to render.
-     */
-    function renderInventoryTable(data) {
-        inventoryTableBody.innerHTML = ''; // Clear existing rows
-        if (data.length === 0) {
-            inventoryTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 40px;">No items found.</td></tr>';
+    const renderInventoryTable = () => {
+        inventoryTableBody.innerHTML = '';
+        
+        if (filteredInventory.length === 0) {
+            inventoryTableBody.innerHTML = '<tr><td colspan="5">No items found.</td></tr>';
             return;
         }
 
-        data.forEach(item => {
-            const row = document.createElement('tr');
-            row.dataset.itemId = item.id;
-            const issueQty = itemsToIssue[item.id] || 0;
+        filteredInventory.forEach(item => {
+            // HIDE archived items from table
+            if (item.is_archived == 1) return;
 
-            let itemsToIssueHtml;
-            if (item.quantity === 0) {
-                itemsToIssueHtml = '<span class="out-of-stock-label">Out of stock</span>';
+            const row = document.createElement('tr');
+            
+            if (selectedItems[item.ItemID]) {
+                row.classList.add('selected');
+            }
+
+            let statusClass = '';
+            if (item.ItemStatus === 'Out of Stock') {
+                statusClass = 'status-out-of-stock';
+            } else if (item.ItemStatus === 'Low Stock') {
+                statusClass = 'status-low-stock';
             } else {
-                itemsToIssueHtml = `
-                    <div class="quantity-controls">
-                        <button class="qty-btn subtract" data-item-id="${item.id}" aria-label="Decrease quantity">-</button>
-                        <span class="current-qty" data-item-id="${item.id}">${issueQty}</span>
-                        <button class="qty-btn add" data-item-id="${item.id}" aria-label="Increase quantity">+</button>
-                    </div>
-                `;
+                statusClass = 'status-in-stock';
             }
 
             row.innerHTML = `
-                <td>${item.name}</td>
-                <td>${item.category}</td>
-                <td>${item.quantity > 0 ? item.quantity : '-'}</td>
-                <td>${item.description}</td>
-                <td>${itemsToIssueHtml}</td>
+                <td>${escapeHtml(item.ItemName)}</td>
+                <td>${escapeHtml(item.Category)}</td>
+                <td>${escapeHtml(item.ItemQuantity)}</td>
+                <td><span class="status-badge ${statusClass}">${escapeHtml(item.ItemStatus)}</span></td>
+                <td>
+                    <button class="action-btn issue-btn" data-item-id="${item.ItemID}" ${item.ItemQuantity <= 0 ? 'disabled' : ''}>
+                        Issue
+                    </button>
+                </td>
             `;
 
-            // Add click listener to the whole row
-            row.addEventListener('click', () => {
-                // Find the item in the original inventoryData
-                const selectedItem = inventoryData.find(i => i.id === item.id);
-                if (selectedItem) {
-                    // Highlight the row
-                    document.querySelectorAll('.inventory-table tbody tr').forEach(r => r.classList.remove('selected-row'));
-                    row.classList.add('selected-row');
-                }
-            });
+            const issueBtn = row.querySelector('.issue-btn');
+            if (issueBtn) {
+                issueBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleRowClick(item, row);
+                });
+            }
 
             inventoryTableBody.appendChild(row);
         });
-    }
+    };
 
-    /**
-     * Renders the "Item Details" list based on the itemsToIssue state.
-     */
-    function renderItemDetailsList() {
-        itemDetailsContent.innerHTML = ''; // Clear the list
+    const applyFiltersAndRender = () => {
+        const category = categoryFilter.value;
+        const search = searchInput.value.toLowerCase();
 
-        const items = Object.keys(itemsToIssue).map(id => {
-            const item = inventoryData.find(i => i.id == id);
-            return { ...item, issueQty: itemsToIssue[id] };
-        }).filter(item => item.issueQty > 0); // Only show items with quantity > 0
-
-        if (items.length === 0) {
-            itemDetailsContent.innerHTML = '<p class="empty-details">No items selected to issue.</p>';
-            return;
-        }
-
-        // Create a table for the details
-        const table = document.createElement('table');
-        table.className = 'details-list-table';
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Items to Issue</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${items.map(item => `
-                    <tr>
-                        <td>${item.name}</td>
-                        <td>${item.category}</td>
-                        <td>${item.issueQty}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        `;
-        itemDetailsContent.appendChild(table);
-    }
-
-    /**
-     * Renders the confirmation modal list.
-     */
-    function renderConfirmationList() {
-        confirmationModalBody.innerHTML = ''; // Clear previous list
-
-        const items = Object.keys(itemsToIssue).map(id => {
-            const item = inventoryData.find(i => i.id == id);
-            return { ...item, issueQty: itemsToIssue[id] };
-        }).filter(item => item.issueQty > 0);
-
-        if (items.length === 0) {
-            // This should not happen if "Done" is clicked with items, but as a fallback
-            confirmationModalBody.innerHTML = '<p style="padding: 20px;">No items selected.</p>';
-            return;
-        }
-
-        const table = document.createElement('table');
-        table.className = 'details-list-table';
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Items to Issue</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${items.map(item => `
-                    <tr>
-                        <td>${item.name}</td>
-                        <td>${item.category}</td>
-                        <td>${item.issueQty}</td>
-                    </tr>
-                `).join('')}
-            </tbody>
-        `;
-        confirmationModalBody.appendChild(table);
-    }
-
-
-    /**
-     * Handles the "Add" or "Subtract" button clicks in the table.
-     * @param {Event} e - The click event.
-     */
-    function handleQuantityClick(e) {
-        const target = e.target;
-        if (!target.classList.contains('qty-btn')) return;
-        
-        const itemId = target.dataset.itemId;
-        if (!itemId) return;
-
-        const item = inventoryData.find(i => i.id == itemId);
-        if (!item || item.quantity === 0) return; // Ignore clicks for out-of-stock items
-
-        let currentIssueQty = itemsToIssue[itemId] || 0;
-
-        if (target.classList.contains('add')) {
-            if (currentIssueQty < item.quantity) {
-                currentIssueQty++;
-            } else {
-                // Optional: Show a message that stock limit is reached
-                // showMessageBox("Stock Limit", `Cannot issue more than the available ${item.quantity} units of ${item.name}.`);
-            }
-        } else if (target.classList.contains('subtract')) {
-            if (currentIssueQty > 0) {
-                currentIssueQty--;
-            }
-        }
-
-        // Update the state
-        itemsToIssue[itemId] = currentIssueQty;
-
-        // Update the quantity in the table
-        const qtySpan = inventoryTableBody.querySelector(`.current-qty[data-item-id="${itemId}"]`);
-        if (qtySpan) {
-            qtySpan.textContent = currentIssueQty;
-        }
-
-        // Re-render the "Item Details" list
-        renderItemDetailsList();
-    }
-
-    /**
-     * Filters the inventory table based on category and search term.
-     */
-    function filterAndRenderTable() {
-        const category = categoryFilter.value.toLowerCase();
-        const searchTerm = searchInput.value.toLowerCase();
-
-        currentFilteredData = inventoryData.filter(item => {
-            const matchesCategory = !category || item.category.toLowerCase() === category;
-            const matchesSearch = !searchTerm ||
-                                item.name.toLowerCase().includes(searchTerm) ||
-                                item.description.toLowerCase().includes(searchTerm);
-            return matchesCategory && matchesSearch;
+        filteredInventory = allInventory.filter(item => {
+            const matchesCategory = !category || item.Category === category;
+            const matchesSearch = !search || item.ItemName.toLowerCase().includes(search);
+            const notArchived = item.is_archived != 1; 
+            return matchesCategory && matchesSearch && notArchived;
         });
 
-        renderInventoryTable(currentFilteredData);
-    }
+        renderInventoryTable();
+    };
 
-    /**
-     * Resets the entire issuing process.
-     */
-    function resetIssueProcess() {
-        itemsToIssue = {};
-        filterAndRenderTable();
-        renderItemDetailsList();
-        document.querySelectorAll('.inventory-table tbody tr').forEach(r => r.classList.remove('selected-row'));
-    }
-
-    // --- Event Listeners ---
-
-    // Table quantity button clicks
-    inventoryTableBody.addEventListener('click', handleQuantityClick);
-
-    // Filters
-    categoryFilter.addEventListener('change', filterAndRenderTable);
-    searchInput.addEventListener('input', filterAndRenderTable);
-
-    // "Done" button (Show Confirmation Modal)
-    doneBtn.addEventListener('click', () => {
-        const items = Object.values(itemsToIssue).filter(qty => qty > 0);
-        if (items.length === 0) {
-            showMessageBox("No Items Selected", "Please select a quantity for at least one item to issue.");
+   const renderDetailsPanel = () => {
+        if (Object.keys(selectedItems).length === 0) {
+            itemDetailsContent.innerHTML = '<p class="placeholder-text">Select an item from the table to get started.</p>';
+            doneBtn.disabled = true;
             return;
         }
-        renderConfirmationList();
+
+        itemDetailsContent.innerHTML = '';
+        doneBtn.disabled = false;
+
+        for (const itemID in selectedItems) {
+            const item = selectedItems[itemID];
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'details-item';
+            itemDiv.setAttribute('data-item-id', itemID);
+            
+            itemDiv.innerHTML = `
+                <div class="item-info">
+                    <span class="item-name">${escapeHtml(item.name)}</span>
+                    <span class="item-category">${escapeHtml(item.category)}</span>
+                </div>
+                <div class="item-controls">
+                    <button class="control-btn remove-btn">&times;</button>
+                    <button class="control-btn decrease-btn" ${item.issueQty <= 0 ? 'disabled' : ''}>-</button>
+                    <input type="number" class="quantity-input" value="${escapeHtml(item.issueQty)}" min="0" max="${escapeHtml(item.stock)}">
+                    <button class="control-btn increase-btn" ${item.issueQty >= item.stock ? 'disabled' : ''}>+</button>
+                </div>
+            `;
+
+            itemDetailsContent.appendChild(itemDiv);
+        }
+    };
+
+    // --- Event Handlers ---
+
+    const handleRowClick = (item, row) => {
+        const itemID = item.ItemID;
+        
+        if (item.ItemQuantity <= 0 && !selectedItems[itemID]) {
+             showToast("This item is out of stock.", "error");
+             return;
+        }
+
+        if (selectedItems[itemID]) {
+            delete selectedItems[itemID];
+            row.classList.remove('selected');
+        } else {
+            selectedItems[itemID] = {
+                name: item.ItemName,
+                category: item.Category,
+                categoryId: item.ItemCategoryID,
+                stock: item.ItemQuantity,
+                issueQty: 0,
+                status: item.ItemStatus,
+                description: item.ItemDescription || ''
+            };
+            row.classList.add('selected');
+        }
+        
+        renderDetailsPanel();
+    };
+
+    itemDetailsContent.addEventListener('click', (e) => {
+        const target = e.target;
+        const itemDiv = target.closest('.details-item');
+        if (!itemDiv) return;
+        
+        const itemID = itemDiv.dataset.itemId;
+        const item = selectedItems[itemID];
+        const qtyInput = itemDiv.querySelector('.quantity-input');
+        const decBtn = itemDiv.querySelector('.decrease-btn');
+        const incBtn = itemDiv.querySelector('.increase-btn');
+
+        if (target.classList.contains('decrease-btn')) {
+            let qty = parseInt(qtyInput.value);
+            if (qty > 0) {
+                qty--;
+                qtyInput.value = qty;
+                item.issueQty = qty;
+            }
+        } 
+        else if (target.classList.contains('increase-btn')) {
+            let qty = parseInt(qtyInput.value);
+            if (qty < item.stock) {
+                qty++;
+                qtyInput.value = qty;
+                item.issueQty = qty;
+            }
+        } 
+        else if (target.classList.contains('remove-btn')) {
+            delete selectedItems[itemID];
+            renderDetailsPanel();
+            const tableRow = [...inventoryTableBody.querySelectorAll('tr')].find(
+                row => row.querySelector('.issue-btn')?.dataset.itemId == itemID
+            );
+            if (tableRow) tableRow.classList.remove('selected');
+        }
+
+        if (item) {
+            decBtn.disabled = item.issueQty <= 0;
+            incBtn.disabled = item.issueQty >= item.stock;
+        }
+    });
+
+    itemDetailsContent.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target.classList.contains('quantity-input')) {
+            const itemDiv = target.closest('.details-item');
+            const itemID = itemDiv.dataset.itemId;
+            const item = selectedItems[itemID];
+            
+            let qty = parseInt(target.value);
+            
+            if (isNaN(qty) || qty < 0) {
+                qty = 0;
+            } else if (qty > item.stock) {
+                qty = item.stock;
+            }
+            
+            target.value = qty;
+            item.issueQty = qty;
+
+            itemDiv.querySelector('.decrease-btn').disabled = qty <= 0;
+            itemDiv.querySelector('.increase-btn').disabled = qty >= item.stock;
+        }
+    });
+
+    categoryFilter.addEventListener('change', applyFiltersAndRender);
+    searchInput.addEventListener('input', applyFiltersAndRender);
+
+    cancelBtn.addEventListener('click', () => {
+        resetIssueProcess();
+    });
+
+    doneBtn.addEventListener('click', () => {
+        const itemsToIssue = Object.entries(selectedItems)
+            .filter(([id, item]) => item.issueQty > 0)
+            .map(([id, item]) => ({ id, ...item }));
+
+        if (itemsToIssue.length === 0) {
+            showToast("Please set a quantity for at least one item.", "error");
+            return;
+        }
+
+        confirmationModalBody.innerHTML = '';
+        itemsToIssue.forEach(item => {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'confirm-item';
+            itemEl.innerHTML = `
+                <span class="confirm-name">${escapeHtml(item.name)}</span>
+                <span class="confirm-qty">QTY: ${item.issueQty}</span>
+            `;
+            confirmationModalBody.appendChild(itemEl);
+        });
+
         showModal(confirmationModalBackdrop);
     });
 
-    // "Cancel" button (Clear selections)
-    cancelBtn.addEventListener('click', ()=> {
-        resetIssueProcess();
-    });
+    // --- Main Issuing Logic ---
 
-    // Confirmation Modal: "Confirm"
-    confirmBtn.addEventListener('click', ()=> {
-        let issuedItemsList = [];
-        let errorList = [];
-
-        // Process the items
-        for (const itemId in itemsToIssue) {
-            const quantityToIssue = itemsToIssue[itemId];
-            if (quantityToIssue > 0) {
-                const item = inventoryData.find(i => i.id == itemId);
-                if (item) {
-                    if (item.quantity >= quantityToIssue) {
-                        // Subtract the quantity
-                        item.quantity -= quantityToIssue;
-                        issuedItemsList.push(`- ${quantityToIssue} x ${item.name}`);
-                    } else {
-                        // This case should be prevented by the UI, but as a safeguard
-                        errorList.push(`- Not enough stock for ${item.name}`);
-                    }
-                }
-            }
-        }
-
-        // Close confirmation modal
+    const resetIssueProcess = () => {
+        selectedItems = {};
+        renderDetailsPanel();
+        applyFiltersAndRender();
         hideModal(confirmationModalBackdrop);
+    };
 
-        // Reset the state
-        resetIssueProcess();
+    confirmBtn.addEventListener('click', async () => {
+        const itemsToIssue = Object.entries(selectedItems)
+            .filter(([id, item]) => item.issueQty > 0)
+            .map(([id, item]) => ({ 
+                item_id: id,
+                stock_adjustment: -item.issueQty,
+                item_name: item.name,
+                category_id: item.categoryId,
+                description: item.description,
+                status: item.status
+            }));
 
-        // Show success message
-        if (issuedItemsList.length > 0) {
-            const successTitle = "Items Issued Successfully";
-            const successText = "The following items have been deducted from inventory:\n\n" + issuedItemsList.join('\n');
-            showMessageBox(successTitle, successText);
+        if (itemsToIssue.length === 0) {
+            hideModal(confirmationModalBackdrop);
+            return;
         }
+
+        const updatePromises = itemsToIssue.map(item => {
+            const formData = new FormData();
+            formData.append('item_id', item.item_id);
+            formData.append('name', item.item_name);
+            formData.append('category_id', item.category_id);
+            formData.append('description', item.description);
+            formData.append('stock_adjustment', item.stock_adjustment);
+            formData.append('status', item.status);
+
+            return fetch('inventory_actions.php?action=issue_item', {
+                method: 'POST',
+                body: formData
+            }).then(response => response.json());
+        });
+
+        try {
+            const results = await Promise.all(updatePromises);
+            
+            const errors = results.filter(res => !res.success);
+            const successes = itemsToIssue.filter((item, index) => results[index].success);
+
+            if (errors.length > 0) {
+                showToast("Some items failed to issue.", "error");
+            } else if (successes.length > 0) {
+                showToast("Items issued successfully!");
+            }
+            
+            fetchInventory();
+
+        } catch (error) {
+            showToast("Critical error occurred while issuing items.", "error");
+        }
+        
+        resetIssueProcess();
     });
 
-    // Confirmation Modal: "Cancel"
     cancelConfirmBtn.addEventListener('click', () => {
         hideModal(confirmationModalBackdrop);
     });
 
-    // Message Box: "OK"
-    messageBoxClose.addEventListener('click', () => {
-        hideModal(messageBoxBackdrop);
-    });
-
-    // Logout Icon
-    logoutIcon.addEventListener('click', () => {
-        showModal(logoutModalBackdrop);
-    });
-
-    // Logout Modal: "Cancel"
-    cancelLogoutBtn.addEventListener('click', () => {
-        hideModal(logoutModalBackdrop);
-    });
-
-    // Logout Modal: "Confirm"
-    confirmLogoutBtn.addEventListener('click', () => {
-        hideModal(logoutModalBackdrop);
-        window.location.href = 'logout.php';
-    });
+    if (messageBoxClose) {
+        messageBoxClose.addEventListener('click', () => {
+            hideModal(messageBoxBackdrop);
+        });
+    }
     
     // --- Initial Load ---
-    populateCategories();
-    filterAndRenderTable();
-    renderItemDetailsList();
+    const initialize = async () => {
+        await fetchCategories();
+        await fetchInventory();
+    };
 
+    initialize();
 });

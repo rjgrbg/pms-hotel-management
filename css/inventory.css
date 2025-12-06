@@ -47,7 +47,7 @@ body {
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 1px;
-  font-family: Forum, serif; /* Added serif as a fallback */
+  font-family: Forum, serif;
 }
 
 .profileIcon {
@@ -70,13 +70,13 @@ body {
   box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  transform: translateX(100%); /* Hidden by default */
+  transform: translateX(100%);
   transition: transform 0.3s ease-in-out;
-  z-index: 1100; /* Ensure it's above the modal backdrop */
+  z-index: 1100;
 }
 
 .profile-sidebar.active {
-  transform: translateX(0); /* Shown when active */
+  transform: translateX(0);
 }
 
 .sidebar-close-btn {
@@ -114,7 +114,7 @@ body {
 }
 
 .profile-nav {
-  flex-grow: 1; /* Pushes the footer down */
+  flex-grow: 1;
   padding: 20px 0;
 }
 
@@ -129,7 +129,7 @@ body {
 
 .profile-nav a:hover,
 .profile-footer a:hover {
-  color: #ffa237;
+  color: #d4af78;
 }
 
 .profile-footer {
@@ -149,9 +149,18 @@ body {
 .pageTitle {
   text-align: center;
   font-size: 32px;
+  color: #333;
   letter-spacing: 2px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.pageDescription {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
   margin-bottom: 30px;
-  font-weight: 400;
+  line-height: 1.5;
 }
 
 .tabNavigation {
@@ -236,7 +245,7 @@ body {
 .filterDropdown:focus,
 .searchInput:focus {
   outline: none;
-  border-color: #ffb400;
+  border-color: #d4af78;
 }
 
 .searchBox {
@@ -250,14 +259,6 @@ body {
   min-width: 250px;
 }
 
-.searchInput {
-  padding: 10px 14px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 13px;
-  background-color: #fff;
-}
-
 .searchBox .searchInput {
   border: none;
   flex: 1;
@@ -266,7 +267,7 @@ body {
 
 .searchInput:focus {
   outline: none;
-  border-color: #ffb400;
+  border-color: #d4af78;
 }
 
 .searchBtn {
@@ -300,7 +301,7 @@ body {
 .refreshBtn:hover,
 .downloadBtn:hover {
   background-color: #f9f9f9;
-  border-color: #ffb400;
+  border-color: #d4af78;
 }
 
 /* ============================================= */
@@ -360,9 +361,20 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
-.statusBadge.dirty { background-color: #ff6b35; }
-.statusBadge.request { background-color: #c9302c; }
-.statusBadge.cleaned { background-color: #5cb85c; }
+.statusBadge.in-stock {
+    background-color: #5cb85c;
+    color: #fff;
+}
+
+.statusBadge.low-stock {
+    background-color: #ffc107;
+    color: #fff;
+}
+
+.statusBadge.out-of-stock {
+    background-color: #c9302c;
+    color: #fff;
+}
 
 .assignBtn {
   background-color: #480c1b;
@@ -411,14 +423,26 @@ tbody tr:hover {
 }
 
 .paginationBtn:hover {
-  border-color: #ffb400;
-  color: #ffb400;
+  border-color: #d4af78;
+  color: #d4af78;
 }
 
 .paginationBtn.active {
-  background-color: #ffb400;
-  border-color: #ffb400;
-  color: #fff;
+  background-color: #d4af78;
+  border-color: #d4af78;
+  color: #480c1b;
+  font-weight: 600;
+}
+
+.paginationBtn:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+  border-color: #eee;
+}
+
+.paginationControls span.dots {
+  padding: 6px 4px;
+  color: #999;
 }
 
 .paginationDots {
@@ -427,7 +451,7 @@ tbody tr:hover {
 }
 
 /* ============================================= */
-/* === MODALS (GENERAL STYLES)             === */
+/* === MODALS (HOUSEKEEPING STYLE)         === */
 /* ============================================= */
 .modalBackdrop {
   position: fixed;
@@ -472,7 +496,7 @@ tbody tr:hover {
 }
 
 .staffSelectionModal .closeBtn {
-  color: #333; /* Dark close button for light modal */
+  color: #333;
 }
 
 .modalButtons {
@@ -510,7 +534,7 @@ tbody tr:hover {
 }
 
 .confirmBtn {
-  background-color: #ffb400;
+  background-color: #d4af78;
   color: #480c1b;
   min-width: 160px;
 }
@@ -523,8 +547,8 @@ tbody tr:hover {
 /* === SPECIFIC MODAL STYLES               === */
 /* ============================================= */
 
-/* --- Assign & Logout Modals (Dark Theme) --- */
-.assignModal, .logoutModal {
+/* --- Logout Modal --- */
+.logoutModal {
   background-color: #480c1b;
   border-radius: 8px;
   padding: 35px;
@@ -537,9 +561,10 @@ tbody tr:hover {
   font-size: 18px;
   margin-bottom: 12px;
   font-weight: 600;
+  color: #d4af78;
 }
 
-.assignModal p, .logoutModal p {
+.logoutModal p {
   color: #dcc8b0;
   font-size: 13px;
   line-height: 1.5;
@@ -555,241 +580,16 @@ tbody tr:hover {
   width: 50px;
 }
 
-/* --- Staff Selection Modal (Light Theme) --- */
-.staffSelectionModal {
-  background: #fff;
-  border-radius: 12px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 85vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.staffSelectionModal h2 {
-  color: #480c1b;
-  font-size: 18px;
-  font-weight: 600;
-  text-align: center;
-  padding: 30px 40px 10px;
-  text-transform: uppercase;
-}
-
-.modalSubtext {
-  color: #666;
-  font-size: 14px;
-  text-align: center;
-  margin-bottom: 25px;
-  padding: 0 40px;
-}
-
-.modalSearchBox {
-  margin: 0 40px 25px;
-  border: 1px solid #ddd;
-}
-
-.staffList {
-  margin: 0 40px;
-  max-height: 320px;
-  overflow-y: auto;
-  padding-right: 10px; /* Space for scrollbar */
-  flex-grow: 1;
-}
-
-.staffListItem {
-  background: #f5f5f5;
-  padding: 18px 20px;
-  margin-bottom: 12px;
-  border-radius: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 2px solid transparent;
-}
-
-.staffListItem:hover:not(.assigned) {
-  background: #e8e8e8;
-}
-
-.staffListItem.selected {
-  background: #fff3cd;
-  border-color: #ffb300;
-}
-
-.staffListItem.assigned {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.staffListName {
-  font-size: 15px;
-  font-weight: 500;
-}
-
-.staffListStatus {
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.staffListStatus.available { background: #d4edda; color: #28a745; }
-.staffListStatus.assigned { background: #f8d7da; color: #dc3545; }
-
-.staffSelectionModal .modalButtons {
-  padding: 25px 40px;
-  border-top: 1px solid #f0f0f0;
-}
-
-/* --- Success Modal --- */
-.successModal {
-  background-color: #480c1b;
-  border-radius: 20px;
-  padding: 50px;
-  max-width: 450px;
-  text-align: center;
-}
-
-.successIcon {
-  width: 100px;
-  height: 100px;
-  margin: 0 auto 30px;
-  background: #00c853;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.successIcon::before {
-  content: '✓';
-  color: white;
-  font-size: 60px;
-  font-weight: bold;
-}
-
-.successModal h2 {
-  color: #fff;
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 30px;
-}
-
-.okayBtn {
-  background-color: #FFA237;
-  color: #fff;
-  min-width: 250px;
-  padding: 16px 20px;
-  border-radius: 5px;
-  font-size: 14px;
-  letter-spacing: 1.5px;
-}
-
-.okayBtn:hover {
-  background-color: #d18224;
-}
-
 /* ============================================= */
-/* === KEYFRAMES & UTILITIES               === */
+/* === FLOATING ADD BUTTON                 === */
 /* ============================================= */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideIn {
-  from { transform: translateY(-30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.staffList::-webkit-scrollbar { width: 6px; }
-.staffList::-webkit-scrollbar-track { background: #f5f5f5; border-radius: 3px; }
-.staffList::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
-.staffList::-webkit-scrollbar-thumb:hover { background: #999; }
-
-/* ============================================= */
-/* === RESPONSIVE STYLES                   === */
-/* ============================================= */
-@media (max-width: 1024px) {
-  .mainContainer {
-    padding: 20px;
-  }
-}
-
-@media (max-width: 768px) {
-  .header {
-    padding: 12px 15px;
-  }
-  .mainContainer {
-    padding: 15px;
-  }
-  .pageTitle {
-    font-size: 24px;
-    margin-bottom: 20px;
-  }
-  .tabNavigation {
-    gap: 5px;
-    margin-bottom: 20px;
-  }
-  .tabBtn {
-    padding: 10px 16px;
-    font-size: 12px;
-  }
-  .filterControls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  table, .searchInput, .paginationBtn {
-    font-size: 11px;
-  }
-  th, td {
-    padding: 8px 6px;
-  }
-  .modalBackdrop > div { /* Target all direct children of backdrop */
-    width: 90%;
-    max-width: 380px;
-    padding: 25px;
-  }
-  .modalButtons {
-    flex-direction: column;
-  }
-  .modalBtn {
-    width: 100%;
-  }
-  .filterDropdown,
-  .searchBox,
-  .refreshBtn,
-  .downloadBtn,
-  .addRoomBtn {
-    width: 100%;
-  }
-}
-
-
-/* Action Icons */
-.action-icons i {
-    margin: 0 3px; /* Slightly less margin */
-    cursor: pointer;
-    color: #352C24; /* Dark Brown */
-    font-size: 16px; /* Slightly larger */
-    padding: 5px; /* Clickable area */
-    transition: color 0.2s;
-}
-.action-icons i:hover {
-    color: #FFA237; /* Gold/Orange */
-}
-
-/* Floating "Add Item" Button */
 .add-item-btn {
     position: fixed;
     bottom: 30px;
     right: 30px;
     padding: 15px 25px;
-    background-color: #480C1B; /* Maroon */
-    color: #FFF2E0; /* Off-white */
+    background-color: #480C1B;
+    color: #FFF2E0;
     border: none;
     border-radius: 8px;
     font-size: 16px;
@@ -800,7 +600,7 @@ tbody tr:hover {
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     cursor: pointer;
     transition: background-color 0.3s;
-    z-index: 999; /* Ensure it's above table */
+    z-index: 999;
 }
 
 .add-item-btn i {
@@ -808,13 +608,12 @@ tbody tr:hover {
 }
 
 .add-item-btn:hover {
-    background-color: #6a2436; /* Lighter maroon */
+    background-color: #6a2436;
 }
 
-
-/* --- MODAL STYLES (All your existing modal styles are here, unchanged) --- */
-/* ... (Truncated for brevity, paste your full modal/sidebar CSS here) ... */
-/* --- MODAL STYLES (Add & Edit Modals) --- */
+/* ============================================= */
+/* === ADD/EDIT ITEM MODAL (HOUSEKEEPING STYLE) === */
+/* ============================================= */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -822,10 +621,12 @@ tbody tr:hover {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
     display: none; 
     justify-content: center;
     align-items: center;
     z-index: 1000;
+    animation: fadeIn 0.3s ease;
 }
 
 .modal-overlay.show-modal {
@@ -833,134 +634,144 @@ tbody tr:hover {
 }
 
 .modal-content {
-    background-color: #352C24; 
-    color: #FFF2E0; 
-    padding: 30px; 
-    border-radius: 15px;
+    background-color: #480c1b;
+    color: #fff;
+    padding: 35px;
+    border-radius: 12px;
     width: 90%;
-    max-width: 600px; 
+    max-width: 600px;
     position: relative;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
+    max-height: 90vh;
+    overflow-y: auto;
 }
-
 
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 15px;
 }
 
 .modal-title {
     display: flex;
     align-items: center;
-    color: #FFF2E0; /* Off-white */
-}
-
-/* Modal Icon Style */
-.modal-icon {
-    width: 40px; 
-    height: 40px;
-    margin-right: 15px;
+    color: #d4af78;
 }
 
 .modal-icon-fa {
     font-size: 35px;
     margin-right: 15px;
-    color: #FFA237;
+    color: #d4af78;
     width: 40px;
     text-align: center;
 }
 
-
 .modal-title h2 {
     margin: 0;
     font-size: 24px;
-    font-family: 'Abril Fatface', serif; /* PRIMARY FONT */
+    color: #d4af78;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-family: 'Arial', sans-serif;
 }
 
 .modal-close-btn {
     background: none;
     border: none;
-    color: #FFF2E0; /* Off-white */
+    color: #fff;
     font-size: 30px;
     font-weight: bold;
     cursor: pointer;
     opacity: 0.7;
 }
+
 .modal-close-btn:hover {
     opacity: 1;
 }
 
 .modal-description {
-    font-size: 14px;
-    color: #FFF2E0; /* Off-white */
+    font-size: 13px;
+    color: #dcc8b0;
     margin-bottom: 25px;
-    border-bottom: 1px solid #4a4035; /* Darker border */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     padding-bottom: 15px;
-    opacity: 0.9;
+    line-height: 1.5;
 }
 
 /* Modal Form Styles */
 .form-row {
     display: flex;
     justify-content: space-between;
-    gap: 15px; 
+    gap: 15px;
     margin-bottom: 15px;
 }
 
 .form-group {
-    flex: 1; /* Each group takes equal space in a row */
+    flex: 1;
     display: flex;
     flex-direction: column;
-    position: relative; 
+    position: relative;
 }
+
 .modal-body > .form-group {
      margin-bottom: 15px;
 }
 
-
 .form-group label {
     margin-bottom: 8px;
-    font-size: 14px;
-    font-weight: bold;
-    color: #FFF2E0; /* Off-white */
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
 }
 
-.category-group label {
+.category-select-wrapper {
     display: flex;
     align-items: center;
-    justify-content: space-between; 
-}
-.category-edit-icon {
-    color: #FFA237; /* Gold */
-    font-size: 14px; 
-    cursor: pointer;
-    margin-left: 10px; 
-    transition: color 0.2s;
-}
-.category-edit-icon:hover {
-    color: #ffb65a; /* Lighter gold */
+    gap: 10px;
 }
 
+.category-select-wrapper select {
+    flex-grow: 1;
+}
+
+.edit-category-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    background-color: #d4af78;
+    color: #212529;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.edit-category-btn:hover {
+    background-color: #c2a06d;
+}
+
+.edit-category-btn .fa-pencil-alt {
+    margin-right: 5px;
+}
 
 .form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="password"],
 .form-group input[type="number"],
 .form-group input[type="date"],
 .form-group select,
 .form-group textarea {
     width: 100%;
-    padding: 15px; 
-    border: none;
-    border-radius: 10px; 
-    background-color: #FFF2E0; 
-    color: #352C24; 
-    font-size: 16px; 
-    box-sizing: border-box; 
-    font-family: Arial, sans-serif;
-    transition: background-color 0.2s, box-shadow 0.2s;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #fff;
+    color: #333;
+    font-size: 13px;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+    transition: border 0.2s;
 }
 
 .form-group textarea {
@@ -971,50 +782,55 @@ tbody tr:hover {
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    background-color: #fcefdc; 
-    box-shadow: 0 0 0 2px #FFA237; /* Gold outline on focus */
+    border-color: #d4af78;
 }
 
 .form-group select {
-    appearance: none; 
+    appearance: none;
     -webkit-appearance: none;
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23352C24"><path d="M7 10l5 5 5-5z"/></svg>'); 
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23333"><path d="M7 10l5 5 5-5z"/></svg>');
     background-repeat: no-repeat;
-    background-position: right 15px center;
-    padding-right: 40px; 
+    background-position: right 10px center;
+    padding-right: 35px;
 }
 
 .submit-btn {
     width: 100%;
-    padding: 18px; 
-    background-color: #FFA237; 
-    color: #352C24; 
+    padding: 12px;
+    background-color: #d4af78;
+    color: #480c1b;
     border: none;
-    border-radius: 10px; 
-    font-size: 18px; 
-    font-weight: bold;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.3s;
-    margin-top: 20px; 
-    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    margin-top: 20px;
 }
 
 .submit-btn:hover {
-    background-color: #ffb65a; /* Lighter gold */
+    background-color: #c4a16c;
+    transform: translateY(-1px);
 }
 
-/* --- CONFIRMATION (ADD) MODAL STYLES --- */
+/* ============================================= */
+/* === CONFIRMATION MODAL (HOUSEKEEPING STYLE) === */
+/* ============================================= */
 .modal-overlay-confirm {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
     display: none;
     justify-content: center;
     align-items: center;
-    z-index: 1001; 
+    z-index: 1001;
+    animation: fadeIn 0.3s ease;
 }
 
 .modal-overlay-confirm.show-modal {
@@ -1022,28 +838,31 @@ tbody tr:hover {
 }
 
 .modal-content-confirm {
-    background-color: #480C1B; /* Maroon */
-    color: #FFF2E0; /* Off-white */
-    padding: 30px;
-    border-radius: 15px;
+    background-color: #480C1B;
+    color: #fff;
+    padding: 40px 35px;
+    border-radius: 12px;
     width: 90%;
     max-width: 450px;
     text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
+    position: relative;
 }
 
 .modal-content-confirm h3 {
     margin: 0;
-    font-size: 20px;
-    color: #FFA237; /* Gold/Orange */
+    font-size: 18px;
+    color: #fff;
     margin-bottom: 15px;
-    font-family: 'Abril Fatface', serif; /* PRIMARY FONT */
+    font-weight: 600;
 }
 
 .modal-content-confirm p {
-    font-size: 14px;
-    color: #FFF2E0; /* Off-white */
+    font-size: 13px;
+    color: #dcc8b0;
     margin-bottom: 25px;
+    line-height: 1.5;
 }
 
 .confirm-buttons {
@@ -1054,43 +873,53 @@ tbody tr:hover {
 
 .confirm-buttons .btn {
     border: none;
-    border-radius: 8px;
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: bold;
+    border-radius: 6px;
+    padding: 11px 28px;
+    font-size: 12px;
+    font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.3s, color 0.3s;
-    font-family: Arial, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
 }
 
 .confirm-buttons .btn-cancel {
-    background-color: #FFA237; /* Gold/Orange */
-    color: #352C24; /* Dark Brown */
+    background-color: #e0e0e0;
+    color: #333;
+    min-width: 120px;
 }
+
 .confirm-buttons .btn-cancel:hover {
-    background-color: #ffb65a;
+    background-color: #d5d5d5;
 }
 
 .confirm-buttons .btn-confirm {
-    background-color: #FFA237; /* Gold/Orange */
-    color: #352C24; /* Dark Brown */
-}
-.confirm-buttons .btn-confirm:hover {
-    background-color: #ffb65a;
+    background-color: #d4af78;
+    color: #480c1b;
+    min-width: 160px;
+    font-weight: 600;
 }
 
-/* --- SUCCESS MODAL STYLES --- */
+.confirm-buttons .btn-confirm:hover {
+    background-color: #c3a06d;
+}
+
+/* ============================================= */
+/* === SUCCESS MODAL (HOUSEKEEPING STYLE)   === */
+/* ============================================= */
 .modal-overlay-success {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
     display: none;
     justify-content: center;
     align-items: center;
     z-index: 1002;
+    animation: fadeIn 0.3s ease;
 }
 
 .modal-overlay-success.show-modal {
@@ -1098,97 +927,249 @@ tbody tr:hover {
 }
 
 .modal-content-success {
-    background-color: #480C1B; /* Maroon */
-    color: #FFF2E0; /* Off-white */
-    padding: 40px;
-    border-radius: 15px;
+    background-color: #480C1B;
+    color: #fff;
+    padding: 50px 40px;
+    border-radius: 12px;
     width: 90%;
     max-width: 400px;
     text-align: center;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
 }
 
-.modal-content-success .modal-icon { 
-     display: block; 
-     margin: 0 auto 20px;
+.modal-content-success .modal-icon {
+    display: block;
+    margin: 0 auto 30px;
 }
 
 .modal-content-success h3 {
     margin: 0;
-    font-size: 22px;
-    color: #FFF2E0; /* Off-white */
-    margin-bottom: 25px;
-    font-family: 'Abril Fatface', serif; /* PRIMARY FONT */
+    font-size: 18px;
+    color: #fff;
+    margin-bottom: 30px;
+    font-weight: 600;
 }
 
 .modal-content-success .btn-okay {
     border: none;
-    border-radius: 8px;
-    padding: 12px 30px;
-    font-size: 14px;
-    font-weight: bold;
+    border-radius: 6px;
+    padding: 14px 40px;
+    font-size: 13px;
+    font-weight: 700;
     cursor: pointer;
-    background-color: #FFA237; /* Gold/Orange */
-    color: #352C24; /* Dark Brown */
-    transition: background-color 0.3s;
-    font-family: Arial, sans-serif;
+    background-color: #d4af78;
+    color: #480c1b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    min-width: 250px;
 }
 
 .modal-content-success .btn-okay:hover {
-    background-color: #ffb65a;
+    background-color: #be9d6b;
+    transform: translateY(-1px);
 }
 
-
-/* --- EDIT MODAL STYLES --- */
+/* ============================================= */
+/* === EDIT MODAL SPECIFIC STYLES          === */
+/* ============================================= */
 #edit-item-modal {
     z-index: 1000;
 }
 
-/* --- DELETE CONFIRM MODAL STYLES --- */
+.form-group-static {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group-static label {
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+}
+
+.form-group-static span {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 400;
+    color: #333;
+    background-color: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    min-height: 42.5px;
+}
+
+.form-row-align-bottom {
+    align-items: flex-end;
+}
+
+.stock-adder-group input {
+    background-color: #fff;
+}
+
+.modal-body .form-row.form-row-align-bottom {
+    align-items: flex-end;
+    gap: 15px;
+}
+
+.modal-body .form-row-align-bottom .form-group {
+    flex: 1;
+}
+
+.edit-modal-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 25px;
+}
+
+.edit-modal-buttons .submit-btn {
+    flex: 1;
+    margin-top: 0;
+}
+
+.btn-cancel-white {
+    background-color: #e0e0e0;
+    color: #333;
+}
+
+.btn-cancel-white:hover {
+    background-color: #d5d5d5;
+}
+
+/* ============================================= */
+/* === DELETE MODAL (HOUSEKEEPING STYLE)    === */
+/* ============================================= */
 #delete-confirm-modal {
     z-index: 1001;
 }
 
-.btn-delete-cancel,
-.btn-delete-confirm {
+#delete-confirm-modal .modal-content-confirm {
+    max-width: 480px;
+    position: relative;
+}
+
+#delete-confirm-modal-content {
+    position: relative;
+}
+
+#delete-confirm-modal-content .modal-close-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 30px;
+    color: #fff;
+    opacity: 0.7;
+}
+
+#delete-confirm-modal-content .modal-close-btn:hover {
+    opacity: 1;
+}
+
+#delete-confirm-modal .modal-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
     border: none;
-    border-radius: 8px;
-    padding: 12px 20px;
-    font-size: 14px;
-    font-weight: bold;
+    font-size: 28px;
+    color: #fff;
     cursor: pointer;
-    transition: background-color 0.3s;
-    font-family: Arial, sans-serif;
+    opacity: 0.7;
+    z-index: 10;
 }
+
+#delete-confirm-modal .modal-close-btn:hover {
+    opacity: 1;
+}
+
+#delete-confirm-modal .modal-icon {
+    display: block;
+    margin: 0 auto 20px;
+    height: 50px;
+    width: 50px;
+}
+
 .btn-delete-cancel {
-    background-color: #FFA237; /* Gold/Orange */
-    color: #352C24; /* Dark Brown */
+    background-color: #e0e0e0;
+    color: #333;
 }
+
+.btn-delete-cancel:hover {
+    background-color: #d5d5d5;
+}
+
 .btn-delete-confirm {
-    background-color: #FFA237; /* Gold/Orange */
-    color: #352C24; /* Dark Brown */
+    background-color: #c9302c;
+    color: #fff;
 }
-.btn-delete-cancel:hover,
+
 .btn-delete-confirm:hover {
-    background-color: #ffb65a;
+    background-color: #e74c3c;
 }
 
-/* --- EDIT CATEGORY MODAL STYLES --- */
-#edit-category-modal {
-    z-index: 1001; 
+/* ============================================= */
+/* === CATEGORY MANAGEMENT MODAL            === */
+/* ============================================= */
+#manage-category-modal {
+    z-index: 1000;
 }
 
-#edit-category-modal .modal-title i.category-header-icon {
+#edit-category-name-modal {
+    z-index: 1001;
+}
+
+#edit-category-name-modal .modal-content {
+    max-width: 400px;
+}
+
+#edit-category-name-modal .modal-title i.category-header-icon {
     font-size: 24px;
-    color: #FFA237;
+    color: #d4af78;
     margin-right: 15px;
+}
+
+.add-category-wrapper {
+    display: flex;
+    gap: 10px;
+}
+
+.add-category-wrapper input {
+    flex-grow: 1;
+    width: auto;
+}
+
+.add-category-wrapper .submit-btn {
+    flex-shrink: 0;
+    padding: 10px 15px;
+    line-height: 1.5;
+    width: auto;
+}
+
+.category-divider {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    margin: 20px 0;
+}
+
+.category-list-container {
+    max-height: 250px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .category-list {
     list-style: none;
     padding: 0;
     margin: 0 0 25px 0;
-    max-height: 250px; 
+    max-height: 250px;
     overflow-y: auto;
 }
 
@@ -1196,38 +1177,133 @@ tbody tr:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid #4a4035; /* Darker border */
-    font-size: 16px;
-    color: #FFF2E0;
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
+
 .category-list-item:last-child {
     border-bottom: none;
 }
 
+.category-list-item .category-name {
+    font-size: 15px;
+    color: #fff;
+    font-weight: 500;
+}
+
+.category-actions .btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: #dcc8b0;
+    margin-left: 10px;
+    transition: color 0.2s ease;
+}
+
 .category-actions i {
-    color: #FFA237;
+    color: #d4af78;
     margin-left: 15px;
     cursor: pointer;
     transition: color 0.2s;
 }
+
 .category-actions i:hover {
-    color: #ffb65a;
+    color: #c09d6a;
+}
+
+.category-actions .btn-edit-category:hover {
+    color: #c9a672;
+}
+
+.category-actions .btn-delete-category:hover {
+    color: #dc3545;
 }
 
 .category-modal-buttons {
     display: flex;
     gap: 15px;
-    margin-top: 15px; 
+    margin-top: 15px;
 }
+
 .category-modal-buttons .submit-btn {
-    margin-top: 0; 
-    width: 50%; 
+    margin-top: 0;
+    width: 50%;
+}
+
+.modal-footer {
+    text-align: right;
+    padding: 15px 0 0 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    margin-top: 15px;
+}
+
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid #d4af78;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.form-group-vertical {
+    display: block;
+}
+
+.form-group-vertical label {
+    display: block;
+    margin-bottom: 8px;
 }
 
 /* ============================================= */
-/* === (NEW) ACTION BUTTONS (IN TABLE)       === */
+/* === CATEGORY DELETE CONFIRM MODAL       === */
 /* ============================================= */
+#category-delete-confirm-modal .modal-content-confirm {
+    position: relative;
+}
+
+#category-delete-confirm-modal .modal-close-btn {
+    position: absolute !important;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #fff;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    z-index: 10;
+    opacity: 0.7;
+}
+
+#category-delete-confirm-modal .modal-close-btn:hover {
+    opacity: 1;
+}
+
+/* ============================================= */
+/* === ACTION ICONS & BUTTONS IN TABLE      === */
+/* ============================================= */
+.action-icons i {
+    margin: 0 3px;
+    cursor: pointer;
+    color: #352C24;
+    font-size: 16px;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.action-icons i:hover {
+    color: #d4af78;
+}
+
 .action-cell {
     text-align: center;
     white-space: nowrap;
@@ -1246,15 +1322,176 @@ tbody tr:hover {
 }
 
 .edit-btn {
-    background-color: #480c1b; /* Maroon */
+    background-color: #480c1b;
 }
+
 .edit-btn:hover {
-    background-color: #6a1129; /* Lighter maroon */
+    background-color: #6a1129;
 }
 
 .delete-btn {
-    background-color: #c9302c; /* Red */
+    background-color: #c9302c;
 }
+
 .delete-btn:hover {
-    background-color: #e74c3c; /* Lighter red */
+    background-color: #e74c3c;
+}
+
+.actionIconBtn {
+    background: none;
+    border: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+    color: #666;
+}
+
+.actionIconBtn:hover {
+    color: #333;
+}
+
+.actionIconBtn.editBtn:hover {
+    color: #d4af78;
+}
+
+.actionIconBtn.deleteBtn:hover {
+    color: #dc3545;
+}
+
+/* ============================================= */
+/* === TABLE COLUMN ALIGNMENT               === */
+/* ============================================= */
+.requestsTable th[data-sort="DateofStockIn"],
+.requestsTable #requestsTableBody td:nth-child(7) {
+    text-align: center;
+}
+
+.requestsTable th:nth-child(8) {
+    text-align: center;
+}
+
+/* ============================================= */
+/* === KEYFRAMES & UTILITIES               === */
+/* ============================================= */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.category-list-container::-webkit-scrollbar { width: 6px; }
+.category-list-container::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 3px; }
+.category-list-container::-webkit-scrollbar-thumb { background: rgba(212, 175, 120, 0.5); border-radius: 3px; }
+.category-list-container::-webkit-scrollbar-thumb:hover { background: #d4af78; }
+
+/* ============================================= */
+/* === RESPONSIVE STYLES                   === */
+/* ============================================= */
+@media (max-width: 1024px) {
+  .mainContainer {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 15px;
+  }
+  
+  .mainContainer {
+    padding: 15px;
+  }
+  
+  .pageTitle {
+    font-size: 24px;
+    margin-bottom: 20px;
+  }
+  
+  .tabNavigation {
+    gap: 5px;
+    margin-bottom: 20px;
+  }
+  
+  .tabBtn {
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+  
+  .filterControls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  table, .searchInput, .paginationBtn {
+    font-size: 11px;
+  }
+  
+  th, td {
+    padding: 8px 6px;
+  }
+  
+  .modal-content {
+    width: 95%;
+    max-width: 380px;
+    padding: 25px;
+  }
+  
+  .modalButtons {
+    flex-direction: column;
+  }
+  
+  .modalBtn {
+    width: 100%;
+  }
+  
+  .filterDropdown,
+  .searchBox,
+  .refreshBtn,
+  .downloadBtn {
+    width: 100%;
+  }
+  
+  .form-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .add-item-btn {
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+}
+.actionIconBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, opacity 0.2s;
+    line-height: 1;
+}
+
+.actionIconBtn:hover {
+    transform: scale(1.1);
+    opacity: 0.8;
+}
+
+.actionIconBtn:focus {
+    outline: none;
+}
+
+.actionIconBtn img {
+    display: block;
+    width: 16px; 
+    height: 16px;
+    object-fit: contain;
 }

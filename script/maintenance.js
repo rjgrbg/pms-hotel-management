@@ -2,44 +2,83 @@
 let currentRequestsData = [];
 let currentStaffData = [];
 let currentHistoryData = [];
-let currentAppliancesData = [];
 let allRooms = [];
-let appliancesTypes = [];
 
 let filteredRequests = [];
 let filteredStaff = [];
 let filteredHistory = [];
-let filteredAppliances = [];
 
 let selectedStaffId = null;
-let currentRequestId = null;
-let currentApplianceId = null;
-let pendingAction = null;
+let currentRoomId = null;
+let confirmCallback = null; 
+let selectedIssueTypes = ''; 
 
 // Pagination State
 const paginationState = {
   requests: { currentPage: 1, itemsPerPage: 10 },
-  history: { currentPage: 1, itemsPerPage: 10 },
-  appliances: { currentPage: 1, itemsPerPage: 10 }
+  history: { currentPage: 1, itemsPerPage: 10 }
 };
+
+// --- INJECT TOAST CSS ---
+const maintToastStyle = document.createElement("style");
+maintToastStyle.textContent = `
+    .toast-notification {
+        position: fixed; top: 20px; right: 20px; color: white;
+        padding: 12px 24px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        z-index: 99999; font-family: 'Segoe UI', sans-serif; font-size: 14px;
+        opacity: 0; transform: translateY(-20px); transition: opacity 0.3s ease, transform 0.3s ease;
+        pointer-events: none;
+    }
+    .toast-visible { opacity: 1; transform: translateY(0); }
+`;
+document.head.appendChild(maintToastStyle);
+
+// --- SHOW TOAST FUNCTION (Updated to support types) ---
+function showMaintenanceToast(message, type = 'success') {
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) existingToast.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.innerText = message;
+    
+    // Set color based on type
+    if (type === 'error') {
+        toast.style.backgroundColor = '#dc3545'; // Red
+    } else {
+        toast.style.backgroundColor = '#28a745'; // Green
+    }
+
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('toast-visible'));
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 
 // ===== INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
-  currentRequestsData = typeof initialRequestsData !== 'undefined' ? initialRequestsData : [];
-  currentStaffData = typeof availableStaffData !== 'undefined' ? availableStaffData : [];
-  currentAppliancesData = typeof initialAppliancesData !== 'undefined' ? initialAppliancesData : [];
-  currentHistoryData = typeof initialHistoryData !== 'undefined' ? initialHistoryData : [];
-  allRooms = typeof allRoomsData !== 'undefined' ? allRoomsData : [];
-  appliancesTypes = typeof appliancesTypesData !== 'undefined' ? appliancesTypesData : [];
+  console.log('DOM Loaded - Initializing...');
+  currentRequestsData = typeof initialRequestsData !== 'undefined' ? [...initialRequestsData] : [];
+  currentStaffData = typeof availableStaffData !== 'undefined' ? [...availableStaffData] : [];
+  currentHistoryData = typeof initialHistoryData !== 'undefined' ? [...initialHistoryData] : [];
+  allRooms = typeof allRoomsData !== 'undefined' ? [...allRoomsData] : [];
 
-  applyRequestFiltersAndRender();
-  applyHistoryFiltersAndRender();
-  applyAppliancesFiltersAndRender();
+  loadRequestFiltersFromSession(); 
 
-  setupEventListeners();
   populateStaticFilters();
-  populateAppliancesFilters();
   populateHistoryFilters();
+  
+  applyRequestFiltersAndRender();
+  applyHistoryFiltersAndRender(); 
+  
+  // Initialize download buttons
+  if (typeof initRequestsDownload === 'function') initRequestsDownload();
+  if (typeof initHistoryDownload === 'function') initHistoryDownload();
+  
+  setupEventListeners();
 });
 
 // ===== SETUP EVENT LISTENERS =====
@@ -56,66 +95,90 @@ function setupEventListeners() {
       });
     });
 
-    // Request Filters
-    document.getElementById('floorFilter')?.addEventListener('change', applyRequestFiltersAndRender);
-    document.getElementById('roomFilter')?.addEventListener('change', applyRequestFiltersAndRender);
-    document.getElementById('searchInput')?.addEventListener('input', applyRequestFiltersAndRender);
+    // --- Request Filters & Actions ---
+    document.getElementById('floorFilter')?.addEventListener('change', () => {
+        document.getElementById('roomFilter').value = ''; 
+        sessionStorage.removeItem('requests_roomFilter'); 
+        applyRequestFiltersAndRender();
+        saveRequestFiltersToSession(); 
+    });
+    document.getElementById('roomFilter')?.addEventListener('change', () => {
+        applyRequestFiltersAndRender();
+        saveRequestFiltersToSession(); 
+    });
+    document.getElementById('searchInput')?.addEventListener('input', () => {
+        applyRequestFiltersAndRender();
+        saveRequestFiltersToSession(); 
+    });
     document.getElementById('refreshBtn')?.addEventListener('click', resetRequestFilters);
-    document.getElementById('downloadBtnRequests')?.addEventListener('click', downloadRequestsCSV);
 
-    // History Filters
+    // --- History Filters & Actions ---
     document.getElementById('floorFilterHistory')?.addEventListener('change', () => {
         updateHistoryRoomFilterOptions();
-        applyHistoryFiltersAndRender();
+        applyHistoryFiltersAndRender(); 
     });
-    document.getElementById('roomFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender);
-    document.getElementById('dateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender);
-    document.getElementById('historySearchInput')?.addEventListener('input', applyHistoryFiltersAndRender);
-    document.getElementById('historyRefreshBtn')?.addEventListener('click', resetHistoryFilters);
-    document.getElementById('historyDownloadBtn')?.addEventListener('click', downloadHistoryCSV);
+    document.getElementById('roomFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender); 
+    
+    // UPDATED: Listeners for Date Range
+    document.getElementById('startDateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender); 
+    document.getElementById('endDateFilterHistory')?.addEventListener('change', applyHistoryFiltersAndRender); 
+    
+    document.getElementById('historySearchInput')?.addEventListener('input', applyHistoryFiltersAndRender); 
+    document.getElementById('historyRefreshBtn')?.addEventListener('click', resetHistoryFilters); 
 
-    // Appliances Filters
-    document.getElementById('floorFilterAppliances')?.addEventListener('change', () => {
-        updateAppliancesRoomFilterOptions();
-        applyAppliancesFiltersAndRender();
+    // --- Issue Type Modal ---
+    document.getElementById('closeIssueTypeModalBtn')?.addEventListener('click', hideIssueTypeModal);
+    document.getElementById('cancelIssueTypeBtn')?.addEventListener('click', hideIssueTypeModal);
+    document.getElementById('issueTypeForm')?.addEventListener('submit', handleIssueTypeSubmit);
+
+    // --- Select All Logic ---
+    const selectAllCheckbox = document.getElementById('issue_select_all');
+    const issueCheckboxes = document.getElementById('issueTypeForm')?.querySelectorAll('input[type="checkbox"][name="issueType[]"]');
+
+    selectAllCheckbox?.addEventListener('change', () => {
+        issueCheckboxes?.forEach(cb => { cb.checked = selectAllCheckbox.checked; });
     });
-    document.getElementById('roomFilterAppliances')?.addEventListener('change', applyAppliancesFiltersAndRender);
-    document.getElementById('typeFilterAppliances')?.addEventListener('change', applyAppliancesFiltersAndRender);
-    document.getElementById('appliancesSearchInput')?.addEventListener('input', applyAppliancesFiltersAndRender);
-    document.getElementById('appliancesRefreshBtn')?.addEventListener('click', resetAppliancesFilters);
-    document.getElementById('appliancesDownloadBtn')?.addEventListener('click', downloadAppliancesCSV);
 
-    // Add Appliance Button
-    document.getElementById('addApplianceBtn')?.addEventListener('click', showAddApplianceModal);
+    issueCheckboxes?.forEach(cb => {
+        cb.addEventListener('change', () => {
+            if (!cb.checked) { selectAllCheckbox.checked = false; }
+            else if (Array.from(issueCheckboxes).every(box => box.checked)) { selectAllCheckbox.checked = true; }
+        });
+    });
 
-    // Add/Edit Appliance Modal
-    document.getElementById('closeAddApplianceBtn')?.addEventListener('click', hideAddApplianceModal);
-    document.getElementById('cancelAddApplianceBtn')?.addEventListener('click', hideAddApplianceModal);
-    document.getElementById('addApplianceForm')?.addEventListener('submit', handleAddApplianceSubmit);
-    document.getElementById('applianceFloor')?.addEventListener('change', updateApplianceRoomDropdown);
-
-    // Confirmation Modal
-    document.getElementById('cancelConfirmBtn')?.addEventListener('click', hideConfirmModal);
-    document.getElementById('confirmActionBtn')?.addEventListener('click', handleConfirmAction);
-
-    // Success Modal
-    document.getElementById('closeSuccessBtn')?.addEventListener('click', hideSuccessModal);
-    document.getElementById('okaySuccessBtn')?.addEventListener('click', hideSuccessModal);
-
-    // Delete Modal
-    document.getElementById('closeDeleteBtn')?.addEventListener('click', hideDeleteModal);
-    document.getElementById('cancelDeleteBtn')?.addEventListener('click', hideDeleteModal);
-    document.getElementById('confirmDeleteBtn')?.addEventListener('click', handleConfirmDelete);
-
-    // Staff Modal
+    // --- Staff Modal ---
     document.getElementById('closeStaffModalBtn')?.addEventListener('click', hideStaffModal);
     document.getElementById('cancelStaffBtn')?.addEventListener('click', hideStaffModal);
     document.getElementById('staffModalSearchInput')?.addEventListener('input', filterStaffInModal);
+    document.getElementById('confirmStaffAssignBtn')?.addEventListener('click', handleStaffAssign);
     document.getElementById('staffModal')?.addEventListener('click', (e) => {
       if (e.target === e.currentTarget) hideStaffModal();
     });
 
-    // Profile Sidebar & Logout
+    // --- Edit Room Status Modal ---
+    document.getElementById('closeEditRoomStatusBtn')?.addEventListener('click', hideEditRoomStatusModal);
+    document.getElementById('cancelEditRoomStatusBtn')?.addEventListener('click', hideEditRoomStatusModal);
+    document.getElementById('editRoomStatusForm')?.addEventListener('submit', handleEditRoomStatusSubmit);
+
+    // --- Success Modal ---
+    document.getElementById('closeSuccessBtn')?.addEventListener('click', hideSuccessModal);
+    document.getElementById('okaySuccessBtn')?.addEventListener('click', hideSuccessModal);
+
+    // --- Confirmation Modal ---
+    const confirmActionBtn = document.getElementById('confirmActionBtn');
+    const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
+    const confirmModal = document.getElementById('confirmModal');
+
+    confirmActionBtn?.addEventListener('click', () => {
+        if (typeof confirmCallback === 'function') confirmCallback();
+        hideConfirmModal();
+    });
+    cancelConfirmBtn?.addEventListener('click', hideConfirmModal);
+    confirmModal?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) hideConfirmModal();
+    });
+    
+    // --- Profile & Logout ---
     const profileBtn = document.getElementById('profileBtn');
     const sidebar = document.getElementById('profile-sidebar');
     const closeSidebarBtn = document.getElementById('sidebar-close-btn');
@@ -135,83 +198,157 @@ function setupEventListeners() {
     logoutModal?.addEventListener('click', (e) => { if (e.target === e.currentTarget) logoutModal.style.display = 'none'; });
 }
 
-// ===== PAGINATION UTILITIES =====
-function paginateData(data, page, itemsPerPage) {
-  const startIndex = (page - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  return data.slice(startIndex, endIndex);
+// ===== FILTER UTILITIES =====
+function populateStaticFilters() {
+    const floorFilter = document.getElementById('floorFilter');
+    const floors = [...new Set(allRooms.map(r => r.floor).filter(f => f))].sort((a, b) => a - b);
+    if (floorFilter) {
+        const currentValue = floorFilter.value; 
+        while (floorFilter.options.length > 1) floorFilter.remove(1);
+        floors.forEach(f => {
+             const option = document.createElement('option');
+             option.value = f;
+             option.textContent = f;
+             floorFilter.appendChild(option);
+        });
+        floorFilter.value = currentValue; 
+    }
+    updateRoomFilterOptions();
 }
 
-function getTotalPages(dataLength, itemsPerPage) {
-  return Math.ceil(dataLength / itemsPerPage);
+function populateHistoryFilters() {
+    const floorFilterHistory = document.getElementById('floorFilterHistory');
+    const floors = [...new Set(currentHistoryData.map(h => h.floor).filter(f => f))].sort((a, b) => a - b);
+    if (floorFilterHistory) {
+        while (floorFilterHistory.options.length > 1) floorFilterHistory.remove(1);
+        floors.forEach(f => {
+             const option = document.createElement('option');
+             option.value = f;
+             option.textContent = f;
+             floorFilterHistory.appendChild(option);
+        });
+    }
+    updateHistoryRoomFilterOptions();
 }
 
-function renderPaginationControls(controlsContainerId, totalPages, currentPage, onPageChange) {
-    const container = document.getElementById(controlsContainerId);
-    if (!container) return;
+function updateRoomFilterOptions() {
+    const floor = document.getElementById('floorFilter')?.value;
+    const roomFilter = document.getElementById('roomFilter');
+    if (!roomFilter) return;
 
-    container.innerHTML = '';
-    if (totalPages <= 1) return;
+    const savedRoom = sessionStorage.getItem('requests_roomFilter');
 
-    const prevBtn = document.createElement('button');
-    prevBtn.className = 'paginationBtn';
-    prevBtn.textContent = '←';
-    prevBtn.disabled = currentPage === 1;
-    prevBtn.onclick = () => onPageChange(currentPage - 1);
-    container.appendChild(prevBtn);
+    while (roomFilter.options.length > 1) roomFilter.remove(1);
 
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    if (endPage - startPage + 1 < maxVisiblePages) {
-        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    const rooms = [...new Set(allRooms
+        .filter(r => !floor || r.floor.toString() === floor)
+        .map(r => r.room)
+    )].sort((a, b) => a - b);
+
+    rooms.forEach(r => {
+        const option = document.createElement('option');
+        option.value = r;
+        option.textContent = r;
+        roomFilter.appendChild(option);
+    });
+    
+    if (savedRoom) {
+        roomFilter.value = savedRoom;
     }
-
-    if (startPage > 1) {
-        const firstPageBtn = document.createElement('button');
-        firstPageBtn.className = 'paginationBtn';
-        firstPageBtn.textContent = '1';
-        firstPageBtn.onclick = () => onPageChange(1);
-        container.appendChild(firstPageBtn);
-        if (startPage > 2) {
-            const dots = document.createElement('span');
-            dots.textContent = '...';
-            dots.className = 'paginationDots';
-            container.appendChild(dots);
-        }
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-        const pageBtn = document.createElement('button');
-        pageBtn.className = `paginationBtn ${i === currentPage ? 'active' : ''}`;
-        pageBtn.textContent = i;
-        pageBtn.onclick = () => onPageChange(i);
-        container.appendChild(pageBtn);
-    }
-
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) {
-            const dots = document.createElement('span');
-            dots.textContent = '...';
-            dots.className = 'paginationDots';
-            container.appendChild(dots);
-        }
-        const lastPageBtn = document.createElement('button');
-        lastPageBtn.className = 'paginationBtn';
-        lastPageBtn.textContent = totalPages;
-        lastPageBtn.onclick = () => onPageChange(totalPages);
-        container.appendChild(lastPageBtn);
-    }
-
-    const nextBtn = document.createElement('button');
-    nextBtn.className = 'paginationBtn';
-    nextBtn.textContent = '→';
-    nextBtn.disabled = currentPage === totalPages;
-    nextBtn.onclick = () => onPageChange(currentPage + 1);
-    container.appendChild(nextBtn);
 }
 
-// ===== RENDER REQUESTS TABLE =====
+function updateHistoryRoomFilterOptions() {
+    const floor = document.getElementById('floorFilterHistory')?.value;
+    const roomFilter = document.getElementById('roomFilterHistory');
+    if (!roomFilter) return;
+
+    const currentRoom = roomFilter.value;
+    while (roomFilter.options.length > 1) roomFilter.remove(1);
+
+    const rooms = [...new Set(currentHistoryData
+        .filter(r => !floor || r.floor.toString() === floor)
+        .map(r => r.room)
+    )].sort((a, b) => a - b);
+
+    rooms.forEach(r => {
+        const option = document.createElement('option');
+        option.value = r;
+        option.textContent = r;
+        roomFilter.appendChild(option);
+    });
+    roomFilter.value = currentRoom;
+}
+
+// =============================================
+// ===== ISSUE TYPE MODAL FUNCTIONS ====
+// =============================================
+
+function showIssueTypeModal(roomId, roomNumber) {
+  const modal = document.getElementById('issueTypeModal');
+  if (!modal) return;
+
+  document.getElementById('issueTypeRoomId').value = roomId;
+  document.getElementById('issueTypeModalRoomNumber').textContent = roomNumber || '---';
+
+  const form = document.getElementById('issueTypeForm');
+  form.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  
+  selectedIssueTypes = '';
+  modal.style.display = 'flex';
+}
+
+function hideIssueTypeModal() {
+  const modal = document.getElementById('issueTypeModal');
+  if (modal) modal.style.display = 'none';
+  document.getElementById('issueTypeRoomId').value = '';
+}
+
+function handleIssueTypeSubmit(e) {
+  e.preventDefault(); 
+  
+  const form = document.getElementById('issueTypeForm');
+  const selectedCheckboxes = form.querySelectorAll('input[type="checkbox"][name="issueType[]"]:checked');
+  const roomId = document.getElementById('issueTypeRoomId').value;
+  
+  if (selectedCheckboxes.length === 0) {
+    alert('Please select at least one issue type.');
+    return;
+  }
+  
+  const values = Array.from(selectedCheckboxes).map(cb => cb.value);
+  selectedIssueTypes = values.join(', '); 
+  
+  hideIssueTypeModal();
+  
+  if (typeof showStaffModal === 'function') {
+      showStaffModal(roomId); 
+  } else {
+      console.error('showStaffModal function not found. Cannot proceed to step 2.');
+  }
+}
+
+// =======================================================
+// ===== CONFIRMATION MODAL FUNCTIONS =====
+// =======================================================
+
+function showConfirmModal(title, text, onConfirm) {
+    document.getElementById('confirmModalTitle').textContent = title;
+    document.getElementById('confirmModalText').textContent = text;
+    confirmCallback = onConfirm; 
+    const modal = document.getElementById('confirmModal');
+    if (modal) modal.style.display = 'flex';
+}
+
+function hideConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    if (modal) modal.style.display = 'none';
+    confirmCallback = null;
+}
+
+// =======================================================
+// ===== REQUESTS TAB FUNCTIONS =====
+// =======================================================
+
 function renderRequestsTable() {
   const tbody = document.getElementById('requestsTableBody');
   const recordCountEl = document.getElementById('requestsRecordCount');
@@ -226,33 +363,51 @@ function renderRequestsTable() {
   }
   const paginatedData = paginateData(filteredRequests, state.currentPage, state.itemsPerPage);
 
-  if (paginatedData.length === 0 && state.currentPage === 1) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No rooms require maintenance or match filters.</td></tr>';
-  } else if (paginatedData.length === 0 && state.currentPage > 1) {
-      state.currentPage--;
-      renderRequestsTable();
-      return;
+  if (paginatedData.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No rooms found.</td></tr>'; 
   } else {
-    tbody.innerHTML = paginatedData.map(req => `
-      <tr>
-        <td>${req.floor ?? 'N/A'}</td>
-        <td>${req.room ?? 'N/A'}</td>
-        <td>${req.date ?? 'N/A'}</td>
-        <td>${req.requestTime ?? 'N/A'}</td>
-        <td>${req.lastMaintenance ?? 'N/A'}</td>
-        <td><span class="statusBadge pending">Maintenance</span></td>
-        <td>
-          <button class="assignBtn" data-room-id="${req.id}">Assign Staff</button>
-        </td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = paginatedData.map(req => {
+        const statusClass = req.status.toLowerCase().replace(/ /g, '-');
+        let assignButton;
+        
+        if (req.staff !== 'Not Assigned') {
+            assignButton = `<button class="assignBtn assigned" disabled>${req.staff}</button>`;
+        } else if (['Needs Maintenance'].includes(req.status)) { 
+            assignButton = `<button class="assignBtn assign-staff-btn" data-room-id="${req.id}" data-room-number="${req.room}">Assign Staff</button>`;
+        } else {
+            assignButton = `<button class="assignBtn" data-room-id="${req.id}" disabled>Not Required</button>`;
+        }
+        
+        // --- ADDED: 'deleteBtn' class for red hover ---
+        let cancelButton = ''; 
+        if (req.status === 'Pending') {
+            cancelButton = `<button class="actionIconBtn deleteBtn cancel-request-btn" title="Cancel Request" data-request-id="${req.requestId}">
+                                <i class="fas fa-times"></i>
+                            </button>`;
+        }
 
-    tbody.querySelectorAll('.assignBtn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        currentRequestId = parseInt(e.target.getAttribute('data-room-id'));
-        showStaffModal();
-      });
-    });
+        // --- ADDED: 'editBtn' class for orange hover ---
+        return `
+          <tr data-room-id="${req.id}" data-request-id="${req.requestId}" data-room-number="${req.room}" data-status="${req.status}">
+            <td>${req.floor ?? 'N/A'}</td>
+            <td>${req.room ?? 'N/A'}</td>
+            <td>${req.date ?? 'N/A'}</td>
+            <td>${req.requestTime ?? 'N/A'}</td>
+            <td>${req.lastMaintenance ?? 'N/A'}</td>
+            <td><span class="statusBadge ${statusClass}">${req.status}</span></td>
+            <td>${assignButton}</td>
+            <td class="action-cell">
+                <button class="actionIconBtn editBtn edit-room-status-btn" title="Edit Room Status">
+                    <i class="fas fa-edit"></i>
+                </button>
+                ${cancelButton} 
+            </td>
+          </tr>
+        `;
+    }).join('');
+
+    tbody.removeEventListener('click', handleRequestsTableClick); 
+    tbody.addEventListener('click', handleRequestsTableClick);
   }
 
   recordCountEl.textContent = filteredRequests.length;
@@ -262,748 +417,414 @@ function renderRequestsTable() {
   });
 }
 
-// ===== RENDER HISTORY TABLE =====
-function renderHistoryTable() {
-  const tbody = document.getElementById('historyTableBody');
-  const recordCountEl = document.getElementById('historyRecordCount');
-  const paginationControlsContainerId = 'historyPaginationControls';
-  const state = paginationState.history;
+function handleRequestsTableClick(e) {
+    // Assign Staff Button
+    const assignBtn = e.target.closest('.assign-staff-btn');
+    if (assignBtn && !assignBtn.disabled) {
+        const row = assignBtn.closest('tr');
+        currentRoomId = row.dataset.roomId; 
+        const roomNumber = row.dataset.roomNumber; 
+        document.getElementById('issueTypeForm').reset();
+        selectedIssueTypes = '';
+        showIssueTypeModal(currentRoomId, roomNumber);
+        return;
+    }
 
-  if (!tbody || !recordCountEl) return;
+    // Edit Room Status Button
+    const editBtn = e.target.closest('.edit-room-status-btn');
+    if (editBtn) {
+        const row = editBtn.closest('tr');
+        currentRoomId = row.dataset.roomId;
+        const roomNumber = row.dataset.roomNumber;
+        const status = row.dataset.status;
+        
+        // --- SAFETY CHECKS ---
 
-  const totalPages = getTotalPages(filteredHistory.length, state.itemsPerPage);
-  if (state.currentPage > totalPages) {
-      state.currentPage = Math.max(1, totalPages);
-  }
-  const paginatedData = paginateData(filteredHistory, state.currentPage, state.itemsPerPage);
+        // 1. Prevent editing if task is active
+        if (status === 'Pending' || status === 'In Progress') {
+            showMaintenanceToast(`Cannot edit status for Room ${roomNumber} while a maintenance task is ${status}.`, 'error');
+            return;
+        }
 
-  if (paginatedData.length === 0 && state.currentPage === 1) {
-     tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history records found matching criteria.</td></tr>';
-  } else if (paginatedData.length === 0 && state.currentPage > 1) {
-      state.currentPage--;
-      renderHistoryTable();
-      return;
-  } else {
-    tbody.innerHTML = paginatedData.map(hist => `
-      <tr>
-        <td>${hist.floor ?? 'N/A'}</td>
-        <td>${hist.room ?? 'N/A'}</td>
-        <td>${hist.issueType ?? 'N/A'}</td>
-        <td>${hist.date ?? 'N/A'}</td>
-        <td>${hist.requestedTime ?? 'N/A'}</td>
-        <td>${hist.completedTime ?? 'N/A'}</td>
-        <td>${hist.staff ?? 'N/A'}</td>
-        <td><span class="statusBadge repaired">${hist.status ?? 'N/A'}</span></td>
-        <td>${hist.remarks ?? ''}</td>
-      </tr>
-    `).join('');
-  }
-
-  recordCountEl.textContent = filteredHistory.length;
-  renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderHistoryTable();
-  });
+        // 2. Prevent editing if status belongs to Housekeeping
+        if (status === 'Needs Cleaning') {
+            showMaintenanceToast(`Cannot edit status. Room ${roomNumber} currently needs cleaning.`, 'error');
+            return;
+        }
+        // ---------------------
+        
+        document.getElementById('editRoomStatusRoomNumber').textContent = roomNumber;
+        document.getElementById('editRoomStatusRoomId').value = currentRoomId;
+        
+        const statusSelect = document.getElementById('editRoomStatusSelect');
+        // Pre-select the correct value or default
+        if (status === 'Needs Maintenance') {
+            statusSelect.value = 'Needs Maintenance';
+        } else {
+            statusSelect.value = 'Available';
+        }
+        
+        showEditRoomStatusModal();
+        return;
+    }
+    
+    // Cancel Request Button
+    const cancelBtn = e.target.closest('.cancel-request-btn');
+    if (cancelBtn) {
+        const requestId = cancelBtn.dataset.requestId;
+        showConfirmModal(
+            'Cancel Maintenance Request?',
+            'Are you sure you want to cancel this request? This action cannot be undone.',
+            () => { handleCancelRequest(requestId); }
+        );
+        return;
+    }
 }
 
-// ===== RENDER APPLIANCES TABLE =====
-function renderAppliancesTable() {
-  const tbody = document.getElementById('appliancesTableBody');
-  const recordCountEl = document.getElementById('appliancesRecordCount');
-  const paginationControlsContainerId = 'appliancesPaginationControls';
-  const state = paginationState.appliances;
+async function handleStaffAssign() {
+    if (!selectedStaffId || !currentRoomId) {
+        alert("Error: Staff or Room ID is missing.");
+        return;
+    }
+    if (!selectedIssueTypes) {
+        alert("Error: Maintenance issue type was not selected.");
+        return;
+    }
 
-  if (!tbody || !recordCountEl) return;
+    const assignBtn = document.getElementById('confirmStaffAssignBtn');
+    assignBtn.disabled = true;
+    assignBtn.textContent = 'ASSIGNING...';
 
-  const totalPages = getTotalPages(filteredAppliances.length, state.itemsPerPage);
-  if (state.currentPage > totalPages) {
-    state.currentPage = Math.max(1, totalPages);
-  }
-  const paginatedData = paginateData(filteredAppliances, state.currentPage, state.itemsPerPage);
+    try {
+        const payload = {
+            action: 'assign_task', 
+            roomId: currentRoomId,
+            staffId: selectedStaffId,
+            issueTypes: selectedIssueTypes 
+        };
+        
+        const result = await handleApiCall(payload.action, payload);
 
-  if (paginatedData.length === 0 && state.currentPage === 1) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No appliances found matching filters.</td></tr>';
-  } else if (paginatedData.length === 0 && state.currentPage > 1) {
-      state.currentPage--;
-      renderAppliancesTable();
-      return;
-  } else {
-    tbody.innerHTML = paginatedData.map(app => `
-      <tr>
-        <td>${app.floor ?? 'N/A'}</td>
-        <td>${app.room ?? 'N/A'}</td>
-        <td>${app.installedDate ?? 'N/A'}</td>
-        <td>${app.type ?? 'N/A'}</td>
-        <td>${app.item ?? 'N/A'}</td>
-        <td>${app.lastMaintained ?? 'Never'}</td>
-        <td><span class="statusBadge ${app.status === 'Working' ? 'repaired' : app.status === 'Needs Repair' ? 'urgent' : 'maintenance'}">${app.status ?? 'Unknown'}</span></td>
-        <td>${app.remarks ?? ''}</td>
-        <td>
-          <button class="actionIconBtn editBtn" data-appliance-id="${app.id}" title="Edit">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button class="actionIconBtn deleteBtn" data-appliance-id="${app.id}" title="Delete">
-            <i class="fas fa-trash"></i>
-          </button>
-        </td>
-      </tr>
-    `).join('');
-
-    tbody.querySelectorAll('.editBtn').forEach(btn => {
-      btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const applianceId = parseInt(this.getAttribute('data-appliance-id'));
-        handleEditAppliance(applianceId);
-      });
-    });
-
-    tbody.querySelectorAll('.deleteBtn').forEach(btn => {
-      btn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const applianceId = parseInt(this.getAttribute('data-appliance-id'));
-        handleDeleteAppliance(applianceId);
-      });
-    });
-  }
-
-  recordCountEl.textContent = filteredAppliances.length;
-  renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
-    state.currentPage = page;
-    renderAppliancesTable();
-  });
+        if (result.status === 'success') { 
+            const roomInRequests = currentRequestsData.find(room => room.id == currentRoomId);
+            if (roomInRequests) {
+                roomInRequests.status = 'Pending'; 
+                roomInRequests.staff = result.staffName; 
+            }
+            
+            hideStaffModal();
+            showSuccessModal(result.message || 'Task Assigned Successfully!');
+            
+            setTimeout(() => { window.location.reload(); }, 1500); 
+            
+        } else {
+            alert("Failed to assign task: " + (result.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error assigning staff:', error);
+        alert("An error occurred. Please try again.");
+    } finally {
+        assignBtn.disabled = false;
+        assignBtn.textContent = 'ASSIGN STAFF';
+        selectedIssueTypes = '';
+        currentRoomId = null;
+    }
 }
 
-// ===== RENDER STAFF LIST =====
-function renderStaffList(staffToRender = filteredStaff) {
-  const staffList = document.getElementById('staffList');
-  if (!staffList) return;
+async function handleEditRoomStatusSubmit(e) {
+    e.preventDefault();
+    const roomId = document.getElementById('editRoomStatusRoomId').value;
+    const newStatus = document.getElementById('editRoomStatusSelect').value;
+    const roomNumber = document.getElementById('editRoomStatusRoomNumber').textContent;
+    const submitBtn = document.getElementById('submitEditRoomStatusBtn');
 
-  if (staffToRender.length === 0) {
-    staffList.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No available maintenance staff found.</div>';
-    return;
-  }
+    if (!roomId || !newStatus || !roomNumber) { alert("Error: Missing room data."); return; }
+    submitBtn.disabled = true;
 
-  staffList.innerHTML = staffToRender.map(staff => `
-      <div class="staffListItem ${staff.assigned ? 'assigned' : ''}" data-staff-id="${staff.id}">
-        <div class="staffListName">${staff.name}</div>
-        <span class="staffListStatus ${staff.assigned ? 'assigned' : 'available'}">${staff.assigned ? 'Assigned' : 'Available'}</span>
-      </div>
-    `).join('');
+    try {
+        const payload = { action: 'update_status', room_number: roomNumber, new_status: newStatus };
+        const response = await fetch('room_actions.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) { throw new Error(`Server error (HTTP ${response.status})`); }
+        const result = await response.json();
+
+        if (result.success) { 
+            hideEditRoomStatusModal();
+            showSuccessModal(result.message || 'Room status updated!');
+            setTimeout(() => { window.location.reload(); }, 1500);
+        } else {
+            alert('Failed to update status: ' + result.message);
+        }
+    } catch (error) {
+        alert('An error occurred: ' + error.message);
+    } finally {
+        submitBtn.disabled = false;
+    }
 }
 
-// ===== FILTERING LOGIC =====
+async function handleCancelRequest(requestId) {
+    if (!requestId) { alert('Error: Request ID is missing.'); return; }
+
+    try {
+        const payload = { action: 'cancel_task', requestId: requestId };
+        const result = await handleApiCall(payload.action, payload);
+
+        if (result.status === 'success') {
+            hideConfirmModal();
+            showSuccessModal(result.message || 'Request cancelled successfully!');
+            setTimeout(() => { window.location.reload(); }, 1500); 
+        } else {
+            hideConfirmModal();
+            alert('Failed to cancel request: ' + (result.message || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error cancelling request:', error);
+        alert('An error occurred. Please try again.');
+    }
+}
+
+// ===== REQUESTS FILTERING LOGIC =====
+
+function saveRequestFiltersToSession() {
+  sessionStorage.setItem('requests_floorFilter', document.getElementById('floorFilter')?.value || '');
+  sessionStorage.setItem('requests_roomFilter', document.getElementById('roomFilter')?.value || '');
+  sessionStorage.setItem('requests_searchInput', document.getElementById('searchInput')?.value || '');
+}
+
+function loadRequestFiltersFromSession() {
+  const floor = sessionStorage.getItem('requests_floorFilter');
+  const search = sessionStorage.getItem('requests_searchInput');
+  if (floor) document.getElementById('floorFilter').value = floor;
+  if (search) document.getElementById('searchInput').value = search;
+}
+
 function applyRequestFiltersAndRender() {
   const floor = document.getElementById('floorFilter')?.value || '';
-  const room = document.getElementById('roomFilter')?.value || '';
+  const room = document.getElementById('roomFilter')?.value || ''; 
   const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+
+  updateRoomFilterOptions(); 
+  document.getElementById('roomFilter').value = room; // Restore value after repopulating
 
   filteredRequests = currentRequestsData.filter(req => {
     const matchFloor = !floor || (req.floor && req.floor.toString() === floor);
-    const matchRoom = !room || (req.room && req.room.toString() === room);
+    const matchRoom = !room || (req.room && req.room.toString() === room); 
     const matchSearch = !search || (req.room && req.room.toString().includes(search));
-
     return matchFloor && matchRoom && matchSearch;
   });
 
   paginationState.requests.currentPage = 1;
   renderRequestsTable();
-  updateRoomFilterOptions();
 }
 
-function applyHistoryFiltersAndRender() {
-  const floor = document.getElementById('floorFilterHistory')?.value || '';
-  const room = document.getElementById('roomFilterHistory')?.value || '';
-  const date = document.getElementById('dateFilterHistory')?.value || '';
-  const search = document.getElementById('historySearchInput')?.value.toLowerCase() || '';
+async function resetRequestFilters() {
+    const refreshBtn = document.getElementById('refreshBtn');
+    const originalText = refreshBtn.innerHTML;
 
-  filteredHistory = currentHistoryData.filter(hist => {
-    const matchFloor = !floor || (hist.floor && hist.floor.toString() === floor);
-    const matchRoom = !room || (hist.room && hist.room.toString() === room);
-    const matchDate = !date || (hist.date && hist.date.includes(date));
-    const matchSearch = !search || 
-      (hist.room && hist.room.toString().includes(search)) ||
-      (hist.staff && hist.staff.toLowerCase().includes(search)) ||
-      (hist.issueType && hist.issueType.toLowerCase().includes(search));
-
-    return matchFloor && matchRoom && matchDate && matchSearch;
-  });
-
-  paginationState.history.currentPage = 1;
-  renderHistoryTable();
-}
-
-function applyAppliancesFiltersAndRender() {
-  const floor = document.getElementById('floorFilterAppliances')?.value || '';
-  const room = document.getElementById('roomFilterAppliances')?.value || '';
-  const type = document.getElementById('typeFilterAppliances')?.value || '';
-  const search = document.getElementById('appliancesSearchInput')?.value.toLowerCase() || '';
-
-  filteredAppliances = currentAppliancesData.filter(app => {
-    const matchFloor = !floor || app.floor.toString() === floor;
-    const matchRoom = !room || app.room.toString() === room;
-    const matchType = !type || app.type === type;
-    const matchSearch = !search || app.item.toLowerCase().includes(search) || app.type.toLowerCase().includes(search);
-
-    return matchFloor && matchRoom && matchType && matchSearch;
-  });
-
-  paginationState.appliances.currentPage = 1;
-  renderAppliancesTable();
-}
-
-function filterStaffInModal() {
-  const search = document.getElementById('staffModalSearchInput')?.value.toLowerCase() || '';
-  filteredStaff = currentStaffData.filter(staff =>
-    staff.name.toLowerCase().includes(search)
-  );
-  renderStaffList();
-}
-
-// ===== FILTER UTILITIES =====
-function populateStaticFilters() {
-    const floorFilter = document.getElementById('floorFilter');
-    const floors = [...new Set(currentRequestsData.map(r => r.floor).filter(f => f))].sort((a, b) => a - b);
-    if (floorFilter) {
-        while (floorFilter.options.length > 1) {
-            floorFilter.remove(1);
-        }
-        floors.forEach(f => {
-             const option = document.createElement('option');
-             option.value = f;
-             option.textContent = f;
-             floorFilter.appendChild(option);
-        });
-    }
-    updateRoomFilterOptions();
-}
-
-function populateHistoryFilters() {
-    const floorFilterHistory = document.getElementById('floorFilterHistory');
-    const floors = [...new Set(currentHistoryData.map(h => h.floor).filter(f => f))].sort((a, b) => a - b);
-    if (floorFilterHistory) {
-        while (floorFilterHistory.options.length > 1) {
-            floorFilterHistory.remove(1);
-        }
-        floors.forEach(f => {
-             const option = document.createElement('option');
-             option.value = f;
-             option.textContent = f;
-             floorFilterHistory.appendChild(option);
-        });
-    }
-    updateHistoryRoomFilterOptions();
-}
-
-function populateAppliancesFilters() {
-    const floorFilter = document.getElementById('floorFilterAppliances');
-    const floors = [...new Set(currentAppliancesData.map(a => a.floor))].sort((a, b) => a - b);
-    if (floorFilter) {
-        while (floorFilter.options.length > 1) {
-            floorFilter.remove(1);
-        }
-        floors.forEach(f => {
-            const option = document.createElement('option');
-            option.value = f;
-            option.textContent = f;
-            floorFilter.appendChild(option);
-        });
-    }
-
-    const typeFilter = document.getElementById('typeFilterAppliances');
-    const types = [...new Set(currentAppliancesData.map(a => a.type))].sort();
-    if (typeFilter) {
-        while (typeFilter.options.length > 1) {
-            typeFilter.remove(1);
-        }
-        types.forEach(t => {
-            const option = document.createElement('option');
-            option.value = t;
-            option.textContent = t;
-            typeFilter.appendChild(option);
-        });
-    }
-
-    updateAppliancesRoomFilterOptions();
-}
-
-function updateRoomFilterOptions() {
-     const floorFilter = document.getElementById('floorFilter');
-     const roomFilter = document.getElementById('roomFilter');
-     if (!roomFilter || !floorFilter) return;
-
-     const selectedFloor = floorFilter.value;
-     const currentRoomValue = roomFilter.value;
-
-     roomFilter.innerHTML = '<option value="">Room</option>';
-
-     const roomsToShow = selectedFloor
-        ? currentRequestsData.filter(r => r.floor && r.floor.toString() === selectedFloor)
-        : currentRequestsData;
-
-     const roomNumbers = [...new Set(roomsToShow.map(r => r.room).filter(r => r))].sort((a, b) => a - b);
-
-     roomNumbers.forEach(roomNum => {
-         const option = document.createElement('option');
-         option.value = roomNum;
-         option.textContent = roomNum;
-         roomFilter.appendChild(option);
-     });
-
-     if (roomNumbers.map(String).includes(String(currentRoomValue))) {
-         roomFilter.value = currentRoomValue;
-     } else if (roomFilter.options.length > 0) {
-         roomFilter.value = "";
-     }
-}
-
-function updateHistoryRoomFilterOptions() {
-     const floorFilterHistory = document.getElementById('floorFilterHistory');
-     const roomFilterHistory = document.getElementById('roomFilterHistory');
-     if (!roomFilterHistory || !floorFilterHistory) return;
-
-     const selectedFloor = floorFilterHistory.value;
-     const currentRoomValue = roomFilterHistory.value;
-
-     roomFilterHistory.innerHTML = '<option value="">Room</option>';
-
-     const roomsToShow = selectedFloor
-        ? currentHistoryData.filter(h => h.floor && h.floor.toString() === selectedFloor)
-        : currentHistoryData;
-
-     const roomNumbers = [...new Set(roomsToShow.map(h => h.room).filter(r => r))].sort((a, b) => a - b);
-
-     roomNumbers.forEach(roomNum => {
-         const option = document.createElement('option');
-         option.value = roomNum;
-         option.textContent = roomNum;
-         roomFilterHistory.appendChild(option);
-     });
-
-      if (roomNumbers.map(String).includes(String(currentRoomValue))) {
-         roomFilterHistory.value = currentRoomValue;
-     } else if (roomFilterHistory.options.length > 0) {
-         roomFilterHistory.value = "";
-     }
-}
-
-function updateAppliancesRoomFilterOptions() {
-    const floorFilter = document.getElementById('floorFilterAppliances');
-    const roomFilter = document.getElementById('roomFilterAppliances');
-    if (!roomFilter || !floorFilter) return;
-
-    const selectedFloor = floorFilter.value;
-    const currentRoomValue = roomFilter.value;
-
-    roomFilter.innerHTML = '<option value="">Room</option>';
-
-    const roomsToShow = selectedFloor
-        ? currentAppliancesData.filter(a => a.floor.toString() === selectedFloor)
-        : currentAppliancesData;
-
-    const roomNumbers = [...new Set(roomsToShow.map(a => a.room))].sort((a, b) => a - b);
-
-    roomNumbers.forEach(roomNum => {
-        const option = document.createElement('option');
-        option.value = roomNum;
-        option.textContent = roomNum;
-        roomFilter.appendChild(option);
-    });
-
-    if (roomNumbers.includes(parseInt(currentRoomValue))) {
-        roomFilter.value = currentRoomValue;
-    }
-}
-
-function resetRequestFilters() {
     document.getElementById('floorFilter').value = '';
     document.getElementById('roomFilter').value = '';
     document.getElementById('searchInput').value = '';
-    applyRequestFiltersAndRender();
-}
 
-function resetHistoryFilters() {
-     document.getElementById('floorFilterHistory').value = '';
-     document.getElementById('roomFilterHistory').value = '';
-     document.getElementById('dateFilterHistory').value = '';
-     document.getElementById('historySearchInput').value = '';
-     applyHistoryFiltersAndRender();
-}
+    sessionStorage.removeItem('requests_floorFilter');
+    sessionStorage.removeItem('requests_roomFilter');
+    sessionStorage.removeItem('requests_searchInput');
 
-function resetAppliancesFilters() {
-    document.getElementById('floorFilterAppliances').value = '';
-    document.getElementById('roomFilterAppliances').value = '';
-    document.getElementById('typeFilterAppliances').value = '';
-    document.getElementById('appliancesSearchInput').value = '';
-    applyAppliancesFiltersAndRender();
-}
-
-// ===== MODAL VISIBILITY =====
-function showStaffModal() {
-    selectedStaffId = null;
-    document.getElementById('staffModalSearchInput').value = '';
-    filteredStaff = [...currentStaffData];
-    renderStaffList();
-    document.getElementById('staffModal').style.display = 'flex';
-}
-
-function hideStaffModal() {
-    document.getElementById('staffModal').style.display = 'none';
-}
-
-function showAddApplianceModal(isEdit = false, applianceData = null) {
-  const modal = document.getElementById('addApplianceModal');
-  const modalTitle = document.getElementById('addApplianceModalTitle');
-  const submitBtn = document.getElementById('submitApplianceBtn');
-  
-  if (isEdit && applianceData) {
-    modalTitle.textContent = 'Edit Appliance';
-    submitBtn.textContent = 'UPDATE APPLIANCE';
+    updateRoomFilterOptions(); 
     
-    document.getElementById('applianceId').value = applianceData.id;
-    populateApplianceFloorDropdown();
-    document.getElementById('applianceFloor').value = applianceData.floor;
-    
-    updateApplianceRoomDropdown();
-    setTimeout(() => {
-      const roomSelect = document.getElementById('applianceRoom');
-      const roomOption = Array.from(roomSelect.options).find(opt => opt.textContent == applianceData.room);
-      if (roomOption) {
-        roomSelect.value = roomOption.value;
-      }
-    }, 50);
-    
-    document.getElementById('applianceName').value = applianceData.item;
-    document.getElementById('applianceType').value = applianceData.type;
-    document.getElementById('applianceStatus').value = applianceData.status || '';
-    document.getElementById('applianceRemarks').value = applianceData.remarks || '';
-    
-    if (applianceData.installedDate && applianceData.installedDate !== 'N/A') {
-      const dateParts = applianceData.installedDate.split('.');
-      if (dateParts.length === 3) {
-        const dateStr = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-        document.getElementById('applianceInstalledDate').value = dateStr;
-      }
-    }
-    
-    if (applianceData.lastMaintained && applianceData.lastMaintained !== 'Never') {
-      const parts = applianceData.lastMaintained.split('/');
-      if (parts.length === 2) {
-        const dateParts = parts[1].split('.');
-        if (dateParts.length === 3) {
-          const dateStr = `${dateParts[2]}-${dateParts[0].padStart(2, '0')}-${dateParts[1].padStart(2, '0')}`;
-          document.getElementById('applianceLastMaintained').value = dateStr;
+    try {
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        // Use handleApiCall wrapper to fetch 'get_all_requests'
+        const result = await handleApiCall('get_all_requests', {});
+        
+        if (result.status === 'success') {
+            currentRequestsData = result.data;
+            applyRequestFiltersAndRender();
+            showMaintenanceToast("Maintenance Requests updated!", 'success');
+        } else {
+            showMaintenanceToast("Failed to fetch new data.", 'error');
         }
-      }
+    } catch (error) {
+        console.error("Refresh Error:", error);
+        showMaintenanceToast("Network error during refresh.", 'error');
+    } finally {
+        refreshBtn.innerHTML = originalText;
     }
-  } else {
-    modalTitle.textContent = 'Add Appliance';
-    submitBtn.textContent = 'ADD APPLIANCE';
-    document.getElementById('applianceId').value = '';
-    document.getElementById('addApplianceForm').reset();
-    populateApplianceFloorDropdown();
-  }
-  
-  modal.style.display = 'flex';
 }
 
-function hideAddApplianceModal() {
-  document.getElementById('addApplianceModal').style.display = 'none';
-  document.getElementById('addApplianceForm').reset();
-}
+async function resetHistoryFilters() {
+    const refreshBtn = document.getElementById('historyRefreshBtn');
+    const originalText = refreshBtn.innerHTML;
 
-function showConfirmModal(title, text, actionText) {
-  document.getElementById('confirmModalTitle').textContent = title;
-  document.getElementById('confirmModalText').textContent = text;
-  document.getElementById('confirmActionBtn').textContent = actionText;
-  document.getElementById('confirmModal').style.display = 'flex';
-}
-
-function hideConfirmModal() {
-  document.getElementById('confirmModal').style.display = 'none';
-  pendingAction = null;
-}
-
-function showSuccessModal(message) {
-  document.getElementById('successModalMessage').textContent = message;
-  document.getElementById('successModal').style.display = 'flex';
-}
-
-function hideSuccessModal() {
-  document.getElementById('successModal').style.display = 'none';
-}
-
-function showDeleteModal() {
-  document.getElementById('deleteModal').style.display = 'flex';
-}
-
-function hideDeleteModal() {
-  document.getElementById('deleteModal').style.display = 'none';
-  currentApplianceId = null;
-}
-
-// ===== FORM HANDLING =====
-function populateApplianceFloorDropdown() {
-  const floorSelect = document.getElementById('applianceFloor');
-  floorSelect.innerHTML = '<option value="">Select Floor</option>';
-  
-  const floors = [...new Set(allRooms.map(r => r.floor))].sort((a, b) => a - b);
-  floors.forEach(floor => {
-    const option = document.createElement('option');
-    option.value = floor;
-    option.textContent = floor;
-    floorSelect.appendChild(option);
-  });
-}
-
-function updateApplianceRoomDropdown() {
-  const floorSelect = document.getElementById('applianceFloor');
-  const roomSelect = document.getElementById('applianceRoom');
-  const selectedFloor = floorSelect.value;
-  
-  roomSelect.innerHTML = '<option value="">Select Room</option>';
-  
-  if (!selectedFloor) return;
-  
-  const rooms = allRooms.filter(r => r.floor.toString() === selectedFloor);
-  rooms.forEach(room => {
-    const option = document.createElement('option');
-    option.value = room.id;
-    option.textContent = room.room;
-    roomSelect.appendChild(option);
-  });
-}
-
-function handleAddApplianceSubmit(e) {
-  e.preventDefault();
-  
-  const applianceId = document.getElementById('applianceId').value;
-  const isEdit = applianceId !== '';
-  
-  const formData = {
-    id: applianceId,
-    roomId: document.getElementById('applianceRoom').value,
-    item: document.getElementById('applianceName').value,
-    type: document.getElementById('applianceType').value,
-    status: document.getElementById('applianceStatus').value,
-    remarks: document.getElementById('applianceRemarks').value,
-    installedDate: document.getElementById('applianceInstalledDate').value,
-    lastMaintained: document.getElementById('applianceLastMaintained').value
-  };
-  
-  const room = allRooms.find(r => r.id.toString() === formData.roomId);
-  if (!room) {
-    alert('Please select a valid room');
-    return;
-  }
-  
-  formData.floor = room.floor;
-  formData.room = room.room;
-  
-  pendingAction = {
-    type: isEdit ? 'edit' : 'add',
-    data: formData
-  };
-  
-  hideAddApplianceModal();
-  
-  if (isEdit) {
-    showConfirmModal(
-      'Are you sure you want to update this appliance?',
-      'Please review the details before confirming. Once updated, the changes will be reflected in the maintenance records.',
-      'YES, UPDATE APPLIANCE'
-    );
-  } else {
-    showConfirmModal(
-      'Are you sure you want to add this appliance?',
-      'Please review the details before confirming. Once added, the appliance will be recorded and visible in the maintenance records.',
-      'YES, ADD APPLIANCE'
-    );
-  }
-}
-
-function handleConfirmAction() {
-  if (!pendingAction) return;
-  
-  if (pendingAction.type === 'add') {
-    const newAppliance = {
-      id: Date.now(),
-      roomId: parseInt(pendingAction.data.roomId),
-      floor: pendingAction.data.floor,
-      room: pendingAction.data.room,
-      type: pendingAction.data.type,
-      item: pendingAction.data.item,
-      status: pendingAction.data.status,
-      installedDate: pendingAction.data.installedDate ? formatDateToDisplay(pendingAction.data.installedDate) : 'N/A',
-      lastMaintained: pendingAction.data.lastMaintained ? formatDateTimeToDisplay(pendingAction.data.lastMaintained) : 'Never',
-      remarks: pendingAction.data.remarks || ''
-    };
+    document.getElementById('floorFilterHistory').value = '';
+    document.getElementById('roomFilterHistory').value = '';
     
-    currentAppliancesData.push(newAppliance);
+    // UPDATED: Clear both date inputs
+    if(document.getElementById('startDateFilterHistory')) document.getElementById('startDateFilterHistory').value = '';
+    if(document.getElementById('endDateFilterHistory')) document.getElementById('endDateFilterHistory').value = '';
     
-    hideConfirmModal();
-    showSuccessModal('Appliance Added Successfully');
-    applyAppliancesFiltersAndRender();
+    document.getElementById('historySearchInput').value = '';
     
-  } else if (pendingAction.type === 'edit') {
-    const applianceIndex = currentAppliancesData.findIndex(app => app.id.toString() === pendingAction.data.id);
-    if (applianceIndex !== -1) {
-      currentAppliancesData[applianceIndex] = {
-        ...currentAppliancesData[applianceIndex],
-        roomId: parseInt(pendingAction.data.roomId),
-        floor: pendingAction.data.floor,
-        room: pendingAction.data.room,
-        type: pendingAction.data.type,
-        item: pendingAction.data.item,
-        status: pendingAction.data.status,
-        remarks: pendingAction.data.remarks || '',
-        installedDate: pendingAction.data.installedDate ? formatDateToDisplay(pendingAction.data.installedDate) : currentAppliancesData[applianceIndex].installedDate,
-        lastMaintained: pendingAction.data.lastMaintained ? formatDateTimeToDisplay(pendingAction.data.lastMaintained) : currentAppliancesData[applianceIndex].lastMaintained
-      };
-      
-      hideConfirmModal();
-      showSuccessModal('Appliance Updated Successfully');
-      applyAppliancesFiltersAndRender();
+    updateHistoryRoomFilterOptions();
+    
+    try {
+        refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        
+        // Use handleApiCall wrapper to fetch 'get_all_history'
+        const result = await handleApiCall('get_all_history', {});
+        
+        if (result.status === 'success') {
+            currentHistoryData = result.data;
+            applyHistoryFiltersAndRender();
+            showMaintenanceToast("Maintenance History updated!", 'success');
+        } else {
+            showMaintenanceToast("Failed to fetch history.", 'error');
+        }
+    } catch (error) {
+        console.error("Refresh Error:", error);
+        showMaintenanceToast("Network error during refresh.", 'error');
+    } finally {
+        refreshBtn.innerHTML = originalText;
     }
-  }
-  
-  pendingAction = null;
 }
 
-function handleEditAppliance(applianceId) {
-  const appliance = currentAppliancesData.find(a => a.id === applianceId);
-  if (!appliance) return;
-  
-  currentApplianceId = applianceId;
-  showAddApplianceModal(true, appliance);
+
+// =======================================================
+// ===== HISTORY TAB RENDER LOGIC =====
+// =======================================================
+
+/**
+ * Filters the history data based on dropdowns and search
+ */
+function applyHistoryFiltersAndRender() {
+    const floor = document.getElementById('floorFilterHistory')?.value;
+    const room = document.getElementById('roomFilterHistory')?.value;
+    const startDate = document.getElementById('startDateFilterHistory')?.value; // YYYY-MM-DD
+    const endDate = document.getElementById('endDateFilterHistory')?.value;     // YYYY-MM-DD
+    const search = document.getElementById('historySearchInput')?.value.toLowerCase();
+
+    filteredHistory = currentHistoryData.filter(h => {
+        const matchFloor = !floor || h.floor.toString() === floor;
+        const matchRoom = !room || h.room.toString() === room;
+        
+        // Date Range Logic
+        let matchDate = true;
+        if (startDate || endDate) {
+            // If row has no date, and we are filtering by date, exclude it
+            if (!h.date || h.date === 'N/A') {
+                matchDate = false;
+            } else {
+                // Parse "MM.DD.YYYY" to Y, M, D integers
+                const [m, d, y] = h.date.split('.');
+                // Create Date at midnight (months are 0-indexed in JS Date)
+                const rowDate = new Date(y, m - 1, d);
+                
+                // Check Start Date
+                if (startDate) {
+                    const [sy, sm, sd] = startDate.split('-');
+                    const start = new Date(sy, sm - 1, sd);
+                    if (rowDate < start) matchDate = false;
+                }
+                
+                // Check End Date (only if start check passed)
+                if (endDate && matchDate) {
+                    const [ey, em, ed] = endDate.split('-');
+                    const end = new Date(ey, em - 1, ed);
+                    if (rowDate > end) matchDate = false;
+                }
+            }
+        }
+        
+        // Search Logic
+        const matchSearch = !search || 
+            (h.room && h.room.toString().includes(search)) || 
+            (h.staff && h.staff.toLowerCase().includes(search)) ||
+            (h.issueType && h.issueType.toLowerCase().includes(search)) ||
+            (h.status && h.status.toLowerCase().includes(search)) ||
+            (h.remarks && h.remarks.toLowerCase().includes(search));
+
+        return matchFloor && matchRoom && matchDate && matchSearch;
+    });
+
+    // Reset to page 1
+    paginationState.history.currentPage = 1;
+    
+    // Call the render function
+    renderHistoryTable();
 }
 
-function handleDeleteAppliance(applianceId) {
-  currentApplianceId = applianceId;
-  showDeleteModal();
-}
+/**
+ * Draws the History Table HTML
+ */
+function renderHistoryTable() {
+    const tbody = document.getElementById('historyTableBody');
+    const recordCountEl = document.getElementById('historyRecordCount');
+    const paginationControlsContainerId = 'historyPaginationControls';
+    const state = paginationState.history;
 
-function handleConfirmDelete() {
-  if (!currentApplianceId) return;
-  
-  const applianceIndex = currentAppliancesData.findIndex(app => app.id === currentApplianceId);
-  if (applianceIndex !== -1) {
-    currentAppliancesData.splice(applianceIndex, 1);
-    hideDeleteModal();
-    showSuccessModal('Appliance Deleted Successfully');
-    applyAppliancesFiltersAndRender();
-  }
-}
+    if (!tbody || !recordCountEl) return;
 
-// ===== DATE FORMATTING UTILITIES =====
-function formatDateToDisplay(dateString) {
-  // Convert YYYY-MM-DD to MM.DD.YYYY
-  if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${month}.${day}.${year}`;
-}
-
-function formatDateTimeToDisplay(dateString) {
-  // Convert YYYY-MM-DD to h:mmAM/MM.DD.YYYY
-  if (!dateString) return 'Never';
-  const date = new Date(dateString);
-  let hours = date.getHours();
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12;
-  hours = hours ? hours : 12;
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const year = date.getFullYear();
-  return `${hours}:${minutes}${ampm}/${month}.${day}.${year}`;
-}
-
-// ===== CSV DOWNLOAD =====
-function downloadRequestsCSV() {
-    if (filteredRequests.length === 0) {
-        alert("No request data to export based on current filters.");
-        return;
+    // Calculate Pages
+    const totalPages = getTotalPages(filteredHistory.length, state.itemsPerPage);
+    
+    // Safety Check: Ensure current page isn't too high
+    if (state.currentPage > totalPages && totalPages > 0) {
+        state.currentPage = totalPages;
     }
-    const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Maintenance', 'Status', 'Staff In Charge'];
-    const csvContent = [
-        headers.join(','),
-        ...filteredRequests.map(req =>
-            [
-                req.floor ?? 'N/A',
-                req.room ?? 'N/A',
-                req.date ?? 'N/A',
-                req.requestTime ?? 'N/A',
-                req.lastMaintenance ?? 'N/A',
-                'Maintenance',
-                req.staff
-             ].join(',')
-        )
-    ].join('\n');
-    downloadCSV(csvContent, 'maintenance-requests');
-}
 
-function downloadHistoryCSV() {
-     if (filteredHistory.length === 0) {
-        alert("No history data to export based on current filters.");
-        return;
+    // Get slice of data for current page
+    const paginatedData = paginateData(filteredHistory, state.currentPage, state.itemsPerPage);
+
+    // Render Rows
+    if (paginatedData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history records found.</td></tr>';
+    } else {
+        tbody.innerHTML = paginatedData.map(h => {
+            // 1. Prepare Status Class
+            const statusClass = h.status ? h.status.toLowerCase().replace(/\s+/g, '-') : '';
+
+            // 2. Prepare Safe Data (Escape HTML to prevent XSS/Layout breaks)
+            const safeFloor = escapeHtml(h.floor ?? 'N/A');
+            const safeRoom = escapeHtml(h.room ?? 'N/A');
+            const safeType = escapeHtml(h.issueType ?? 'N/A');
+            const safeDate = escapeHtml(h.date ?? 'N/A');
+            const safeReqTime = escapeHtml(h.requestedTime ?? 'N/A');
+            const safeCompTime = escapeHtml(h.completedTime ?? 'N/A');
+            const safeStaff = escapeHtml(h.staff ?? 'N/A');
+            const safeStatus = escapeHtml(h.status ?? 'N/A');
+
+            // 3. Special Handling for Remarks (Truncate then Escape)
+            const rawRemarks = h.remarks ?? '';
+            const safeFullRemarks = escapeHtml(rawRemarks); // For tooltip
+            const truncatedRaw = rawRemarks.length > 30 ? rawRemarks.substring(0, 30) + '...' : rawRemarks;
+            const safeDisplayRemarks = escapeHtml(truncatedRaw);
+
+            return `
+                <tr>
+                    <td>${safeFloor}</td>
+                    <td>${safeRoom}</td>
+                    <td>${safeType}</td>
+                    <td>${safeDate}</td>
+                    <td>${safeReqTime}</td>
+                    <td>${safeCompTime}</td>
+                    <td>${safeStaff}</td>
+                    <td><span class="statusBadge ${statusClass}">${safeStatus}</span></td>
+                    <td title="${safeFullRemarks}">${safeDisplayRemarks}</td>
+                </tr>
+            `;
+        }).join('');
     }
-    const headers = ['Floor', 'Room', 'Issue Type', 'Date', 'Requested Time', 'Completed Time', 'Staff In Charge', 'Status', 'Remarks'];
-    const csvContent = [
-        headers.join(','),
-        ...filteredHistory.map(hist =>
-            [
-                hist.floor ?? 'N/A',
-                hist.room ?? 'N/A',
-                hist.issueType ?? 'N/A',
-                hist.date ?? 'N/A',
-                hist.requestedTime ?? 'N/A',
-                hist.completedTime ?? 'N/A',
-                hist.staff ?? 'N/A',
-                hist.status ?? 'N/A',
-                `"${(hist.remarks || '').replace(/"/g, '""')}"`
-            ].join(',')
-        )
-    ].join('\n');
-    downloadCSV(csvContent, 'maintenance-history');
-}
 
-function downloadAppliancesCSV() {
-    if (filteredAppliances.length === 0) {
-        alert("No appliances data to export based on current filters.");
-        return;
-    }
-    const headers = ['Floor', 'Room', 'Installed Date', 'Types', 'Items', 'Last Maintained', 'Status', 'Remarks'];
-    const csvContent = [
-        headers.join(','),
-        ...filteredAppliances.map(app =>
-            [
-                app.floor,
-                app.room,
-                app.installedDate,
-                app.type,
-                `"${app.item.replace(/"/g, '""')}"`,
-                app.lastMaintained,
-                app.status,
-                `"${(app.remarks || '').replace(/"/g, '""')}"`
-            ].join(',')
-        )
-    ].join('\n');
-    downloadCSV(csvContent, 'maintenance-appliances');
-}
+    // Update Count Text
+    recordCountEl.textContent = filteredHistory.length;
 
-function downloadCSV(csvContent, filenamePrefix) {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${filenamePrefix}-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Render Pagination Buttons
+    renderPaginationControls(paginationControlsContainerId, totalPages, state.currentPage, (page) => {
+        state.currentPage = page;
+        renderHistoryTable();
+    });
 }

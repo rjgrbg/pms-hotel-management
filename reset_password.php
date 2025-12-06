@@ -63,7 +63,7 @@ if ($hashed_password === false) {
 }
 
 // --- Update Database ---
-$sql = "UPDATE users SET Password = ? WHERE EmailAddress = ?";
+$sql = "UPDATE pms_users SET Password = ? WHERE EmailAddress = ?";
 if ($stmt = $conn->prepare($sql)) {
     $stmt->bind_param("ss", $hashed_password, $email);
     if ($stmt->execute()) {

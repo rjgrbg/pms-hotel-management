@@ -1,175 +1,244 @@
-// ===== HOUSEKEEPING DETAILS PAGE SCRIPT =====
+// ===== HOUSEKEEPING TASK DETAILS PAGE SCRIPT =====
 
-// ===== MAINTENANCE CHECKBOX TOGGLE =====
-const maintenanceCheck = document.getElementById('maintenanceCheck');
-const maintenanceDropdowns = document.getElementById('maintenanceDropdowns');
-const issueSection = document.getElementById('issueSection');
+// --- GLOBALS ---
+let CURRENT_TASK_ID = null;
 
-maintenanceCheck.addEventListener('change', function() {
-  if (this.checked) {
-    maintenanceDropdowns.classList.add('active');
-    issueSection.classList.add('active');
-  } else {
-    maintenanceDropdowns.classList.remove('active');
-    issueSection.classList.remove('active');
-  }
-});
-
-// ===== MODAL FUNCTIONALITY =====
-const doneBtn = document.getElementById('doneBtn');
-const modalBackdrop = document.getElementById('modalBackdrop');
-const modalCancel = document.getElementById('modalCancel');
-const modalSave = document.getElementById('modalSave');
-
-// Open modal when Done button is clicked
-doneBtn.addEventListener('click', () => {
-  modalBackdrop.classList.add('active');
-});
-
-// Close modal when Cancel button is clicked
-modalCancel.addEventListener('click', () => {
-  modalBackdrop.classList.remove('active');
-});
-
-// Close modal when clicking outside
-modalBackdrop.addEventListener('click', (e) => {
-  if (e.target === modalBackdrop) {
-    modalBackdrop.classList.remove('active');
-  }
-});
-
-// Save and close modal
-modalSave.addEventListener('click', () => {
-  // Get form data
-  const formData = getFormData();
-  
-  // Validate required fields
-  if (!validateForm(formData)) {
-    alert('⚠️ Please fill in all required fields!');
-    return;
-  }
-  
-  // Save data (you would send this to your backend)
-  console.log('Saving data:', formData);
-  
-  alert('✅ Task marked as complete!');
-  modalBackdrop.classList.remove('active');
-  
-  // Here you would typically:
-  // 1. Send data to backend API
-  // 2. Redirect to housekeeping list page
-  // Example:
-  // window.location.href = 'housekeeping.html';
-});
-
-// ===== IN PROGRESS BUTTON =====
-const inProgressBtn = document.getElementById('inProgressBtn');
-
-inProgressBtn.addEventListener('click', () => {
-  const formData = getFormData();
-  
-  console.log('Setting status to In Progress:', formData);
-  
-  alert('📋 Task marked as In Progress!');
-  
-  // Here you would typically:
-  // 1. Update status in backend
-  // 2. Optionally redirect back to list
-  // Example:
-  // window.location.href = 'housekeeping.html';
-});
-
-// ===== HELPER FUNCTIONS =====
-
-/**
- * Get all form data
- */
-function getFormData() {
-  const remarks = document.querySelector('.remarks-textarea').value;
-  const isMaintenance = maintenanceCheck.checked;
-  
-  const data = {
-    room: document.querySelector('.detail-row:nth-child(1) .detail-value').textContent,
-    guest: document.querySelector('.detail-row:nth-child(2) .detail-value').textContent,
-    date: document.querySelector('.detail-row:nth-child(3) .detail-value').textContent,
-    requestTime: document.querySelector('.detail-row:nth-child(4) .detail-value').textContent,
-    status: document.querySelector('.detail-row:nth-child(5) .detail-value').textContent,
-    remarks: remarks,
-    maintenance: isMaintenance
-  };
-  
-  // If maintenance is checked, get maintenance details
-  if (isMaintenance) {
-    data.workType = document.getElementById('workType').value;
-    data.unitType = document.getElementById('unitType').value;
-    data.issueDescription = document.querySelector('.issue-textarea').value;
-  }
-  
-  return data;
-}
-
-/**
- * Validate form data
- */
-function validateForm(data) {
-  // If maintenance is checked, validate maintenance fields
-  if (data.maintenance) {
-    if (!data.workType || !data.unitType || !data.issueDescription) {
-      return false;
-    }
-  }
-  
-  return true;
-}
-
-/**
- * Initialize page with data (call this when page loads with data from URL params or API)
- */
-function initializePageData(requestData) {
-  if (!requestData) return;
-  
-  // Set room details
-  if (requestData.room) {
-    document.querySelector('.detail-row:nth-child(1) .detail-value').textContent = requestData.room;
-  }
-  if (requestData.guest) {
-    document.querySelector('.detail-row:nth-child(2) .detail-value').textContent = requestData.guest;
-  }
-  if (requestData.date) {
-    document.querySelector('.detail-row:nth-child(3) .detail-value').textContent = requestData.date;
-  }
-  if (requestData.requestTime) {
-    document.querySelector('.detail-row:nth-child(4) .detail-value').textContent = requestData.requestTime;
-  }
-  if (requestData.status) {
-    document.querySelector('.detail-row:nth-child(5) .detail-value').textContent = requestData.status;
-  }
-}
+// --- DOM ELEMENTS ---
+const elements = {
+    taskIdInput: document.getElementById('task-id'),
+    roomNumber: document.getElementById('room-number'),
+    dateRequested: document.getElementById('date-requested'),
+    timeRequested: document.getElementById('time-requested'),
+    taskType: document.getElementById('task-type'),
+    currentStatus: document.getElementById('current-status'),
+    remarksTextarea: document.getElementById('remarks-textarea'),
+    inProgressBtn: document.getElementById('inProgressBtn'),
+    doneBtn: document.getElementById('doneBtn'),
+    modalBackdrop: document.getElementById('modalBackdrop'),
+    modalCancel: document.getElementById('modalCancel'),
+    modalSave: document.getElementById('modalSave'),
+    successModal: document.getElementById('successModal'),
+    okaySuccessBtn: document.getElementById('okaySuccessBtn'),
+    loadingState: document.getElementById('loading-state'),
+    errorState: document.getElementById('error-state'),
+    errorMessage: document.getElementById('error-message'),
+    taskContent: document.getElementById('task-content'),
+    toast: document.getElementById('toast')
+};
 
 // ===== PAGE INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Housekeeping Details page loaded');
-  
-  // Example: Get data from URL parameters
+
+  // 1. Get task_id from URL
   const urlParams = new URLSearchParams(window.location.search);
-  const room = urlParams.get('room');
-  
-  if (room) {
-    // You would typically fetch the full request data from your backend here
-    // Example:
-    // fetch(`/api/housekeeping/request/${room}`)
-    //   .then(res => res.json())
-    //   .then(data => initializePageData(data));
-    
-    console.log('Loading data for room:', room);
+  const taskId = urlParams.get('task_id');
+
+  if (!taskId) {
+    showErrorView('Task ID not provided in the URL.', elements);
+    return;
   }
+
+  CURRENT_TASK_ID = taskId;
+  elements.taskIdInput.value = taskId;
   
-  // Example of setting initial data (replace with actual data from your backend)
-  // initializePageData({
-  //   room: '101',
-  //   guest: '001',
-  //   date: '10/25/25',
-  //   requestTime: '2:30 PM',
-  //   status: 'Dirty / Unoccupied'
-  // });
+  // 2. Fetch task details from API
+  fetchTaskDetails(CURRENT_TASK_ID, elements);
+  
+  // 3. Add Event Listeners
+  addEventListeners(elements);
 });
+
+/**
+ * Fetch task details from the new housekeeping API
+ */
+async function fetchTaskDetails(taskId, elements) {
+    showLoadingView(elements);
+    try {
+        const response = await fetch(`api_hk_task.php?action=get_task_details&task_id=${taskId}`);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            populateTaskDetails(result.data, elements);
+            showTaskView(elements);
+        } else {
+            showErrorView(result.message || 'Could not load task details.', elements);
+        }
+    } catch (error) {
+        console.error('Fetch error:', error);
+        showErrorView('An error occurred while fetching task details.', elements);
+    }
+}
+
+/**
+ * Populate the HTML with data from the API
+ */
+function populateTaskDetails(data, elements) {
+    elements.roomNumber.textContent = data.RoomNumber || 'N/A';
+    elements.dateRequested.textContent = data.DateRequested || 'N/A';
+    elements.timeRequested.textContent = data.TimeRequested || 'N/A';
+    elements.taskType.textContent = data.TaskType || 'N/A';
+    elements.currentStatus.textContent = data.Status || 'N/A';
+    elements.remarksTextarea.value = data.Remarks || '';
+
+    // Reset button visibility
+    elements.inProgressBtn.style.display = ''; 
+    elements.inProgressBtn.disabled = false;
+    elements.doneBtn.disabled = false;
+    elements.remarksTextarea.disabled = false;
+
+    if (data.Status === 'In Progress') {
+        // *** HIDE In Progress button if already In Progress ***
+        elements.inProgressBtn.style.display = 'none';
+        
+    } else if (data.Status === 'Completed') {
+        elements.inProgressBtn.disabled = true;
+        elements.doneBtn.disabled = true;
+        elements.remarksTextarea.disabled = true;
+        elements.inProgressBtn.textContent = 'Task Completed';
+        elements.inProgressBtn.style.display = ''; // Show disabled button
+    }
+}
+
+/**
+ * Add listeners for all buttons and modals
+ */
+function addEventListeners(elements) {
+    // --- In Progress Button ---
+    elements.inProgressBtn.addEventListener('click', () => {
+        console.log('Setting status to In Progress...');
+        updateTaskStatus('In Progress', elements);
+    });
+
+    // --- Done Button (opens modal) ---
+    elements.doneBtn.addEventListener('click', () => {
+        elements.modalBackdrop.style.display = 'flex';
+    });
+
+    // --- Modal Cancel Button ---
+    elements.modalCancel.addEventListener('click', () => {
+        elements.modalBackdrop.style.display = 'none';
+    });
+
+    // --- Modal Save Button (marks as Done) ---
+    elements.modalSave.addEventListener('click', () => {
+        console.log('Setting status to Completed...');
+        updateTaskStatus('Completed', elements);
+    });
+
+    // --- Modal Backdrop (closes modal) ---
+    elements.modalBackdrop.addEventListener('click', (e) => {
+        if (e.target === elements.modalBackdrop) {
+            elements.modalBackdrop.style.display = 'none';
+        }
+    });
+
+    // --- Success Modal OK Button (Legacy) ---
+    if (elements.okaySuccessBtn) {
+        elements.okaySuccessBtn.addEventListener('click', () => {
+            elements.successModal.style.display = 'none';
+        });
+    }
+}
+
+/**
+ * Show Toast Notification
+ */
+function showToast(message, type = 'success') {
+    if (!elements.toast) return;
+
+    elements.toast.textContent = message;
+    elements.toast.className = `toast toast-${type} toast-visible`;
+
+    setTimeout(() => {
+        elements.toast.classList.remove('toast-visible');
+    }, 3000);
+}
+
+/**
+ * Send the status update to the backend
+ */
+async function updateTaskStatus(newStatus, elements) {
+  const taskData = {
+    task_id: CURRENT_TASK_ID, 
+    status: newStatus,
+    remarks: elements.remarksTextarea.value 
+  };
+
+  // Disable buttons while processing
+  elements.inProgressBtn.disabled = true;
+  elements.doneBtn.disabled = true;
+
+  try {
+    const response = await fetch('api_hk_task.php', { 
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'update_task_status',
+        data: taskData
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    if (result.status === 'success') {
+      showToast(`✅ Task status updated to ${newStatus}`, 'success');
+      elements.currentStatus.textContent = newStatus;
+      
+      if (newStatus === 'Completed') {
+         elements.modalBackdrop.style.display = 'none';
+         elements.remarksTextarea.disabled = true;
+         
+         setTimeout(() => {
+             window.location.reload();
+         }, 1500);
+
+      } else if (newStatus === 'In Progress') {
+         // *** HIDE In Progress button immediately ***
+         elements.inProgressBtn.style.display = 'none'; 
+         elements.doneBtn.disabled = false; // Re-enable done button
+      }
+    } else {
+      showToast(`⚠️ Error: ${result.message}`, 'error');
+      // Re-enable buttons if error
+      elements.inProgressBtn.disabled = false;
+      elements.doneBtn.disabled = false;
+    }
+  } catch (error) {
+    console.error('Update task status error:', error);
+    showToast('Error: Could not connect to server to update status.', 'error');
+    // Re-enable buttons if error
+    elements.inProgressBtn.disabled = false;
+    elements.doneBtn.disabled = false;
+  }
+}
+
+// ===== VIEW CONTROLS =====
+
+function showLoadingView(elements) {
+    if (elements.taskContent) elements.taskContent.style.display = 'none';
+    if (elements.errorState) elements.errorState.style.display = 'none';
+    if (elements.loadingState) elements.loadingState.style.display = 'block';
+}
+
+function showErrorView(message, elements) {
+    if (elements.taskContent) elements.taskContent.style.display = 'none';
+    if (elements.loadingState) elements.loadingState.style.display = 'none';
+    if (elements.errorMessage) elements.errorMessage.textContent = message;
+    if (elements.errorState) elements.errorState.style.display = 'block';
+}
+
+function showTaskView(elements) {
+    if (elements.loadingState) elements.loadingState.style.display = 'none';
+    if (elements.errorState) elements.errorState.style.display = 'none';
+    if (elements.taskContent) elements.taskContent.style.display = 'block';
+}
