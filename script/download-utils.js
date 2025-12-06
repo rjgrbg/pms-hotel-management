@@ -105,25 +105,27 @@ function injectDownloadModalStyles() {
         }
 
         .downloadFormatBtn.pdfBtn {
-            color: #dc3545;
+            color: rgb(198, 159, 111);
         }
 
         .downloadFormatBtn.pdfBtn:hover {
-            border-color: #dc3545;
-            background: rgba(220, 53, 69, 0.2);
+            border-color: rgb(198, 159, 111);
+            background: rgba(198, 159, 111, 0.2);
+            color: rgb(198, 159, 111);
             transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+            box-shadow: 0 5px 15px rgba(198, 159, 111, 0.3);
         }
 
         .downloadFormatBtn.excelBtn {
-            color: #28a745;
+            color: rgb(198, 159, 111);
         }
 
         .downloadFormatBtn.excelBtn:hover {
-            border-color: #28a745;
-            background: rgba(40, 167, 69, 0.2);
+            border-color: rgb(198, 159, 111);
+            background: rgba(198, 159, 111, 0.2);
+            color: rgb(198, 159, 111);
             transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+            box-shadow: 0 5px 15px rgba(198, 159, 111, 0.3);
         }
 
         .downloadFormatModal .closeBtn {
@@ -294,31 +296,31 @@ function exportToExcel(headers, data, title, filename) {
         const dateMerge = { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } };
         ws['!merges'].push(dateMerge);
 
-        // Style title row (A1)
+        // Style title row (A1) - Black text, no background
         if (ws['A1']) {
             ws['A1'].s = {
-                font: { bold: true, sz: 16, color: { rgb: "480c1b" } },
-                alignment: { horizontal: "center", vertical: "center" },
+                font: { bold: true, sz: 16, color: { rgb: "000000" } },
+                alignment: { horizontal: "left", vertical: "center" },
                 fill: { fgColor: { rgb: "FFFFFF" } }
             };
         }
 
-        // Style date row (A2)
+        // Style date row (A2) - Gray text
         if (ws['A2']) {
             ws['A2'].s = {
-                font: { sz: 11, color: { rgb: "666666" } },
-                alignment: { horizontal: "center", vertical: "center" }
+                font: { sz: 10, color: { rgb: "808080" } },
+                alignment: { horizontal: "left", vertical: "center" }
             };
         }
 
-        // Style header row (row 4)
+        // Style header row (row 4) - Dark burgundy background with white text
         const headerRowNum = 3; // 0-indexed, so row 4
         for (let C = 0; C < headers.length; C++) {
             const cellAddress = XLSX.utils.encode_cell({ r: headerRowNum, c: C });
             if (!ws[cellAddress]) continue;
             ws[cellAddress].s = {
-                font: { bold: true, color: { rgb: "FFFFFF" } },
-                fill: { fgColor: { rgb: "480c1b" } },
+                font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } },
+                fill: { fgColor: { rgb: "4A0D1A" } }, // Dark burgundy/maroon matching the image
                 alignment: { horizontal: "center", vertical: "center" },
                 border: {
                     top: { style: "thin", color: { rgb: "000000" } },
@@ -329,20 +331,20 @@ function exportToExcel(headers, data, title, filename) {
             };
         }
 
-        // Style data rows with borders and alternating colors
+        // Style data rows with borders - white background, centered text
         for (let R = headerRowNum + 1; R < headerRowNum + 1 + data.length; R++) {
-            const isEvenRow = (R - headerRowNum) % 2 === 0;
             for (let C = 0; C < headers.length; C++) {
                 const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
                 if (!ws[cellAddress]) continue;
                 ws[cellAddress].s = {
-                    alignment: { horizontal: "left", vertical: "center" },
-                    fill: { fgColor: { rgb: isEvenRow ? "F9F9F9" : "FFFFFF" } },
+                    font: { sz: 10, color: { rgb: "000000" } },
+                    alignment: { horizontal: "center", vertical: "center" },
+                    fill: { fgColor: { rgb: "FFFFFF" } },
                     border: {
-                        top: { style: "thin", color: { rgb: "DDDDDD" } },
-                        bottom: { style: "thin", color: { rgb: "DDDDDD" } },
-                        left: { style: "thin", color: { rgb: "DDDDDD" } },
-                        right: { style: "thin", color: { rgb: "DDDDDD" } }
+                        top: { style: "thin", color: { rgb: "D0D0D0" } },
+                        bottom: { style: "thin", color: { rgb: "D0D0D0" } },
+                        left: { style: "thin", color: { rgb: "D0D0D0" } },
+                        right: { style: "thin", color: { rgb: "D0D0D0" } }
                     }
                 };
             }
