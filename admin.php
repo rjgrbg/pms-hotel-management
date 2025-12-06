@@ -386,6 +386,7 @@ $conn->close();
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 
 <body>
@@ -1443,6 +1444,7 @@ $conn->close();
   </script>
 
   <script src="script/shared-data.js"></script>
+  <script src="script/download-utils.js"></script>
   <script src="script/admin.config.js"></script>
   <script src="script/admin.utils.js"></script>
   <script src="script/admin.pagination.js"></script>

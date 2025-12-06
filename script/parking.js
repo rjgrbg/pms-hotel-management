@@ -1478,28 +1478,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                try {
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF();
-                    doc.setFontSize(18);
-                    doc.text("Parking History Report", 14, 22);
-                    doc.setFontSize(11);
-                    doc.setTextColor(100);
-                    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
-                    
-                    const head = [[ 'Slot', 'Plate #', 'Room', 'Name', 'Type', 'Category', 'Duration', 'Entry', 'Exit' ]];
-                    const body = filteredData.map(v => [ v.SlotName, v.PlateNumber, v.RoomNumber, v.GuestName, v.VehicleType, v.VehicleCategory, v.ParkingTime, v.EntryDateTime, v.ExitDateTime ]);
+                const headers = ['Slot', 'Plate #', 'Room', 'Name', 'Type', 'Category', 'Duration', 'Entry', 'Exit'];
+                const tableData = filteredData.map(v => [
+                    v.SlotName, v.PlateNumber, v.RoomNumber, v.GuestName, 
+                    v.VehicleType, v.VehicleCategory, v.ParkingTime, 
+                    v.EntryDateTime, v.ExitDateTime
+                ]);
 
-                    doc.autoTable({
-                        head: head, body: body, startY: 35,
-                        headStyles: { fillColor: [72, 12, 27] },
-                        styles: { fontSize: 8, cellPadding: 2 },
-                        alternateRowStyles: { fillColor: [245, 245, 245] }
-                    });
-                    doc.save('Parking-History-Report.pdf');
-                } catch (e) {
-                    console.error("Error generating PDF:", e);
-                    showToast('Error generating PDF. See console.', 'error');
+                if (typeof downloadData === 'function') {
+                    downloadData(headers, tableData, 'Parking History Report', 'parking-history');
+                } else {
+                    showToast('Download utility not available. Please refresh the page.', 'error');
                 }
             });
         }
@@ -1516,28 +1505,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                try {
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF();
-                    doc.setFontSize(18);
-                    doc.text("Active Parking Report", 14, 22); 
-                    doc.setFontSize(11);
-                    doc.setTextColor(100);
-                    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
+                const headers = ['Slot', 'Plate #', 'Room', 'Name', 'Type', 'Category', 'Enter Time', 'Enter Date'];
+                const tableData = filteredData.map(v => [
+                    v.SlotName, v.PlateNumber, v.RoomNumber, v.GuestName, 
+                    v.VehicleType, v.VehicleCategory, v.EnterTime, v.EnterDate
+                ]);
 
-                    const head = [[ 'Slot', 'Plate #', 'Room', 'Name', 'Type', 'Category', 'Enter Time', 'Enter Date' ]];
-                    const body = filteredData.map(v => [ v.SlotName, v.PlateNumber, v.RoomNumber, v.GuestName, v.VehicleType, v.VehicleCategory, v.EnterTime, v.EnterDate ]);
-
-                    doc.autoTable({
-                        head: head, body: body, startY: 35,
-                        headStyles: { fillColor: [72, 12, 27] },
-                        styles: { fontSize: 8, cellPadding: 2 },
-                        alternateRowStyles: { fillColor: [245, 245, 245] }
-                    });
-                    doc.save('Active-Parking-Report.pdf'); 
-                } catch (e) {
-                    console.error("Error generating PDF:", e);
-                    showToast('Error generating PDF. See console.', 'error');
+                if (typeof downloadData === 'function') {
+                    downloadData(headers, tableData, 'Active Parking Report', 'active-parking');
+                } else {
+                    showToast('Download utility not available. Please refresh the page.', 'error');
                 }
             });
         }

@@ -1013,50 +1013,6 @@ function renderHistoryTable() {
     });
   }
 
-  function downloadPDF(data, headers, bodyKeys, title, filename) {
-    if (data.length === 0) {
-      alert('No data to download.');
-      return;
-    }
-
-    try {
-      const {
-        jsPDF
-      } = window.jspdf;
-      const doc = new jsPDF({
-        orientation: 'landscape'
-      });
-
-      doc.setFontSize(18);
-      doc.text(title, 14, 22);
-      doc.setFontSize(11);
-      doc.setTextColor(100);
-      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 28);
-
-      const body = data.map(row => bodyKeys.map(key => row[key] || 'N/A'));
-
-      doc.autoTable({
-        head: [headers],
-        body: body,
-        startY: 35,
-        headStyles: {
-          fillColor: [72, 12, 27]
-        },
-        styles: {
-          fontSize: 8,
-          cellPadding: 2
-        },
-        alternateRowStyles: {
-          fillColor: [245, 245, 245]
-        }
-      });
-
-      doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (e) {
-      console.error("Error generating PDF:", e);
-      alert("Error generating PDF. Please ensure you are online to load the PDF library.");
-    }
-  }
 
   if (downloadBtnRequests) {
     downloadBtnRequests.addEventListener('click', () => {
@@ -1077,9 +1033,16 @@ function renderHistoryTable() {
       sortData(filteredData, column, direction);
 
       const headers = ['ID', 'Name', 'Category', 'Qty', 'Description', 'Status', 'Stock In'];
-      const bodyKeys = ['ItemID', 'ItemName', 'Category', 'ItemQuantity', 'ItemDescription', 'ItemStatus', 'DateofStockIn'];
+      const tableData = filteredData.map(item => [
+        item.ItemID, item.ItemName, item.Category, item.ItemQuantity, 
+        item.ItemDescription || '', item.ItemStatus, item.DateofStockIn || 'N/A'
+      ]);
 
-      downloadPDF(filteredData, headers, bodyKeys, 'Inventory Stocks Report', 'inventory-stocks');
+      if (typeof downloadData === 'function') {
+        downloadData(headers, tableData, 'Inventory Stocks Report', 'inventory-stocks');
+      } else {
+        alert('Download utility not available. Please refresh the page.');
+      }
     });
   }
 
@@ -1105,9 +1068,17 @@ function renderHistoryTable() {
       sortData(filteredData, column, direction);
 
       const headers = ['Log ID', 'Name', 'Category', 'Old Qty', 'Change', 'New Qty', 'Status', 'Stock In', 'Performed By'];
-      const bodyKeys = ['InvLogID', 'ItemName', 'Category', 'OldQuantity', 'QuantityChange', 'NewQuantity', 'ItemStatus', 'DateofStockIn', 'PerformedBy'];
+      const tableData = filteredData.map(log => [
+        log.InvLogID, log.ItemName, log.Category, log.OldQuantity, 
+        log.QuantityChange, log.NewQuantity, log.ItemStatus, 
+        log.DateofStockIn || 'N/A', log.PerformedBy
+      ]);
 
-      downloadPDF(filteredData, headers, bodyKeys, 'Inventory History Report', 'inventory-history');
+      if (typeof downloadData === 'function') {
+        downloadData(headers, tableData, 'Inventory History Report', 'inventory-history');
+      } else {
+        alert('Download utility not available. Please refresh the page.');
+      }
     });
   }
 

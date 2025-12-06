@@ -334,40 +334,31 @@ function handleRefreshRequests() {
   applyRequestFiltersAndRender();
 }
 
-// ===== REQUESTS PDF DOWNLOAD =====
-function downloadRequestsPDF() {
-  if (filteredRequests.length === 0) {
-    alert("No request data to export based on current filters.");
-    return;
+
+// Initialize download button handler
+function initRequestsDownload() {
+  const downloadBtn = document.getElementById('downloadBtnRequests');
+  if (downloadBtn) {
+    downloadBtn.onclick = () => {
+      if (filteredRequests.length === 0) {
+        alert('No data available to download');
+        return;
+      }
+      const headers = ['Floor', 'Room', 'Date', 'Request Time', 'Last Clean', 'Status', 'Staff'];
+      const tableData = filteredRequests.map(req => [
+        req.floor ?? 'N/A',
+        req.room ?? 'N/A',
+        req.date ?? 'N/A',
+        req.requestTime ?? 'N/A',
+        req.lastClean ?? 'N/A',
+        req.status ?? 'N/A',
+        req.staff ?? 'N/A'
+      ]);
+      if (typeof downloadData === 'function') {
+        downloadData(headers, tableData, 'Housekeeping Requests Report', 'housekeeping-requests');
+      } else {
+        alert('Download utility not available. Please refresh the page.');
+      }
+    };
   }
-  
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  const headers = [
-    ['Floor', 'Room', 'Date', 'Request Time', 'Last Clean', 'Status', 'Staff In Charge'] // MODIFIED
-  ];
-
-  const bodyData = filteredRequests.map(req => [
-    req.floor ?? 'N/A',
-    req.room ?? 'N/A',
-    req.date ?? 'N/A',
-    req.requestTime ?? 'N/A',
-    req.lastClean ?? 'N/A', // MODIFIED
-    req.status ?? 'N/A',
-    req.staff ?? 'N/A'
-  ]);
-
-  doc.setFontSize(18);
-  doc.text("Housekeeping Requests Report", 14, 22); // MODIFIED
-
-  doc.autoTable({
-    startY: 30,
-    head: headers,
-    body: bodyData,
-    theme: 'striped',
-    headStyles: { fillColor: [41, 128, 185] },
-  });
-
-  doc.save(`housekeeping-requests-${new Date().toISOString().split('T')[0]}.pdf`); // MODIFIED
 }

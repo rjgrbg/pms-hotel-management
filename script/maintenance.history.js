@@ -129,26 +129,18 @@ function resetHistoryFilters() {
     applyHistoryFiltersAndRender();
 }
 
-/**
- * Downloads the *filtered* history data as a PDF
- */
-function downloadHistoryPDF() {
-    if (filteredHistory.length === 0) {
-        alert("No history data to export based on current filters.");
+
+// Initialize download button handler
+function initHistoryDownload() {
+  const downloadBtn = document.getElementById('historyDownloadBtn');
+  if (downloadBtn) {
+    downloadBtn.onclick = () => {
+      if (filteredHistory.length === 0) {
+        alert('No data available to download');
         return;
-    }
-
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    // Define the headers
-    const headers = [
-        ['Floor', 'Room', 'Type', 'Date', 'Requested', 'Completed', 'Staff', 'Status', 'Remarks']
-    ];
-
-    // Map the filtered data to match the headers
-    // This uses the already filtered and sorted `filteredHistory` array
-    const bodyData = filteredHistory.map(h => [
+      }
+      const headers = ['Floor', 'Room', 'Type', 'Date', 'Requested Time', 'Completed Time', 'Staff', 'Status', 'Remarks'];
+      const tableData = filteredHistory.map(h => [
         h.floor ?? 'N/A',
         h.room ?? 'N/A',
         h.issueType ?? 'N/A',
@@ -158,26 +150,12 @@ function downloadHistoryPDF() {
         h.staff ?? 'N/A',
         h.status ?? 'N/A',
         h.remarks ?? ''
-    ]);
-
-    // Add a title
-    doc.setFontSize(18);
-    doc.text("Maintenance History Report", 14, 22);
-
-    // Add the table
-    doc.autoTable({
-        startY: 30,
-        head: headers,
-        body: bodyData,
-        theme: 'striped',
-        headStyles: { fillColor: [41, 128, 185] }, // Blue header
-        styles: { fontSize: 8 },
-        columnStyles: {
-            2: { cellWidth: 30 }, // Type
-            8: { cellWidth: 40 }  // Remarks
-        }
-    });
-
-    // Save the PDF
-    doc.save('maintenance-history.pdf');
+      ]);
+      if (typeof downloadData === 'function') {
+        downloadData(headers, tableData, 'Maintenance History Report', 'maintenance-history');
+      } else {
+        alert('Download utility not available. Please refresh the page.');
+      }
+    };
+  }
 }
