@@ -669,7 +669,6 @@ body {
   background-color: rgba(255, 255, 255, 0.9);
   color: #333;
   font-weight: 600;
-  -moz-appearance: textfield;
 }
 
 .quantity-input::-webkit-outer-spin-button,
