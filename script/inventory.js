@@ -469,11 +469,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  async function fetchHistory() {
+async function fetchHistory() {
     try {
       // Show loading
-      if(historyTableBody) {
-          historyTableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">Loading history...</td></tr>';
+      if (historyTableBody) {
+        historyTableBody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 20px;">Loading history...</td></tr>';
       }
 
       const response = await fetch('inventory_actions.php?action=get_history');
@@ -485,6 +485,21 @@ document.addEventListener('DOMContentLoaded', () => {
         allHistoryData = [];
       } else {
         allHistoryData = logs;
+
+        // ======================================================
+        // === USE DATABASE VALUES FOR OLD & NEW QTY
+        // ======================================================
+        // The database query already calculates OldQuantity and NewQuantity
+        // OldQuantity = quantity before the transaction
+        // NewQuantity = cumulative quantity after the transaction
+        allHistoryData.forEach(log => {
+            log.calculatedOldQty = parseFloat(log.OldQuantity || 0);
+            log.calculatedNewQty = parseFloat(log.NewQuantity || 0);
+        });
+        // ======================================================
+        // === END FIX
+        // ======================================================
+
         renderHistoryTable();
         populateFilterDropdown(allHistoryData, categoryFilterHistory);
       }
@@ -687,7 +702,7 @@ function renderHistoryTable() {
     const endIndex = startIndex + rowsPerPage;
     const paginatedData = filteredData.slice(startIndex, endIndex);
 
-    historyTableBody.innerHTML = paginatedData
+historyTableBody.innerHTML = paginatedData
       .map(
         (log) => {
           let quantityChangeText = log.QuantityChange;
@@ -704,8 +719,12 @@ function renderHistoryTable() {
             quantityChangeText = '0';
           }
 
-          const oldQty = (log.OldQuantity === null || log.OldQuantity === undefined) ? 'N/A' : log.OldQuantity;
-          const newQty = (log.NewQuantity === null || log.NewQuantity === undefined) ? 'N/A' : log.NewQuantity;
+          // === FIX: USE CALCULATED VALUES ===
+          // Use the values we calculated in fetchHistory
+          // If they don't exist (fallback), assume 0
+          const oldQty = (log.calculatedOldQty !== undefined) ? log.calculatedOldQty : 0;
+          const newQty = (log.calculatedNewQty !== undefined) ? log.calculatedNewQty : 0;
+          // ==================================
 
           return `
             <tr>
@@ -723,7 +742,7 @@ function renderHistoryTable() {
         }
       )
       .join('');
-
+      
     updateSortHeaders('history-tab', sortState.history);
   }
 
@@ -741,6 +760,12 @@ function renderHistoryTable() {
   });
 
   confirmAddBtn.addEventListener('click', async () => {
+    // Prevent spam clicking
+    if (confirmAddBtn.disabled) return;
+    
+    confirmAddBtn.disabled = true;
+    confirmAddBtn.textContent = 'Adding...';
+    
     const formData = new FormData();
     formData.append('name', document.getElementById('item-name').value);
     formData.append(
@@ -779,6 +804,10 @@ function renderHistoryTable() {
       }
     } catch (error) {
       handleError('Error adding item: ' + error.message);
+    } finally {
+      // Re-enable button after request completes
+      confirmAddBtn.disabled = false;
+      confirmAddBtn.textContent = 'Confirm';
     }
   });
 
@@ -796,9 +825,19 @@ function renderHistoryTable() {
     showModal(editItemModal);
   }
 
+  let isSubmittingEdit = false;
+  
   editItemForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!currentEditItemId) return;
+    if (!currentEditItemId || isSubmittingEdit) return;
+
+    isSubmittingEdit = true;
+    const submitBtn = editItemForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Updating...';
+    }
 
     const formData = new FormData();
     formData.append('item_id', currentEditItemId);
@@ -828,6 +867,12 @@ function renderHistoryTable() {
       }
     } catch (error) {
       handleError('Error updating item: ' + error.message);
+    } finally {
+      isSubmittingEdit = false;
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
     }
   });
 

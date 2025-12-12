@@ -121,7 +121,8 @@ function getInventoryHistory($conn) {
             END AS DateofStockIn,
             rt.ActionType,
             CONCAT(u.Fname, ' ', u.Lname) AS PerformedBy,
-            rt.DateofRelease
+            rt.DateofRelease,
+            rt.ItemID
           FROM (
               SELECT 
                   il.InvLogID,
