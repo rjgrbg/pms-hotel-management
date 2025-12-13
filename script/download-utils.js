@@ -4,6 +4,127 @@
  */
 
 // ==========================================
+// 0. PDF HEADER HELPER FUNCTION
+// ==========================================
+
+/**
+ * Adds a professional header to PDF with logo, hotel name, and report details
+ * @param {jsPDF} doc - The jsPDF document instance
+ * @param {string} reportTitle - The main report title (e.g., "Guest Reservations Report")
+ * @param {string} reportSubtitle - The system subtitle (e.g., "Property Management System Reports")
+ * @param {string} filterInfo - Optional filter information (e.g., "This Month", "All Records")
+ * @returns {number} - The Y position where content should start after the header
+ */
+async function addPDFHeader(doc, reportTitle, reportSubtitle, filterInfo = null) {
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const logoPath = 'assets/images/celestia-logo.png';
+    
+    try {
+        // Load and add logo
+        const img = await loadImage(logoPath);
+        const logoWidth = 20;
+        const logoHeight = 20;
+        doc.addImage(img, 'PNG', 14, 10, logoWidth, logoHeight);
+        
+        // Hotel name - positioned next to logo
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(139, 0, 0); // Dark red color #8B0000
+        doc.text('CELESTIA HOTEL', 38, 18);
+        
+        // Report title - positioned below hotel name
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(reportTitle, 38, 24);
+        
+        // Report subtitle - positioned below report title
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(120, 120, 120);
+        doc.text(reportSubtitle, 38, 29);
+        
+        // Generated timestamp - positioned at the right side
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        const now = new Date();
+        const formattedDate = now.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: '2-digit' 
+        });
+        const formattedTime = now.toLocaleTimeString('en-US', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: true 
+        });
+        const timestamp = `Generated: ${formattedDate} - ${formattedTime}`;
+        const timestampWidth = doc.getTextWidth(timestamp);
+        doc.text(timestamp, pageWidth - timestampWidth - 14, 18);
+        
+        // Draw a separator line
+        doc.setDrawColor(72, 12, 27); // #480c1b
+        doc.setLineWidth(0.5);
+        doc.line(14, 34, pageWidth - 14, 34);
+        
+        // Add filter information if provided
+        let startY = 42;
+        if (filterInfo) {
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(72, 12, 27);
+            
+            // Add background box for filter info
+            doc.setFillColor(252, 242, 244); // Light pink background
+            doc.roundedRect(14, 38, pageWidth - 28, 8, 2, 2, 'F');
+            
+            // Add filter text
+            doc.text(`📊 Report Filter: ${filterInfo}`, 18, 43);
+            startY = 52;
+        }
+        
+        return startY;
+        
+    } catch (error) {
+        console.error('Error loading logo for PDF:', error);
+        // Fallback: text-only header
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(139, 0, 0);
+        doc.text('CELESTIA HOTEL', 14, 18);
+        
+        doc.setFontSize(13);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(reportTitle, 14, 26);
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        doc.text(reportSubtitle, 14, 31);
+        
+        // Separator line
+        doc.setDrawColor(72, 12, 27);
+        doc.setLineWidth(0.5);
+        doc.line(14, 34, pageWidth - 14, 34);
+        
+        return 42;
+    }
+}
+
+/**
+ * Helper function to load an image and return a promise
+ */
+function loadImage(url) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+    });
+}
+
+// ==========================================
 // 1. MODAL HTML INJECTION
 // ==========================================
 
@@ -219,7 +340,7 @@ function showDownloadModal(onPdfClick, onExcelClick) {
 // 4. PDF EXPORT FUNCTION
 // ==========================================
 
-function exportToPDF(headers, data, title, filename) {
+async function exportToPDF(headers, data, title, filename, filterInfo = null) {
     if (!window.jspdf) {
         alert("PDF Library not loaded. Please refresh the page.");
         return;
@@ -228,25 +349,23 @@ function exportToPDF(headers, data, title, filename) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF('l', 'mm', 'a4'); // Landscape
 
-    // Header
-    doc.setFontSize(18);
-    doc.setTextColor(72, 12, 27); // #480c1b
-    doc.text(title, 14, 20);
-    
-    // Date
-    doc.setFontSize(11);
-    doc.setTextColor(100);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+    // Add professional header with logo
+    const startY = await addPDFHeader(
+        doc, 
+        title, 
+        'Property Management System',
+        filterInfo
+    );
 
     // Table
     doc.autoTable({
         head: [headers],
         body: data,
-        startY: 35,
+        startY: startY,
         theme: 'grid',
         styles: { fontSize: 10, cellPadding: 3, overflow: 'linebreak', textColor: 50 },
         headStyles: { fillColor: '#480c1b', textColor: '#ffffff', fontStyle: 'bold', halign: 'center' },
-        margin: { top: 35 }
+        margin: { top: startY }
     });
 
     doc.save(`${filename}-${new Date().toISOString().split('T')[0]}.pdf`);
@@ -371,14 +490,14 @@ function exportToExcel(headers, data, title, filename) {
 // 6. MAIN DOWNLOAD FUNCTION WITH MODAL
 // ==========================================
 
-function downloadData(headers, data, title, filename) {
+function downloadData(headers, data, title, filename, filterInfo = null) {
     if (!data || data.length === 0) {
         alert("No data available to download based on current filters.");
         return;
     }
 
     showDownloadModal(
-        () => exportToPDF(headers, data, title, filename),
+        () => exportToPDF(headers, data, title, filename, filterInfo),
         () => exportToExcel(headers, data, title, filename)
     );
 }
