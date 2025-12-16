@@ -90,23 +90,48 @@ function handleGetManageAreas($conn) {
     $data = $conn->query("SELECT * FROM pms_parkingarea ORDER BY is_archived ASC, AreaName ASC")->fetch_all(MYSQLI_ASSOC);
     echo json_encode(['success' => true, 'areas' => $data]);
 }
+
 function handleAddArea($conn) {
     $name = trim($_POST['AreaName'] ?? '');
     if (!$name) throw new Exception("Area name required.");
+
+    // CHECK DUPLICATE AREA NAME
+    $check = $conn->prepare("SELECT AreaID FROM pms_parkingarea WHERE AreaName = ?");
+    $check->bind_param("s", $name);
+    $check->execute();
+    $check->store_result();
+    if ($check->num_rows > 0) {
+        throw new Exception("Area name '$name' already exists.");
+    }
+    $check->close();
+
     $stmt = $conn->prepare("INSERT INTO pms_parkingarea (AreaName, is_archived) VALUES (?, 0)");
     $stmt->bind_param("s", $name);
     if ($stmt->execute()) echo json_encode(['success' => true, 'message' => 'Area added.']);
     else throw new Exception($stmt->error);
 }
+
 function handleUpdateArea($conn) {
     $id = $_POST['AreaID'] ?? 0;
     $name = trim($_POST['AreaName'] ?? '');
     if (!$id || !$name) throw new Exception("ID and Name required.");
+
+    // CHECK DUPLICATE AREA NAME (Excluding current ID)
+    $check = $conn->prepare("SELECT AreaID FROM pms_parkingarea WHERE AreaName = ? AND AreaID != ?");
+    $check->bind_param("si", $name, $id);
+    $check->execute();
+    $check->store_result();
+    if ($check->num_rows > 0) {
+        throw new Exception("Area name '$name' already exists.");
+    }
+    $check->close();
+
     $stmt = $conn->prepare("UPDATE pms_parkingarea SET AreaName = ? WHERE AreaID = ?");
     $stmt->bind_param("si", $name, $id);
     if ($stmt->execute()) echo json_encode(['success' => true, 'message' => 'Area updated.']);
     else throw new Exception($stmt->error);
 }
+
 function handleArchiveArea($conn) {
     $id = $_POST['AreaID'] ?? 0;
     if (!$id) throw new Exception("Area ID required.");
@@ -126,6 +151,7 @@ function handleArchiveArea($conn) {
         echo json_encode(['success' => true, 'message' => 'Area archived.']);
     } catch (Exception $e) { $conn->rollback(); throw $e; }
 }
+
 function handleRestoreArea($conn) {
     $id = $_POST['AreaID'] ?? 0;
     if (!$id) throw new Exception("Area ID required.");
@@ -147,26 +173,55 @@ function handleRestoreArea($conn) {
 // ==========================================
 
 function handleAddSlot($conn) {
-    $areaID = $_POST['AreaID'] ?? 0; $name = trim($_POST['SlotName'] ?? ''); $typeID = $_POST['AllowedVehicleTypeID'] ?? 0;
+    $areaID = $_POST['AreaID'] ?? 0; 
+    $name = trim($_POST['SlotName'] ?? ''); 
+    $typeID = $_POST['AllowedVehicleTypeID'] ?? 0;
+    
     if (!$areaID || !$name || !$typeID) throw new Exception("All fields required.");
+
+    // CHECK DUPLICATE SLOT NAME IN THIS AREA
+    $check = $conn->prepare("SELECT SlotID FROM pms_parkingslot WHERE AreaID = ? AND SlotName = ?");
+    $check->bind_param("is", $areaID, $name);
+    $check->execute();
+    $check->store_result();
+    if ($check->num_rows > 0) {
+        throw new Exception("Slot '$name' already exists in this area.");
+    }
+    $check->close();
+
     $stmt = $conn->prepare("INSERT INTO pms_parkingslot (AreaID, SlotName, AllowedVehicleTypeID, Status, is_archived) VALUES (?, ?, ?, 'available', 0)");
     $stmt->bind_param("isi", $areaID, $name, $typeID);
     if ($stmt->execute()) echo json_encode(['success' => true, 'message' => 'Slot added.']);
-    else throw new Exception("Slot name might already exist.");
+    else throw new Exception($stmt->error);
 }
 
 function handleUpdateSlot($conn) {
-    $id = $_POST['SlotID'] ?? 0; $name = trim($_POST['SlotName'] ?? ''); $typeID = $_POST['AllowedVehicleTypeID'] ?? 0;
+    $id = $_POST['SlotID'] ?? 0; 
+    $name = trim($_POST['SlotName'] ?? ''); 
+    $typeID = $_POST['AllowedVehicleTypeID'] ?? 0;
+    
     if (!$id || !$name || !$typeID) throw new Exception("All fields required.");
 
-    // --- CHECK OCCUPANCY BEFORE UPDATE ---
-    $check = $conn->prepare("SELECT Status FROM pms_parkingslot WHERE SlotID = ?");
+    // --- CHECK OCCUPANCY AND GET CURRENT AREA ---
+    $check = $conn->prepare("SELECT Status, AreaID FROM pms_parkingslot WHERE SlotID = ?");
     $check->bind_param("i", $id);
     $check->execute();
-    $status = $check->get_result()->fetch_assoc()['Status'] ?? '';
+    $result = $check->get_result()->fetch_assoc();
+    $status = $result['Status'] ?? '';
+    $currentAreaID = $result['AreaID'] ?? 0;
+    $check->close();
 
     if ($status === 'occupied') throw new Exception("Cannot edit an occupied slot.");
-    // -------------------------------------
+
+    // CHECK DUPLICATE SLOT NAME IN THIS AREA (Excluding current Slot)
+    $checkDup = $conn->prepare("SELECT SlotID FROM pms_parkingslot WHERE AreaID = ? AND SlotName = ? AND SlotID != ?");
+    $checkDup->bind_param("isi", $currentAreaID, $name, $id);
+    $checkDup->execute();
+    $checkDup->store_result();
+    if ($checkDup->num_rows > 0) {
+        throw new Exception("Slot '$name' already exists in this area.");
+    }
+    $checkDup->close();
 
     $stmt = $conn->prepare("UPDATE pms_parkingslot SET SlotName = ?, AllowedVehicleTypeID = ? WHERE SlotID = ?");
     $stmt->bind_param("sii", $name, $typeID, $id);
@@ -211,8 +266,6 @@ function handleGetParkingAreas($conn) {
 }
 
 function handleGetAllSlots($conn) {
-    // CHANGED: Added 's.Status ASC' to ORDER BY to prioritize Available (A) before Occupied (O)
-    // Kept LEFT JOIN from previous fix
     $slotsSql = "SELECT s.SlotID, s.AreaID, a.AreaName, s.SlotName, s.AllowedVehicleTypeID, t.TypeName AS AllowedVehicle, s.Status, s.is_archived
             FROM pms_parkingslot s
             JOIN pms_parkingarea a ON s.AreaID = a.AreaID
