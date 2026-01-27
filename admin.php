@@ -171,7 +171,7 @@ $sql_hk_history = "SELECT
                     r.floor_num as FloorNumber, 
                     r.room_num as RoomNumber, 
                     ht.TaskType,
-                    ht.DateRequested, 
+                    ht.DateRequested,   
                     ht.DateCompleted, 
                     u.Fname, 
                     u.Lname, 
