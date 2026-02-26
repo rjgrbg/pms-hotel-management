@@ -44,7 +44,7 @@ if ($type !== 'username' && $type !== 'password') {
 }
 
 // --- Connect to DB (Required after validation) ---
-$conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+$conn = get_db_connection('bt3wljbwprykeblz7tvq');
 if ($conn === null) {
     error_log("DB Connection Error (send_otp.php)");
     http_response_code(500);

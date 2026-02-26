@@ -66,7 +66,7 @@ if (!$data || !isset($data['action'])) {
 
 $action = trim($data['action'] ?? '');
 $managerUserId = $_SESSION['UserID'];
-$conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+$conn = get_db_connection('bt3wljbwprykeblz7tvq');
 
 if ($conn === null) {
     echo json_encode(['status' => 'error', 'message' => 'Database connection error.']);
