@@ -12,7 +12,7 @@ if (session_status() == PHP_SESSION_NONE) {
     ]);
 }
 
-$conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+$conn = get_db_connection('bt3wljbwprykeblz7tvq');
 if (!$conn) {
     header('Content-Type: application/json');
     http_response_code(500);

@@ -6,7 +6,7 @@ use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 error_reporting(E_ALL);
-ini_set('display_errors', 0); 
+ini_set('display_errors', 1); 
 ini_set('log_errors', 1);
 
 header('Content-Type: application/json');
@@ -50,7 +50,7 @@ switch ($action) {
             send_json_response(false, 'Unauthorized access. Admin only.');
         }
         
-        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+        $pms_conn = get_db_connection('bt3wljbwprykeblz7tvq');
         if ($pms_conn === null) {
             send_json_response(false, 'Database connection error.');
         }
@@ -66,7 +66,6 @@ switch ($action) {
                 p.Lname = e.last_name,
                 p.Mname = e.middle_name,
                 p.Birthday = e.birthdate,
-                p.Shift = e.shift,
                 p.EmailAddress = COALESCE(NULLIF(ee.email, ''), p.EmailAddress),
                 p.ContactNumber = COALESCE(NULLIF(ec.contact_number, ''), p.ContactNumber),
                 p.Address = COALESCE(NULLIF(ea.home_address, ''), p.Address)
@@ -95,7 +94,7 @@ switch ($action) {
             send_json_response(false, 'Unauthorized access.');
         }
 
-        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+        $pms_conn = get_db_connection('bt3wljbwprykeblz7tvq');
         
         // Prepare list of allowed positions for SQL IN clause
         $allowed_positions = array_keys($position_to_account_type);
@@ -141,7 +140,7 @@ switch ($action) {
             send_json_response(false, 'Employee Code is required.');
         }
 
-        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+        $pms_conn = get_db_connection('bt3wljbwprykeblz7tvq');
         
         // Double check existence
         $stmt_check = $pms_conn->prepare("SELECT UserID, is_archived FROM pms_users WHERE EmployeeID = ?");
@@ -160,8 +159,10 @@ switch ($action) {
         $stmt_check->close();
 
         // Fetch Employee Data
-        $sql_employee = "SELECT e.employee_code, e.first_name, e.last_name, e.middle_name, e.birthdate, ee.email, ec.contact_number, ea.home_address, e.shift, jp.position_name
-            FROM employees e
+        // Updated query to fetch home_address directly from the employees table
+        $sql_employee = "SELECT e.employee_code, e.first_name, e.last_name, e.middle_name, e.birthdate, 
+                        ee.email, ec.contact_number, ea.home_address, jp.position_name
+    FROM employees e
             LEFT JOIN employee_emails ee ON e.employee_id = ee.employee_id
             LEFT JOIN employee_contact_numbers ec ON e.employee_id = ec.employee_id
             LEFT JOIN employee_addresses ea ON e.employee_id = ea.employee_id
@@ -169,6 +170,12 @@ switch ($action) {
             WHERE e.employee_code = ? LIMIT 1";
         
         $stmt_emp = $pms_conn->prepare($sql_employee);
+
+        // This check will tell you if there are any other column mismatches
+        if (!$stmt_emp) {
+            send_json_response(false, "Database Query Error: " . $pms_conn->error);
+        }
+
         $stmt_emp->bind_param("s", $employee_code);
         $stmt_emp->execute();
         $result_emp = $stmt_emp->get_result();
@@ -183,7 +190,7 @@ switch ($action) {
             $accountType = $position_to_account_type[$position_name];
             $username = strtolower($employee['last_name'] . '.' . $employee_code);
             
-            // Validate Username Unique
+           // Validate Username Unique
             $stmt_check_user = $pms_conn->prepare("SELECT UserID FROM pms_users WHERE Username = ?");
             $stmt_check_user->bind_param("s", $username);
             $stmt_check_user->execute();
@@ -193,9 +200,20 @@ switch ($action) {
             }
             $stmt_check_user->close();
 
+            // FIX: Strictly require an email address so the activation link can actually be sent!
+            if (empty($employee['email'])) {
+                send_json_response(false, "This employee does not have a registered email address. An email is strictly required to send the account activation link.");
+            }
+
             $temp_password = password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT);
             $token = bin2hex(random_bytes(32));
             $token_expiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
+            // Fallbacks for other less-critical strict columns
+            $safe_shift = !empty($employee['shift']) ? $employee['shift'] : 'Morning';
+            $safe_address = !empty($employee['home_address']) ? $employee['home_address'] : 'Address Not Provided';
+            $safe_birthday = !empty($employee['birthdate']) ? $employee['birthdate'] : '2000-01-01';
+            $safe_contact = !empty($employee['contact_number']) ? $employee['contact_number'] : '00000000000';
 
            $sql_insert = "INSERT INTO pms_users 
                             (EmployeeID, Fname, Lname, Mname, Birthday, AccountType, Username, Password, 
@@ -203,10 +221,15 @@ switch ($action) {
                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Offline', 0)";
             
             $stmt_insert = $pms_conn->prepare($sql_insert);
+            
+            if (!$stmt_insert) {
+                send_json_response(false, 'DB Prepare Error (Insert): ' . $pms_conn->error);
+            }
+
             $stmt_insert->bind_param("ssssssssssssss",
-                $employee_code, $employee['first_name'], $employee['last_name'], $employee['middle_name'], $employee['birthdate'],
-                $accountType, $username, $temp_password, $employee['email'], $employee['shift'],
-                $employee['home_address'], $employee['contact_number'], $token, $token_expiry
+                $employee_code, $employee['first_name'], $employee['last_name'], $employee['middle_name'], $safe_birthday,
+                $accountType, $username, $temp_password, $employee['email'], $safe_shift,
+                $safe_address, $safe_contact, $token, $token_expiry
             );
 
             if ($stmt_insert->execute()) {
@@ -229,10 +252,10 @@ switch ($action) {
                     $mail->send();
                     send_json_response(true, "User '$username' created. Activation email sent.");
                 } catch (Throwable $e) {
-                    send_json_response(true, "User created, but email failed: " . $mail->ErrorInfo);
+                    send_json_response(true, "User created, but email failed to send. Error: " . $mail->ErrorInfo);
                 }
             } else {
-                send_json_response(false, 'Failed to add user to PMS.');
+                send_json_response(false, 'Database Error: ' . $stmt_insert->error);
             }
             $stmt_insert->close();
         } else {
@@ -246,7 +269,7 @@ switch ($action) {
         if (!isset($_SESSION['UserID']) || $_SESSION['UserType'] !== 'admin') {
             send_json_response(false, 'Unauthorized access.');
         }
-        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+        $pms_conn = get_db_connection('bt3wljbwprykeblz7tvq');
         $userID = filter_var($_POST['userID'] ?? null, FILTER_VALIDATE_INT);
         $password = trim($_POST['password'] ?? '');
 
@@ -270,7 +293,7 @@ switch ($action) {
             send_json_response(false, 'Unauthorized access.');
         }
         
-        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+        $pms_conn = get_db_connection('bt3wljbwprykeblz7tvq');
         $userID = filter_var($_POST['userID'] ?? null, FILTER_VALIDATE_INT);
 
         if ($userID === false) send_json_response(false, 'Invalid User ID.');
@@ -296,7 +319,7 @@ switch ($action) {
             send_json_response(false, 'Unauthorized access.');
         }
         
-        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+        $pms_conn = get_db_connection('bt3wljbwprykeblz7tvq');
         $userID = filter_var($_POST['userID'] ?? null, FILTER_VALIDATE_INT);
 
         if ($userID === false) send_json_response(false, 'Invalid User ID.');
@@ -317,7 +340,7 @@ switch ($action) {
         if (!isset($_SESSION['UserID']) || $_SESSION['UserType'] !== 'admin') {
             send_json_response(false, 'Unauthorized access.');
         }
-        $pms_conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+        $pms_conn = get_db_connection('bt3wljbwprykeblz7tvq');
         $sql = "SELECT ul.LogID, ul.ActionType, ul.Timestamp, u.UserID, u.EmployeeID, u.Fname, u.Lname, u.Mname, u.AccountType, u.Shift, u.Username, u.EmailAddress
                 FROM pms_user_logs ul JOIN pms_users u ON ul.UserID = u.UserID ORDER BY ul.LogID DESC";
         $result = $pms_conn->query($sql);
