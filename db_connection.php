@@ -25,20 +25,20 @@ define('BASE_URL', $baseUrl);
 
 static $db_connection = null;
 
-function get_db_connection($db_name = 'bt3wljbwprykeblz7tvq') {
+function get_db_connection($db_name = 'b9wkqgu32onfqy0dvyva') {
     global $db_connection;
 
     if ($db_connection instanceof mysqli && $db_connection->ping()) {
         return $db_connection;
     }
 
-    // --- CLEVER CLOUD CONFIGURATION ---
-    // FIX: Using '?:' ensures your hardcoded credentials work on Localhost
-    $db_host = getenv('MYSQL_ADDON_HOST') ?: 'bt3wljbwprykeblz7tvq-mysql.services.clever-cloud.com';
-    $db_user = getenv('MYSQL_ADDON_USER') ?: 'ufmekorzrbmg2hji';
-    $db_pass = getenv('MYSQL_ADDON_PASSWORD') ?: 'rbD8au3K6hUQ3zeesap';
-    $db_name_config = getenv('MYSQL_ADDON_DB') ?: 'bt3wljbwprykeblz7tvq';
-    $db_port = getenv('MYSQL_ADDON_PORT') ?: 20351;
+    // --- LOCAL XAMPP CONFIGURATION ---
+    // For local development with XAMPP MySQL
+    $db_host = getenv('MYSQL_ADDON_HOST') ?: 'localhost';
+    $db_user = getenv('MYSQL_ADDON_USER') ?: 'root';
+    $db_pass = getenv('MYSQL_ADDON_PASSWORD') ?: '';
+    $db_name_config = getenv('MYSQL_ADDON_DB') ?: 'b9wkqgu32onfqy0dvyva';
+    $db_port = getenv('MYSQL_ADDON_PORT') ?: 3306;
 
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     try {
