@@ -121,6 +121,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabContents = document.querySelectorAll('.tabContent');
 
   // Filter & Search Selectors
+  const typeFilter = document.getElementById('typeFilter');     
+  const typeFilterHistory = document.getElementById('typeFilterHistory');
   const categoryFilter = document.getElementById('floorFilter');
   const statusFilter = document.getElementById('roomFilter');
   const searchInput = document.getElementById('searchInput');
@@ -544,6 +546,7 @@ async function fetchHistory() {
   // ======================================================
 
  function renderInventoryTable() {
+    const type = typeFilter ? typeFilter.value.toLowerCase() : ''; // NEW
     const category = categoryFilter.value.toLowerCase();
     const status = statusFilter.value.toLowerCase();
     const search = searchInput.value.toLowerCase();
@@ -555,17 +558,17 @@ async function fetchHistory() {
           if (!itemIsArchived) return false; 
       } else {
           if (itemIsArchived) return false; 
-          
           if (status && item.ItemStatus.toLowerCase() !== status) return false;
       }
 
+      const matchType = !type || (item.ItemType && item.ItemType.toLowerCase() === type); // NEW
       const matchCategory = !category || item.Category.toLowerCase() === category;
       const matchSearch =
         !search ||
         item.ItemName.toLowerCase().includes(search) ||
         item.ItemID.toString().includes(search);
 
-      return matchCategory && matchSearch;
+      return matchType && matchCategory && matchSearch; // UPDATED
     });
 
     const { column, direction } = sortState.requests;
@@ -627,11 +630,12 @@ async function fetchHistory() {
         return `
         <tr>
           <td>${escapeHtml(item.ItemName)}</td>
+          <td>${escapeHtml(item.ItemType || 'N/A')}</td>
           <td>${escapeHtml(item.Category)}</td>
           <td>${escapeHtml(item.ItemQuantity)}</td>
-          <td>${escapeHtml(item.ItemDescription || 'N/A')}</td>
+          <td>${escapeHtml(item.ItemWeight ? item.ItemWeight + 'g' : 'N/A')}</td>
+          <td>${escapeHtml(item.ExpirationDate || 'N/A')}</td>
           <td><span class="statusBadge ${badgeClass}">${escapeHtml(item.ItemStatus)}</span></td>
-          <td>${escapeHtml(item.DateofStockIn)}</td>
           <td class="action-cell">
               ${actionButtons}
           </td>
@@ -669,20 +673,22 @@ async function fetchHistory() {
   }
 
 function renderHistoryTable() {
+    const type = typeFilterHistory ? typeFilterHistory.value.toLowerCase() : ''; // NEW
     const category = categoryFilterHistory.value.toLowerCase();
     const status = statusFilterHistory.value.toLowerCase();
     const search = searchInputHistory.value.toLowerCase();
 
     const filteredData = allHistoryData.filter((log) => {
-      const matchCategory =
-        !category || (log.Category && log.Category.toLowerCase() === category);
+      const matchType = !type || (log.ItemType && log.ItemType.toLowerCase() === type); // NEW
+      const matchCategory = !category || (log.Category && log.Category.toLowerCase() === category);
       const matchStatus = !status || (log.ItemStatus && log.ItemStatus.toLowerCase() === status);
       const matchSearch =
         !search ||
         (log.ItemName && log.ItemName.toLowerCase().includes(search)) ||
         (log.InvLogID && log.InvLogID.toString().includes(search)) ||
         (log.PerformedBy && log.PerformedBy.toLowerCase().includes(search));
-      return matchCategory && matchStatus && matchSearch;
+        
+      return matchType && matchCategory && matchStatus && matchSearch; // UPDATED
     });
 
     const { column, direction } = sortState.history;
@@ -766,22 +772,16 @@ historyTableBody.innerHTML = paginatedData
     confirmAddBtn.disabled = true;
     confirmAddBtn.textContent = 'Adding...';
     
-    const formData = new FormData();
+   const formData = new FormData();
     formData.append('name', document.getElementById('item-name').value);
-    formData.append(
-      'category_id',
-      document.getElementById('item-category').value
-    );
-    formData.append(
-      'description',
-      document.getElementById('item-description').value
-    );
+    formData.append('type', document.getElementById('item-type').value);
+    formData.append('category_id', document.getElementById('item-category').value);
+    formData.append('description', document.getElementById('item-description').value);
     formData.append('quantity', document.getElementById('item-quantity').value);
-    formData.append('low_stock_threshold', document.getElementById('item-threshold').value); // Append Threshold
-    formData.append(
-      'stock_in_date',
-      document.getElementById('stock-in-date').value
-    );
+    formData.append('weight', document.getElementById('item-weight').value);
+    formData.append('low_stock_threshold', document.getElementById('item-threshold').value);
+    formData.append('stock_in_date', document.getElementById('stock-in-date').value);
+    formData.append('expiration_date', document.getElementById('item-expiration').value);
 
     try {
       const response = await fetch('inventory_actions.php?action=add_item', {
@@ -811,16 +811,22 @@ historyTableBody.innerHTML = paginatedData
     }
   });
 
-  function openEditModal(item) {
+function openEditModal(item) {
     currentEditItemId = item.ItemID;
     editItemIdSpan.textContent = item.ItemID;
     editItemIdInput.value = item.ItemID;
     document.getElementById('edit-item-name').value = item.ItemName;
+    document.getElementById('edit-item-type').value = item.ItemType || 'Consumables'; // New
     editCategorySelect.value = item.ItemCategoryID;
     document.getElementById('edit-item-description').value = item.ItemDescription;
+    document.getElementById('edit-item-weight').value = item.ItemWeight || ''; // New
+    document.getElementById('edit-item-expiration').value = item.ExpirationDate || ''; // New
     editItemThresholdInput.value = item.LowStockThreshold || 10; 
     editStockInput.value = '';
     document.getElementById('edit-item-current-qty').textContent = item.ItemQuantity;
+    
+    // Trigger the toggle to show/hide the expiration field based on type
+    if(typeof toggleEditExpiration === 'function') toggleEditExpiration(); 
 
     showModal(editItemModal);
   }
@@ -829,6 +835,15 @@ historyTableBody.innerHTML = paginatedData
   
   editItemForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // --- ADD THIS VALIDATION CHECK ---
+    // This tells the browser to highlight required empty fields
+    if (!editItemForm.checkValidity()) {
+        editItemForm.reportValidity();
+        return;
+    }
+    // ---------------------------------
+
     if (!currentEditItemId || isSubmittingEdit) return;
 
     isSubmittingEdit = true;
@@ -839,18 +854,17 @@ historyTableBody.innerHTML = paginatedData
       submitBtn.textContent = 'Updating...';
     }
 
-    const formData = new FormData();
+   const formData = new FormData();
     formData.append('item_id', currentEditItemId);
     formData.append('name', document.getElementById('edit-item-name').value);
+    formData.append('type', document.getElementById('edit-item-type').value);
     formData.append('category_id', editCategorySelect.value);
-    formData.append(
-      'description',
-      document.getElementById('edit-item-description').value
-    );
+    formData.append('description', document.getElementById('edit-item-description').value);
+    formData.append('weight', document.getElementById('edit-item-weight').value);
+    formData.append('expiration_date', document.getElementById('edit-item-expiration').value);
     formData.append('low_stock_threshold', editItemThresholdInput.value); 
     const stockToAdd = editStockInput.value || 0;
     formData.append('stock_adjustment', stockToAdd);
-
     try {
       const response = await fetch('inventory_actions.php?action=update_item', {
         method: 'POST',
@@ -1029,10 +1043,18 @@ historyTableBody.innerHTML = paginatedData
     currentPages.history = 1;
     renderHistoryTable();
   });
+if (typeFilter) typeFilter.addEventListener('change', () => {
+    currentPages.requests = 1;
+    renderInventoryTable();
+  });
 
-  if (refreshBtn) {
-    // UPDATED REFRESH LOGIC FOR INVENTORY ITEMS
+  if (typeFilterHistory) typeFilterHistory.addEventListener('change', () => {
+    currentPages.history = 1;
+    renderHistoryTable();
+  });
+ if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
+      if (typeFilter) typeFilter.value = ''; // NEW
       categoryFilter.value = '';
       statusFilter.value = '';
       searchInput.value = '';
@@ -1048,6 +1070,7 @@ historyTableBody.innerHTML = paginatedData
   if (refreshBtnHistory) {
     // UPDATED REFRESH LOGIC FOR HISTORY
     refreshBtnHistory.addEventListener('click', async () => {
+      if (typeFilterHistory) typeFilterHistory.value = '';
       categoryFilterHistory.value = '';
       statusFilterHistory.value = '';
       searchInputHistory.value = '';

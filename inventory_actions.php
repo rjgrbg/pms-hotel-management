@@ -82,12 +82,15 @@ function getInventory($conn) {
   $sql = "SELECT 
             i.ItemID, 
             i.ItemName, 
+            i.ItemType,
             ic.ItemCategoryName AS Category,
             i.ItemQuantity, 
+            i.ItemWeight,
             i.LowStockThreshold,
             i.ItemDescription, 
             i.ItemStatus, 
             DATE_FORMAT(i.DateofStockIn, '%Y-%m-%d') AS DateofStockIn, 
+            DATE_FORMAT(i.ExpirationDate, '%Y-%m-%d') AS ExpirationDate,
             ic.ItemCategoryID,
             i.is_archived
           FROM pms_inventory i
@@ -109,12 +112,12 @@ function getInventoryHistory($conn) {
   $sql = "SELECT 
             rt.InvLogID,
             i.ItemName,
+            i.ItemType,   
             ic.ItemCategoryName AS Category,
             rt.Quantity AS QuantityChange, 
             (rt.NewQuantity - rt.Quantity) AS OldQuantity,
             rt.NewQuantity,
-            i.ItemStatus,
-            CASE
+            i.ItemStatus,            CASE
                 WHEN rt.ActionType = 'Initial Stock In' OR rt.ActionType = 'Stock Added'
                 THEN DATE_FORMAT(i.DateofStockIn, '%Y-%m-%d')
                 ELSE NULL
@@ -168,18 +171,22 @@ function getCategories($conn) {
 }
 
 function addItem($conn, $data, $userID) {
-  // *** REMOVED htmlspecialchars, KEPT trim ***
   $name = trim($data['name'] ?? '');
+  $type = trim($data['type'] ?? '');
   $description = trim($data['description'] ?? '');
   $stockInDate = trim($data['stock_in_date'] ?? '');
+  $expirationDate = !empty($data['expiration_date']) ? trim($data['expiration_date']) : NULL;
   $categoryID = (int)($data['category_id'] ?? 0); 
   $quantity = (int)($data['quantity'] ?? 0);
+  $weight = !empty($data['weight']) ? (float)$data['weight'] : NULL;
   $threshold = (int)($data['low_stock_threshold'] ?? 10);
 
   if (empty($name)) throw new Exception("Item name is required.");
   if ($categoryID <= 0) throw new Exception("Invalid category selected.");
   if (empty($stockInDate)) throw new Exception("Stock in date is required.");
   if ($threshold < 0) throw new Exception("Threshold cannot be negative.");
+  // Validation for consumable expiration
+  if ($type === 'Consumables' && empty($expirationDate)) throw new Exception("Expiration date is required for Consumables.");
 
   $status = 'In Stock';
   if ($quantity == 0) {
@@ -191,10 +198,11 @@ function addItem($conn, $data, $userID) {
   $conn->begin_transaction();
 
   $stmt = $conn->prepare(
-    "INSERT INTO pms_inventory (ItemName, ItemCategoryID, ItemQuantity, ItemDescription, ItemStatus, DateofStockIn, LowStockThreshold) 
-     VALUES (?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO pms_inventory (ItemName, ItemType, ItemCategoryID, ItemQuantity, ItemWeight, ItemDescription, ItemStatus, DateofStockIn, ExpirationDate, LowStockThreshold) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
-  $stmt->bind_param("siisssi", $name, $categoryID, $quantity, $description, $status, $stockInDate, $threshold);
+  // 'ssiidssssi' binds: string, string, int, int, double, string, string, string, string, int
+  $stmt->bind_param("ssiidssssi", $name, $type, $categoryID, $quantity, $weight, $description, $status, $stockInDate, $expirationDate, $threshold);
   
   if (!$stmt->execute()) {
     $conn->rollback();
@@ -219,20 +227,23 @@ function addItem($conn, $data, $userID) {
   header('Content-Type: application/json');
   echo json_encode(['success' => true, 'message' => 'Item added successfully.', 'new_item_id' => $newItemID]);
 }
-
 function updateItem($conn, $data, $userID) {
   $itemID = (int)($data['item_id'] ?? 0);
-  // *** REMOVED htmlspecialchars, KEPT trim ***
   $name = trim($data['name'] ?? '');
+  $type = trim($data['type'] ?? '');
   $description = trim($data['description'] ?? '');
+  $expirationDate = !empty($data['expiration_date']) ? trim($data['expiration_date']) : NULL;
   $categoryID = (int)($data['category_id'] ?? 0);
   $stockAdjustment = (int)($data['stock_adjustment'] ?? 0);
+  $weight = !empty($data['weight']) ? (float)$data['weight'] : NULL;
   $threshold = (int)($data['low_stock_threshold'] ?? 10);
 
   if (empty($name)) throw new Exception("Item name is required.");
   if ($categoryID <= 0) throw new Exception("Invalid category selected.");
   if ($itemID <= 0) throw new Exception("Invalid item ID.");
   if ($threshold < 0) throw new Exception("Threshold cannot be negative.");
+  // Validation for consumable expiration
+  if ($type === 'Consumables' && empty($expirationDate)) throw new Exception("Expiration date is required for Consumables.");
   
   if ($stockAdjustment < 0) $stockAdjustment = 0;
 
@@ -268,11 +279,12 @@ function updateItem($conn, $data, $userID) {
 
   $stmt = $conn->prepare(
     "UPDATE pms_inventory 
-     SET ItemName = ?, ItemCategoryID = ?, ItemDescription = ?, 
-         ItemQuantity = ?, ItemStatus = ?, LowStockThreshold = ?
+     SET ItemName = ?, ItemType = ?, ItemCategoryID = ?, ItemDescription = ?, 
+         ItemQuantity = ?, ItemWeight = ?, ItemStatus = ?, ExpirationDate = ?, LowStockThreshold = ?
      WHERE ItemID = ?"
   );
-  $stmt->bind_param("sisisii", $name, $categoryID, $description, $newQuantity, $status, $threshold, $itemID);
+  // 'ssisidssii' binds: string, string, int, string, int, double, string, string, int, int
+  $stmt->bind_param("ssisidssii", $name, $type, $categoryID, $description, $newQuantity, $weight, $status, $expirationDate, $threshold, $itemID);
   
   if (!$stmt->execute()) {
     $conn->rollback();

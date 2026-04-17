@@ -319,18 +319,26 @@ if (isset($_SESSION['UserID'])) {
     </div>
 
     <div class="tabContent active" id="requests-tab">
-      <div class="controlsRow">
+     <div class="controlsRow">
         <div class="filterControls">
+          <select class="filterDropdown" id="typeFilter">
+            <option value="">All Types</option>
+            <option value="Consumables">Consumables</option>
+            <option value="Reusable">Reusable</option>
+            <option value="Equipment">Equipment</option>
+          </select>
+
           <select class="filterDropdown" id="floorFilter">
             <option value="">Category</option>
-            </select>
+          </select>
 
           <select class="filterDropdown" id="roomFilter">
             <option value="">Status</option>
             <option value="Out of Stock">Out of Stock</option>
             <option value="Low Stock">Low Stock</option>
             <option value="In Stock">In Stock</option>
-            <option value="Archived" style="color: red; font-weight: bold;">Archived</option> </select>
+            <option value="Archived" style="color: red; font-weight: bold;">Archived</option>
+          </select>
 
           <div class="searchBox">
             <input type="text" placeholder="Search" class="searchInput" id="searchInput" />
@@ -354,14 +362,15 @@ if (isset($_SESSION['UserID'])) {
       </div>
       <div class="tableWrapper">
         <table class="requestsTable">
-          <thead>
+         <thead>
                       <tr>
                           <th class="sortable" data-sort="ItemName">Name</th>
+                          <th class="sortable" data-sort="ItemType">Type</th>
                           <th class="sortable" data-sort="Category">Category</th>
-                          <th class="sortable" data-sort="ItemQuantity">Quantity</th>
-                          <th class="sortable" data-sort="ItemDescription">Description</th>
+                          <th class="sortable" data-sort="ItemQuantity">Qty</th>
+                          <th class="sortable" data-sort="ItemWeight">Weight(g)</th>
+                          <th class="sortable" data-sort="ExpirationDate">Expiry</th>
                           <th class="sortable" data-sort="ItemStatus">Status</th>
-                          <th class="sortable" data-sort="DateofStockIn">Stock In Date</th>
                           <th>Action</th> 
                       </tr>
           </thead>
@@ -373,13 +382,20 @@ if (isset($_SESSION['UserID'])) {
       <div class="pagination" id="pagination-stocks"></div>
     </div>
 
-
     <div class="tabContent" id="history-tab">
-      <div class="controlsRow">
+
+   <div class="controlsRow">
         <div class="filterControls">
+          <select class="filterDropdown" id="typeFilterHistory">
+            <option value="">All Types</option>
+            <option value="Consumables">Consumables</option>
+            <option value="Reusable">Reusable</option>
+            <option value="Equipment">Equipment</option>
+          </select>
+
           <select class="filterDropdown" id="floorFilterHistory">
             <option value="">Category</option>
-            </select>
+          </select>
 
           <select class="filterDropdown" id="roomFilterHistory">
             <option value="">Status</option>
@@ -450,7 +466,16 @@ if (isset($_SESSION['UserID'])) {
                         <label for="item-name">Name</label>
                         <input type="text" id="item-name" required>
                     </div>
-                      <div class="form-group category-group">
+                    <div class="form-group">
+                        <label for="item-type">Type</label>
+                        <select id="item-type" required onchange="toggleAddExpiration()">
+                            <option value="" disabled selected>Select Type</option>
+                            <option value="Consumables">Consumables</option>
+                            <option value="Reusable">Reusable</option>
+                            <option value="Equipment">Equipment</option>
+                        </select>
+                    </div>
+                    <div class="form-group category-group">
                         <label for="item-category">Category</label>
                         <div class="category-select-wrapper">
                             <select id="item-category" required>
@@ -460,10 +485,10 @@ if (isset($_SESSION['UserID'])) {
                                 <i class="fas fa-pencil-alt"></i> Edit
                             </button>
                         </div>
-                          </div>
+                    </div>
                 </div>
                 <div class="form-group"> <label for="item-description">Description</label>
-                    <textarea id="item-description" rows="3"></textarea>
+                    <textarea id="item-description" rows="2"></textarea>
                 </div>
                  <div class="form-row"> 
                     <div class="form-group">
@@ -471,12 +496,22 @@ if (isset($_SESSION['UserID'])) {
                         <input type="number" id="item-quantity" min="0" required>
                     </div>
                     <div class="form-group">
+                        <label for="item-weight">Weight (g)</label>
+                        <input type="number" id="item-weight" min="0" step="0.01" placeholder="Optional">
+                    </div>
+                    <div class="form-group">
                         <label for="item-threshold">Low Stock Threshold</label> 
                         <input type="number" id="item-threshold" min="0" value="10" required>
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group">
                         <label for="stock-in-date">Stock In Date</label>
                         <input type="date" id="stock-in-date" required>
+                    </div>
+                    <div class="form-group" id="expiration-group" style="display: none;">
+                        <label for="item-expiration">Expiration Date <span style="color:red">*</span></label>
+                        <input type="date" id="item-expiration">
                     </div>
                 </div>
                 <button type="submit" class="submit-btn">ADD ITEM</button>
@@ -517,35 +552,51 @@ if (isset($_SESSION['UserID'])) {
         </div>
         <div class="modal-body">
             <form id="edit-item-form">
-                
                 <input type="hidden" id="edit-item-id-input">
-                
                 <div class="form-group-static">
                     <label>ID</label>
                     <span id="edit-item-id">101</span>
                 </div>
 
-                <div class="form-group">
-                    <label for="edit-item-name">Name</label>
-                    <input type="text" id="edit-item-name" required>
-                </div>
-                
-                <div class="form-group category-group">
-                    <label for="edit-item-category">Category</label>
-                    <div class="category-select-wrapper">
-                        <select id="edit-item-category" required>
-                           </select>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-item-name">Name</label>
+                        <input type="text" id="edit-item-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-item-type">Type</label>
+                        <select id="edit-item-type" required onchange="toggleEditExpiration()">
+                            <option value="Consumables">Consumables</option>
+                            <option value="Reusable">Reusable</option>
+                            <option value="Equipment">Equipment</option>
+                        </select>
+                    </div>
+                    <div class="form-group category-group">
+                        <label for="edit-item-category">Category</label>
+                        <div class="category-select-wrapper">
+                            <select id="edit-item-category" required></select>
+                        </div>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label for="edit-item-description">Description</label>
-                    <textarea id="edit-item-description" rows="3"></textarea>
+                    <textarea id="edit-item-description" rows="2"></textarea>
                 </div>
                 
-                <div class="form-group">
-                    <label for="edit-item-threshold">Low Stock Threshold</label> 
-                    <input type="number" id="edit-item-threshold" min="0" required>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="edit-item-threshold">Low Stock Threshold</label> 
+                        <input type="number" id="edit-item-threshold" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-item-weight">Weight (g)</label>
+                        <input type="number" id="edit-item-weight" min="0" step="0.01">
+                    </div>
+                    <div class="form-group" id="edit-expiration-group" style="display: none;">
+                        <label for="edit-item-expiration">Expiration Date <span style="color:red">*</span></label>
+                        <input type="date" id="edit-item-expiration">
+                    </div>
                 </div>
 
                 <div class="form-row form-row-align-bottom">
@@ -1056,6 +1107,35 @@ if (isset($_SESSION['UserID'])) {
             }
         });
     });
+</script>
+<script>
+function toggleAddExpiration() {
+    const type = document.getElementById('item-type').value;
+    const expGroup = document.getElementById('expiration-group');
+    const expInput = document.getElementById('item-expiration');
+    if (type === 'Consumables') {
+        expGroup.style.display = 'block';
+        expInput.required = true;
+    } else {
+        expGroup.style.display = 'none';
+        expInput.required = false;
+        expInput.value = '';
+    }
+}
+
+function toggleEditExpiration() {
+    const type = document.getElementById('edit-item-type').value;
+    const expGroup = document.getElementById('edit-expiration-group');
+    const expInput = document.getElementById('edit-item-expiration');
+    if (type === 'Consumables') {
+        expGroup.style.display = 'block';
+        expInput.required = true;
+    } else {
+        expGroup.style.display = 'none';
+        expInput.required = false;
+        expInput.value = '';
+    }
+}
 </script>
 <script src="script/download-utils.js?v=<?php echo time(); ?>"></script>
 </body>
