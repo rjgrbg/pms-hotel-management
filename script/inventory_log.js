@@ -37,10 +37,22 @@ document.addEventListener('DOMContentLoaded', () => {
       gap: 10px;
       pointer-events: none;
     }
-    .toast-notification.show {
+  .toast-notification.show {
       opacity: 1;
       transform: translateY(0);
     }
+    
+    .statusBadge {
+        font-weight: 600;
+        font-size: 0.85em;
+        display: inline-block;
+        text-transform: capitalize;
+    }
+    .statusBadge.in-stock { background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius:4px; } 
+    .statusBadge.threshold { background-color: #fff3cd; color: #856404; padding: 4px 8px; border-radius:4px; } 
+    .statusBadge.critical { background-color: #ffe8cc; color: #d35400; padding: 4px 8px; border-radius:4px; } 
+    .statusBadge.out-of-stock { background-color: #f8d7da; color: #721c24; padding: 4px 8px; border-radius:4px; }
+    .statusBadge.archived { background-color: #e2e3e5; color: #383d41; padding: 4px 8px; border-radius:4px; }
     `;
     document.head.appendChild(style);
 
@@ -177,9 +189,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const inventoryTableBody = document.getElementById('inventoryTableBody');
+   const inventoryTableBody = document.getElementById('inventoryTableBody');
+    const typeFilter = document.getElementById('typeFilter'); // NEW
     const categoryFilter = document.getElementById('categoryFilter');
     const searchInput = document.getElementById('searchInput');
+    const refreshBtn = document.getElementById('refreshBtn'); // NEW
     const itemDetailsContent = document.getElementById('itemDetailsContent');
     const doneBtn = document.getElementById('doneBtn');
     const cancelBtn = document.getElementById('cancelBtn');
@@ -233,7 +247,7 @@ document.addEventListener('DOMContentLoaded', () => {
         inventoryTableBody.innerHTML = '';
         
         if (filteredInventory.length === 0) {
-            inventoryTableBody.innerHTML = '<tr><td colspan="5">No items found.</td></tr>';
+            inventoryTableBody.innerHTML = '<tr><td colspan="6">No items found.</td></tr>'; // Updated colspan to 6
             return;
         }
 
@@ -247,20 +261,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 row.classList.add('selected');
             }
 
-            let statusClass = '';
-            if (item.ItemStatus === 'Out of Stock') {
-                statusClass = 'status-out-of-stock';
-            } else if (item.ItemStatus === 'Low Stock') {
-                statusClass = 'status-low-stock';
-            } else {
-                statusClass = 'status-in-stock';
-            }
+            // === UPDATED ADMIN BADGE LOGIC ===
+            let badgeClass = '';
+            const statusLower = (item.ItemStatus || '').toLowerCase();
+            if (statusLower === 'in stock') badgeClass = 'in-stock';
+            else if (statusLower === 'out of stock') badgeClass = 'out-of-stock';
+            else if (statusLower === 'critical' || statusLower === 'low stock') badgeClass = 'critical'; 
+            else if (statusLower === 'threshold') badgeClass = 'threshold'; 
+            else if (statusLower === 'archived') badgeClass = 'archived';
 
-            row.innerHTML = `
+           row.innerHTML = `
                 <td>${escapeHtml(item.ItemName)}</td>
+                <td>${item.ItemType ? escapeHtml(item.ItemType) : '<span style="color:#aaa;">N/A</span>'}</td> 
                 <td>${escapeHtml(item.Category)}</td>
                 <td>${escapeHtml(item.ItemQuantity)}</td>
-                <td><span class="status-badge ${statusClass}">${escapeHtml(item.ItemStatus)}</span></td>
+                <td><span class="statusBadge ${badgeClass}">${escapeHtml(item.ItemStatus)}</span></td>
                 <td>
                     <button class="action-btn issue-btn" data-item-id="${item.ItemID}" ${item.ItemQuantity <= 0 ? 'disabled' : ''}>
                         Issue
@@ -280,20 +295,36 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const applyFiltersAndRender = () => {
+ const applyFiltersAndRender = () => {
+        const type = typeFilter ? typeFilter.value.toLowerCase() : '';
         const category = categoryFilter.value;
         const search = searchInput.value.toLowerCase();
 
         filteredInventory = allInventory.filter(item => {
+            const matchesType = !type || (item.ItemType && item.ItemType.toLowerCase() === type);
             const matchesCategory = !category || item.Category === category;
             const matchesSearch = !search || item.ItemName.toLowerCase().includes(search);
             const notArchived = item.is_archived != 1; 
-            return matchesCategory && matchesSearch && notArchived;
+            return matchesType && matchesCategory && matchesSearch && notArchived;
+        });
+
+        // NEW: Enforce specific sorting order (In Stock -> Threshold -> Low/Critical -> Out of Stock)
+        const statusRank = {
+            'in stock': 1,
+            'threshold': 2,
+            'low stock': 3,
+            'critical': 3,
+            'out of stock': 4
+        };
+
+        filteredInventory.sort((a, b) => {
+            const rankA = statusRank[(a.ItemStatus || '').toLowerCase()] || 99;
+            const rankB = statusRank[(b.ItemStatus || '').toLowerCase()] || 99;
+            return rankA - rankB;
         });
 
         renderInventoryTable();
     };
-
    const renderDetailsPanel = () => {
         if (Object.keys(selectedItems).length === 0) {
             itemDetailsContent.innerHTML = '<p class="placeholder-text">Select an item from the table to get started.</p>';
@@ -421,8 +452,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    if (typeFilter) typeFilter.addEventListener('change', applyFiltersAndRender);
     categoryFilter.addEventListener('change', applyFiltersAndRender);
     searchInput.addEventListener('input', applyFiltersAndRender);
+    if (typeFilter) typeFilter.addEventListener('change', applyFiltersAndRender);
+    categoryFilter.addEventListener('change', applyFiltersAndRender);
+    searchInput.addEventListener('input', applyFiltersAndRender);
+
+    // NEW: Refresh Button Logic
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            // Reset filters
+            if (typeFilter) typeFilter.value = '';
+            categoryFilter.value = '';
+            searchInput.value = '';
+            
+            // Refetch Data
+            await fetchCategories();
+            await fetchInventory();
+            showToast('Data refreshed successfully!');
+        });
+    }
 
     cancelBtn.addEventListener('click', () => {
         resetIssueProcess();

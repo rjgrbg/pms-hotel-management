@@ -102,8 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Sorting State
   let sortState = {
     requests: {
-      column: 'ItemName',
-      direction: 'asc'
+      column: 'ItemStatus', // Change default sort to Status
+      direction: 'asc'      // 'asc' sorts 1 to 5 (Out of Stock -> Critical -> Threshold -> In Stock)
     },
     history: {
       column: 'DateofRelease',
@@ -123,12 +123,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // Filter & Search Selectors
   const typeFilter = document.getElementById('typeFilter');     
   const typeFilterHistory = document.getElementById('typeFilterHistory');
-  const categoryFilter = document.getElementById('floorFilter');
-  const statusFilter = document.getElementById('roomFilter');
+  
+  // FIX: Look for category/status IDs, fallback to floor/room if needed so it doesn't crash
+  const categoryFilter = document.getElementById('categoryFilter') || document.getElementById('floorFilter');
+  const statusFilter = document.getElementById('statusFilter') || document.getElementById('roomFilter');
   const searchInput = document.getElementById('searchInput');
 
-  const categoryFilterHistory = document.getElementById('floorFilterHistory');
-  const statusFilterHistory = document.getElementById('roomFilterHistory');
+  const categoryFilterHistory = document.getElementById('categoryFilterHistory') || document.getElementById('floorFilterHistory');
+  const statusFilterHistory = document.getElementById('statusFilterHistory') || document.getElementById('roomFilterHistory');
   const searchInputHistory = document.getElementById('historySearchInput');
 
   // Buttons
@@ -161,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const editItemIdSpan = document.getElementById('edit-item-id');
   const editItemIdInput = document.getElementById('edit-item-id-input');
   const editStockInput = document.getElementById('edit-item-add-stock');
-  const editItemThresholdInput = document.getElementById('edit-item-threshold'); 
+
 
   const editModalCancelBtn = document.getElementById('edit-modal-cancel-btn');
 
@@ -372,19 +374,31 @@ document.addEventListener('DOMContentLoaded', () => {
       let valA = a[column];
       let valB = b[column];
 
-      if (column === 'ItemID' || column === 'ItemQuantity' ||
-        column === 'InvLogID' || column === 'QuantityChange' ||
-        column === 'OldQuantity' || column === 'NewQuantity') {
+      // Number Sorting
+      if (['ItemID', 'ItemQuantity', 'InvLogID', 'QuantityChange', 'OldQuantity', 'NewQuantity', 'UnitCost', 'TotalValue', 'StockLimit'].includes(column)) {
         valA = parseFloat(valA) || 0;
         valB = parseFloat(valB) || 0;
       }
 
-      if (column === 'DateofStockIn' || column === 'DateofRelease') {
+      // Date Sorting
+      if (['DateofStockIn', 'DateofRelease', 'ExpirationDate', 'RestockDate'].includes(column)) {
         valA = parseDateWhen(valA, null);
         valB = parseDateWhen(valB, null);
       }
 
-      if (typeof valA === 'string') {
+      // === NEW: Custom Severity Sorting for Status ===
+      if (column === 'ItemStatus') {
+          const statusRank = {
+              'out of stock': 1,
+              'critical': 2,
+              'low stock': 2, // Fallback for old data
+              'threshold': 3,
+              'in stock': 4,
+              'archived': 5
+          };
+          valA = statusRank[(valA || '').toLowerCase()] || 99;
+          valB = statusRank[(valB || '').toLowerCase()] || 99;
+      } else if (typeof valA === 'string') {
         valA = (valA || "").toLowerCase();
         valB = (valB || "").toLowerCase();
       }
@@ -546,29 +560,32 @@ async function fetchHistory() {
   // ======================================================
 
  function renderInventoryTable() {
-    const type = typeFilter ? typeFilter.value.toLowerCase() : ''; // NEW
-    const category = categoryFilter.value.toLowerCase();
-    const status = statusFilter.value.toLowerCase();
-    const search = searchInput.value.toLowerCase();
+    // FIX: Add safe checks (?) so it doesn't crash if an element is missing
+    const type = typeFilter ? typeFilter.value.toLowerCase() : ''; 
+    const category = categoryFilter ? categoryFilter.value.toLowerCase() : '';
+    const status = statusFilter ? statusFilter.value.toLowerCase() : '';
+    const search = searchInput ? searchInput.value.toLowerCase() : '';
 
     const filteredData = allInventoryData.filter((item) => {
       const itemIsArchived = parseInt(item.is_archived) === 1;
+      // FIX: Add safety checks so blank database values don't crash the filters
+      const itemStatus = item.ItemStatus ? item.ItemStatus.toLowerCase() : '';
       
       if (status === 'archived') {
           if (!itemIsArchived) return false; 
       } else {
           if (itemIsArchived) return false; 
-          if (status && item.ItemStatus.toLowerCase() !== status) return false;
+          if (status && itemStatus !== status) return false;
       }
 
-      const matchType = !type || (item.ItemType && item.ItemType.toLowerCase() === type); // NEW
-      const matchCategory = !category || item.Category.toLowerCase() === category;
+      const matchType = !type || (item.ItemType && item.ItemType.toLowerCase() === type); 
+      const matchCategory = !category || (item.Category && item.Category.toLowerCase() === category);
       const matchSearch =
         !search ||
-        item.ItemName.toLowerCase().includes(search) ||
-        item.ItemID.toString().includes(search);
+        (item.ItemName && item.ItemName.toLowerCase().includes(search)) ||
+        (item.ItemID && item.ItemID.toString().includes(search));
 
-      return matchType && matchCategory && matchSearch; // UPDATED
+      return matchType && matchCategory && matchSearch; 
     });
 
     const { column, direction } = sortState.requests;
@@ -590,57 +607,58 @@ async function fetchHistory() {
 
     requestsTableBody.innerHTML = paginatedData
       .map((item) => {
-        const badgeClass = item.ItemStatus.toLowerCase().replace(/\s+/g, '-');
+        // === NEW DYNAMIC BADGE LOGIC ===
+        let badgeClass = '';
+        const statusLower = (item.ItemStatus || '').toLowerCase();
+        if (statusLower === 'in stock') badgeClass = 'in-stock';
+        else if (statusLower === 'out of stock') badgeClass = 'out-of-stock';
+        else if (statusLower === 'critical' || statusLower === 'low stock') badgeClass = 'critical'; // Orange fallback for old data
+        else if (statusLower === 'threshold') badgeClass = 'threshold'; // Yellow
+        else if (statusLower === 'archived') badgeClass = 'archived';
+
         const isArchived = parseInt(item.is_archived) === 1;
-        
         let actionButtons = '';
+        let budgetBtn = '';
         
-        // Three-dot dropdown menu
+        // Add Request Budget button if stock is at warning levels
+        if (!isArchived && (statusLower === 'critical' || statusLower === 'threshold' || statusLower === 'low stock' || statusLower === 'out of stock')) {
+            budgetBtn = `<button class="dropdown-item budget-quick-btn" data-id="${item.ItemID}"><i class="fas fa-file-invoice-dollar" style="color:#d35400;"></i> Request Budget</button>`;
+        }
+
         if (isArchived) {
             actionButtons = `
                 <div class="action-dropdown">
-                    <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
+                    <button class="action-dots-btn" onclick="toggleActionDropdown(event)"><i class="fas fa-ellipsis-v"></i></button>
                     <div class="dropdown-menu">
-                        <button class="dropdown-item restore-btn" data-id="${item.ItemID}">
-                            <i class="fas fa-trash-restore"></i> Restore
-                        </button>
+                        <button class="dropdown-item restore-btn" data-id="${item.ItemID}"><i class="fas fa-trash-restore"></i> Restore</button>
                     </div>
-                </div>
-            `;
+                </div>`;
         } else {
             actionButtons = `
                 <div class="action-dropdown">
-                    <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
-                        <i class="fas fa-ellipsis-v"></i>
-                    </button>
+                    <button class="action-dots-btn" onclick="toggleActionDropdown(event)"><i class="fas fa-ellipsis-v"></i></button>
                     <div class="dropdown-menu">
-                        <button class="dropdown-item edit-btn" data-id="${item.ItemID}">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                        <button class="dropdown-item delete delete-btn" data-id="${item.ItemID}">
-                            <i class="fas fa-archive"></i> Archive
-                        </button>
+                        ${budgetBtn}
+                        <button class="dropdown-item edit-btn" data-id="${item.ItemID}"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="dropdown-item delete delete-btn" data-id="${item.ItemID}"><i class="fas fa-archive"></i> Archive</button>
                     </div>
-                </div>
-            `;
+                </div>`;
         }
 
-        return `
+    return `
         <tr>
           <td>${escapeHtml(item.ItemName)}</td>
           <td>${escapeHtml(item.ItemType || 'N/A')}</td>
           <td>${escapeHtml(item.Category)}</td>
           <td>${escapeHtml(item.ItemQuantity)}</td>
-          <td>${escapeHtml(item.ItemWeight ? item.ItemWeight + 'g' : 'N/A')}</td>
-          <td>${escapeHtml(item.ExpirationDate || 'N/A')}</td>
+          <td>${item.ItemUnit ? escapeHtml(item.ItemUnit) : '<span style="color:#aaa;">N/A</span>'}</td>
+          <td>₱${parseFloat(item.UnitCost || 0).toFixed(2)}</td>
+          <td>₱${parseFloat(item.TotalValue || 0).toFixed(2)}</td>
+          <td style="text-align: center;">${item.ExpirationDate ? escapeHtml(item.ExpirationDate) : '<span style="color:#aaa;">N/A</span>'}</td>
+          <td style="text-align: center;">${item.RestockDate ? escapeHtml(item.RestockDate) : '<span style="color:#aaa;">N/A</span>'}</td>
           <td><span class="statusBadge ${badgeClass}">${escapeHtml(item.ItemStatus)}</span></td>
-          <td class="action-cell">
-              ${actionButtons}
-          </td>
-        </tr>
-      `;
+          <td class="action-cell">${actionButtons}</td>
+        </tr>`;
       })
       .join('');
 
@@ -673,10 +691,11 @@ async function fetchHistory() {
   }
 
 function renderHistoryTable() {
-    const type = typeFilterHistory ? typeFilterHistory.value.toLowerCase() : ''; // NEW
-    const category = categoryFilterHistory.value.toLowerCase();
-    const status = statusFilterHistory.value.toLowerCase();
-    const search = searchInputHistory.value.toLowerCase();
+    // FIX: Add safe checks (?) 
+    const type = typeFilterHistory ? typeFilterHistory.value.toLowerCase() : ''; 
+    const category = categoryFilterHistory ? categoryFilterHistory.value.toLowerCase() : '';
+    const status = statusFilterHistory ? statusFilterHistory.value.toLowerCase() : '';
+    const search = searchInputHistory ? searchInputHistory.value.toLowerCase() : '';
 
     const filteredData = allHistoryData.filter((log) => {
       const matchType = !type || (log.ItemType && log.ItemType.toLowerCase() === type); // NEW
@@ -772,14 +791,15 @@ historyTableBody.innerHTML = paginatedData
     confirmAddBtn.disabled = true;
     confirmAddBtn.textContent = 'Adding...';
     
-   const formData = new FormData();
+  const formData = new FormData();
     formData.append('name', document.getElementById('item-name').value);
     formData.append('type', document.getElementById('item-type').value);
     formData.append('category_id', document.getElementById('item-category').value);
     formData.append('description', document.getElementById('item-description').value);
     formData.append('quantity', document.getElementById('item-quantity').value);
-    formData.append('weight', document.getElementById('item-weight').value);
-    formData.append('low_stock_threshold', document.getElementById('item-threshold').value);
+    formData.append('unit', document.getElementById('item-unit').value);
+    formData.append('unit_cost', document.getElementById('item-unit-cost').value);
+    formData.append('stock_limit', document.getElementById('item-limit').value);
     formData.append('stock_in_date', document.getElementById('stock-in-date').value);
     formData.append('expiration_date', document.getElementById('item-expiration').value);
 
@@ -795,7 +815,6 @@ historyTableBody.innerHTML = paginatedData
       if (result.success) {
         showModal(successModal);
         addItemForm.reset();
-        document.getElementById('item-threshold').value = 10; 
         hideModal(addItemModal);
         fetchInventory();
         fetchHistory();
@@ -816,12 +835,13 @@ function openEditModal(item) {
     editItemIdSpan.textContent = item.ItemID;
     editItemIdInput.value = item.ItemID;
     document.getElementById('edit-item-name').value = item.ItemName;
-    document.getElementById('edit-item-type').value = item.ItemType || 'Consumables'; // New
+    document.getElementById('edit-item-type').value = item.ItemType || 'Consumables';
     editCategorySelect.value = item.ItemCategoryID;
     document.getElementById('edit-item-description').value = item.ItemDescription;
-    document.getElementById('edit-item-weight').value = item.ItemWeight || ''; // New
-    document.getElementById('edit-item-expiration').value = item.ExpirationDate || ''; // New
-    editItemThresholdInput.value = item.LowStockThreshold || 10; 
+    document.getElementById('edit-item-unit').value = item.ItemUnit || ''; 
+    document.getElementById('edit-item-unit-cost').value = item.UnitCost || '0.00'; 
+    document.getElementById('edit-item-limit').value = item.StockLimit || 1; 
+    document.getElementById('edit-item-expiration').value = item.ExpirationDate || ''; 
     editStockInput.value = '';
     document.getElementById('edit-item-current-qty').textContent = item.ItemQuantity;
     
@@ -860,9 +880,10 @@ function openEditModal(item) {
     formData.append('type', document.getElementById('edit-item-type').value);
     formData.append('category_id', editCategorySelect.value);
     formData.append('description', document.getElementById('edit-item-description').value);
-    formData.append('weight', document.getElementById('edit-item-weight').value);
+    formData.append('unit', document.getElementById('edit-item-unit').value);
+    formData.append('unit_cost', document.getElementById('edit-item-unit-cost').value);
+    formData.append('stock_limit', document.getElementById('edit-item-limit').value);
     formData.append('expiration_date', document.getElementById('edit-item-expiration').value);
-    formData.append('low_stock_threshold', editItemThresholdInput.value); 
     const stockToAdd = editStockInput.value || 0;
     formData.append('stock_adjustment', stockToAdd);
     try {
@@ -1196,10 +1217,210 @@ if (typeFilter) typeFilter.addEventListener('change', () => {
       await fetchCategories();
       await fetchInventory();
       fetchHistory();
+      fetchBudgetRequests(); // Load budgets on init
     } catch (error) {
-      handleError("A critical error occurred while loading the page: " + error.message);
+      console.error("Critical error during initialization:", error);
     }
   }
+
+ // ==========================================
+  // === BUDGET REQUEST LOGIC ===
+  // ==========================================
+  let allBudgetRequests = [];
+  const BUDGET_API_URL = 'inventory_actions.php'; // <--- Added missing URL here
+
+  async function fetchBudgetRequests() {
+      try {
+          const res = await fetch(`${BUDGET_API_URL}?action=get_budget_requests`);
+          allBudgetRequests = await res.json();
+          renderBudgetTable();
+      } catch (e) { console.error(e); }
+  }
+
+ function renderBudgetTable() {
+      const tbody = document.getElementById('budgetTableBody');
+      if (!tbody) return;
+
+      // FIX: Actively grab the value from the Budget Status dropdown
+      const statusInput = document.getElementById('budgetStatusFilter');
+      const statusFilter = statusInput ? statusInput.value.toLowerCase() : '';
+      
+      const searchInput = document.getElementById('searchBudget');
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+      let filtered = allBudgetRequests.filter(req => {
+          // Safety checks to prevent null crashes
+          const matchName = !searchTerm || (req.ItemName && req.ItemName.toLowerCase().includes(searchTerm)) || (req.RequestID && req.RequestID.toString().includes(searchTerm));
+          const matchStatus = !statusFilter || (req.Status && req.Status.toLowerCase() === statusFilter);
+          
+          return matchName && matchStatus;
+      });
+
+      if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">No budget requests found.</td></tr>';
+          return;
+      }
+
+      tbody.innerHTML = filtered.map(req => {
+          let statusColor = req.Status.toLowerCase() === 'pending' ? '#856404' : (req.Status.toLowerCase() === 'accepted' ? '#155724' : '#721c24');
+          let statusBg = req.Status.toLowerCase() === 'pending' ? '#fff3cd' : (req.Status.toLowerCase() === 'accepted' ? '#d4edda' : '#f8d7da');
+          let priorityColor = req.Priority.toLowerCase() === 'high' ? 'red' : (req.Priority.toLowerCase() === 'medium' ? 'orange' : 'black');
+
+         // NEW: Only show Cancel Button if the request is 'pending'
+          let actionBtns = '<span style="color:#aaa;">Locked</span>';
+          if (req.Status.toLowerCase() === 'pending') {
+              actionBtns = `
+                  <div style="display:flex; gap:5px; justify-content:center;">
+                      <button class="cancel-budget-btn" data-id="${req.RequestID}" style="padding: 5px 8px; cursor: pointer; border: none; background: #dc3545; color: white; border-radius: 4px;" title="Cancel"><i class="fas fa-times"></i></button>
+                  </div>`;
+          }
+
+          return `
+              <tr>
+                  <td>#${req.RequestID}</td>
+                  <td>${escapeHtml(req.ItemName)}</td>
+                  <td>${req.RequestDate.split(' ')[0]}</td>
+                  <td>${req.RequestedQty}</td>
+                  <td>₱${parseFloat(req.UnitCost).toFixed(2)}</td>
+                  <td style="font-weight: bold;">₱${parseFloat(req.TotalAmount).toFixed(2)}</td>
+                  <td style="color: ${priorityColor}; font-weight: bold; text-transform: capitalize;">${req.Priority}</td>
+                  <td><span style="background:${statusBg}; color:${statusColor}; padding:4px 8px; border-radius:4px; text-transform: capitalize;">${req.Status}</span></td>
+                  <td>${escapeHtml(req.RequestedByName || 'N/A')}</td>
+                  <td style="text-align:center;">${actionBtns}</td>
+              </tr>
+          `;
+      }).join('');
+  }
+
+  // Budget Input Auto-Calculations
+  const budgetQty = document.getElementById('budget-qty');
+  const budgetCost = document.getElementById('budget-cost');
+  const budgetTotal = document.getElementById('budget-total');
+  const budgetModal = document.getElementById('budget-request-modal');
+  const budgetForm = document.getElementById('budgetForm');
+
+  function calculateBudgetTotal() {
+      if(budgetTotal) budgetTotal.value = ((parseInt(budgetQty.value)||0) * (parseFloat(budgetCost.value)||0)).toFixed(2);
+  }
+  if (budgetQty) budgetQty.addEventListener('input', calculateBudgetTotal);
+  if (budgetCost) budgetCost.addEventListener('input', calculateBudgetTotal);
+
+  // Open Modal from "Low Stock" Button
+  window.openBudgetModalFromItem = function(item) {
+      if(budgetForm) budgetForm.reset();
+      document.getElementById('budget-item-id').value = item.ItemID;
+      document.getElementById('budget-item-name').value = item.ItemName;
+      document.getElementById('budget-description').value = item.ItemDescription || '';
+      document.getElementById('budget-cost').value = item.UnitCost || '';
+      
+      const needed = item.StockLimit - item.ItemQuantity;
+      if(budgetQty) budgetQty.value = needed > 0 ? needed : 1; 
+      
+      document.getElementById('budget-priority').value = (item.ItemQuantity === 0) ? 'High' : (item.ItemStatus === 'Critical' ? 'Medium' : 'Low');
+      calculateBudgetTotal();
+      
+      if(budgetModal) {
+          budgetModal.style.display = 'flex';
+          budgetModal.classList.add('show-modal');
+      }
+  };
+
+  // Budget Filter Event Listener
+  if (document.getElementById('budgetStatusFilter')) {
+      document.getElementById('budgetStatusFilter').addEventListener('change', renderBudgetTable);
+  }
+
+  // Open Empty Budget Modal
+  if (document.getElementById('addBudgetBtn')) {
+      document.getElementById('addBudgetBtn').addEventListener('click', () => {
+          if(budgetForm) budgetForm.reset();
+          document.getElementById('budget-item-id').value = '';
+          if(budgetTotal) budgetTotal.value = '';
+          if(budgetModal) {
+              budgetModal.style.display = 'flex';
+              budgetModal.classList.add('show-modal');
+          }
+      });
+  }
+
+  // Close Budget Modal
+  if (document.getElementById('closeBudgetModal')) { 
+      document.getElementById('closeBudgetModal').addEventListener('click', () => { 
+          if(budgetModal) {
+              budgetModal.style.display = 'none';
+              budgetModal.classList.remove('show-modal');
+          }
+      });
+  }
+
+ // Submit Budget Request (Handles Add Only)
+  if (budgetForm) {
+      budgetForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          
+          const formData = new FormData();
+          formData.append('item_id', document.getElementById('budget-item-id').value);
+          formData.append('item_name', document.getElementById('budget-item-name').value);
+          formData.append('description', document.getElementById('budget-description').value);
+          formData.append('quantity', budgetQty.value);
+          formData.append('unit_cost', budgetCost.value);
+          formData.append('priority', document.getElementById('budget-priority').value);
+          formData.append('remarks', document.getElementById('budget-remarks').value);
+
+          try {
+              const res = await fetch(`${BUDGET_API_URL}?action=add_budget_request`, { method: 'POST', body: formData });
+              const data = await res.json();
+              if (data.success) {
+                  if(budgetModal) budgetModal.style.display = 'none';
+                  fetchBudgetRequests();
+                  showToast('Budget requested successfully!', 'success');
+              } else {
+                  alert("Backend Error: " + (data.error || data.message || 'Failed to submit request.'));
+              }
+          } catch (error) {
+              console.error(error);
+          }
+      });
+  }
+
+ // Handle Cancel Button inside Budget Table
+  document.getElementById('budgetTableBody')?.addEventListener('click', async (e) => {
+      const cancelBtn = e.target.closest('.cancel-budget-btn');
+
+      if (cancelBtn) {
+          if (confirm('Are you sure you want to cancel this request? It will be removed from Finance.')) {
+              const reqID = parseInt(cancelBtn.dataset.id);
+              const formData = new FormData();
+              formData.append('request_id', reqID);
+              
+              try {
+                  const res = await fetch(`${BUDGET_API_URL}?action=delete_budget_request`, { method: 'POST', body: formData });
+                  const data = await res.json();
+                  if (data.success) {
+                      fetchBudgetRequests();
+                      showToast('Request cancelled.', 'success');
+                  } else {
+                      alert("Error: " + (data.message || 'Failed to cancel.'));
+                  }
+              } catch (err) { console.error(err); }
+          }
+      }
+  });
+
+  // Attach listeners to dynamically generated quick-action buttons inside the inventory table
+  document.getElementById('requestsTableBody').addEventListener('click', (e) => {
+      const budgetBtn = e.target.closest('.budget-quick-btn');
+      if (budgetBtn) {
+          const itemID = parseInt(budgetBtn.dataset.id);
+          const item = allInventoryData.find(i => i.ItemID === itemID);
+          if (item) {
+             // Clear edit ID so it knows it is new
+             const hiddenId = document.getElementById('budget-request-id');
+             if(hiddenId) hiddenId.value = '';
+             window.openBudgetModalFromItem(item);
+          }
+      }
+  });
 
   initializePage();
 });

@@ -307,7 +307,7 @@ if (isset($_SESSION['UserID'])) {
     <h1 class="pageTitle">INVENTORY</h1>
     <p class="pageDescription">Track hotel supplies, manage stock levels, and monitor inventory transactions</p>
 
-    <div class="tabNavigation">
+   <div class="tabNavigation">
       <button class="tabBtn active" data-tab="requests">
         <img src="assets/icons/inventory-log.png" alt="Requests" class="tabIcon" />
         Stocks
@@ -315,6 +315,10 @@ if (isset($_SESSION['UserID'])) {
       <button class="tabBtn" data-tab="history">
         <img src="assets/icons/history-icon.png" alt="History" class="tabIcon" />
         History
+      </button>
+      <button class="tabBtn" data-tab="budget">
+        <i class="fas fa-file-invoice-dollar tabIcon" style="font-size: 18px; margin-right: 8px;"></i>
+        Budget Request
       </button>
     </div>
 
@@ -335,7 +339,8 @@ if (isset($_SESSION['UserID'])) {
           <select class="filterDropdown" id="roomFilter">
             <option value="">Status</option>
             <option value="Out of Stock">Out of Stock</option>
-            <option value="Low Stock">Low Stock</option>
+            <option value="Critical">Low Stock</option>
+            <option value="Threshold">Threshold</option>
             <option value="In Stock">In Stock</option>
             <option value="Archived" style="color: red; font-weight: bold;">Archived</option>
           </select>
@@ -362,20 +367,23 @@ if (isset($_SESSION['UserID'])) {
       </div>
       <div class="tableWrapper">
         <table class="requestsTable">
-         <thead>
-                      <tr>
-                          <th class="sortable" data-sort="ItemName">Name</th>
-                          <th class="sortable" data-sort="ItemType">Type</th>
-                          <th class="sortable" data-sort="Category">Category</th>
-                          <th class="sortable" data-sort="ItemQuantity">Qty</th>
-                          <th class="sortable" data-sort="ItemWeight">Weight(g)</th>
-                          <th class="sortable" data-sort="ExpirationDate">Expiry</th>
-                          <th class="sortable" data-sort="ItemStatus">Status</th>
-                          <th>Action</th> 
-                      </tr>
+       <thead>
+            <tr>
+              <th class="sortable" data-sort="ItemName">Name</th>
+              <th class="sortable" data-sort="ItemType">Type</th>
+              <th class="sortable" data-sort="Category">Category</th>
+              <th class="sortable" data-sort="ItemQuantity">Qty</th>
+              <th class="sortable" data-sort="ItemUnit">Unit</th>
+              <th class="sortable" data-sort="UnitCost">Unit Cost</th>
+              <th class="sortable" data-sort="TotalValue">Total Value</th>
+              <th class="sortable" data-sort="ExpirationDate">Expiry</th>
+              <th class="sortable" data-sort="RestockDate" style="text-align: center;">Restock Deadline</th>
+              <th class="sortable" data-sort="ItemStatus">Status</th>
+              <th>Action</th> 
+            </tr>
           </thead>
           <tbody id="requestsTableBody">
-            <tr><td colspan="7" style="text-align: center;">Loading...</td></tr> 
+            <tr><td colspan="11" style="text-align: center;">Loading...</td></tr> 
           </tbody>
         </table>
       </div>
@@ -443,6 +451,42 @@ if (isset($_SESSION['UserID'])) {
         <div class="pagination" id="pagination-history"></div>
       </div>
     </div>
+    <div class="tabContent" id="budget-tab">
+      <div class="controlsRow">
+        <div class="filterControls">
+          <select class="filterDropdown" id="budgetStatusFilter">
+            <option value="">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="accepted">Accepted</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <button class="addItemBtn" id="addBudgetBtn" style="width: auto; padding: 0 15px; font-weight: bold;">
+            + NEW REQUEST
+          </button>
+        </div>
+      </div>
+      <div class="tableWrapper">
+        <table class="requestsTable">
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Item Name</th>
+              <th>Date Requested</th>
+              <th>Qty</th>
+              <th>Est. Unit Cost</th>
+              <th>Total Amount</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Requested By</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="budgetTableBody">
+            <tr><td colspan="9" style="text-align: center;">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
 
@@ -496,19 +540,25 @@ if (isset($_SESSION['UserID'])) {
                         <input type="number" id="item-quantity" min="0" required>
                     </div>
                     <div class="form-group">
-                        <label for="item-weight">Weight (g)</label>
-                        <input type="number" id="item-weight" min="0" step="0.01" placeholder="Optional">
+                        <label for="item-unit">Unit</label>
+                        <input type="text" id="item-unit" placeholder="e.g. pcs, box">
                     </div>
                     <div class="form-group">
-                        <label for="item-threshold">Low Stock Threshold</label> 
-                        <input type="number" id="item-threshold" min="0" value="10" required>
+                        <label for="item-unit-cost">Unit Cost (₱)</label>
+                        <input type="number" id="item-unit-cost" min="0" step="0.01" value="0.00" required>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label for="item-limit">Stock Limit (Max) <span style="color:red">*</span></label>
+                        <input type="number" id="item-limit" min="1" placeholder="Triggers alerts when low" required>
+                    </div>
+                    <div class="form-group">
                         <label for="stock-in-date">Stock In Date</label>
                         <input type="date" id="stock-in-date" required>
                     </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group" id="expiration-group" style="display: none;">
                         <label for="item-expiration">Expiration Date <span style="color:red">*</span></label>
                         <input type="date" id="item-expiration">
@@ -586,13 +636,19 @@ if (isset($_SESSION['UserID'])) {
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="edit-item-threshold">Low Stock Threshold</label> 
-                        <input type="number" id="edit-item-threshold" min="0" required>
+                        <label for="edit-item-unit">Unit</label>
+                        <input type="text" id="edit-item-unit">
                     </div>
                     <div class="form-group">
-                        <label for="edit-item-weight">Weight (g)</label>
-                        <input type="number" id="edit-item-weight" min="0" step="0.01">
+                        <label for="edit-item-unit-cost">Unit Cost (₱)</label>
+                        <input type="number" id="edit-item-unit-cost" min="0" step="0.01" required>
                     </div>
+                    <div class="form-group">
+                        <label for="edit-item-limit">Stock Limit (Max) <span style="color:red">*</span></label>
+                        <input type="number" id="edit-item-limit" min="1" required>
+                    </div>
+                </div>
+                <div class="form-row">
                     <div class="form-group" id="edit-expiration-group" style="display: none;">
                         <label for="edit-item-expiration">Expiration Date <span style="color:red">*</span></label>
                         <input type="date" id="edit-item-expiration">
@@ -735,7 +791,61 @@ if (isset($_SESSION['UserID'])) {
         </div>
     </div>
 </div>
-
+<div class="modal-overlay" id="budget-request-modal">
+    <div class="modal-content">
+        <span class="close-modal" id="closeBudgetModal">&times;</span>
+        <h2>Budget Request</h2>
+        <form id="budgetForm">
+            <input type="hidden" id="budget-item-id">
+            <input type="hidden" id="budget-request-id">
+            
+            <div class="form-group">
+                <label>Item Name <span style="color:red">*</span></label>
+                <input type="text" id="budget-item-name" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="budget-description" rows="2" placeholder="Item description..."></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Quantity <span style="color:red">*</span></label>
+                    <input type="number" id="budget-qty" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Estimated Unit Cost (₱) <span style="color:red">*</span></label>
+                    <input type="number" id="budget-cost" step="0.01" min="0" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Total Requested Amount</label>
+                <input type="text" id="budget-total" readonly style="background:#e9ecef; font-weight:bold;">
+            </div>
+            
+            <div class="form-group">
+                <label>Priority</label>
+                <select id="budget-priority" required>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Remarks / Purpose</label>
+                <textarea id="budget-remarks" rows="2" placeholder="Why is this budget needed?"></textarea>
+            </div>
+            
+            <div class="modalButtons">
+                <button type="submit" class="modalBtn confirmBtn" id="submitBudgetBtn">Submit Request</button>
+            </div>
+        </form>
+    </div>
+    </div>
+</div>
 <script src="script/shared-data.js"></script>
 <script src="script/inventory.js?v=1.9"></script>
 
