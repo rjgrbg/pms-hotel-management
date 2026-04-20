@@ -479,27 +479,12 @@ table td:last-child {
   border: 1px solid;
 }
 
-/* In Stock */
-.statusBadge.in-stock {
-  background-color: #d4edda;
-  border-color: #c3e6cb;
-  color: #155724;
-}
-
-/* Low Stock */
-.statusBadge.low-stock {
-  background-color: #ffe5cc;
-  border-color: #ffd4a3;
-  color: #8a5000;
-}
-
-/* Out of Stock */
-.statusBadge.out-of-stock {
-  background-color: #f8d7da;
-  border-color: #f5c6cb;
-  color: #721c24;
-}
-
+/* Status Badge Colors */
+    .statusBadge.in-stock { background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius:4px;} 
+    .statusBadge.threshold { background-color: #fff3cd; color: #856404; padding: 4px 8px; border-radius:4px;} 
+    .statusBadge.critical { background-color: #ffe8cc; color: #d35400; padding: 4px 8px; border-radius:4px;} 
+    .statusBadge.out-of-stock { background-color: #f8d7da; color: #721c24; padding: 4px 8px; border-radius:4px;}
+    
 .assignBtn {
   background-color: #480c1b;
   color: #fff;

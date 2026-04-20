@@ -17,7 +17,7 @@ if (!isset($_SESSION['UserID']) || !in_array($_SESSION['UserType'], $allowedRole
 }
 
 // Get single database connection
-$conn = get_db_connection('b9wkqgu32onfqy0dvyva');
+$conn = get_db_connection('bt3wljbwprykeblz7tvq');
 
 // Check connection
 if ($conn === null) {

@@ -1,10 +1,12 @@
 <?php
 // Use the exact same secure session settings as your signin.php
-session_start([
-    'cookie_httponly' => true,
-    'cookie_secure' => isset($_SERVER['HTTPS']),
-    'use_strict_mode' => true
-]);
+if (session_status() == PHP_SESSION_NONE) {
+    session_start([
+        'cookie_httponly' => true,
+        'cookie_secure' => (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on'),
+        'use_strict_mode' => true
+    ]);
+}
 
 /**
  * Logs in a user based on their UserID.

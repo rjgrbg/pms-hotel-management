@@ -128,7 +128,13 @@ if (isset($_SESSION['UserID'])) {
             
             <div class="table-section">
                 <div class="controls-row">
-                    <div class="filter-controls">
+                    <div class="filter-controls" style="display: flex; align-items: center; gap: 10px;">
+                        <select class="filter-dropdown" id="typeFilter">
+                            <option value="">All Types</option>
+                            <option value="Consumables">Consumables</option>
+                            <option value="Reusable">Reusable</option>
+                            <option value="Equipment">Equipment</option>
+                        </select>
                         <select class="filter-dropdown" id="categoryFilter">
                             <option value="">All Categories</option>
                         </select>
@@ -136,15 +142,18 @@ if (isset($_SESSION['UserID'])) {
                             <input type="text" placeholder="Search Item Name..." class="search-input" id="searchInput">
                             <i class="fas fa-search search-icon"></i>
                         </div>
+                       <button id="refreshBtn" style="background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 5px; cursor: pointer; height: 40px; width: 42px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin-left: 5px;" title="Refresh Data" onmouseover="this.style.backgroundColor='#f3f4f6'" onmouseout="this.style.backgroundColor='#ffffff'">
+                            <img src="assets/icons/refresh-icon.png" alt="Refresh" style="width: 18px; height: 18px;">
+                        </button>
                     </div>
                 </div>
 
                 <div class="table-container">
                     <table class="inventory-table">
-                        <thead>
+                       <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>Category</th>
+                                <th>Type</th> <th>Category</th>
                                 <th>Quantity</th>
                                 <th>Status</th>
                                 <th>Action</th>
