@@ -227,7 +227,7 @@ switch ($action) {
                                     if ($newQuantity <= 0) $status = 'Out of Stock';
                                     else if ($newQuantity <= $orangeThreshold) $status = 'Critical';
                                     else $status = 'Threshold';
-                                    $restockDate = $currentRestockDate ? $currentRestockDate : date('Y-m-d', strtotime('+14 days'));
+                                    $restockDate = $currentRestockDate ? $currentRestockDate : date('Y-m-d', strtotime('+7 days'));
                                 }
 
                                 if ($restockDate === NULL) {

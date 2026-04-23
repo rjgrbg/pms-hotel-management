@@ -174,8 +174,8 @@ function getInventoryHistory($conn) {
 }
 
 function getCategories($conn) {
-  // Added is_archived to SELECT
-  $sql = "SELECT ItemCategoryID, ItemCategoryName, is_archived FROM pms_itemcategory ORDER BY ItemCategoryName";
+  // Added AvailableBudget to the SELECT statement
+  $sql = "SELECT ItemCategoryID, ItemCategoryName, is_archived, AvailableBudget FROM pms_itemcategory ORDER BY ItemCategoryName";
   $result = $conn->query($sql);
   if (!$result) throw new Exception("Error fetching categories: ". $conn->error);
 
@@ -246,7 +246,8 @@ function addItem($conn, $data, $userID) {
     $conn->rollback();
     throw new Exception("Error logging item creation: ". $logStmt->error);
   }
-
+// Deduct from budget and create log!
+  deductStockPurchase($conn, $categoryID, $name, $quantity, $unitCost, $userID);
   $conn->commit();
   header('Content-Type: application/json');
   echo json_encode(['success' => true, 'message' => 'Item added successfully.', 'new_item_id' => $newItemID]);
@@ -301,13 +302,13 @@ function updateItem($conn, $data, $userID) {
   $orangeThreshold = $stockLimit / 4;
   $restockDate = NULL;
 
-  // Auto 2-Weeks Restock Date Logic
+  // Auto 1-Week Restock Date Logic
   if ($newQuantity <= 0 || $newQuantity <= $yellowThreshold) {
       if ($newQuantity <= 0) $status = 'Out of Stock';
       else if ($newQuantity <= $orangeThreshold) $status = 'Critical';
       else $status = 'Threshold';
 
-      $restockDate = $currentRestockDate ? $currentRestockDate : date('Y-m-d', strtotime('+14 days'));
+      $restockDate = $currentRestockDate ? $currentRestockDate : date('Y-m-d', strtotime('+7 days'));
   }
 
   $stmt = $conn->prepare(
@@ -331,7 +332,10 @@ function updateItem($conn, $data, $userID) {
     $logStmt->bind_param("iii", $userID, $itemID, $stockAdjustment);
     $logStmt->execute();
   }
-
+// Deduct from budget and create log!
+  if ($stockAdjustment > 0) {
+      deductStockPurchase($conn, $categoryID, $name, $stockAdjustment, $unitCost, $userID);
+  }
   $conn->commit();
   header('Content-Type: application/json');
   echo json_encode(['success' => true, 'message' => 'Item updated successfully.']);
@@ -383,13 +387,13 @@ function issueItem($conn, $data, $userID) {
   $orangeThreshold = $stockLimit / 4;
   $restockDate = NULL;
 
-  // Auto 2-Weeks Restock Date Logic
+  // Auto 1-Week Restock Date Logic
   if ($newQuantity <= 0 || $newQuantity <= $yellowThreshold) {
       if ($newQuantity <= 0) $status = 'Out of Stock';
       else if ($newQuantity <= $orangeThreshold) $status = 'Critical';
       else $status = 'Threshold';
 
-      $restockDate = $currentRestockDate ? $currentRestockDate : date('Y-m-d', strtotime('+14 days'));
+      $restockDate = $currentRestockDate ? $currentRestockDate : date('Y-m-d', strtotime('+7 days'));
   }
 
   $stmt = $conn->prepare("UPDATE pms_inventory SET ItemQuantity = ?, ItemStatus = ?, RestockDate = ? WHERE ItemID = ?");
@@ -552,23 +556,108 @@ function restoreCategory($conn, $data) {
     }
     $stmt->close();
 }
+// HELPER: Deduct money when stock is purchased and log it
+function deductStockPurchase($conn, $categoryID, $itemName, $qty, $unitCost, $userID) {
+    if ($qty <= 0 || $unitCost <= 0) return;
+    $totalCost = $qty * $unitCost;
 
+    // 1. Get current budget and deduct
+    $stmtCat = $conn->prepare("SELECT AvailableBudget, ItemCategoryName FROM pms_itemcategory WHERE ItemCategoryID = ? FOR UPDATE");
+    $stmtCat->bind_param("i", $categoryID);
+    $stmtCat->execute();
+    $catRow = $stmtCat->get_result()->fetch_assoc();
+    $currentBudget = $catRow ? (float)$catRow['AvailableBudget'] : 0.00;
+    $categoryName = $catRow ? $catRow['ItemCategoryName'] : 'Unknown';
+    $stmtCat->close();
+
+    $newBudget = $currentBudget - $totalCost;
+
+    $stmtUpd = $conn->prepare("UPDATE pms_itemcategory SET AvailableBudget = ? WHERE ItemCategoryID = ?");
+    $stmtUpd->bind_param("di", $newBudget, $categoryID);
+    $stmtUpd->execute();
+    $stmtUpd->close();
+
+    // 2. Insert receipt into Budget Logs
+    // We save the Qty and UnitCost into Remarks so the Frontend can split them into columns!
+    $desc = $itemName; 
+    $remarks = "QTY:" . $qty . "|PRICE:" . $unitCost; 
+    $priority = "None";
+    
+    $stmtLog = $conn->prepare("INSERT INTO pms_budget_requests (CategoryID, ItemCategory, Description, TotalAmount, RemainingBudget, Priority, RequestedBy, Remarks, Status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Purchased')");
+    $stmtLog->bind_param("issddsis", $categoryID, $categoryName, $desc, $totalCost, $newBudget, $priority, $userID, $remarks);
+    $stmtLog->execute();
+    $stmtLog->close();
+}
 // ==========================================
 // === BUDGET REQUEST ACTIONS (DUAL-INSERT) ===
 // ==========================================
 
 function getBudgetRequests($conn) {
-    $sql = "SELECT br.*, CONCAT(u.Fname, ' ', u.Lname) AS RequestedByName 
+    // --- AUTO-SYNC WITH FINANCE ---
+    $conn->begin_transaction();
+    try {
+        // A. Sync ACCEPTED requests (ADD MONEY TO BUDGET)
+        $stmtFindAcc = $conn->prepare("
+            SELECT br.RequestID, br.CategoryID, br.TotalAmount 
+            FROM pms_budget_requests br
+            JOIN expense_notifications en ON en.external_reference_id = CONCAT('INV-REQ-', br.RequestID)
+            WHERE br.Status = 'Pending' AND LOWER(en.status) IN ('accepted', 'approved')
+        ");
+        $stmtFindAcc->execute();
+        $resultAcc = $stmtFindAcc->get_result();
+        
+        while ($row = $resultAcc->fetch_assoc()) {
+            $reqId = $row['RequestID'];
+            $catId = $row['CategoryID'];
+            $amount = (float)$row['TotalAmount'];
+            
+            // 1. Get current budget and ADD the new funds
+            $stmtCat = $conn->prepare("SELECT AvailableBudget FROM pms_itemcategory WHERE ItemCategoryID = ?");
+            $stmtCat->bind_param("i", $catId);
+            $stmtCat->execute();
+            $currentBudget = $stmtCat->get_result()->fetch_assoc()['AvailableBudget'] ?? 0;
+            $stmtCat->close();
+            
+            $newBudget = $currentBudget + $amount;
+            
+            // 2. Deposit funds to Category
+            $stmtDep = $conn->prepare("UPDATE pms_itemcategory SET AvailableBudget = ? WHERE ItemCategoryID = ?");
+            $stmtDep->bind_param("di", $newBudget, $catId);
+            $stmtDep->execute();
+            $stmtDep->close();
+            
+            // 3. Mark request as Accepted and record the new balance
+            $stmtMarkAcc = $conn->prepare("UPDATE pms_budget_requests SET Status = 'Accepted', RemainingBudget = ? WHERE RequestID = ?");
+            $stmtMarkAcc->bind_param("di", $newBudget, $reqId);
+            $stmtMarkAcc->execute();
+            $stmtMarkAcc->close();
+        }
+        $stmtFindAcc->close();
+
+        // B. Sync REJECTED requests (No money moved, just update status)
+        $stmtSyncRej = $conn->prepare("
+            UPDATE pms_budget_requests br
+            JOIN expense_notifications en ON en.external_reference_id = CONCAT('INV-REQ-', br.RequestID)
+            SET br.Status = 'Rejected'
+            WHERE br.Status = 'Pending' AND LOWER(en.status) = 'rejected'
+        ");
+        $stmtSyncRej->execute();
+        $stmtSyncRej->close();
+        
+        $conn->commit();
+    } catch (Exception $e) { $conn->rollback(); }
+
+    // --- FETCH THE UPDATED LIST ---
+    $sql = "SELECT br.*, CONCAT(u.Fname, ' ', u.Lname) AS RequestedByName, ic.ItemCategoryName AS CategoryName
             FROM pms_budget_requests br 
-            JOIN pms_users u ON br.RequestedBy = u.UserID 
+            LEFT JOIN pms_users u ON br.RequestedBy = u.UserID 
+            LEFT JOIN pms_itemcategory ic ON br.CategoryID = ic.ItemCategoryID
             ORDER BY br.RequestDate DESC";
             
     $result = $conn->query($sql);
     $requests = [];
     if ($result) {
-        while ($row = $result->fetch_assoc()) { 
-            $requests[] = $row; 
-        }
+        while ($row = $result->fetch_assoc()) { $requests[] = $row; }
     }
     
     header('Content-Type: application/json');
@@ -576,77 +665,48 @@ function getBudgetRequests($conn) {
 }
 
 function addBudgetRequest($conn, $data, $userID) {
-    $itemID = !empty($data['item_id']) ? (int)$data['item_id'] : NULL;
-    $itemName = trim($data['item_name'] ?? '');
+    $categoryID = (int)($data['category_id'] ?? 0);
     $description = trim($data['description'] ?? '');
-    $qty = (int)($data['quantity'] ?? 0);
-    $unitCost = (float)($data['unit_cost'] ?? 0);
+    $totalAmount = (float)($data['requested_amount'] ?? 0);
     $priorityUI = trim($data['priority'] ?? 'Low'); 
     $remarks = trim($data['remarks'] ?? '');
     
-    if (empty($itemName) || $qty <= 0) throw new Exception("Invalid request details.");
-    
-    $totalAmount = $qty * $unitCost;
+    if ($categoryID <= 0 || empty($description) || $totalAmount <= 0) throw new Exception("Invalid request details.");
     $dbPriority = strtolower($priorityUI); 
-
-    $stmtUser = $conn->prepare("SELECT Fname, Lname, AccountType FROM pms_users WHERE UserID = ?");
-    if ($stmtUser) {
-        $stmtUser->bind_param("i", $userID);
-        $stmtUser->execute();
-        $userRow = $stmtUser->get_result()->fetch_assoc();
-        $requesterName = $userRow ? trim($userRow['Fname'] . ' ' . $userRow['Lname']) : 'InventoryManager';
-        if (empty($requesterName)) $requesterName = $userRow['AccountType'] ?? 'InventoryManager';
-        $stmtUser->close();
-    } else {
-        $requesterName = 'InventoryManager';
-    }
 
     $conn->begin_transaction();
 
-    if ($itemID === NULL) {
-        $stmt1 = $conn->prepare(
-            "INSERT INTO pms_budget_requests (ItemName, RequestedQty, UnitCost, TotalAmount, Priority, RequestedBy, Remarks) 
-             VALUES (?, ?, ?, ?, ?, ?, ?)"
-        );
-        if (!$stmt1) { $conn->rollback(); throw new Exception("Inventory Table Error: " . $conn->error); }
-        $stmt1->bind_param("siddsis", $itemName, $qty, $unitCost, $totalAmount, $priorityUI, $userID, $remarks);
-    } else {
-        $stmt1 = $conn->prepare(
-            "INSERT INTO pms_budget_requests (ItemID, ItemName, RequestedQty, UnitCost, TotalAmount, Priority, RequestedBy, Remarks) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-        );
-        if (!$stmt1) { $conn->rollback(); throw new Exception("Inventory Table Error: " . $conn->error); }
-        $stmt1->bind_param("isiddsis", $itemID, $itemName, $qty, $unitCost, $totalAmount, $priorityUI, $userID, $remarks);
-    }
-    
-    if (!$stmt1->execute()) {
-        $conn->rollback();
-        throw new Exception("Error saving budget request: " . $stmt1->error);
-    }
-    
+    // Just get the current balance for the record (NO DEDUCTION)
+    $stmtCat = $conn->prepare("SELECT AvailableBudget, ItemCategoryName FROM pms_itemcategory WHERE ItemCategoryID = ?");
+    $stmtCat->bind_param("i", $categoryID);
+    $stmtCat->execute();
+    $catRow = $stmtCat->get_result()->fetch_assoc();
+    $currentBudget = $catRow ? (float)$catRow['AvailableBudget'] : 0.00;
+    $categoryName = $catRow ? $catRow['ItemCategoryName'] : 'Unknown Category';
+    $stmtCat->close();
+
+    // Get User Details
+    $stmtUser = $conn->prepare("SELECT Fname, Lname FROM pms_users WHERE UserID = ?");
+    $stmtUser->bind_param("i", $userID);
+    $stmtUser->execute();
+    $userRow = $stmtUser->get_result()->fetch_assoc();
+    $requesterName = $userRow ? trim($userRow['Fname'] . ' ' . $userRow['Lname']) : 'InventoryManager';
+    $stmtUser->close();
+
+    // Insert into Inventory Budget Requests (Status is 'Pending' by default)
+    $stmt1 = $conn->prepare("INSERT INTO pms_budget_requests (CategoryID, ItemCategory, Description, TotalAmount, RemainingBudget, Priority, RequestedBy, Remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt1->bind_param("issddsis", $categoryID, $categoryName, $description, $totalAmount, $currentBudget, $priorityUI, $userID, $remarks);
+    $stmt1->execute();
     $requestID = $conn->insert_id;
+    $stmt1->close();
+
+    // Push to Finance Notification
     $extRef = "INV-REQ-" . $requestID;
-
-    $notifTitle = $itemName;
-    $deptId = 2; 
-
-    $stmt2 = $conn->prepare(
-        "INSERT INTO expense_notifications (external_reference_id, title, description, requested_amount, requested_by, purpose, priority, status, department_id) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)"
-    );
-    
-    if (!$stmt2) {
-        $conn->rollback();
-        $errorMsg = $conn->error ? $conn->error : "Unknown SQL Prepare Error. Check column names.";
-        throw new Exception("Finance Table Prepare Error: " . $errorMsg);
-    }
-    
-    $stmt2->bind_param("sssdsssi", $extRef, $notifTitle, $description, $totalAmount, $requesterName, $remarks, $dbPriority, $deptId);
-    
-    if (!$stmt2->execute()) {
-        $conn->rollback();
-        throw new Exception("Finance Table Execute Error: " . $stmt2->error);
-    }
+    $notifTitle = "Budget Request: " . $categoryName;
+    $stmt2 = $conn->prepare("INSERT INTO expense_notifications (external_reference_id, title, description, requested_amount, requested_by, purpose, priority, status, department_id) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', 2)");
+    $stmt2->bind_param("sssdsss", $extRef, $notifTitle, $description, $totalAmount, $requesterName, $remarks, $dbPriority);
+    $stmt2->execute();
+    $stmt2->close();
 
     $conn->commit();
     header('Content-Type: application/json');
@@ -659,33 +719,25 @@ function deleteBudgetRequest($conn, $data) {
 
     $conn->begin_transaction();
 
-    $stmt1 = $conn->prepare("DELETE FROM pms_budget_requests WHERE RequestID = ? AND Status = 'Pending'");
-    if (!$stmt1) { $conn->rollback(); throw new Exception("Inv Delete Error: " . $conn->error); }
-    $stmt1->bind_param("i", $requestID);
-    
-    if (!$stmt1->execute()) {
+    // Mark as Cancelled (NO REFUND needed because it never deducted)
+    $stmtUpdate = $conn->prepare("UPDATE pms_budget_requests SET Status = 'Cancelled' WHERE RequestID = ? AND Status = 'Pending'");
+    $stmtUpdate->bind_param("i", $requestID);
+    $stmtUpdate->execute();
+    if ($stmtUpdate->affected_rows === 0) {
         $conn->rollback();
-        throw new Exception("Error deleting request: " . $stmt1->error);
+        throw new Exception("Request cannot be cancelled. It may have already been processed.");
     }
-    
-    if ($stmt1->affected_rows === 0) {
-        $conn->rollback();
-        throw new Exception("Request cannot be deleted. It may have already been accepted or rejected.");
-    }
+    $stmtUpdate->close();
 
+    // Delete Finance Notification
     $extRef = "INV-REQ-" . $requestID;
-    
-    $stmt2 = $conn->prepare("DELETE FROM expense_notifications WHERE external_reference_id = ? AND status = 'pending'");
-    if (!$stmt2) { $conn->rollback(); throw new Exception("Finance Delete Error: " . $conn->error); }
-    $stmt2->bind_param("s", $extRef);
-    
-    if (!$stmt2->execute()) {
-        $conn->rollback();
-        throw new Exception("Error deleting Finance notification: " . $stmt2->error);
-    }
+    $stmtDelNotif = $conn->prepare("DELETE FROM expense_notifications WHERE external_reference_id = ? AND status = 'pending'");
+    $stmtDelNotif->bind_param("s", $extRef);
+    $stmtDelNotif->execute();
+    $stmtDelNotif->close();
 
     $conn->commit();
     header('Content-Type: application/json');
-    echo json_encode(['success' => true, 'message' => 'Budget request cancelled.']);
+    echo json_encode(['success' => true, 'message' => 'Request cancelled.']);
 }
 ?>

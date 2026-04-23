@@ -320,13 +320,17 @@ if (isset($_SESSION['UserID'])) {
         <i class="fas fa-file-invoice-dollar tabIcon" style="font-size: 18px; margin-right: 8px;"></i>
         Budget Request
       </button>
+      <button class="tabBtn" data-tab="budget-logs">
+        <i class="fas fa-book tabIcon" style="font-size: 18px; margin-right: 8px;"></i>
+        Budget Logs
+      </button>
     </div>
 
     <div class="tabContent active" id="requests-tab">
      <div class="controlsRow">
         <div class="filterControls">
           <select class="filterDropdown" id="typeFilter">
-            <option value="">All Types</option>
+            <option value="">Types</option>
             <option value="Consumables">Consumables</option>
             <option value="Reusable">Reusable</option>
             <option value="Equipment">Equipment</option>
@@ -360,9 +364,9 @@ if (isset($_SESSION['UserID'])) {
             <img src="assets/icons/download-icon.png" alt="Download" />
           </button>
           
-          <button class="addItemBtn" id="addItemBtn">
-            <img src="assets/icons/add.png" alt="Add Item" />
-          </button>
+           <button class="addItemBtn" id="addItemBtn">
+             <img src="assets/icons/add.png" alt="Add Item" />
+           </button>
         </div>
       </div>
       <div class="tableWrapper">
@@ -395,7 +399,7 @@ if (isset($_SESSION['UserID'])) {
    <div class="controlsRow">
         <div class="filterControls">
           <select class="filterDropdown" id="typeFilterHistory">
-            <option value="">All Types</option>
+            <option value="">Types</option>
             <option value="Consumables">Consumables</option>
             <option value="Reusable">Reusable</option>
             <option value="Equipment">Equipment</option>
@@ -452,6 +456,20 @@ if (isset($_SESSION['UserID'])) {
       </div>
     </div>
     <div class="tabContent" id="budget-tab">
+      
+      <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+          <div style="flex: 1; margin-right: 20px;">
+              <label style="display: block; font-size: 12px; color: #888; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Select Category to View Budget:</label>
+              <select class="filterDropdown" id="globalBudgetCategorySelect" style="width: 100%; max-width: 300px; padding: 10px; font-size: 16px; border-radius: 5px; border: 2px solid #007bff; background: #f8fbff; cursor: pointer;">
+                  <option value="" selected>-- Select Category --</option>
+              </select>
+          </div>
+          <div style="text-align: right; border-left: 2px solid #eee; padding-left: 20px;">
+              <span style="display: block; font-size: 12px; color: #888; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;">Available Budget</span>
+              <span id="global-available-budget" style="font-size: 28px; font-weight: 800; color: #28a745; display: block;">₱0.00</span>
+          </div>
+      </div>
+
       <div class="controlsRow">
         <div class="filterControls">
           <select class="filterDropdown" id="budgetStatusFilter">
@@ -459,37 +477,68 @@ if (isset($_SESSION['UserID'])) {
             <option value="pending">Pending</option>
             <option value="accepted">Accepted</option>
             <option value="rejected">Rejected</option>
+            <option value="cancelled">Cancelled</option>
           </select>
           <button class="addItemBtn" id="addBudgetBtn" style="width: auto; padding: 0 15px; font-weight: bold;">
             + NEW REQUEST
           </button>
         </div>
       </div>
+      
       <div class="tableWrapper">
         <table class="requestsTable">
           <thead>
             <tr>
               <th>Request ID</th>
-              <th>Item Name</th>
-              <th>Date Requested</th>
-              <th>Qty</th>
-              <th>Est. Unit Cost</th>
-              <th>Total Amount</th>
-              <th>Priority</th>
-              <th>Status</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Requested Amount</th>
               <th>Requested By</th>
+              <th>Date Requested</th>
+              <th>Status</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody id="budgetTableBody">
-            <tr><td colspan="9" style="text-align: center;">Loading...</td></tr>
+            <tr><td colspan="8" style="text-align: center;">Loading...</td></tr>
           </tbody>
         </table>
       </div>
-    </div>
-  </div>
-
-
+    </div> <div class="tabContent" id="budget-logs-tab">
+      <div class="controlsRow">
+        <div class="filterControls">
+          <select class="filterDropdown" id="budgetLogCategoryFilter">
+            <option value="">All Categories</option>
+          </select>
+          <div class="searchBox">
+            <input type="text" placeholder="Search logs..." class="searchInput" id="searchBudgetLogs" />
+            <button class="searchBtn">
+              <img src="assets/icons/search-icon.png" alt="Search" />
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="tableWrapper">
+        <table class="requestsTable">
+          <thead>
+            <tr>
+              <th>Log ID</th>
+              <th>Category</th>
+              <th>Item Stocked</th>
+              <th>Qty</th>
+              <th>Unit Price (₱)</th>
+              <th>Total Deducted (₱)</th>
+              <th>Remaining Budget (₱)</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody id="budgetLogsTableBody">
+            <tr><td colspan="8" style="text-align: center;">Loading budget logs...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div> 
+</div>
 <div class="modal-overlay" id="add-item-modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -519,19 +568,21 @@ if (isset($_SESSION['UserID'])) {
                             <option value="Equipment">Equipment</option>
                         </select>
                     </div>
-                    <div class="form-group category-group">
-                        <label for="item-category">Category</label>
-                        <div class="category-select-wrapper">
-                            <select id="item-category" required>
-                                <option value="" disabled selected>Select a category</option>
-                            </select>
-                            <button type="button" class="edit-category-btn" id="open-category-modal-btn">
-                                <i class="fas fa-pencil-alt"></i> Edit
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group"> <label for="item-description">Description</label>
+<div class="form-group category-group">
+    <label for="item-category">Category</label>
+    <div class="category-select-wrapper">
+        <select id="item-category" required>
+            <option value="" disabled selected>Select a category</option>
+        </select>
+        <button type="button" class="edit-category-btn" id="open-category-modal-btn">
+            <i class="fas fa-pencil-alt"></i> Edit
+        </button>
+    </div>
+    <div style="margin-top: 5px; font-size: 12px; font-weight: bold;">
+        Available Budget: <span id="add-modal-available-budget" style="color: #28a745;">₱0.00</span>
+    </div>
+</div>
+</div> <div class="form-group"> <label for="item-description">Description</label>
                     <textarea id="item-description" rows="2"></textarea>
                 </div>
                  <div class="form-row"> 
@@ -541,7 +592,19 @@ if (isset($_SESSION['UserID'])) {
                     </div>
                     <div class="form-group">
                         <label for="item-unit">Unit</label>
-                        <input type="text" id="item-unit" placeholder="e.g. pcs, box">
+                        <select id="item-unit" required>
+                            <option value="" disabled selected>Select Unit</option>
+                            <option value="pcs">pcs (pieces)</option>
+                            <option value="box">box</option>
+                            <option value="pack">pack</option>
+                            <option value="set">set</option>
+                            <option value="bottle">bottle</option>
+                            <option value="gallon">gallon</option>
+                            <option value="kg">kg</option>
+                            <option value="liter">liter</option>
+                            <option value="roll">roll</option>
+                            <option value="pair">pair</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="item-unit-cost">Unit Cost (₱)</label>
@@ -621,15 +684,16 @@ if (isset($_SESSION['UserID'])) {
                             <option value="Equipment">Equipment</option>
                         </select>
                     </div>
-                    <div class="form-group category-group">
-                        <label for="edit-item-category">Category</label>
-                        <div class="category-select-wrapper">
-                            <select id="edit-item-category" required></select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
+   <div class="form-group category-group">
+    <label for="edit-item-category">Category</label>
+    <div class="category-select-wrapper">
+        <select id="edit-item-category" required></select>
+    </div>
+    <div style="margin-top: 5px; font-size: 12px; font-weight: bold;">
+        Available Budget: <span id="edit-modal-available-budget" style="color: #28a745;">₱0.00</span>
+    </div>
+</div>
+</div> <div class="form-group">
                     <label for="edit-item-description">Description</label>
                     <textarea id="edit-item-description" rows="2"></textarea>
                 </div>
@@ -637,7 +701,19 @@ if (isset($_SESSION['UserID'])) {
                 <div class="form-row">
                     <div class="form-group">
                         <label for="edit-item-unit">Unit</label>
-                        <input type="text" id="edit-item-unit">
+                        <select id="edit-item-unit" required>
+                            <option value="" disabled selected>Select Unit</option>
+                            <option value="pcs">pcs (pieces)</option>
+                            <option value="box">box</option>
+                            <option value="pack">pack</option>
+                            <option value="set">set</option>
+                            <option value="bottle">bottle</option>
+                            <option value="gallon">gallon</option>
+                            <option value="kg">kg</option>
+                            <option value="liter">liter</option>
+                            <option value="roll">roll</option>
+                            <option value="pair">pair</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label for="edit-item-unit-cost">Unit Cost (₱)</label>
@@ -792,46 +868,38 @@ if (isset($_SESSION['UserID'])) {
     </div>
 </div>
 <div class="modal-overlay" id="budget-request-modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 500px;">
         <span class="close-modal" id="closeBudgetModal">&times;</span>
         <h2>Budget Request</h2>
+
         <form id="budgetForm">
-            <input type="hidden" id="budget-item-id">
             <input type="hidden" id="budget-request-id">
             
             <div class="form-group">
-                <label>Item Name <span style="color:red">*</span></label>
-                <input type="text" id="budget-item-name" required>
+                <label>Budget Category <span style="color:red">*</span></label>
+                <select id="budget-category" required>
+                    <option value="" disabled selected>Select Category...</option>
+                    </select>
             </div>
             
             <div class="form-group">
-                <label>Description</label>
-                <textarea id="budget-description" rows="2" placeholder="Item description..."></textarea>
+                <label>Description <span style="color:red">*</span></label>
+                <textarea id="budget-description" rows="3" placeholder="List the items you need to buy here..." required></textarea>
             </div>
             
             <div class="form-row">
                 <div class="form-group">
-                    <label>Quantity <span style="color:red">*</span></label>
-                    <input type="number" id="budget-qty" min="1" required>
+                    <label>Requested Amount (₱) <span style="color:red">*</span></label>
+                    <input type="number" id="budget-amount" step="0.01" min="1" required style="font-weight: bold; font-size: 16px; color: #d35400;">
                 </div>
                 <div class="form-group">
-                    <label>Estimated Unit Cost (₱) <span style="color:red">*</span></label>
-                    <input type="number" id="budget-cost" step="0.01" min="0" required>
+                    <label>Priority</label>
+                    <select id="budget-priority" required>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
                 </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Total Requested Amount</label>
-                <input type="text" id="budget-total" readonly style="background:#e9ecef; font-weight:bold;">
-            </div>
-            
-            <div class="form-group">
-                <label>Priority</label>
-                <select id="budget-priority" required>
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                </select>
             </div>
             
             <div class="form-group">
@@ -840,10 +908,25 @@ if (isset($_SESSION['UserID'])) {
             </div>
             
             <div class="modalButtons">
-                <button type="submit" class="modalBtn confirmBtn" id="submitBudgetBtn">Submit Request</button>
+                <button type="submit" class="modalBtn confirmBtn" id="submitBudgetBtn" style="width: 100%;">Submit Request</button>
             </div>
         </form>
     </div>
+</div>
+</div>
+<div class="modal-overlay" id="budget-confirm-modal">
+    <div class="modal-content-confirm" style="max-width: 480px; position: relative;">
+        <button class="modal-close-btn" id="budget-modal-close-btn">&times;</button>
+        <i class="fas fa-file-invoice-dollar modal-icon" style="font-size: 40px; color: #007bff; display: block; text-align: center; margin-bottom: 20px;"></i>
+        
+        <h3 style="text-align: center;">Confirm Budget Request</h3>
+        <p style="text-align: center; color: #555;">
+            Are you sure you want to submit this budget request to Finance?
+        </p>
+        <div class="confirm-buttons" style="margin-top: 20px;">
+            <button type="button" class="btn btn-cancel" id="budget-cancel-btn">CANCEL</button>
+            <button type="button" class="btn btn-confirm" id="budget-confirm-btn" style="background-color: #007bff; border: none;">YES, SUBMIT</button>
+        </div>
     </div>
 </div>
 <script src="script/shared-data.js"></script>

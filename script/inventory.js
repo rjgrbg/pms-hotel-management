@@ -261,7 +261,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const handleError = (message) => {
     console.error(message);
-    alert(message);
+    // Remove the annoying double "Error: Error:" prefix if it exists
+    const cleanMessage = message.replace('Error updating item: Error: ', 'Error: ');
+    showToast(cleanMessage, 'error');
   };
 
   // ======================================================
@@ -618,12 +620,6 @@ async function fetchHistory() {
 
         const isArchived = parseInt(item.is_archived) === 1;
         let actionButtons = '';
-        let budgetBtn = '';
-        
-        // Add Request Budget button if stock is at warning levels
-        if (!isArchived && (statusLower === 'critical' || statusLower === 'threshold' || statusLower === 'low stock' || statusLower === 'out of stock')) {
-            budgetBtn = `<button class="dropdown-item budget-quick-btn" data-id="${item.ItemID}"><i class="fas fa-file-invoice-dollar" style="color:#d35400;"></i> Request Budget</button>`;
-        }
 
         if (isArchived) {
             actionButtons = `
@@ -638,7 +634,6 @@ async function fetchHistory() {
                 <div class="action-dropdown">
                     <button class="action-dots-btn" onclick="toggleActionDropdown(event)"><i class="fas fa-ellipsis-v"></i></button>
                     <div class="dropdown-menu">
-                        ${budgetBtn}
                         <button class="dropdown-item edit-btn" data-id="${item.ItemID}"><i class="fas fa-edit"></i> Edit</button>
                         <button class="dropdown-item delete delete-btn" data-id="${item.ItemID}"><i class="fas fa-archive"></i> Archive</button>
                     </div>
@@ -771,12 +766,43 @@ historyTableBody.innerHTML = paginatedData
     updateSortHeaders('history-tab', sortState.history);
   }
 
-  // ======================================================
+ // ======================================================
   // === MODAL & FORM LOGIC
   // ======================================================
 
+  // Instantly update the budget display when picking a category
+  document.getElementById('item-category')?.addEventListener('change', (e) => {
+      const catId = e.target.value;
+      const display = document.getElementById('add-modal-available-budget');
+      if (display && categoryBudgets[catId] !== undefined) {
+          display.textContent = '₱' + categoryBudgets[catId].toLocaleString('en-PH', {minimumFractionDigits: 2});
+      }
+  });
+
+  document.getElementById('edit-item-category')?.addEventListener('change', (e) => {
+      const catId = e.target.value;
+      const display = document.getElementById('edit-modal-available-budget');
+      if (display && categoryBudgets[catId] !== undefined) {
+          display.textContent = '₱' + categoryBudgets[catId].toLocaleString('en-PH', {minimumFractionDigits: 2});
+      }
+  });
+
   addItemForm.addEventListener('submit', (e) => {
     e.preventDefault();
+
+    // --- BUDGET HARD BLOCK ---
+    const categoryId = document.getElementById('item-category').value;
+    const qty = parseFloat(document.getElementById('item-quantity').value) || 0;
+    const unitCost = parseFloat(document.getElementById('item-unit-cost').value) || 0;
+    const totalPurchaseCost = qty * unitCost;
+    const available = categoryBudgets[categoryId] || 0;
+
+    if (totalPurchaseCost > available) {
+        showToast(`Insufficient Budget! This purchase costs ₱${totalPurchaseCost.toLocaleString('en-PH', {minimumFractionDigits:2})}, but you only have ₱${available.toLocaleString('en-PH', {minimumFractionDigits:2})}.`, 'error');
+        return; // BLOCK SUBMISSION
+    }
+    // -------------------------
+
     if (addItemForm.checkValidity()) {
       showModal(confirmationModal);
     } else {
@@ -848,6 +874,12 @@ function openEditModal(item) {
     // Trigger the toggle to show/hide the expiration field based on type
     if(typeof toggleEditExpiration === 'function') toggleEditExpiration(); 
 
+    // Fetch the correct budget to display as soon as modal opens
+    const editDisplay = document.getElementById('edit-modal-available-budget');
+    if(editDisplay) {
+        editDisplay.textContent = '₱' + (categoryBudgets[item.ItemCategoryID] || 0).toLocaleString('en-PH', {minimumFractionDigits: 2});
+    }
+
     showModal(editItemModal);
   }
 
@@ -856,8 +888,22 @@ function openEditModal(item) {
   editItemForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // --- ADD THIS VALIDATION CHECK ---
-    // This tells the browser to highlight required empty fields
+    // --- BUDGET HARD BLOCK FOR RESTOCK ---
+    const categoryId = document.getElementById('edit-item-category').value;
+    const stockAdjustment = parseFloat(document.getElementById('edit-item-add-stock').value) || 0;
+    const unitCost = parseFloat(document.getElementById('edit-item-unit-cost').value) || 0;
+    
+    if (stockAdjustment > 0) {
+        const totalRestockCost = stockAdjustment * unitCost;
+        const available = categoryBudgets[categoryId] || 0;
+        if (totalRestockCost > available) {
+            showToast(`Insufficient Budget! Restocking costs ₱${totalRestockCost.toLocaleString('en-PH', {minimumFractionDigits:2})}, but you only have ₱${available.toLocaleString('en-PH', {minimumFractionDigits:2})}.`, 'error');
+            return; // BLOCK SUBMISSION
+        }
+    }
+    // -------------------------------------
+
+    // --- EXISTING VALIDATION CHECK ---
     if (!editItemForm.checkValidity()) {
         editItemForm.reportValidity();
         return;
@@ -1227,115 +1273,205 @@ if (typeFilter) typeFilter.addEventListener('change', () => {
   // === BUDGET REQUEST LOGIC ===
   // ==========================================
   let allBudgetRequests = [];
-  const BUDGET_API_URL = 'inventory_actions.php'; // <--- Added missing URL here
+  const BUDGET_API_URL = 'inventory_actions.php';
 
+  // Holds actual budget values from DB
+  let categoryBudgets = {};
+
+  const budgetModal = document.getElementById('budget-request-modal');
+  const budgetForm = document.getElementById('budgetForm');
+  const budgetCategory = document.getElementById('budget-category');
+  const budgetAmount = document.getElementById('budget-amount');
+  
+  const globalCategorySelect = document.getElementById('globalBudgetCategorySelect');
+  const globalBudgetDisplay = document.getElementById('global-available-budget');
+
+  // 1. Fetch Categories & Real Available Budgets
+  async function fetchCategoryBudgets() {
+      try {
+          const res = await fetch('inventory_actions.php?action=get_categories');
+          const cats = await res.json();
+          
+          // Clear dropdowns
+          const optionsHtml = '<option value="" disabled selected>Select Category...</option>';
+          let realOptions = '';
+
+          cats.forEach(c => {
+              if (c.is_archived == 0) {
+                  categoryBudgets[c.ItemCategoryID] = parseFloat(c.AvailableBudget || 0);
+                  realOptions += `<option value="${c.ItemCategoryID}">${c.ItemCategoryName}</option>`;
+              }
+          });
+
+          if(budgetCategory) budgetCategory.innerHTML = optionsHtml + realOptions;
+          if(globalCategorySelect) {
+              const currentVal = globalCategorySelect.value; // Remember selection
+              globalCategorySelect.innerHTML = '<option value="" selected>-- Select Category --</option>' + realOptions;
+              globalCategorySelect.value = currentVal;
+          }
+
+          updateGlobalBudgetDisplay(globalCategorySelect ? globalCategorySelect.value : null);
+      } catch(e) { console.error("Error fetching budgets", e); }
+  }
+
+  // 2. Update the big Green Dashboard text
+  function updateGlobalBudgetDisplay(catId) {
+      if(globalBudgetDisplay && catId && categoryBudgets[catId] !== undefined) {
+          globalBudgetDisplay.textContent = '₱' + categoryBudgets[catId].toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      } else if (globalBudgetDisplay) {
+          globalBudgetDisplay.textContent = '₱0.00';
+      }
+  }
+
+  // Event Listeners for Dropdowns
+  if(globalCategorySelect) {
+      globalCategorySelect.addEventListener('change', () => {
+          updateGlobalBudgetDisplay(globalCategorySelect.value);
+      });
+  }
+
+  if(budgetCategory) {
+      budgetCategory.addEventListener('change', () => {
+          if(globalCategorySelect) {
+              globalCategorySelect.value = budgetCategory.value;
+              updateGlobalBudgetDisplay(budgetCategory.value);
+          }
+      });
+  }
+
+  // Connect the new Status Filter
+  const budgetStatusFilter = document.getElementById('budgetStatusFilter');
+  if(budgetStatusFilter) {
+      budgetStatusFilter.addEventListener('change', () => {
+          renderBudgetTable();
+      });
+  }
+
+  // 3. Render the Logs Table & Pending Table cleanly separated
   async function fetchBudgetRequests() {
       try {
           const res = await fetch(`${BUDGET_API_URL}?action=get_budget_requests`);
           allBudgetRequests = await res.json();
+          
+          // --- RENDER LOGS TAB (History only: Purchased/Expenses) ---
+          const logsTbody = document.getElementById('budgetLogsTableBody');
+          if(logsTbody) {
+              // Only show stock purchases in the logs
+              const logData = allBudgetRequests.filter(req => req.Status.toLowerCase() === 'purchased');
+              logsTbody.innerHTML = '';
+              
+              if(logData.length === 0) {
+                  logsTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No stock purchase logs found.</td></tr>';
+              } else {
+                  logData.forEach(req => {
+                      const tr = document.createElement('tr');
+                      
+                      let itemName = req.Description || 'N/A';
+                      let qty = "-";
+                      let price = "-";
+                      
+                      // Extract Qty and Price from Remarks (New Format)
+                      if (req.Remarks && req.Remarks.includes('QTY:')) {
+                          const parts = req.Remarks.split('|');
+                          qty = parts[0].replace('QTY:', '');
+                          price = parseFloat(parts[1].replace('PRICE:', '')).toLocaleString('en-PH', {minimumFractionDigits:2});
+                      } 
+                      // Extract from Description (Fallback for tests you already did)
+                      else if (itemName.includes('Stock Purchased:')) {
+                          const match = itemName.match(/Stock Purchased: (.*?) \(Qty: (\d+) @ ₱([\d,.]+)\)/);
+                          if (match) {
+                              itemName = match[1];
+                              qty = match[2];
+                              price = match[3];
+                          }
+                      }
+
+                      const rawAmount = parseFloat(req.TotalAmount) || 0;
+                      const rawBalance = parseFloat(req.RemainingBudget) || 0;
+
+                      tr.innerHTML = `
+                          <td>#${req.RequestID}</td>
+                          <td><strong>${escapeHtml(req.ItemCategory || req.CategoryName || 'Unknown')}</strong></td>
+                          <td>${escapeHtml(itemName)}</td>
+                          <td>${escapeHtml(qty)}</td>
+                          <td>₱${price}</td>
+                          <td style="color:#dc3545; font-weight:bold;">
+                              - ₱${rawAmount.toLocaleString('en-PH', {minimumFractionDigits:2})}
+                          </td>
+                          <td style="color:#0056b3; font-weight:bold;">
+                              ₱${rawBalance.toLocaleString('en-PH', {minimumFractionDigits:2})}
+                          </td>
+                          <td>${new Date(req.RequestDate).toLocaleDateString()}</td>
+                      `;
+                      logsTbody.appendChild(tr);
+                  });
+              }
+          }
+          
+          // --- RENDER BUDGET REQUESTS TAB ---
           renderBudgetTable();
-      } catch (e) { console.error(e); }
+          
+      } catch(e) { console.error('Error fetching budget logs:', e); }
   }
 
- function renderBudgetTable() {
+  function renderBudgetTable() {
       const tbody = document.getElementById('budgetTableBody');
       if (!tbody) return;
 
-      // FIX: Actively grab the value from the Budget Status dropdown
-      const statusInput = document.getElementById('budgetStatusFilter');
-      const statusFilter = statusInput ? statusInput.value.toLowerCase() : '';
+      // Show EVERYTHING EXCEPT "Purchased" in the Requests tab
+      let filtered = allBudgetRequests.filter(req => req.Status.toLowerCase() !== 'purchased');
       
-      const searchInput = document.getElementById('searchBudget');
-      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-
-      let filtered = allBudgetRequests.filter(req => {
-          // Safety checks to prevent null crashes
-          const matchName = !searchTerm || (req.ItemName && req.ItemName.toLowerCase().includes(searchTerm)) || (req.RequestID && req.RequestID.toString().includes(searchTerm));
-          const matchStatus = !statusFilter || (req.Status && req.Status.toLowerCase() === statusFilter);
-          
-          return matchName && matchStatus;
-      });
+      // Apply the dropdown filter if it is selected
+      const statusFilterVal = budgetStatusFilter ? budgetStatusFilter.value.toLowerCase() : '';
+      if (statusFilterVal) {
+          filtered = filtered.filter(req => req.Status.toLowerCase() === statusFilterVal);
+      }
 
       if (filtered.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">No budget requests found.</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #777;">No budget requests found.</td></tr>';
           return;
       }
 
       tbody.innerHTML = filtered.map(req => {
-          let statusColor = req.Status.toLowerCase() === 'pending' ? '#856404' : (req.Status.toLowerCase() === 'accepted' ? '#155724' : '#721c24');
-          let statusBg = req.Status.toLowerCase() === 'pending' ? '#fff3cd' : (req.Status.toLowerCase() === 'accepted' ? '#d4edda' : '#f8d7da');
-          let priorityColor = req.Priority.toLowerCase() === 'high' ? 'red' : (req.Priority.toLowerCase() === 'medium' ? 'orange' : 'black');
+          let statusColor = '#856404';
+          let statusBg = '#fff3cd';
+          let actionBtns = '-';
 
-         // NEW: Only show Cancel Button if the request is 'pending'
-          let actionBtns = '<span style="color:#aaa;">Locked</span>';
-          if (req.Status.toLowerCase() === 'pending') {
+          const status = req.Status.toLowerCase();
+          if (status === 'accepted') { statusColor = '#155724'; statusBg = '#d4edda'; }
+          else if (status === 'rejected') { statusColor = '#721c24'; statusBg = '#f8d7da'; }
+          else if (status === 'cancelled') { statusColor = '#383d41'; statusBg = '#e2e3e5'; }
+          else if (status === 'pending') {
               actionBtns = `
-                  <div style="display:flex; gap:5px; justify-content:center;">
-                      <button class="cancel-budget-btn" data-id="${req.RequestID}" style="padding: 5px 8px; cursor: pointer; border: none; background: #dc3545; color: white; border-radius: 4px;" title="Cancel"><i class="fas fa-times"></i></button>
-                  </div>`;
+              <div style="display:flex; gap:5px; justify-content:center;">
+                  <button class="cancel-budget-btn" data-id="${req.RequestID}" style="padding: 6px 10px; cursor: pointer; border: none; background: #dc3545; color: white; border-radius: 4px; font-weight: bold;" title="Cancel Request"><i class="fas fa-times"></i> Cancel</button>
+              </div>`;
           }
 
           return `
               <tr>
                   <td>#${req.RequestID}</td>
-                  <td>${escapeHtml(req.ItemName)}</td>
-                  <td>${req.RequestDate.split(' ')[0]}</td>
-                  <td>${req.RequestedQty}</td>
-                  <td>₱${parseFloat(req.UnitCost).toFixed(2)}</td>
-                  <td style="font-weight: bold;">₱${parseFloat(req.TotalAmount).toFixed(2)}</td>
-                  <td style="color: ${priorityColor}; font-weight: bold; text-transform: capitalize;">${req.Priority}</td>
-                  <td><span style="background:${statusBg}; color:${statusColor}; padding:4px 8px; border-radius:4px; text-transform: capitalize;">${req.Status}</span></td>
+                  <td><strong>${escapeHtml(req.ItemCategory || req.CategoryName || 'Unknown')}</strong></td>
+                  <td>${escapeHtml(req.Description || 'N/A')}</td>
+                  <td style="font-weight: bold; color: ${status === 'accepted' ? '#28a745' : '#d35400'};">
+                      ${status === 'accepted' ? '+ ' : ''}₱${parseFloat(req.TotalAmount).toLocaleString('en-PH', {minimumFractionDigits:2})}
+                  </td>
                   <td>${escapeHtml(req.RequestedByName || 'N/A')}</td>
+                  <td>${req.RequestDate.split(' ')[0]}</td>
+                  <td><span style="background:${statusBg}; color:${statusColor}; padding:4px 8px; border-radius:4px; text-transform: capitalize; font-weight:bold;">${req.Status}</span></td>
                   <td style="text-align:center;">${actionBtns}</td>
               </tr>
           `;
       }).join('');
   }
 
-  // Budget Input Auto-Calculations
-  const budgetQty = document.getElementById('budget-qty');
-  const budgetCost = document.getElementById('budget-cost');
-  const budgetTotal = document.getElementById('budget-total');
-  const budgetModal = document.getElementById('budget-request-modal');
-  const budgetForm = document.getElementById('budgetForm');
-
-  function calculateBudgetTotal() {
-      if(budgetTotal) budgetTotal.value = ((parseInt(budgetQty.value)||0) * (parseFloat(budgetCost.value)||0)).toFixed(2);
-  }
-  if (budgetQty) budgetQty.addEventListener('input', calculateBudgetTotal);
-  if (budgetCost) budgetCost.addEventListener('input', calculateBudgetTotal);
-
-  // Open Modal from "Low Stock" Button
-  window.openBudgetModalFromItem = function(item) {
-      if(budgetForm) budgetForm.reset();
-      document.getElementById('budget-item-id').value = item.ItemID;
-      document.getElementById('budget-item-name').value = item.ItemName;
-      document.getElementById('budget-description').value = item.ItemDescription || '';
-      document.getElementById('budget-cost').value = item.UnitCost || '';
-      
-      const needed = item.StockLimit - item.ItemQuantity;
-      if(budgetQty) budgetQty.value = needed > 0 ? needed : 1; 
-      
-      document.getElementById('budget-priority').value = (item.ItemQuantity === 0) ? 'High' : (item.ItemStatus === 'Critical' ? 'Medium' : 'Low');
-      calculateBudgetTotal();
-      
-      if(budgetModal) {
-          budgetModal.style.display = 'flex';
-          budgetModal.classList.add('show-modal');
-      }
-  };
-
-  // Budget Filter Event Listener
-  if (document.getElementById('budgetStatusFilter')) {
-      document.getElementById('budgetStatusFilter').addEventListener('change', renderBudgetTable);
-  }
-
-  // Open Empty Budget Modal
+  // Open Modal logic
   if (document.getElementById('addBudgetBtn')) {
       document.getElementById('addBudgetBtn').addEventListener('click', () => {
           if(budgetForm) budgetForm.reset();
-          document.getElementById('budget-item-id').value = '';
-          if(budgetTotal) budgetTotal.value = '';
+          if(globalCategorySelect && globalCategorySelect.value && budgetCategory) {
+              budgetCategory.value = globalCategorySelect.value;
+          }
           if(budgetModal) {
               budgetModal.style.display = 'flex';
               budgetModal.classList.add('show-modal');
@@ -1343,9 +1479,8 @@ if (typeFilter) typeFilter.addEventListener('change', () => {
       });
   }
 
-  // Close Budget Modal
-  if (document.getElementById('closeBudgetModal')) { 
-      document.getElementById('closeBudgetModal').addEventListener('click', () => { 
+  if (document.getElementById('closeBudgetModal')) {
+      document.getElementById('closeBudgetModal').addEventListener('click', () => {
           if(budgetModal) {
               budgetModal.style.display = 'none';
               budgetModal.classList.remove('show-modal');
@@ -1353,37 +1488,109 @@ if (typeFilter) typeFilter.addEventListener('change', () => {
       });
   }
 
- // Submit Budget Request (Handles Add Only)
+  // Temporary variable to hold form data while waiting for user confirmation
+  let pendingBudgetSubmission = null;
+
+  // 1. Intercept the form submission and show the Confirmation Modal
   if (budgetForm) {
-      budgetForm.addEventListener('submit', async (e) => {
+      budgetForm.addEventListener('submit', (e) => {
           e.preventDefault();
+
+          const categoryId = budgetCategory.value;
+          const amount = parseFloat(budgetAmount.value);
           
+          if(!categoryId) return alert("Please select a category.");
+
           const formData = new FormData();
-          formData.append('item_id', document.getElementById('budget-item-id').value);
-          formData.append('item_name', document.getElementById('budget-item-name').value);
+          formData.append('category_id', categoryId); 
           formData.append('description', document.getElementById('budget-description').value);
-          formData.append('quantity', budgetQty.value);
-          formData.append('unit_cost', budgetCost.value);
+          formData.append('requested_amount', amount); 
           formData.append('priority', document.getElementById('budget-priority').value);
           formData.append('remarks', document.getElementById('budget-remarks').value);
 
-          try {
-              const res = await fetch(`${BUDGET_API_URL}?action=add_budget_request`, { method: 'POST', body: formData });
-              const data = await res.json();
-              if (data.success) {
-                  if(budgetModal) budgetModal.style.display = 'none';
-                  fetchBudgetRequests();
-                  showToast('Budget requested successfully!', 'success');
-              } else {
-                  alert("Backend Error: " + (data.error || data.message || 'Failed to submit request.'));
-              }
-          } catch (error) {
-              console.error(error);
+          // Save data and show the standard confirmation modal
+          pendingBudgetSubmission = formData; 
+          const confirmModal = document.getElementById('budget-confirm-modal');
+          if(confirmModal) {
+              confirmModal.style.display = 'flex';
+              confirmModal.classList.add('show-modal');
           }
       });
   }
 
- // Handle Cancel Button inside Budget Table
+  // 2. The actual sending function (Fired after they click "Yes, Submit")
+  async function processBudgetForm(formData) {
+      try {
+          const submitBtn = document.getElementById('submitBudgetBtn');
+          if(submitBtn) submitBtn.textContent = 'Submitting...';
+
+          const res = await fetch(`${BUDGET_API_URL}?action=add_budget_request`, { method: 'POST', body: formData });
+          const data = await res.json();
+          
+          if (data.success) {
+              if(budgetModal) {
+                  budgetModal.style.display = 'none';
+                  budgetModal.classList.remove('show-modal');
+              }
+              fetchCategoryBudgets(); // Refresh the Green Dashboard
+              fetchBudgetRequests();  // Refresh the Table Logs
+              showToast('Budget request submitted & logged successfully!', 'success');
+          } else {
+                      alert("Error: " + (data.message || 'Failed to cancel.'));
+                  }
+          if(submitBtn) submitBtn.textContent = 'Submit Request';
+      } catch (error) { console.error(error); }
+  }
+
+  // 3. Modal Listeners for the Standard Confirmation
+  const budgetConfirmBtn = document.getElementById('budget-confirm-btn');
+  const budgetCancelBtn = document.getElementById('budget-cancel-btn');
+  const budgetModalCloseBtn = document.getElementById('budget-modal-close-btn');
+  const confirmModal = document.getElementById('budget-confirm-modal');
+
+  function closeConfirmModal() {
+      if(confirmModal) {
+          confirmModal.style.display = 'none';
+          confirmModal.classList.remove('show-modal');
+      }
+      pendingBudgetSubmission = null; // clear the temporary data
+  }
+
+  if(budgetCancelBtn) budgetCancelBtn.addEventListener('click', closeConfirmModal);
+  if(budgetModalCloseBtn) budgetModalCloseBtn.addEventListener('click', closeConfirmModal);
+  
+  if(budgetConfirmBtn) {
+      budgetConfirmBtn.addEventListener('click', async () => {
+          if(pendingBudgetSubmission) {
+              const dataToSubmit = pendingBudgetSubmission;
+              closeConfirmModal(); // Hide modal
+              await processBudgetForm(dataToSubmit); // Fire the save function!
+          }
+      });
+  }
+
+  // Open Modal from "Low Stock" quick-action button on the Table
+  window.openBudgetModalFromItem = function(item) {
+      if(budgetForm) budgetForm.reset();
+
+      if(budgetCategory) budgetCategory.value = item.ItemCategoryID;
+      if(globalCategorySelect) globalCategorySelect.value = item.ItemCategoryID;
+      
+      document.getElementById('budget-description').value = `Restock: ${item.ItemName}`;
+
+      const needed = item.StockLimit - item.ItemQuantity;
+      const qtyToBuy = needed > 0 ? needed : 1;
+      
+      if(budgetAmount) budgetAmount.value = (qtyToBuy * (item.UnitCost || 0)).toFixed(2);
+      document.getElementById('budget-priority').value = (item.ItemQuantity === 0) ? 'High' : (item.ItemStatus === 'Critical' ? 'Medium' : 'Low');
+
+      if(budgetModal) {
+          budgetModal.style.display = 'flex';
+          budgetModal.classList.add('show-modal');
+      }
+  };
+
+  // Handle Cancel Button inside Budget Table
   document.getElementById('budgetTableBody')?.addEventListener('click', async (e) => {
       const cancelBtn = e.target.closest('.cancel-budget-btn');
 
@@ -1414,13 +1621,19 @@ if (typeFilter) typeFilter.addEventListener('change', () => {
           const itemID = parseInt(budgetBtn.dataset.id);
           const item = allInventoryData.find(i => i.ItemID === itemID);
           if (item) {
-             // Clear edit ID so it knows it is new
              const hiddenId = document.getElementById('budget-request-id');
              if(hiddenId) hiddenId.value = '';
              window.openBudgetModalFromItem(item);
           }
       }
   });
+
+  // Override initializePage to ensure our new budget function runs!
+  const originalInit = initializePage;
+  initializePage = async function() {
+      await fetchCategoryBudgets(); // Run our new category fetcher!
+      await originalInit();
+  };
 
   initializePage();
 });
