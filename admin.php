@@ -1352,7 +1352,7 @@ $conn->close();
 
         <div class="modalButtons">
           <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeCodeBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn" style="background: #b99156ff;">ADD EMPLOYEE</button>
+          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn">ADD EMPLOYEE</button>
         </div>
       </form>
       
@@ -1363,36 +1363,57 @@ $conn->close();
           <div class="profileAvatar">
             <img src="assets/icons/profile-icon.png" alt="Profile" />
           </div>
-          <h3 id="displayFullName" class="editUserName">User Full Name</h3>
-          <p class="editUserEmployeeId" style="color: white;">Employee Code: <span id="displayEmployeeCode">------</span></p>
+          <div class="profileInfo">
+            <h3 id="displayFullName" class="editUserName">User Full Name</h3>
+            <p class="editUserEmployeeId">Employee Code: <span id="displayEmployeeCode">------</span></p>
+          </div>
         </div>
 
-        <div class="infoGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; border-radius: 8px;">
+        <span class="readOnlyLabel">Read-Only Details</span>
+
+        <div class="infoGrid">
           <div>
-            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Email</label>
-            <div id="displayEmail" style="font-size: 14px; font-weight: 500;">-</div>
+            <i class="fas fa-envelope"></i>
+            <div class="infoContent">
+              <label>Email</label>
+              <div id="displayEmail">-</div>
+            </div>
           </div>
           <div>
-            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Account Type</label>
-            <div id="displayAccountType" style="font-size: 14px; font-weight: 500;">-</div>
+            <i class="fas fa-user"></i>
+            <div class="infoContent">
+              <label>Account Type</label>
+              <div id="displayAccountType">-</div>
+            </div>
           </div>
           <div>
-            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Shift</label>
-            <div id="displayShift" style="font-size: 14px; font-weight: 500;">-</div>
+            <i class="fas fa-clock"></i>
+            <div class="infoContent">
+              <label>Shift</label>
+              <div id="displayShift">-</div>
+            </div>
           </div>
           <div>
-            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Username</label>
-            <div id="displayUsername" style="font-size: 14px; font-weight: 500;">-</div>
+            <i class="fas fa-user-circle"></i>
+            <div class="infoContent">
+              <label>Username</label>
+              <div id="displayUsername">-</div>
+            </div>
           </div>
         </div>
 
         <form id="passwordChangeForm">
           <div class="formGroup">
-            <label for="newPassword" style="text-align: left;">New Password *</label>
+            <label for="newPassword">New Password *</label>
             <input type="password" id="newPassword" name="password" required
-              placeholder="Enter new password"
-              style="border: 2px solid #efefefff;" />
-            <small style="color: #c6c6c6ff; font-size: 11px; display: block; margin-top: 5px;">
+              placeholder="Enter your secure new password" />
+            <small>
+              Minimum 8 characters, include a special character.
+            </small>
+          </div>
+
+          <div class="formGroup">
+            <small>
               All other user information is read-only and comes from the employees table.
             </small>
           </div>
@@ -1410,7 +1431,7 @@ $conn->close();
     <div class="logoutModal">
       <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
       <div class="modalIcon">
-        <i class="fas fa-archive" style="font-size: 40px; color: #d4af78;"></i> 
+        <i class="fas fa-archive"></i> 
       </div>
       <h2>Archive User</h2>
       <p id="deleteUserText">Are you sure you want to archive this user?</p>
