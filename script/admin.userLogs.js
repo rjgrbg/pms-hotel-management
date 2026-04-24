@@ -131,6 +131,8 @@ function initUserLogsFilters() {
     const searchInput = document.getElementById('logsSearchInput');
     const roleFilter = document.getElementById('logsRoleFilter');
     const shiftFilter = document.getElementById('logsShiftFilter');
+    const dateFrom = document.getElementById('logsDateFrom');
+    const dateTo = document.getElementById('logsDateTo');
     const refreshBtn = document.getElementById('logsRefreshBtn');
     const downloadBtn = document.getElementById('logsDownloadBtn');
 
@@ -139,6 +141,8 @@ function initUserLogsFilters() {
         const search = searchInput.value.toLowerCase();
         const role = roleFilter.value;
         const shift = shiftFilter.value;
+        const from = dateFrom && dateFrom.value ? new Date(dateFrom.value) : null;
+        const to = dateTo && dateTo.value ? new Date(dateTo.value) : null;
 
         const filtered = userLogsDataList.filter(row => {
             // Search Check (checks multiple fields)
@@ -149,14 +153,25 @@ function initUserLogsFilters() {
                 (row.EmailAddress && row.EmailAddress.toLowerCase().includes(search)) ||
                 (row.UserID && row.UserID.toString().includes(search))
             );
-            
             // Dropdown Checks
             const matchesRole = !role || row.AccountType === role;
             const matchesShift = !shift || row.Shift === shift;
-
-            return matchesSearch && matchesRole && matchesShift;
+            // Date filter
+            let matchesDate = true;
+            if (from || to) {
+                const logDate = row.Timestamp ? new Date(row.Timestamp) : null;
+                if (logDate) {
+                    if (from && logDate < from) matchesDate = false;
+                    if (to) {
+                        // Set to end of day for inclusive filtering
+                        const toEnd = new Date(to);
+                        toEnd.setHours(23,59,59,999);
+                        if (logDate > toEnd) matchesDate = false;
+                    }
+                }
+            }
+            return matchesSearch && matchesRole && matchesShift && matchesDate;
         });
-
         paginationState.userLogs.currentPage = 1;
         renderUserLogsTable(filtered);
         return filtered; // Return for PDF
@@ -166,6 +181,8 @@ function initUserLogsFilters() {
     if (searchInput) searchInput.oninput = applyFilters;
     if (roleFilter) roleFilter.onchange = applyFilters;
     if (shiftFilter) shiftFilter.onchange = applyFilters;
+    if (dateFrom) dateFrom.onchange = applyFilters;
+    if (dateTo) dateTo.onchange = applyFilters;
 
     // --- Refresh Button ---
     if (refreshBtn) {

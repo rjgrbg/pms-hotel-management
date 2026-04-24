@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $response['message'] = "Both username and password are required.";
     } else {
         // --- SECURE SQL (Prepared Statement) ---
-        $sql = "SELECT UserID, Password, AccountType FROM pms_users WHERE Username = ?";
+        $sql = "SELECT UserID, Password, AccountType, is_archived FROM pms_users WHERE Username = ?";
 
         if ($stmt = $conn->prepare($sql)) {
             $stmt->bind_param("s", $username);
@@ -61,44 +61,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // --- SECURE PASSWORD CHECK ---
                 if ($user && password_verify($password, $user['Password'])) {
-                    // SUCCESSFUL LOGIN
-                    session_regenerate_id(true); // Prevents session fixation
+                    if (isset($user['is_archived']) && $user['is_archived'] == 1) {
+                        $response['message'] = "Your account has been archived. Please contact the administrator.";
+                    } else {
+                        // SUCCESSFUL LOGIN
+                        session_regenerate_id(true); // Prevents session fixation
 
-                    // Use the $user array we already fetched
-                    $_SESSION['UserID'] = $user['UserID'];
-                    $_SESSION['UserName'] = $username;
-                    $_SESSION['UserType'] = $user['AccountType'];
-                    $_SESSION['login_time'] = time();
+                        // Use the $user array we already fetched
+                        $_SESSION['UserID'] = $user['UserID'];
+                        $_SESSION['UserName'] = $username;
+                        $_SESSION['UserType'] = $user['AccountType'];
+                        $_SESSION['login_time'] = time();
 
-                    // --- LOGGING BLOCK ---
-                    $log_error = null;
-                    try {
-                        // This query will now work!
-                        $log_sql = "INSERT INTO pms_user_logs (UserID, ActionType) VALUES (?, 'Logged In')";
-                        if ($log_stmt = $conn->prepare($log_sql)) {
-                            // Use the UserID from the $user array
-                            $log_stmt->bind_param("i", $user['UserID']); 
-                            if (!$log_stmt->execute()) {
-                                $log_error = "Log Execute Error: " . $log_stmt->error;
+                        // --- LOGGING BLOCK ---
+                        $log_error = null;
+                        try {
+                            // This query will now work!
+                            $log_sql = "INSERT INTO pms_user_logs (UserID, ActionType) VALUES (?, 'Logged In')";
+                            if ($log_stmt = $conn->prepare($log_sql)) {
+                                // Use the UserID from the $user array
+                                $log_stmt->bind_param("i", $user['UserID']);
+                                if (!$log_stmt->execute()) {
+                                    $log_error = "Log Execute Error: " . $log_stmt->error;
+                                }
+                                $log_stmt->close();
+                            } else {
+                                $log_error = "Log Prepare Error: " . $conn->error;
                             }
-                            $log_stmt->close();
-                        } else {
-                            $log_error = "Log Prepare Error: " . $conn->error;
+                        } catch (Exception $e) {
+                            $log_error = "Log Exception: " . $e->getMessage();
                         }
-                    } catch (Exception $e) {
-                        $log_error = "Log Exception: " . $e->getMessage();
+                        // --- END OF LOGGING BLOCK ---
+
+                        $response['success'] = true;
+                        $response['message'] = 'Login successful.';
+                        $response['redirect'] = 'index.php'; // Redirect target
+
+                        if ($log_error !== null) {
+                            $response['log_error'] = $log_error;
+                            error_log($log_error); // Also write to server log
+                        }
                     }
-                    // --- END OF LOGGING BLOCK ---
-
-                    $response['success'] = true;
-                    $response['message'] = 'Login successful.';
-                    $response['redirect'] = 'index.php'; // Redirect target
-
-                    if ($log_error !== null) {
-                        $response['log_error'] = $log_error;
-                        error_log($log_error); // Also write to server log
-                    }
-
                 } else {
                     // NO USER FOUND or INCORRECT PASSWORD
                     $response['message'] = "Incorrect username or password.";
