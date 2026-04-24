@@ -174,13 +174,13 @@ function getInventoryHistory($conn) {
 }
 
 function getCategories($conn) {
-  // Added AvailableBudget to the SELECT statement
-  $sql = "SELECT ItemCategoryID, ItemCategoryName, is_archived, AvailableBudget FROM pms_itemcategory ORDER BY ItemCategoryName";
+  $sql = "SELECT ItemCategoryID, ItemCategoryName, ItemType, is_archived, AvailableBudget FROM pms_itemcategory ORDER BY ItemCategoryName";
   $result = $conn->query($sql);
   if (!$result) throw new Exception("Error fetching categories: ". $conn->error);
 
   $categories = [];
   while ($row = $result->fetch_assoc()) {
+    $row['ItemType'] = $row['ItemType'] ?: 'Consumables'; // Default failsafe
     $categories[] = $row;
   }
   header('Content-Type: application/json');
@@ -290,7 +290,8 @@ function updateItem($conn, $data, $userID) {
   }
   $qtyStmt->close();
   
-  if ($currentQuantity < abs($stockAdjustment)) {
+  // Only block if they are trying to REMOVE more stock than what exists
+  if ($stockAdjustment < 0 && $currentQuantity < abs($stockAdjustment)) {
       $conn->rollback();
       throw new Exception("Not enough stock. Only $currentQuantity item(s) available.");
   }
@@ -387,33 +388,20 @@ function issueItem($conn, $data, $userID) {
   $orangeThreshold = $stockLimit / 4;
   $restockDate = NULL;
 
-  // Auto 1-Week Restock Date Logic
   if ($newQuantity <= 0 || $newQuantity <= $yellowThreshold) {
       if ($newQuantity <= 0) $status = 'Out of Stock';
       else if ($newQuantity <= $orangeThreshold) $status = 'Critical';
       else $status = 'Threshold';
-
       $restockDate = $currentRestockDate ? $currentRestockDate : date('Y-m-d', strtotime('+7 days'));
   }
 
   $stmt = $conn->prepare("UPDATE pms_inventory SET ItemQuantity = ?, ItemStatus = ?, RestockDate = ? WHERE ItemID = ?");
   $stmt->bind_param("issi", $newQuantity, $status, $restockDate, $itemID);
+  $stmt->execute();
 
-  if (!$stmt->execute()) {
-    $conn->rollback();
-    throw new Exception("Error updating item quantity: ". $stmt->error);
-  }
-
-  $logStmt = $conn->prepare(
-    "INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) 
-     VALUES (?, ?, ?, ?, NOW())"
-  );
+  $logStmt = $conn->prepare("INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) VALUES (?, ?, ?, ?, NOW())");
   $logStmt->bind_param("iiis", $userID, $itemID, $stockAdjustment, $logReason);
-
-  if (!$logStmt->execute()) {
-    $conn->rollback();
-    throw new Exception("Error logging stock issue: ". $logStmt->error);
-  }
+  $logStmt->execute();
 
   $conn->commit();
   header('Content-Type: application/json');
@@ -458,62 +446,52 @@ function restoreItem($conn, $data, $userID) {
 
 function addCategory($conn, $data) {
     header('Content-Type: application/json');
-    // *** REMOVED htmlspecialchars, KEPT trim ***
     $name = trim($data['CategoryName'] ?? '');
+    $type = trim($data['ItemType'] ?? 'Consumables');
 
     if (empty($name)) {
-        echo json_encode(['success' => false, 'message' => 'Category name cannot be empty.']);
-        return;
+        echo json_encode(['success' => false, 'message' => 'Category name cannot be empty.']); return;
     }
 
     $checkStmt = $conn->prepare("SELECT 1 FROM pms_itemcategory WHERE ItemCategoryName = ?");
     $checkStmt->bind_param("s", $name);
     $checkStmt->execute();
     if ($checkStmt->get_result()->num_rows > 0) {
-        echo json_encode(['success' => false, 'message' => 'This category already exists.']);
-        return;
+        echo json_encode(['success' => false, 'message' => 'This category already exists.']); return;
     }
     $checkStmt->close();
 
-    $stmt = $conn->prepare("INSERT INTO pms_itemcategory (ItemCategoryName, is_archived) VALUES (?, 0)");
-    $stmt->bind_param("s", $name);
+    $stmt = $conn->prepare("INSERT INTO pms_itemcategory (ItemCategoryName, ItemType, is_archived) VALUES (?, ?, 0)");
+    $stmt->bind_param("ss", $name, $type);
     
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'message' => 'Category added successfully.']);
-    } else {
-        throw new Exception("Error adding category: ". $stmt->error);
-    }
+    if ($stmt->execute()) echo json_encode(['success' => true, 'message' => 'Category added successfully.']);
+    else throw new Exception("Error adding category: ". $stmt->error);
     $stmt->close();
 }
 
 function updateCategory($conn, $data) {
     header('Content-Type: application/json');
     $id = (int)($data['CategoryID'] ?? 0);
-    // *** REMOVED htmlspecialchars, KEPT trim ***
     $name = trim($data['CategoryName'] ?? '');
+    $type = trim($data['ItemType'] ?? 'Consumables');
 
     if ($id <= 0 || empty($name)) {
-        echo json_encode(['success' => false, 'message' => 'Both Category ID and Name are required.']);
-        return;
+        echo json_encode(['success' => false, 'message' => 'Both ID and Name are required.']); return;
     }
 
     $checkStmt = $conn->prepare("SELECT 1 FROM pms_itemcategory WHERE ItemCategoryName = ? AND ItemCategoryID != ?");
     $checkStmt->bind_param("si", $name, $id);
     $checkStmt->execute();
     if ($checkStmt->get_result()->num_rows > 0) {
-        echo json_encode(['success' => false, 'message' => 'This category name is already in use.']);
-        return;
+        echo json_encode(['success' => false, 'message' => 'This category name is already in use.']); return;
     }
     $checkStmt->close();
 
-    $stmt = $conn->prepare("UPDATE pms_itemcategory SET ItemCategoryName = ? WHERE ItemCategoryID = ?");
-    $stmt->bind_param("si", $name, $id);
+    $stmt = $conn->prepare("UPDATE pms_itemcategory SET ItemCategoryName = ?, ItemType = ? WHERE ItemCategoryID = ?");
+    $stmt->bind_param("ssi", $name, $type, $id);
     
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'message' => 'Category updated.']);
-    } else {
-        throw new Exception("Error updating category: ". $stmt->error);
-    }
+    if ($stmt->execute()) echo json_encode(['success' => true, 'message' => 'Category updated.']);
+    else throw new Exception("Error updating category: ". $stmt->error);
     $stmt->close();
 }
 
@@ -740,4 +718,5 @@ function deleteBudgetRequest($conn, $data) {
     header('Content-Type: application/json');
     echo json_encode(['success' => true, 'message' => 'Request cancelled.']);
 }
+
 ?>

@@ -320,10 +320,12 @@ if (isset($_SESSION['UserID'])) {
         <i class="fas fa-file-invoice-dollar tabIcon" style="font-size: 18px; margin-right: 8px;"></i>
         Budget Request
       </button>
+      
       <button class="tabBtn" data-tab="budget-logs">
-        <i class="fas fa-book tabIcon" style="font-size: 18px; margin-right: 8px;"></i>
+        <i class="fas fa-chart-line tabIcon" style="font-size: 18px; margin-right: 8px;"></i>
         Budget Logs
       </button>
+      
     </div>
 
     <div class="tabContent active" id="requests-tab">
@@ -343,7 +345,7 @@ if (isset($_SESSION['UserID'])) {
           <select class="filterDropdown" id="roomFilter">
             <option value="">Status</option>
             <option value="Out of Stock">Out of Stock</option>
-            <option value="Critical">Low Stock</option>
+            <option value="Critical">Critical</option>
             <option value="Threshold">Threshold</option>
             <option value="In Stock">In Stock</option>
             <option value="Archived" style="color: red; font-weight: bold;">Archived</option>
@@ -412,7 +414,7 @@ if (isset($_SESSION['UserID'])) {
           <select class="filterDropdown" id="roomFilterHistory">
             <option value="">Status</option>
             <option value="Out of Stock">Out of Stock</option>
-            <option value="Low Stock">Low Stock</option>
+            <option value="Critical">Critical</option>
             <option value="In Stock">In Stock</option>
           </select>
 
@@ -796,6 +798,11 @@ if (isset($_SESSION['UserID'])) {
             <div class="form-group">
                 <label for="new-category-name">Add New Category</label>
                 <div class="add-category-wrapper">
+                    <select id="new-category-type" required style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 130px; flex-shrink: 0;">
+                        <option value="Consumables">Consumables</option>
+                        <option value="Reusable">Reusable</option>
+                        <option value="Equipment">Equipment</option>
+                    </select>
                     <input type="text" id="new-category-name" placeholder="Enter new category name">
                     <button type="button" class="submit-btn" id="add-new-category-btn">ADD</button>
                 </div>
@@ -827,6 +834,14 @@ if (isset($_SESSION['UserID'])) {
         <div class="modal-body">
             <form id="edit-category-name-form">
                 <input type="hidden" id="edit-category-id-input">
+                <div class="form-group">
+                    <label for="edit-category-type-input">Item Type</label>
+                    <select id="edit-category-type-input" required>
+                        <option value="Consumables">Consumables</option>
+                        <option value="Reusable">Reusable</option>
+                        <option value="Equipment">Equipment</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label for="edit-category-name-input">Category Name</label>
                     <input type="text" id="edit-category-name-input" required>
@@ -929,6 +944,7 @@ if (isset($_SESSION['UserID'])) {
         </div>
     </div>
 </div>
+
 <script src="script/shared-data.js"></script>
 <script src="script/inventory.js?v=1.9"></script>
 
@@ -1055,26 +1071,87 @@ if (isset($_SESSION['UserID'])) {
         editCategoryNameCancelBtn.addEventListener('click', closeEditCategoryNameModal);
 
         // --- UPDATED: LOAD CATEGORIES (Active first, then Archived) ---
-        async function loadCategories() {
-            categoryListContainer.innerHTML = '<div class="spinner"></div>';
+        window.allSystemCategories = [];
+
+        async function refreshCategoryDropdowns() {
             try {
                 const response = await fetch(`${API_URL}?action=get_categories`);
                 if (!response.ok) throw new Error('Network response was not ok');
                 
-                const categories = await response.json();
+                window.allSystemCategories = await response.json();
+                
+                const filterDropdowns = [
+                    document.getElementById('floorFilter'),
+                    document.getElementById('floorFilterHistory')
+                ];
+
+                filterDropdowns.forEach(dropdown => {
+                    if (!dropdown) return;
+                    const currentValue = dropdown.value;
+                    while (dropdown.options.length > 1) { dropdown.remove(1); }
+                    
+                    window.allSystemCategories.forEach(category => {
+                        const option = document.createElement('option');
+                        option.value = category.ItemCategoryName;
+                        option.textContent = category.ItemCategoryName;
+                        dropdown.appendChild(option);
+                    });
+                    dropdown.value = currentValue;
+                });
+
+                // Auto-filter based on current Add/Edit form types
+                filterCategoriesByType('item-type', 'item-category');
+                filterCategoriesByType('edit-item-type', 'edit-item-category');
+
+            } catch (error) { console.error('Error refreshing dropdowns:', error); }
+        }
+
+        // The Smart Filter
+        window.filterCategoriesByType = function(typeSelectId, categorySelectId) {
+            const typeSelect = document.getElementById(typeSelectId);
+            const catSelect = document.getElementById(categorySelectId);
+            if (!typeSelect || !catSelect || !window.allSystemCategories) return;
+
+            const selectedType = typeSelect.value;
+            const currentCatId = catSelect.value;
+
+            while (catSelect.options.length > 1) { catSelect.remove(1); }
+
+            // --- FIX: Show all categories if no Type is selected ---
+            const filtered = window.allSystemCategories.filter(c => {
+                if (c.is_archived == 1) return false;
+                if (!selectedType) return true; // Show all if blank
+                return c.ItemType === selectedType;
+            });
+
+            filtered.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.ItemCategoryID;
+                option.textContent = category.ItemCategoryName;
+                catSelect.appendChild(option);
+            });
+
+            catSelect.value = currentCatId;
+            if(catSelect.value !== currentCatId) catSelect.value = ""; 
+        };
+
+        // --- LOAD CATEGORIES (Active first, then Archived) ---
+        async function loadCategories() {
+            categoryListContainer.innerHTML = '<div class="spinner"></div>';
+            try {
+                // Ensure we have the latest data
+                const response = await fetch(`${API_URL}?action=get_categories`);
+                window.allSystemCategories = await response.json();
                 
                 categoryListContainer.innerHTML = '';
-                if (categories.length === 0) {
+                if (window.allSystemCategories.length === 0) {
                     categoryListContainer.innerHTML = '<p style="text-align:center; color: #777;">No categories found.</p>';
                 } else {
-                    // 1. Split into Active and Archived groups
-                    const activeCategories = categories.filter(c => c.is_archived == 0);
-                    const archivedCategories = categories.filter(c => c.is_archived == 1);
+                    const activeCategories = window.allSystemCategories.filter(c => c.is_archived == 0);
+                    const archivedCategories = window.allSystemCategories.filter(c => c.is_archived == 1);
 
-                    // 2. Render Active Categories
                     activeCategories.forEach(category => renderCategoryItem(category));
 
-                    // 3. Render Archived Categories (with a separator)
                     if (archivedCategories.length > 0) {
                         const separator = document.createElement('div');
                         separator.textContent = "Archived";
@@ -1090,244 +1167,153 @@ if (isset($_SESSION['UserID'])) {
             }
         }
 
-        // Helper to render a single category item
+        // --- RENDER SINGLE CATEGORY ITEM ---
         function renderCategoryItem(category) {
             const isArchived = category.is_archived == 1;
             const item = document.createElement('div');
             item.className = 'category-list-item';
             item.dataset.id = category.ItemCategoryID;
+            item.dataset.type = category.ItemType || 'Consumables'; 
             
-            let buttonsHtml = '';
-            let nameStyle = '';
-
-            if (isArchived) {
-                // Archived Item Styling
-                nameStyle = 'text-decoration: line-through; color: #999;';
-                buttonsHtml = `<button class="btn-icon btn-restore-category" title="Restore"><i class="fas fa-trash-restore"></i></button>`;
-            } else {
-                // Active Item Styling
-                buttonsHtml = `
-                    <button class="btn-icon btn-edit-category" title="Edit"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="btn-icon btn-archive-category" title="Archive"><i class="fas fa-archive"></i></button>
-                `;
-            }
+            let buttonsHtml = isArchived 
+                ? `<button class="btn-icon btn-restore-category"><i class="fas fa-trash-restore"></i></button>` 
+                : `<button class="btn-icon btn-edit-category"><i class="fas fa-pencil-alt"></i></button> 
+                   <button class="btn-icon btn-archive-category"><i class="fas fa-archive"></i></button>`;
 
             item.innerHTML = `
-                <span class="category-name" style="${nameStyle}">${escapeHTML(category.ItemCategoryName)}</span>
-                <div class="category-actions">
-                    ${buttonsHtml}
+                <div>
+                    <span class="category-name" style="${isArchived ? 'text-decoration: line-through; color: #999;' : ''}">${escapeHTML(category.ItemCategoryName)}</span>
+                    <span style="font-size: 11px; color: #888; background: #eee; padding: 2px 6px; border-radius: 4px; margin-left: 8px;">${escapeHTML(category.ItemType || 'Consumables')}</span>
                 </div>
+                <div class="category-actions">${buttonsHtml}</div>
             `;
             categoryListContainer.appendChild(item);
         }
 
-        // --- REFRESH DROPDOWNS ---
-       async function refreshCategoryDropdowns() {
-            try {
-                const response = await fetch(`${API_URL}?action=get_categories`);
-                if (!response.ok) throw new Error('Network response was not ok');
-                
-                const categories = await response.json();
-                
-                allCategoryDropdowns.forEach(dropdown => {
-                    if (!dropdown) return;
-                    const currentValue = dropdown.value;
-                    while (dropdown.options.length > 1) { dropdown.remove(1); }
-
-                    const isFormDropdown = (dropdown.id === 'item-category' || dropdown.id === 'edit-item-category');
-                    
-                    categories.forEach(category => {
-                        // *** START CHANGE: Check for is_archived ***
-                        // If it's a form dropdown (Add/Edit Item) and the category is archived, SKIP IT
-                        if (isFormDropdown && category.is_archived == 1) return;
-                        // *** END CHANGE ***
-
-                        const option = document.createElement('option');
-                        if (isFormDropdown) {
-                            option.value = category.ItemCategoryID;
-                        } else {
-                            option.value = category.ItemCategoryName;
-                        }
-                        option.textContent = escapeHTML(category.ItemCategoryName);
-                        dropdown.appendChild(option);
-                    });
-
-                    dropdown.value = currentValue;
-                    if(dropdown.value !== currentValue && isFormDropdown) {
-                         dropdown.value = ""; 
-                    }
-                });
-            } catch (error) {
-                 console.error('Error refreshing category dropdowns:', error);
-            }
+        // --- MODAL OPENER ---
+        function openEditCategoryNameModal(id, name, type) {
+            editCategoryIdInput.value = id;
+            editCategoryNameInput.value = name;
+            document.getElementById('edit-category-type-input').value = type || 'Consumables'; 
+            editCategoryNameModal.style.display = 'flex';
         }
-        // --- ADD Category ---
+
+        // --- ADD CATEGORY ---
         addNewCategoryBtn.addEventListener('click', async () => {
             const newName = newCategoryNameInput.value.trim();
-            if (!newName) {
-                showCategoryMessage('Please enter a category name.', 'error');
-                return;
-            }
-
+            const newType = document.getElementById('new-category-type').value; 
+            if (!newName) return showCategoryMessage('Please enter a category name.', 'error');
             try {
                 const formData = new FormData();
                 formData.append('CategoryName', newName);
-
-                const response = await fetch(`${API_URL}?action=add_category`, {
-                    method: 'POST',
-                    body: formData
-                });
+                formData.append('ItemType', newType); 
+                const response = await fetch(`${API_URL}?action=add_category`, { method: 'POST', body: formData });
                 const result = await response.json();
-
-                if (result.success) {
+                if (result.success) { 
                     newCategoryNameInput.value = ''; 
-                    await loadCategories();
-                    await refreshCategoryDropdowns();
-                } else {
-                    showCategoryMessage(result.message || 'Failed to add category.', 'error');
-                }
-            } catch (error) {
-                console.error('Error adding category:', error);
-                showCategoryMessage('An error occurred.', 'error');
-            }
+                    await loadCategories(); 
+                    await refreshCategoryDropdowns(); 
+                } else showCategoryMessage(result.message, 'error');
+            } catch (e) { showCategoryMessage('Error adding category.', 'error'); }
         });
 
-        // --- CLICK DELEGATION ---
-        categoryListContainer.addEventListener('click', (e) => {
-            const editBtn = e.target.closest('.btn-edit-category');
-            const archiveBtn = e.target.closest('.btn-archive-category');
-            const restoreBtn = e.target.closest('.btn-restore-category');
-            const item = e.target.closest('.category-list-item');
-
-            if (!item) return; 
-
-            const categoryId = item.dataset.id;
-            const categoryName = item.querySelector('.category-name').textContent;
-            
-            if (editBtn) openEditCategoryNameModal(categoryId, categoryName);
-            if (archiveBtn) showCategoryArchiveModal(categoryId, categoryName);
-            if (restoreBtn) restoreCategory(categoryId);
-        });
-
-        // --- ARCHIVE ---
-        catDelConfirmBtn.addEventListener('click', async () => {
-            if (!categoryIdToArchive) return;
-
-            try {
-                const formData = new FormData();
-                formData.append('CategoryID', categoryIdToArchive);
-
-                const response = await fetch(`${API_URL}?action=archive_category`, {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-                closeCategoryArchiveModal();
-
-                if (result.success) {
-                    await loadCategories();
-                    await refreshCategoryDropdowns();
-                    showCategoryMessage('Category archived successfully.', 'success');
-                } else {
-                    showCategoryMessage(result.message || 'Failed to archive category.', 'error');
-                }
-            } catch (error) {
-                console.error('Error archiving category:', error);
-                closeCategoryArchiveModal();
-                showCategoryMessage('An error occurred.', 'error');
-            }
-        });
-
-        // --- RESTORE ---
-        async function restoreCategory(id) {
-            try {
-                const formData = new FormData();
-                formData.append('CategoryID', id);
-
-                const response = await fetch(`${API_URL}?action=restore_category`, {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-
-                if (result.success) {
-                    await loadCategories();
-                    await refreshCategoryDropdowns();
-                    showCategoryMessage('Category restored successfully.', 'success');
-                } else {
-                    showCategoryMessage(result.message || 'Failed to restore.', 'error');
-                }
-            } catch (error) {
-                console.error('Error restoring:', error);
-                showCategoryMessage('An error occurred.', 'error');
-            }
-        }
-
-        // --- UPDATE ---
+        // --- UPDATE CATEGORY ---
         editCategoryNameForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const categoryId = editCategoryIdInput.value;
             const newName = editCategoryNameInput.value.trim();
-
-            if (!newName) {
-                showCategoryMessage('Please enter a category name.', 'error');
-                return;
-            }
-
+            const newType = document.getElementById('edit-category-type-input').value; 
             try {
                 const formData = new FormData();
                 formData.append('CategoryID', categoryId);
                 formData.append('CategoryName', newName);
-
-                const response = await fetch(`${API_URL}?action=update_category`, {
-                    method: 'POST',
-                    body: formData
-                });
+                formData.append('ItemType', newType); 
+                const response = await fetch(`${API_URL}?action=update_category`, { method: 'POST', body: formData });
                 const result = await response.json();
-                
+                if (result.success) { 
+                    closeEditCategoryNameModal(); 
+                    await loadCategories(); 
+                    await refreshCategoryDropdowns(); 
+                } else showCategoryMessage(result.message, 'error');
+            } catch (e) { console.error(e); }
+        });
+
+        // --- DELEGATE CLICKS (Edit/Archive/Restore) ---
+        categoryListContainer.addEventListener('click', (e) => {
+            const item = e.target.closest('.category-list-item');
+            if (!item) return; 
+            
+            const categoryId = item.dataset.id;
+            const categoryName = item.querySelector('.category-name').textContent;
+            
+            const editBtn = e.target.closest('.btn-edit-category');
+            const archiveBtn = e.target.closest('.btn-archive-category');
+            const restoreBtn = e.target.closest('.btn-restore-category');
+
+            if (editBtn) openEditCategoryNameModal(categoryId, categoryName, item.dataset.type);
+            if (archiveBtn) showCategoryArchiveModal(categoryId, categoryName);
+            if (restoreBtn) restoreCategory(categoryId);
+        });
+
+        // --- ARCHIVE CATEGORY ---
+        catDelConfirmBtn.addEventListener('click', async () => {
+            if (!categoryIdToArchive) return;
+            try {
+                const formData = new FormData();
+                formData.append('CategoryID', categoryIdToArchive);
+                const response = await fetch(`${API_URL}?action=archive_category`, { method: 'POST', body: formData });
+                const result = await response.json();
+                closeCategoryArchiveModal();
                 if (result.success) {
-                    closeEditCategoryNameModal();
                     await loadCategories();
                     await refreshCategoryDropdowns();
-                    showCategoryMessage('Category updated successfully.', 'success');
-                } else {
-                    showCategoryMessage(result.message || 'Failed to update category.', 'error');
-                }
+                    showCategoryMessage('Category archived successfully.', 'success');
+                } else showCategoryMessage(result.message || 'Failed to archive.', 'error');
             } catch (error) {
-                console.error('Error updating category:', error);
+                closeCategoryArchiveModal();
                 showCategoryMessage('An error occurred.', 'error');
             }
         });
+
+        // --- RESTORE CATEGORY ---
+        async function restoreCategory(id) {
+            try {
+                const formData = new FormData();
+                formData.append('CategoryID', id);
+                const response = await fetch(`${API_URL}?action=restore_category`, { method: 'POST', body: formData });
+                const result = await response.json();
+                if (result.success) {
+                    await loadCategories();
+                    await refreshCategoryDropdowns();
+                    showCategoryMessage('Category restored successfully.', 'success');
+                } else showCategoryMessage(result.message || 'Failed to restore.', 'error');
+            } catch (error) { showCategoryMessage('An error occurred.', 'error'); }
+        }
     });
 </script>
+
 <script>
+// --- FORM TOGGLES (Including Category Auto-Filter) ---
 function toggleAddExpiration() {
     const type = document.getElementById('item-type').value;
     const expGroup = document.getElementById('expiration-group');
     const expInput = document.getElementById('item-expiration');
-    if (type === 'Consumables') {
-        expGroup.style.display = 'block';
-        expInput.required = true;
-    } else {
-        expGroup.style.display = 'none';
-        expInput.required = false;
-        expInput.value = '';
-    }
+    if (type === 'Consumables') { expGroup.style.display = 'block'; expInput.required = true; } 
+    else { expGroup.style.display = 'none'; expInput.required = false; expInput.value = ''; }
+    
+    // Auto-filter categories
+    if(window.filterCategoriesByType) window.filterCategoriesByType('item-type', 'item-category');
 }
 
 function toggleEditExpiration() {
     const type = document.getElementById('edit-item-type').value;
     const expGroup = document.getElementById('edit-expiration-group');
     const expInput = document.getElementById('edit-item-expiration');
-    if (type === 'Consumables') {
-        expGroup.style.display = 'block';
-        expInput.required = true;
-    } else {
-        expGroup.style.display = 'none';
-        expInput.required = false;
-        expInput.value = '';
-    }
+    if (type === 'Consumables') { expGroup.style.display = 'block'; expInput.required = true; } 
+    else { expGroup.style.display = 'none'; expInput.required = false; expInput.value = ''; }
+    
+    // Auto-filter categories
+    if(window.filterCategoriesByType) window.filterCategoriesByType('edit-item-type', 'edit-item-category');
 }
 </script>
 <script src="script/download-utils.js?v=<?php echo time(); ?>"></script>

@@ -95,7 +95,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Pagination State
   let currentPages = {
     requests: 1,
-    history: 1
+    history: 1,
+    
   };
   const rowsPerPage = 10;
 
@@ -440,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // === DATA FETCHING
   // ======================================================
 
-  function populateFilterDropdown(data, dropdown) {
+ function populateFilterDropdown(data, dropdown) {
       if (!dropdown) return;
       
       const currentValue = dropdown.value;
@@ -475,10 +476,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (items.error) {
         handleError(items.error);
         allInventoryData = [];
-      } else {
+        } else {
         allInventoryData = items;
         renderInventoryTable();
-        populateFilterDropdown(allInventoryData, categoryFilter);
       }
     } catch (error) {
       handleError('Error fetching inventory: ' + error.message);
@@ -519,7 +519,6 @@ async function fetchHistory() {
         // ======================================================
 
         renderHistoryTable();
-        populateFilterDropdown(allHistoryData, categoryFilterHistory);
       }
     } catch (error) {
       handleError('Error fetching history: ' + error.message);
@@ -529,32 +528,7 @@ async function fetchHistory() {
   }
 
   async function fetchCategories() {
-    try {
-      const response = await fetch('inventory_actions.php?action=get_categories');
-      if (!response.ok) throw new Error('Network response was not ok.');
-      const categories = await response.json();
-
-      if (categories.error) {
-        handleError(categories.error);
-        return;
-      }
-
-      addCategorySelect.innerHTML = '<option value="" disabled selected>Select a category</option>';
-      editCategorySelect.innerHTML = '';
-
-      categories.forEach((category) => {
-        if (category.is_archived != 1) {
-            const optionForForm = document.createElement('option');
-            optionForForm.value = category.ItemCategoryID;
-            optionForForm.textContent = category.ItemCategoryName;
-
-            addCategorySelect.appendChild(optionForForm.cloneNode(true));
-            editCategorySelect.appendChild(optionForForm.cloneNode(true));
-        }
-      });
-    } catch (error) {
-      handleError('Error fetching categories: ' + error.message);
-    }
+      // Disabled: The new Smart Filter and fetchCategoryBudgets handle this perfectly now!
   }
 
   // ======================================================
@@ -641,7 +615,7 @@ async function fetchHistory() {
         }
 
     return `
-        <tr>
+        <tr>  
           <td>${escapeHtml(item.ItemName)}</td>
           <td>${escapeHtml(item.ItemType || 'N/A')}</td>
           <td>${escapeHtml(item.Category)}</td>
@@ -656,17 +630,19 @@ async function fetchHistory() {
         </tr>`;
       })
       .join('');
-
+    
     updateSortHeaders('requests-tab', sortState.requests);
 
     // --- UPDATED LISTENERS: use e.currentTarget to safely get dataset ---
+    
+    // ADDED BACK: The Edit Button Listener
     document.querySelectorAll('#requestsTableBody .edit-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
-          const itemId = parseInt(e.currentTarget.dataset.id);
-          const itemToEdit = allInventoryData.find((i) => i.ItemID == itemId);
-          if (itemToEdit) openEditModal(itemToEdit);
+            const itemId = parseInt(e.currentTarget.dataset.id);
+            const itemToEdit = allInventoryData.find((i) => i.ItemID == itemId);
+            if (itemToEdit) openEditModal(itemToEdit);
         });
-      });
+    });
 
     document.querySelectorAll('#requestsTableBody .delete-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
@@ -769,13 +745,26 @@ historyTableBody.innerHTML = paginatedData
  // ======================================================
   // === MODAL & FORM LOGIC
   // ======================================================
-
+// Handle Return Submission
   // Instantly update the budget display when picking a category
+  // Instantly update the budget display and Auto-Select Type when picking a category
   document.getElementById('item-category')?.addEventListener('change', (e) => {
       const catId = e.target.value;
       const display = document.getElementById('add-modal-available-budget');
       if (display && categoryBudgets[catId] !== undefined) {
           display.textContent = '₱' + categoryBudgets[catId].toLocaleString('en-PH', {minimumFractionDigits: 2});
+      }
+      
+      // --- NEW: Auto-select the Type! ---
+      if (window.allSystemCategories) {
+          const category = window.allSystemCategories.find(c => c.ItemCategoryID == catId);
+          if (category && category.ItemType) {
+              const typeDropdown = document.getElementById('item-type');
+              if (typeDropdown.value !== category.ItemType) {
+                  typeDropdown.value = category.ItemType; // Set the Type
+                  if (typeof toggleAddExpiration === 'function') toggleAddExpiration(); // Trigger UI updates
+              }
+          }
       }
   });
 
@@ -785,9 +774,21 @@ historyTableBody.innerHTML = paginatedData
       if (display && categoryBudgets[catId] !== undefined) {
           display.textContent = '₱' + categoryBudgets[catId].toLocaleString('en-PH', {minimumFractionDigits: 2});
       }
+      
+      // --- NEW: Auto-select the Type! ---
+      if (window.allSystemCategories) {
+          const category = window.allSystemCategories.find(c => c.ItemCategoryID == catId);
+          if (category && category.ItemType) {
+              const typeDropdown = document.getElementById('edit-item-type');
+              if (typeDropdown.value !== category.ItemType) {
+                  typeDropdown.value = category.ItemType; // Set the Type
+                  if (typeof toggleEditExpiration === 'function') toggleEditExpiration(); // Trigger UI updates
+              }
+          }
+      }
   });
 
-  addItemForm.addEventListener('submit', (e) => {
+ addItemForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
     // --- BUDGET HARD BLOCK ---
@@ -799,7 +800,7 @@ historyTableBody.innerHTML = paginatedData
 
     if (totalPurchaseCost > available) {
         showToast(`Insufficient Budget! This purchase costs ₱${totalPurchaseCost.toLocaleString('en-PH', {minimumFractionDigits:2})}, but you only have ₱${available.toLocaleString('en-PH', {minimumFractionDigits:2})}.`, 'error');
-        return; // BLOCK SUBMISSION
+        return; // PREVENTS MODAL FROM OPENING
     }
     // -------------------------
 
@@ -862,6 +863,12 @@ function openEditModal(item) {
     editItemIdInput.value = item.ItemID;
     document.getElementById('edit-item-name').value = item.ItemName;
     document.getElementById('edit-item-type').value = item.ItemType || 'Consumables';
+    
+    // --- FIX: Filter the categories instantly to match the Type BEFORE setting the category! ---
+    if(window.filterCategoriesByType) {
+        window.filterCategoriesByType('edit-item-type', 'edit-item-category');
+    }
+    
     editCategorySelect.value = item.ItemCategoryID;
     document.getElementById('edit-item-description').value = item.ItemDescription;
     document.getElementById('edit-item-unit').value = item.ItemUnit || ''; 
@@ -896,9 +903,10 @@ function openEditModal(item) {
     if (stockAdjustment > 0) {
         const totalRestockCost = stockAdjustment * unitCost;
         const available = categoryBudgets[categoryId] || 0;
+        
         if (totalRestockCost > available) {
             showToast(`Insufficient Budget! Restocking costs ₱${totalRestockCost.toLocaleString('en-PH', {minimumFractionDigits:2})}, but you only have ₱${available.toLocaleString('en-PH', {minimumFractionDigits:2})}.`, 'error');
-            return; // BLOCK SUBMISSION
+            return; // BLOCKS SUBMISSION
         }
     }
     // -------------------------------------
@@ -908,6 +916,7 @@ function openEditModal(item) {
         editItemForm.reportValidity();
         return;
     }
+    // ... rest of the code remains exactly the same ...
     // ---------------------------------
 
     if (!currentEditItemId || isSubmittingEdit) return;
@@ -1002,8 +1011,18 @@ function openEditModal(item) {
     });
   });
 
-  if (addItemBtn)
-    addItemBtn.addEventListener('click', () => showModal(addItemModal));
+  if (addItemBtn) {
+    addItemBtn.addEventListener('click', () => {
+        if(addItemForm) addItemForm.reset(); // Reset form
+        
+        // Reset the Smart Filter so it waits for you to pick a Type
+        if(window.filterCategoriesByType) {
+            window.filterCategoriesByType('item-type', 'item-category');
+        }
+        
+        showModal(addItemModal);
+    });
+  }
   if (addModalCloseBtn)
     addModalCloseBtn.addEventListener('click', () => hideModal(addItemModal));
   if (confirmCancelBtn)
@@ -1110,18 +1129,47 @@ function openEditModal(item) {
     currentPages.history = 1;
     renderHistoryTable();
   });
-if (typeFilter) typeFilter.addEventListener('change', () => {
-    currentPages.requests = 1;
-    renderInventoryTable();
+// --- NEW: Smart Filter for the Main Tables ---
+  function updateMainTabCategoryFilters(typeVal, categoryDropdownId) {
+      const catSelect = document.getElementById(categoryDropdownId);
+      if (!catSelect || !window.allSystemCategories) return;
+
+      const currentCat = catSelect.value;
+      while (catSelect.options.length > 1) { catSelect.remove(1); }
+
+      let filtered = window.allSystemCategories.filter(c => c.is_archived == 0);
+      if (typeVal) {
+          filtered = filtered.filter(c => c.ItemType === typeVal); // Filter by Type
+      }
+
+      filtered.forEach(category => {
+          const option = document.createElement('option');
+          option.value = category.ItemCategoryName; 
+          option.textContent = category.ItemCategoryName; // Perfectly clean text
+          catSelect.appendChild(option);
+      });
+
+      catSelect.value = currentCat;
+      if(catSelect.value !== currentCat) catSelect.value = "";
+  }
+
+  if (typeFilter) typeFilter.addEventListener('change', () => {
+      currentPages.requests = 1;
+      updateMainTabCategoryFilters(typeFilter.value, 'floorFilter');
+      renderInventoryTable();
   });
 
   if (typeFilterHistory) typeFilterHistory.addEventListener('change', () => {
-    currentPages.history = 1;
-    renderHistoryTable();
+      currentPages.history = 1;
+      updateMainTabCategoryFilters(typeFilterHistory.value, 'floorFilterHistory');
+      renderHistoryTable();
   });
  if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
-      if (typeFilter) typeFilter.value = ''; // NEW
+      if (typeFilter) {
+          typeFilter.value = ''; 
+          updateMainTabCategoryFilters('', 'floorFilter'); // Instantly reset categories
+      }
       categoryFilter.value = '';
       statusFilter.value = '';
       searchInput.value = '';
@@ -1137,7 +1185,10 @@ if (typeFilter) typeFilter.addEventListener('change', () => {
   if (refreshBtnHistory) {
     // UPDATED REFRESH LOGIC FOR HISTORY
     refreshBtnHistory.addEventListener('click', async () => {
-      if (typeFilterHistory) typeFilterHistory.value = '';
+      if (typeFilterHistory) {
+          typeFilterHistory.value = '';
+          updateMainTabCategoryFilters('', 'floorFilterHistory'); // Instantly reset categories
+      }
       categoryFilterHistory.value = '';
       statusFilterHistory.value = '';
       searchInputHistory.value = '';
@@ -1292,6 +1343,9 @@ if (typeFilter) typeFilter.addEventListener('change', () => {
           const res = await fetch('inventory_actions.php?action=get_categories');
           const cats = await res.json();
           
+          // --- NEW: FEED THE SMART FILTER ---
+          window.allSystemCategories = cats;
+
           // Clear dropdowns
           const optionsHtml = '<option value="" disabled selected>Select Category...</option>';
           let realOptions = '';
@@ -1305,12 +1359,25 @@ if (typeFilter) typeFilter.addEventListener('change', () => {
 
           if(budgetCategory) budgetCategory.innerHTML = optionsHtml + realOptions;
           if(globalCategorySelect) {
-              const currentVal = globalCategorySelect.value; // Remember selection
+              const currentVal = globalCategorySelect.value; 
               globalCategorySelect.innerHTML = '<option value="" selected>-- Select Category --</option>' + realOptions;
               globalCategorySelect.value = currentVal;
           }
 
           updateGlobalBudgetDisplay(globalCategorySelect ? globalCategorySelect.value : null);
+          
+          // --- NEW: TRIGGER THE FILTER FOR ADD/EDIT MODALS ON LOAD ---
+          if (typeof window.filterCategoriesByType === 'function') {
+              window.filterCategoriesByType('item-type', 'item-category');
+              window.filterCategoriesByType('edit-item-type', 'edit-item-category');
+          }
+
+          // --- FIX: POPULATE MAIN TAB CATEGORIES ON LOAD ---
+          if (typeof updateMainTabCategoryFilters === 'function') {
+              updateMainTabCategoryFilters(typeFilter ? typeFilter.value : '', 'floorFilter');
+              updateMainTabCategoryFilters(typeFilterHistory ? typeFilterHistory.value : '', 'floorFilterHistory');
+          }
+
       } catch(e) { console.error("Error fetching budgets", e); }
   }
 
@@ -1628,7 +1695,7 @@ if (typeFilter) typeFilter.addEventListener('change', () => {
       }
   });
 
-  // Override initializePage to ensure our new budget function runs!
+ // Override initializePage to ensure our new budget function runs!
   const originalInit = initializePage;
   initializePage = async function() {
       await fetchCategoryBudgets(); // Run our new category fetcher!
