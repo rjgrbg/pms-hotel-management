@@ -93,24 +93,29 @@ if (isset($_SESSION['UserID'])) {
 
     /* Style for the new 'Edit' button */
     .edit-category-btn {
-        padding: 8px 12px;
+        padding: 12px 14px;
         font-size: 13px;
         font-weight: 600;
-        background-color: #ffc107; /* Yellow background like mockup */
-        color: #212529; /* Dark text */
+        background-color: #480c1b; /* Maroon background to match other buttons */
+        color: #fff; /* White text */
         border: none;
         border-radius: 5px;
         cursor: pointer;
         transition: background-color 0.2s ease;
         flex-shrink: 0; /* Prevent button from shrinking */
+        min-height: 44px; /* Match form element height */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px; /* Square button for icon only */
     }
 
     .edit-category-btn:hover {
-        background-color: #e0a800;
+        background-color: #5a0e22;
     }
 
     .edit-category-btn .fa-pencil-alt {
-        margin-right: 5px;
+        margin: 0; /* No margin needed since no text */
     }
 
     /* Styles for the new "Manage Category" Modal */
@@ -292,9 +297,6 @@ if (isset($_SESSION['UserID'])) {
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeLogoutBtn">×</button>
-      <div class="modalIcon">
-        <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
-      </div>
       <h2>Are you sure you want to logout?</h2>
       <p>You will be logged out from your account and redirected to the login page.</p>
       <div class="modalButtons">
@@ -494,15 +496,10 @@ if (isset($_SESSION['UserID'])) {
     <div class="modal-content">
         <div class="modal-header">
             <div class="modal-title">
-                <i class="fas fa-boxes-stacked modal-icon-fa"></i>
                 <h2>Add Item</h2>
             </div>
             <button class="modal-close-btn" id="modal-close-btn">&times;</button>
         </div>
-        <p class="modal-description">
-            Please fill out the item details carefully before adding them to the inventory. 
-            Ensure that all information is accurate to maintain proper stock records.
-        </p>
         <div class="modal-body">
             <form id="add-item-form">
                 <div class="form-row">
@@ -526,7 +523,7 @@ if (isset($_SESSION['UserID'])) {
                                 <option value="" disabled selected>Select a category</option>
                             </select>
                             <button type="button" class="edit-category-btn" id="open-category-modal-btn">
-                                <i class="fas fa-pencil-alt"></i> Edit
+                                <i class="fas fa-pencil-alt"></i>
                             </button>
                         </div>
                     </div>

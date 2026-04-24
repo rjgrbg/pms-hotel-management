@@ -1423,9 +1423,6 @@ $conn->close();
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeLogoutBtn">&times;</button>
-      <div class="modalIcon">
-        <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
-      </div>
       <h2>Confirm Logout</h2>
       <p>Are you sure you want to logout?</p>
       <div class="modalButtons">

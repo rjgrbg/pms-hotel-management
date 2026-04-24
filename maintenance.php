@@ -297,9 +297,6 @@ $conn->close();
     <div class="modalBackdrop" id="logoutModal" style="display: none;">
         <div class="logoutModal">
             <button class="closeBtn" id="closeLogoutBtn">×</button>
-            <div class="modalIcon">
-                <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
-            </div>
             <h2>Are you sure you want to logout?</h2>
             <p>You will be logged out from your account and redirected to the login page.</p>
             <div class="modalButtons">
@@ -447,64 +444,128 @@ $conn->close();
     </div>
 
     <div class="modalBackdrop" id="issueTypeModal" style="display: none;">
-        <div class="addItemModal">
+        <div class="issueTypeModal">
             <button class="closeBtn" id="closeIssueTypeModalBtn">×</button>
-            <div class="modalIconHeader">
-                <i class="fas fa-tasks" style="font-size: 48px; color: #FFA237;"></i>
-            </div>
             <h2>Select Issue Types</h2>
             <p class="modalSubtext">Select all relevant categories for the maintenance request in Room <strong id="issueTypeModalRoomNumber">---</strong>.</p>
             
             <form id="issueTypeForm">
                 <input type="hidden" id="issueTypeRoomId" value="">
                 
-                <div class="formGroup checkboxGroup" style="width: 100%; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 10px;">
-                    <input type="checkbox" id="issue_select_all" name="issue_select_all">
-                    <label for="issue_select_all" style="font-weight: 700; color: #333;">SELECT ALL</label>
-                </div>
+                <div class="issueTypeGrid">
+                    <input type="checkbox" id="issue_select_all" class="issue-checkbox-hidden">
+                    <label for="issue_select_all" class="issueTypeCard selectAllCard">
+                        <div class="issueTypeName">SELECT ALL</div>
+                        <div class="issueTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
 
-                <div class="formRow" id="issueTypeCheckboxContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px 15px; max-height: 250px; overflow-y: auto;">
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="issue_electrical" name="issueType[]" value="Electrical & Lighting">
-                        <label for="issue_electrical">Electrical & Lighting</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="issue_plumbing" name="issueType[]" value="Plumbing">
-                        <label for="issue_plumbing">Plumbing</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="issue_furniture" name="issueType[]" value="Furniture & Fixtures">
-                        <label for="issue_furniture">Furniture & Fixtures</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="issue_hvac" name="issueType[]" value="HVAC">
-                        <label for="issue_hvac">HVAC</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="issue_doors" name="issueType[]" value="Doors & Windows">
-                        <label for="issue_doors">Doors & Windows</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="issue_bathroom" name="issueType[]" value="Bathroom Area">
-                        <label for="issue_bathroom">Bathroom Area</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="issue_safety" name="issueType[]" value="Safety & Security">
-                        <label for="issue_safety">Safety & Security</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="issue_flooring" name="issueType[]" value="Flooring & Walls">
-                        <label for="issue_flooring">Flooring & Walls</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="issue_windows" name="issueType[]" value="Windows, Curtains, & Blinds">
-                        <label for="issue_windows">Windows, Curtains, & Blinds</label>
-                    </div>
+                    <input type="checkbox" id="issue_electrical" name="issueType[]" value="Electrical & Lighting" class="issue-checkbox-hidden">
+                    <label for="issue_electrical" class="issueTypeCard">
+                        <div class="issueTypeIcon">
+                            <i class="fas fa-lightbulb"></i>
+                        </div>
+                        <div class="issueTypeName">Electrical & Lighting</div>
+                        <div class="issueTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="issue_plumbing" name="issueType[]" value="Plumbing" class="issue-checkbox-hidden">
+                    <label for="issue_plumbing" class="issueTypeCard">
+                        <div class="issueTypeIcon">
+                            <i class="fas fa-faucet"></i>
+                        </div>
+                        <div class="issueTypeName">Plumbing</div>
+                        <div class="issueTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="issue_furniture" name="issueType[]" value="Furniture & Fixtures" class="issue-checkbox-hidden">
+                    <label for="issue_furniture" class="issueTypeCard">
+                        <div class="issueTypeIcon">
+                            <i class="fas fa-couch"></i>
+                        </div>
+                        <div class="issueTypeName">Furniture & Fixtures</div>
+                        <div class="issueTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="issue_hvac" name="issueType[]" value="HVAC" class="issue-checkbox-hidden">
+                    <label for="issue_hvac" class="issueTypeCard">
+                        <div class="issueTypeIcon">
+                            <i class="fas fa-fan"></i>
+                        </div>
+                        <div class="issueTypeName">HVAC</div>
+                        <div class="issueTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="issue_doors" name="issueType[]" value="Doors & Windows" class="issue-checkbox-hidden">
+                    <label for="issue_doors" class="issueTypeCard">
+                        <div class="issueTypeIcon">
+                            <i class="fas fa-door-open"></i>
+                        </div>
+                        <div class="issueTypeName">Doors & Windows</div>
+                        <div class="issueTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="issue_bathroom" name="issueType[]" value="Bathroom Area" class="issue-checkbox-hidden">
+                    <label for="issue_bathroom" class="issueTypeCard">
+                        <div class="issueTypeIcon">
+                            <i class="fas fa-bath"></i>
+                        </div>
+                        <div class="issueTypeName">Bathroom Area</div>
+                        <div class="issueTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="issue_safety" name="issueType[]" value="Safety & Security" class="issue-checkbox-hidden">
+                    <label for="issue_safety" class="issueTypeCard">
+                        <div class="issueTypeIcon">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div class="issueTypeName">Safety & Security</div>
+                        <div class="issueTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="issue_flooring" name="issueType[]" value="Flooring & Walls" class="issue-checkbox-hidden">
+                    <label for="issue_flooring" class="issueTypeCard">
+                        <div class="issueTypeIcon">
+                            <i class="fas fa-paint-roller"></i>
+                        </div>
+                        <div class="issueTypeName">Flooring & Walls</div>
+                        <div class="issueTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="issue_windows" name="issueType[]" value="Windows, Curtains, & Blinds" class="issue-checkbox-hidden">
+                    <label for="issue_windows" class="issueTypeCard">
+                        <div class="issueTypeIcon">
+                            <i class="fas fa-window-maximize"></i>
+                        </div>
+                        <div class="issueTypeName">Windows, Curtains, & Blinds</div>
+                        <div class="issueTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
                 </div>
                 
                 <div class="modalButtons">
                     <button type="button" class="modalBtn cancelBtn" id="cancelIssueTypeBtn">CANCEL</button>
-                    <button type="submit" class="modalBtn confirmBtn" id="confirmIssueTypeBtn">NEXT</button>
+                    <button type="submit" class="modalBtn confirmBtn" id="confirmIssueTypeBtn">
+                        <i class="fas fa-check"></i> NEXT
+                    </button>
                 </div>
             </form>
         </div>
@@ -513,20 +574,20 @@ $conn->close();
     <div class="modalBackdrop" id="editRoomStatusModal" style="display: none;">
         <div class="addItemModal"> <button class="closeBtn" id="closeEditRoomStatusBtn">×</button>
             <div class="modalIconHeader">
-                <i class="fas fa-bed" style="font-size: 48px; color: #FFA237;"></i>
+                <i class="fas fa-bed" style="font-size: 48px; color: #480c1b;"></i>
             </div>
-            <h2 id="editRoomStatusModalTitle" style="color: white;">Edit Room Status</h2>
+            <h2 id="editRoomStatusModalTitle">Edit Room Status</h2>
             
-            <p class="modalSubtext normal-message" style="color: white;">
+            <p class="modalSubtext normal-message">
                 Update the status for Room <strong id="editRoomStatusRoomNumber">---</strong>.
             </p>
             <p class="modalSubtext error-message" id="editRoomStatusErrorMessage">
                 </p>
-            <form id="editRoomStatusForm" style="color: white;">
+            <form id="editRoomStatusForm">
                 <input type="hidden" id="editRoomStatusRoomId" value="">
                 <div class="formRow">
                     <div class="formGroup">
-                        <label style="color: #c7c7c7;">Room Status</label>
+                        <label>Room Status</label>
                         <select class="formInput" id="editRoomStatusSelect" required>
                             <option value="Available">Available</option>
                             <option value="Needs Maintenance">Needs Maintenance</option>
@@ -555,7 +616,7 @@ $conn->close();
         <div class="successModal">
             <button class="closeBtn" id="closeSuccessBtn">×</button>
             <div class="modalIconHeader">
-                <i class="fas fa-check-circle" style="font-size: 80px; color: #28a745;"></i>
+                <i class="fas fa-check-circle" style="font-size: 80px; color: #480c1b;"></i>
             </div>
             <h2 id="successModalMessage">Success!</h2>
             <div class="modalButtons">

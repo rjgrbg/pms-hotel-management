@@ -236,6 +236,11 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const showModal = (modal) => {
+    // Hide all open dropdowns when modal opens
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+      menu.classList.remove('show');
+    });
+    
     if (modal) {
       if (modal.classList.contains('modalBackdrop')) {
         modal.style.display = 'flex';

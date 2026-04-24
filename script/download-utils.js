@@ -136,7 +136,7 @@ function injectDownloadModal() {
             <div class="downloadFormatModal">
                 <button class="closeBtn" id="closeDownloadFormatBtn">×</button>
                 <div class="modalIcon">
-                    <img src="assets/icons/download-icon.png" alt="Download" style="width: 60px; height: 60px; filter: brightness(0) saturate(100%) invert(74%) sepia(54%) saturate(2154%) hue-rotate(343deg) brightness(101%) contrast(98%);" />
+                    <img src="assets/icons/download-icon.png" alt="Download" style="width: 60px; height: 60px; filter: brightness(0) saturate(100%) invert(8%) sepia(35%) saturate(4872%) hue-rotate(332deg) brightness(91%) contrast(101%);" />
                 </div>
                 <h2>Choose Download Format</h2>
                 <p>Select the format you want to download the data in:</p>
@@ -168,7 +168,7 @@ function injectDownloadModalStyles() {
     styles.id = 'downloadModalStyles';
     styles.textContent = `
         .downloadFormatModal {
-            background: rgb(72, 12, 27);
+            background: #fff;
             border-radius: 12px;
             padding: 30px;
             width: 90%;
@@ -186,14 +186,18 @@ function injectDownloadModalStyles() {
         }
 
         .downloadFormatModal h2 {
-            color: rgb(252, 160, 55);
+            color: #480c1b;
             margin: 15px 0 10px 0;
             font-size: 20px;
+            letter-spacing: 0px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
         }
 
         .downloadFormatModal p {
-            color: white;
+            color: #666;
             margin-bottom: 25px;
+            margin-top: 20px;
         }
 
         .downloadFormatButtons {
@@ -201,16 +205,17 @@ function injectDownloadModalStyles() {
             gap: 20px;
             justify-content: center;
             flex-wrap: wrap;
+            margin-top: 45px;
         }
 
         .downloadFormatBtn {
             flex: 1;
             min-width: 150px;
             padding: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid #e0e0e0;
             border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
+            background: #fff;
+            color: #666;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
@@ -226,27 +231,27 @@ function injectDownloadModalStyles() {
         }
 
         .downloadFormatBtn.pdfBtn {
-            color: rgb(198, 159, 111);
+            color: #666;
         }
 
         .downloadFormatBtn.pdfBtn:hover {
-            border-color: rgb(198, 159, 111);
-            background: rgba(198, 159, 111, 0.2);
-            color: rgb(198, 159, 111);
+            border-color: #480c1b;
+            background: #fff;
+            color: #480c1b;
             transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(198, 159, 111, 0.3);
+            box-shadow: 0 5px 15px rgba(72, 12, 27, 0.2);
         }
 
         .downloadFormatBtn.excelBtn {
-            color: rgb(198, 159, 111);
+            color: #666;
         }
 
         .downloadFormatBtn.excelBtn:hover {
-            border-color: rgb(198, 159, 111);
-            background: rgba(198, 159, 111, 0.2);
-            color: rgb(198, 159, 111);
+            border-color: #480c1b;
+            background: #fff;
+            color: #480c1b;
             transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(198, 159, 111, 0.3);
+            box-shadow: 0 5px 15px rgba(72, 12, 27, 0.2);
         }
 
         .downloadFormatModal .closeBtn {
@@ -256,7 +261,7 @@ function injectDownloadModalStyles() {
             background: none;
             border: none;
             font-size: 28px;
-            color: rgba(255, 255, 255, 0.7);
+            color: #480c1b;
             cursor: pointer;
             padding: 0;
             width: 30px;
@@ -268,7 +273,7 @@ function injectDownloadModalStyles() {
         }
 
         .downloadFormatModal .closeBtn:hover {
-            color: #fff;
+            color: #8B0000;
         }
 
         @keyframes modalSlideIn {

@@ -250,9 +250,6 @@ if (isset($_SESSION['UserID'])) {
     <div class="modalBackdrop" id="logoutModal" style="display: none;">
         <div class="logoutModal">
             <button class="closeBtn" id="closeLogoutBtn">×</button>
-            <div class="modalIcon">
-                <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
-            </div>
             <h2>Are you sure you want to logout?</h2>
             <p>You will be logged out from your account and redirected to the login page.</p>
             <div class="modalButtons">

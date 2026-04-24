@@ -226,48 +226,63 @@ body {
   background-color: #d5d5d5;
 }
 
-/* This .confirmBtn style from inventory.css uses a gold background */
+/* This .confirmBtn style uses maroon background */
 .modalBtn.confirmBtn {
-  background-color: #d4af78; 
-  color: #480c1b;
+  background-color: #480c1b; 
+  color: #fff;
   min-width: 160px;
 }
 
 .modalBtn.confirmBtn:hover:not(:disabled) {
-  opacity: 0.9;
+  background-color: #6a1129;
 }
 
-/* --- Logout Modal (Dark Theme from inventory.css) --- */
+/* --- Logout Modal (White Theme) --- */
 .logoutModal {
-  background-color: #480c1b; /* This is the correct dark maroon */
-  border-radius: 8px;
+  background-color: #fff;
+  border-radius: 12px;
   padding: 35px;
   max-width: 420px;
   text-align: center;
-  color: #fff; /* White text */
+  color: #333;
 }
 
 .logoutModal h2 {
-  font-size: 18px;
-  margin-bottom: 12px;
+  font-size: 20px;
+  margin-top: 20px;
+  margin-bottom: 15px;
   font-weight: 600;
-  color: #fff; /* Ensure header text is white */
+  color: #480c1b;
+  letter-spacing: 0px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .logoutModal p {
-  color: #dcc8b0; /* Light text for dark background */
-  font-size: 13px;
+  color: #666;
+  font-size: 14px;
   line-height: 1.5;
   margin-bottom: 10px;
+  margin-top: 20px;
 }
 
 .modalIcon {
   margin: 10px auto 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logoutIcon {
+  height: 60px;
+  width: 60px;
+  filter: brightness(0) saturate(100%) invert(8%) sepia(35%) saturate(4872%) hue-rotate(332deg) brightness(91%) contrast(101%);
 }
 
 .logoutIcon {
   height: 50px;
   width: 50px;
+  filter: brightness(0) saturate(100%) invert(8%) sepia(35%) saturate(4872%) hue-rotate(332deg) brightness(91%) contrast(101%);
 }
 
 /* ============================================= */
