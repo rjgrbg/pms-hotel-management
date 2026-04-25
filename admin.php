@@ -1210,6 +1210,8 @@ $conn->close();
                 <option value="Afternoon">Afternoon</option>
                 <option value="Night">Night</option>
               </select>
+              <input type="date" id="logsDateFrom" class="filterDateInput" placeholder="From" style="margin-left:8px;">
+              <input type="date" id="logsDateTo" class="filterDateInput" placeholder="To" style="margin-left:4px;">
               <div class="searchBox">
                 <input type="text" placeholder="Search" class="searchInput" id="logsSearchInput" />
                 <button class="searchBtn">
@@ -1336,23 +1338,23 @@ $conn->close();
 
       <form id="employeeCodeForm" style="display: block;">
         <div class="formGroup">
-          <label for="employeeCodeInput">Employee Code *</label>
+          <label for="employeeCodeInput">Search Employees *</label>
           
-          <input type="text" id="employeeCodeInput" name="employeeCode" list="employeeList" required 
-                 placeholder="Type or select Employee Code (e.g., EMP-001)"
-                 style="font-size: 16px; padding: 12px; width: 100%; border: 1px solid #ddd; border-radius: 5px;">
+          <input type="text" id="employeeCodeInput" name="employeeSearch" 
+                 placeholder="Type name or code (e.g., Smith)..."
+                 style="font-size: 16px; padding: 12px; width: 100%; border: 1px solid #ddd; border-radius: 5px; margin-bottom: 5px;">
           
-          <datalist id="employeeList">
-              </datalist>
+          <div id="employeeCheckboxContainer" style="max-height: 180px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px; background: #fff; display: none;">
+          </div>
           
-          <small style="color: #e1e1e1ff; font-size: 12px; display: block; margin-top: 10px; text-align: center;">
-            You can type the code manually or select from the list of eligible employees.
+          <small style="color: #e1e1e1; font-size: 12px; display: block; margin-top: 10px; text-align: center;">
+            Search and check the boxes next to the employees you want to add.
           </small>
         </div>
 
         <div class="modalButtons">
           <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeCodeBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn" style="background: #b99156ff;">ADD EMPLOYEE</button>
+          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn" style="background: #b99156;">ADD SELECTED</button>
         </div>
       </form>
       

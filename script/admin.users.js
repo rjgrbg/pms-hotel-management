@@ -41,22 +41,31 @@ if (!document.getElementById('user-toast-style')) {
     document.head.appendChild(userStyle);
 }
 
-function showUserToast(message) {
+function showUserToast(message, isError = false) {
     const existingToast = document.querySelector('.toast-success');
     if (existingToast) existingToast.remove();
 
     const toast = document.createElement('div');
     toast.className = 'toast-success';
+    
+    // Make it RED if it's an error message
+    if (isError) {
+        toast.style.backgroundColor = '#dc3545'; 
+    }
+    
     toast.innerText = message;
     document.body.appendChild(toast);
 
     requestAnimationFrame(() => toast.classList.add('toast-visible'));
+    
+    // Keep errors on screen slightly longer (4.5s) so they can read it
+    const displayTime = isError ? 4500 : 3000; 
+    
     setTimeout(() => {
         toast.classList.remove('toast-visible');
         setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    }, displayTime);
 }
-
 // DEPRECATED - Now using download-utils.js
 // This function is kept for backwards compatibility but downloads now use downloadData()
 function downloadUsersPDF(headers, data, title, filename) {
@@ -127,10 +136,8 @@ function renderUsersTable(data) {
         tbody.innerHTML = paginatedData.map(row => {
             const fullName = `${row.Lname}, ${row.Fname}`;
             const roleName = (typeof ACCOUNT_TYPE_MAP !== 'undefined' ? ACCOUNT_TYPE_MAP[row.AccountType] : row.AccountType) || row.AccountType;
-            
             const isArchived = row.is_archived == 1;
             const rowClass = isArchived ? 'user-archived' : '';
-            
             let dropdownMenu = '';
             if (isArchived) {
                 dropdownMenu = `
@@ -152,7 +159,8 @@ function renderUsersTable(data) {
                     </div>
                 `;
             }
-
+            // Read the shift directly from the synced database value
+            const shiftDisplay = row.Shift || '-';
             return `
                 <tr class="${rowClass}">
                 <td><span style="font-weight:bold; color:#555;">${row.EmployeeID || '-'}</span></td>
@@ -160,7 +168,7 @@ function renderUsersTable(data) {
                     <td>${escapeHtml(fullName)}</td>
                     <td><span class="statusBadge ${row.AccountType}">${escapeHtml(roleName)}</span></td>
                     <td>${escapeHtml(row.EmailAddress)}</td>
-                    <td>${escapeHtml(row.Shift)}</td>
+                    <td>${shiftDisplay}</td>
                     <td>
                         <div class="action-dropdown">
                             <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
@@ -187,52 +195,119 @@ function renderUsersTable(data) {
 // 3. MODAL HANDLERS
 // ==========================================
 
-// --- ADD USER: Fetch List and Show Modal ---
+// --- ADD USER: Show Modal & Auto-load ALL Suggestions ---
 async function handleAddUserClick() {
     if(typeof hideFormMessage === 'function') hideFormMessage(true);
-    document.getElementById('userModalTitle').textContent = 'Add User from Employee';
+    
+    document.getElementById('userModal').style.display = 'flex';
+    document.getElementById('userModalTitle').textContent = 'Add Users from Employees';
     document.getElementById('employeeCodeForm').style.display = 'block';
     document.getElementById('userDetailsDisplay').style.display = 'none';
     document.getElementById('employeeCodeForm').reset();
     
-    // Get the datalist element
-    const datalist = document.getElementById('employeeList');
+    const container = document.getElementById('employeeCheckboxContainer');
     const input = document.getElementById('employeeCodeInput');
     
-    if (datalist && input) { 
-        datalist.innerHTML = ''; // Clear previous options
-        input.placeholder = "Loading suggestions...";
+    if (container && input) { 
+        // 145px perfectly fits 4 items. If it clips on your screen, change to 150px.
+        container.style.maxHeight = '145px';
+        container.style.overflowY = 'auto';
+        
+        container.innerHTML = '<p style="text-align:center; color:#999; margin:15px 0;">Loading all employees...</p>'; 
+        container.style.display = 'block';
+        input.placeholder = "Search loaded employees..."; 
         
         try {
-            const result = await apiCall('fetch_available_employees', {}, 'GET', 'user_actions.php');
-            
-            input.placeholder = "Type or select Employee Code (e.g., EMP-001)";
+            // Request ALL employees immediately
+            const result = await apiCall('fetch_available_employees', { limit: 'all' }, 'GET', 'user_actions.php');
+            container.innerHTML = ''; 
             
             if (result.success && result.data && result.data.length > 0) {
                 result.data.forEach(emp => {
-                    const option = document.createElement('option');
-                    // Value is what gets put into the input box
-                    option.value = emp.employee_code; 
-                    // Label helps the user identify the code
-                    option.textContent = `${emp.last_name}, ${emp.first_name} (${emp.position_name})`; 
-                    datalist.appendChild(option);
+                    const div = document.createElement('div');
+                    div.style.marginBottom = '8px';
+                    div.style.paddingBottom = '8px';
+                    div.style.borderBottom = '1px solid #f0f0f0';
+                    div.innerHTML = `
+                        <label style="display: flex; align-items: center; cursor: pointer; color: #333; margin: 0; font-size: 14px;">
+                            <input type="checkbox" name="selectedEmployees[]" value="${emp.employee_code}" style="margin-right: 12px; width: 18px; height: 18px;">
+                            <strong>${emp.last_name}, ${emp.first_name}</strong> &nbsp; <span style="color: #777;">(${emp.position_name})</span>
+                        </label>
+                    `;
+                    container.appendChild(div);
                 });
+            } else {
+                container.innerHTML = '<p style="color:#999; text-align:center; margin:15px 0;">No new employees available to add.</p>';
             }
-        } catch (e) {
-            console.error(e);
-            input.placeholder = "Error loading list. Type manually.";
+        } catch (error) {
+            console.error("Error fetching suggestions:", error);
+            container.innerHTML = '<p style="color:red; text-align:center; margin:15px 0;">Error loading suggestions.</p>';
         }
     }
-
-    document.getElementById('userModal').style.display = 'flex';
 }
 
+// --- DEBOUNCED SEARCH: Render Checkboxes ---
+let debounceTimeout;
+document.getElementById('employeeCodeInput')?.addEventListener('input', function(e) {
+    const searchQuery = e.target.value.trim();
+    const container = document.getElementById('employeeCheckboxContainer');
+    
+    clearTimeout(debounceTimeout);
+    
+    // If the user clears the search bar, reload the full list automatically
+    if (searchQuery.length === 0) {
+        handleAddUserClick();
+        return;
+    }
+
+    if (searchQuery.length < 2) {
+        return; // Wait for at least 2 characters before searching
+    }
+
+    container.innerHTML = '<p style="text-align:center; color:#999; margin:15px 0;">Searching...</p>';
+
+    debounceTimeout = setTimeout(async () => {
+        try {
+            const result = await apiCall('fetch_available_employees', { search: searchQuery, limit: 'all' }, 'GET', 'user_actions.php');
+            container.innerHTML = '';
+            
+            if (result.success && result.data && result.data.length > 0) {
+                container.style.display = 'block';
+                result.data.forEach(emp => {
+                    const div = document.createElement('div');
+                    div.style.marginBottom = '8px';
+                    div.style.paddingBottom = '8px';
+                    div.style.borderBottom = '1px solid #f0f0f0';
+                    div.innerHTML = `
+                        <label style="display: flex; align-items: center; cursor: pointer; color: #333; margin: 0; font-size: 14px;">
+                            <input type="checkbox" name="selectedEmployees[]" value="${emp.employee_code}" style="margin-right: 12px; width: 18px; height: 18px;">
+                            <strong>${emp.last_name}, ${emp.first_name}</strong> &nbsp; <span style="color: #777;">(${emp.position_name})</span>
+                        </label>
+                    `;
+                    container.appendChild(div);
+                });
+            } else {
+                container.style.display = 'block';
+                container.innerHTML = '<p style="color:#999; text-align:center; margin:15px 0;">No matching employees found.</p>';
+            }
+        } catch (error) {
+            console.error("Error fetching suggestions:", error);
+        }
+    }, 300);
+});
+
+// --- SUBMIT: Add Multiple Users ---
 async function handleEmployeeCodeSubmit(e) {
     e.preventDefault();
     if(typeof hideFormMessage === 'function') hideFormMessage(true);
     
-    const employeeCode = document.getElementById('employeeCodeInput').value.trim();
-    if (!employeeCode) return typeof showFormMessage === 'function' && showFormMessage('Please enter or select an Employee Code', 'error', true);
+    // Gather all checked boxes and JOIN them into a single comma-separated string
+    const checkedBoxes = document.querySelectorAll('input[name="selectedEmployees[]"]:checked');
+    const selectedCodes = Array.from(checkedBoxes).map(cb => cb.value).join(',');
+    
+    if (!selectedCodes || selectedCodes.length === 0) {
+        return typeof showFormMessage === 'function' && showFormMessage('Please check at least one employee from the list.', 'error', true);
+    }
     
     const lookupBtn = document.getElementById('lookupEmployeeBtn');
     const originalText = lookupBtn.textContent;
@@ -240,15 +315,21 @@ async function handleEmployeeCodeSubmit(e) {
     lookupBtn.textContent = 'ADDING...';
     
     try {
-        const result = await apiCall('add_user_from_employee', { employeeCode: employeeCode }, 'POST', 'user_actions.php');
+        // Send the comma-separated string to the backend
+        const result = await apiCall('add_user_from_employee', { employeeCodes: selectedCodes }, 'POST', 'user_actions.php');
+        
         if (result.success) {
-            if(typeof showFormMessage === 'function') showFormMessage('User added successfully!', 'success', true);
+            if(typeof showFormMessage === 'function') showFormMessage(result.message, 'success', true);
             document.getElementById('employeeCodeForm').reset();
+            document.getElementById('employeeCheckboxContainer').innerHTML = '';
+            document.getElementById('employeeCheckboxContainer').style.display = 'none';
+            
             await fetchAndRenderUsers();
+            
             setTimeout(() => {
                 document.getElementById('userModal').style.display = 'none';
                 if(typeof hideFormMessage === 'function') hideFormMessage(true);
-            }, 1500);
+            }, 2500);
         } else {
             if(typeof showFormMessage === 'function') showFormMessage(result.message || 'Failed.', 'error', true);
         }
@@ -259,7 +340,6 @@ async function handleEmployeeCodeSubmit(e) {
         lookupBtn.textContent = originalText;
     }
 }
-
 // --- EDIT USER ---
 function handleEditUserClick(user) {
     if(typeof hideFormMessage === 'function') hideFormMessage(true);
@@ -352,9 +432,13 @@ async function confirmUserArchive() {
             await fetchAndRenderUsers();
             showUserToast('User archived successfully!');
         } else {
-            alert(result.message || 'Failed to archive user.');
+            document.getElementById('deleteUserModal').style.display = 'none';
+            showUserToast(result.message || 'Failed to archive user.', true); // true = isError
         }
-    } catch (error) { alert('Error occurred.'); } 
+    } catch (error) { 
+        document.getElementById('deleteUserModal').style.display = 'none';
+        showUserToast('Error occurred.', true); 
+    } 
     finally {
         btn.disabled = false;
         btn.textContent = originalText;
@@ -402,9 +486,13 @@ async function confirmUserRestore() {
             await fetchAndRenderUsers();
             showUserToast('User restored successfully!');
         } else {
-            alert(result.message || 'Failed to restore user.');
+            document.getElementById('deleteUserModal').style.display = 'none';
+            showUserToast(result.message || 'Failed to restore user.', true); // true = isError
         }
-    } catch (error) { alert('Error occurred.'); } 
+    } catch (error) { 
+        document.getElementById('deleteUserModal').style.display = 'none';
+        showUserToast('Error occurred.', true); 
+    } 
     finally {
         btn.disabled = false;
         btn.textContent = originalText;
@@ -437,12 +525,14 @@ function initUserFilters() {
         const filtered = usersData.filter(row => {
             const matchS = !search || [row.Username, row.Fname, row.Lname, row.EmailAddress].some(val => val?.toLowerCase().includes(search));
             const matchR = !role || row.AccountType === role;
+            
+            // Read the shift directly for filtering
             const matchSh = !shift || row.Shift === shift;
             
             const isArchived = row.is_archived == 1;
             const rowStatus = isArchived ? 'Archived' : 'Active';
             const matchSt = !status || rowStatus === status;
-
+            
             return matchS && matchR && matchSh && matchSt;
         });
 
