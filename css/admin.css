@@ -1117,42 +1117,42 @@ table td {
 /* User Logs Table - All columns centered */
 #user-logs-tab table th:nth-child(1),
 #user-logs-tab table td:nth-child(1) {
-  width: 8%;
+  width: 6%;
 }
 
 #user-logs-tab table th:nth-child(2),
 #user-logs-tab table td:nth-child(2) {
-  width: 12%;
+  width: 10%;
 }
 
 #user-logs-tab table th:nth-child(3),
 #user-logs-tab table td:nth-child(3) {
-  width: 12%;
+  width: 10%;
 }
 
 #user-logs-tab table th:nth-child(4),
 #user-logs-tab table td:nth-child(4) {
-  width: 12%;
+  width: 10%;
 }
 
 #user-logs-tab table th:nth-child(5),
 #user-logs-tab table td:nth-child(5) {
-  width: 14%;
+  width: 12%;
 }
 
 #user-logs-tab table th:nth-child(6),
 #user-logs-tab table td:nth-child(6) {
-  width: 10%;
+  width: 9%;
 }
 
 #user-logs-tab table th:nth-child(7),
 #user-logs-tab table td:nth-child(7) {
-  width: 10%;
+  width: 9%;
 }
 
 #user-logs-tab table th:nth-child(8),
 #user-logs-tab table td:nth-child(8) {
-  width: 12%;
+  width: 16%;
 }
 
 #user-logs-tab table th:nth-child(9),
@@ -1162,7 +1162,7 @@ table td {
 
 #user-logs-tab table th:nth-child(10),
 #user-logs-tab table td:nth-child(10) {
-  width: 10%;
+  width: 8%;
 }
 
 /* ===== ROOMS PAGE SPECIFIC STYLES ===== */
