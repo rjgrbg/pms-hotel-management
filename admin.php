@@ -1093,14 +1093,14 @@ $conn->close();
 
         <div class="tableWrapper">
           <table>
-         <thead>
+        <thead>
               <tr>
                 <th>Floor</th>
                 <th>Room</th>
                 <th>Room Name</th>
                 <th>Type</th>
                 <th>No. Guests</th>
-                <th>Ocuppancy / Status</th>
+                <th>Occupancy / Status</th>
                 <th>Action</th>
               </tr>
             </thead>
