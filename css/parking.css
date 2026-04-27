@@ -965,8 +965,8 @@ table td {
 }
 
 .modal-content {
-    background-color: #480c1b;
-    color: #fff;
+    background-color: #fff;
+    color: #333;
     padding: 35px;
     border-radius: 12px;
     width: 90%;
@@ -974,48 +974,72 @@ table td {
     position: relative;
     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     animation: slideIn 0.3s ease;
-    max-height: 90vh;
+    max-height: 95vh;
     overflow-y: auto;
 }
 
 .modal-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
+    align-items: flex-start;
+    margin-bottom: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e0e0;
+    position: relative;
 }
 
 .modal-title {
     display: flex;
     align-items: center;
-    color: #d4af78;
+    color: #480c1b;
+    flex: 1;
+    padding-right: 40px;
+    justify-content: flex-start;
 }
 
 .modal-icon-fa {
     font-size: 35px;
     margin-right: 15px;
-    color: #d4af78;
+    color: #480c1b;
     width: 40px;
     text-align: center;
+    flex-shrink: 0;
 }
 
 .modal-title h2 {
     margin: 0;
-    font-size: 24px;
-    color: #d4af78;
+    font-size: 18px;
+    color: #480c1b;
     font-weight: 600;
     text-transform: uppercase;
     font-family: 'Arial', sans-serif;
+    letter-spacing: 0.5px;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 .modal-close-btn {
+    position: absolute;
+    top: 1px;
+    right: 1px;
     background: none;
     border: none;
-    color: #fff;
-    font-size: 30px;
-    font-weight: bold;
+    color: #480c1b;
+    font-size: 24px;
+    font-weight: normal;
     cursor: pointer;
     opacity: 0.7;
+    flex-shrink: 0;
+    line-height: 1;
+    padding: 0;
+    margin: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s;
+    z-index: 10;
 }
 
 .modal-close-btn:hover {
@@ -1024,10 +1048,11 @@ table td {
 
 .modal-description {
     font-size: 13px;
-    color: #dcc8b0;
+    color: #666;
     margin-bottom: 25px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    padding-bottom: 15px;
+    margin-top: 20px;
+    padding-bottom: 0;
+    border-bottom: none;
     line-height: 1.5;
 }
 
@@ -1047,45 +1072,55 @@ table td {
 }
 
 .modal-body > .form-group {
-     margin-bottom: 15px;
+     margin-bottom: 30px;
 }
 
 .form-group label {
     margin-bottom: 8px;
     font-size: 13px;
     font-weight: 600;
-    color: #fff;
+    color: #333;
+    display: block;
 }
 
 .category-select-wrapper {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     gap: 10px;
 }
 
 .category-select-wrapper select {
     flex-grow: 1;
+    min-width: 0;
 }
 
 .edit-category-btn {
-    padding: 8px 12px;
-    font-size: 13px;
+    padding: 0;
+    font-size: 14px;
     font-weight: 600;
-    background-color: #ffc107;
-    color: #212529;
+    background-color: #480c1b;
+    color: #fff;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.2s ease;
     flex-shrink: 0;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
 }
 
 .edit-category-btn:hover {
-    background-color: #be9c68;
+    background-color: #5a0e22;
 }
 
 .edit-category-btn .fa-pencil-alt {
-    margin-right: 5px;
+    margin-right: 0;
+    color: #fff;
 }
 
 .form-group input[type="text"],
@@ -1094,10 +1129,46 @@ table td {
 .form-group select,
 .form-group textarea {
     width: 100%;
-    padding: 10px 14px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+    padding: 12px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
     background-color: #fff;
+    color: #333;
+    font-size: 14px;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+    transition: border 0.2s;
+    min-height: 44px;
+    margin-bottom: 15px;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #28a745;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+}
+
+.form-group input:hover:not(:focus),
+.form-group select:hover:not(:focus),
+.form-group textarea:hover:not(:focus) {
+    border-color: #480c1b;
+}
+
+.form-group select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%23480c1b"><path d="M7 10l5 5 5-5z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 40px;
+    cursor: pointer;
     color: #333;
     font-size: 13px;
     box-sizing: border-box;
@@ -1134,8 +1205,8 @@ table td {
 .submit-btn {
     width: 100%;
     padding: 12px;
-    background-color: #d4af78;
-    color: #480c1b;
+    background-color: #480c1b;
+    color: #fff;
     border: none;
     border-radius: 6px;
     font-size: 13px;
@@ -1148,7 +1219,7 @@ table td {
 }
 
 .submit-btn:hover {
-    background-color: #c3a16f;
+    background-color: #5a0e22;
     transform: translateY(-1px);
 }
 
@@ -1162,7 +1233,7 @@ table td {
 }
 
 /* ============================================= */
-/* === CONFIRMATION MODAL (HOUSEKEEPING STYLE)=== */
+/* === CONFIRMATION MODAL (ADMIN STYLE)     === */
 /* ============================================= */
 .modal-overlay-confirm {
     position: fixed;
@@ -1184,8 +1255,8 @@ table td {
 }
 
 .modal-content-confirm {
-    background-color: #480C1B;
-    color: #fff;
+    background-color: #fff;
+    color: #333;
     padding: 40px 35px;
     border-radius: 12px;
     width: 90%;
@@ -1193,31 +1264,38 @@ table td {
     text-align: center;
     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     animation: slideIn 0.3s ease;
+    position: relative;
 }
 
 .modal-content-confirm h3 {
     margin: 0;
-    font-size: 18px;
-    color: #fff;
+    font-size: 20px;
+    color: #480c1b;
+    margin-top: 20px;
     margin-bottom: 15px;
     font-weight: 600;
+    letter-spacing: 0px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
 }
 
 .modal-content-confirm p {
-    font-size: 13px;
-    color: #dcc8b0;
+    font-size: 14px;
+    color: #666;
     margin-bottom: 25px;
+    margin-top: 20px;
     line-height: 1.5;
 }
 
 .modal-content-confirm p strong {
-    color: #d4af78;
+    color: #480c1b;
 }
 
 .confirm-buttons {
     display: flex;
     justify-content: center;
     gap: 15px;
+    margin-top: 45px;
 }
 
 .confirm-buttons .btn {
@@ -1243,18 +1321,18 @@ table td {
 }
 
 .confirm-buttons .btn-confirm {
-    background-color: #d4af78;
-    color: #480c1b;
+    background-color: #480c1b;
+    color: #fff;
     min-width: 160px;
     font-weight: 600;
 }
 
 .confirm-buttons .btn-confirm:hover {
-    background-color: #be9d6a;
+    background-color: #5a0e22;
 }
 
 /* ============================================= */
-/* === SUCCESS MODAL (HOUSEKEEPING STYLE)    === */
+/* === SUCCESS MODAL (ADMIN STYLE)          === */
 /* ============================================= */
 .modal-overlay-success {
     position: fixed;
@@ -1276,8 +1354,8 @@ table td {
 }
 
 .modal-content-success {
-    background-color: #480C1B;
-    color: #fff;
+    background-color: #fff;
+    color: #333;
     padding: 50px 40px;
     border-radius: 12px;
     width: 90%;
@@ -1294,10 +1372,11 @@ table td {
 
 .modal-content-success h3 {
     margin: 0;
-    font-size: 18px;
-    color: #fff;
+    font-size: 20px;
+    color: #480c1b;
     margin-bottom: 30px;
     font-weight: 600;
+    letter-spacing: 0px;
 }
 
 .modal-content-success .btn-okay {
@@ -1307,8 +1386,8 @@ table td {
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    background-color: #d4af78;
-    color: #480c1b;
+    background-color: #480c1b;
+    color: #fff;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     transition: all 0.2s;
@@ -1316,7 +1395,7 @@ table td {
 }
 
 .modal-content-success .btn-okay:hover {
-    background-color: #c19f6d;
+    background-color: #5a0e22;
     transform: translateY(-1px);
 }
 
@@ -1374,7 +1453,7 @@ table td {
 
 .category-list-item .category-name {
     font-size: 15px;
-    color: #fff;
+    color: #333;
     font-weight: 500;
     word-break: break-all;
 }
@@ -1384,23 +1463,32 @@ table td {
     border: none;
     cursor: pointer;
     font-size: 16px;
-    color: #dcc8b0;
+    color: #666;
     margin-left: 10px;
     transition: color 0.2s ease;
 }
 
-.category-actions .btn-edit-category:hover {
-    color: #d4af78;
+.category-actions .btn-edit-category:hover,
+.category-actions .btn-edit-area:hover,
+.category-actions .btn-edit-slot:hover {
+    color: #480c1b;
 }
 
-.category-actions .btn-delete-category:hover {
+.category-actions .btn-delete-category:hover,
+.category-actions .btn-archive-area:hover,
+.category-actions .btn-archive-slot:hover {
     color: #dc3545;
+}
+
+.category-actions .btn-restore-area:hover,
+.category-actions .btn-restore-slot:hover {
+    color: #28a745;
 }
 
 .modal-footer {
     text-align: right;
     padding: 15px 0 0 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-top: 1px solid #e0e0e0;
     margin-top: 15px;
 }
 
@@ -1578,10 +1666,42 @@ table td {
   to { transform: translateY(0); opacity: 1; }
 }
 
-.category-list-container::-webkit-scrollbar { width: 6px; }
-.category-list-container::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); border-radius: 3px; }
-.category-list-container::-webkit-scrollbar-thumb { background: rgba(212, 175, 120, 0.5); border-radius: 3px; }
-.category-list-container::-webkit-scrollbar-thumb:hover { background: #d4af78; }
+/* Custom Scrollbar for Modal Content */
+.modal-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 10px 0;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: #480c1b;
+  border-radius: 10px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+  background: #5d0f23;
+}
+
+.category-list-container::-webkit-scrollbar { 
+  width: 4px; 
+}
+
+.category-list-container::-webkit-scrollbar-track { 
+  background: transparent;
+  margin: 5px 0;
+}
+
+.category-list-container::-webkit-scrollbar-thumb { 
+  background: #480c1b;
+  border-radius: 10px;
+}
+
+.category-list-container::-webkit-scrollbar-thumb:hover { 
+  background: #5d0f23;
+}
 
 /* ============================================= */
 /* === RESPONSIVE STYLES                     === */

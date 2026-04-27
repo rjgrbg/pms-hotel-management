@@ -93,10 +93,10 @@ if (isset($_SESSION['UserID'])) {
 
     /* Edit button */
     .edit-category-btn {
-        padding: 8px 12px;
+        padding: 4px 12px;
         font-size: 13px;
         font-weight: 600;
-        background-color: #ffc107;
+        background-color: #480c1b;
         color: #212529;
         border: none;
         border-radius: 5px;
@@ -106,7 +106,7 @@ if (isset($_SESSION['UserID'])) {
         width: auto; /* Fix for flex */
     }
     .edit-category-btn:hover {
-        background-color: #e0a800;
+        background-color: #410a18ff;
     }
     .edit-category-btn .fa-pencil-alt {
         margin-right: 5px;
@@ -561,17 +561,20 @@ if (isset($_SESSION['UserID'])) {
     </div>
 
     <div class="modal-overlay-confirm" id="exitModal">
-        <div class="modal-content-confirm" style="text-align: left;">
-            <h3 style="text-align: center;">Exit Vehicle?</h3>
-            <p>
-                <strong>Slot:</strong> <span id="exitSlotNumber"></span><br>
-                <strong>Plate #:</strong> <span id="exitPlate"></span><br>
-                <strong>Vehicle:</strong> <span id="exitVehicle"></span><br>
-                <strong>Entered:</strong> <span id="exitDateTime"></span>
-            </p>
+        <div class="modal-content-confirm">
+            <button class="modal-close-btn" data-modal-id="exitModal">&times;</button>
+            <i class="fas fa-sign-out-alt" style="font-size: 50px; color: #480c1b; display: block; text-align: center; margin-bottom: 20px;"></i>
+            <h3>Exit Vehicle?</h3>
+            <div style="text-align: left; background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin: 8px 0;"><strong>Slot:</strong> <span id="exitSlotNumber"></span></p>
+                <p style="margin: 8px 0;"><strong>Plate #:</strong> <span id="exitPlate"></span></p>
+                <p style="margin: 8px 0;"><strong>Vehicle:</strong> <span id="exitVehicle"></span></p>
+                <p style="margin: 8px 0;"><strong>Entered:</strong> <span id="exitDateTime"></span></p>
+            </div>
+            <p style="text-align: center; color: #666; font-size: 13px;">Are you sure you want to exit this vehicle from the parking slot?</p>
             <div class="confirm-buttons">
                 <button type="button" class="btn btn-cancel" data-modal-id="exitModal">CANCEL</button>
-                <button type="button" class="btn btn-confirm" id="btnConfirmExit" style="background-color: #c9302c; color: white;">YES, EXIT</button>
+                <button type="button" class="btn btn-confirm" id="btnConfirmExit" style="background-color: #480c1b !important;">YES, EXIT</button>
             </div>
         </div>
     </div>
