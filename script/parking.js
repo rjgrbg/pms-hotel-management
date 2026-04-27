@@ -1723,3 +1723,12 @@ document.addEventListener('click', (event) => {
         });
     }
 });
+
+// Close dropdown when clicking on any dropdown item
+document.addEventListener('click', (event) => {
+    if (event.target.closest('.dropdown-item')) {
+        document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+});

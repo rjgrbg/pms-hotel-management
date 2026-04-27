@@ -461,16 +461,16 @@ if (isset($_SESSION['UserID'])) {
     </div>
     <div class="tabContent" id="budget-tab">
       
-      <div style="background: #fff; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-          <div style="flex: 1; margin-right: 20px;">
-              <label style="display: block; font-size: 12px; color: #888; font-weight: bold; margin-bottom: 5px; text-transform: uppercase;">Select Category to View Budget:</label>
-              <select class="filterDropdown" id="globalBudgetCategorySelect" style="width: 100%; max-width: 300px; padding: 10px; font-size: 16px; border-radius: 5px; border: 2px solid #007bff; background: #f8fbff; cursor: pointer;">
+      <div style="background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e0e0e0; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+          <div style="flex: 1; margin-right: 30px;">
+              <label style="display: block; font-size: 13px; color: #666; font-weight: normal; margin-bottom: 8px;">Select Category to View Budget:</label>
+              <select class="filterDropdown" id="globalBudgetCategorySelect" style="width: 100%; max-width: 350px; padding: 12px 14px; font-size: 14px; border-radius: 8px; border: 2px solid #e0e0e0; background: #fff; cursor: pointer; transition: border 0.2s; font-family: 'Arial', sans-serif;">
                   <option value="" selected>-- Select Category --</option>
               </select>
           </div>
-          <div style="text-align: right; border-left: 2px solid #eee; padding-left: 20px;">
-              <span style="display: block; font-size: 12px; color: #888; font-weight: bold; text-transform: uppercase; margin-bottom: 2px;">Available Budget</span>
-              <span id="global-available-budget" style="font-size: 28px; font-weight: 800; color: #28a745; display: block;">₱0.00</span>
+          <div style="text-align: right; padding-left: 30px;">
+              <span style="display: block; font-size: 13px; color: #666; font-weight: normal; margin-bottom: 5px;">Available Budget:</span>
+              <span id="global-available-budget" style="font-size: 32px; font-weight: 700; color: #28a745; display: block; letter-spacing: -0.5px;">₱0.00</span>
           </div>
       </div>
 
@@ -483,8 +483,8 @@ if (isset($_SESSION['UserID'])) {
             <option value="rejected">Rejected</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <button class="addItemBtn" id="addBudgetBtn" style="width: auto; padding: 0 15px; font-weight: bold;">
-            + NEW REQUEST
+          <button class="addItemBtn" id="addBudgetBtn" style="width: auto; padding: 10px 20px; font-weight: 600; background-color: #480c1b; color: #fff; border: none; border-radius: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 16px; font-weight: 700;">+</span> NEW REQUEST
           </button>
         </div>
       </div>
@@ -551,6 +551,10 @@ if (isset($_SESSION['UserID'])) {
             </div>
             <button class="modal-close-btn" id="modal-close-btn">&times;</button>
         </div>
+        <div style="padding: 8px 0; border-bottom: 1px solid #e0e0e0; margin-bottom: 15px;">
+            <div style="font-size: 13px; font-weight: normal; color: #666; margin-bottom: 3px;">Available Budget:</div>
+            <div id="add-modal-available-budget" style="font-size: 18px; font-weight: 700; color: #28a745;">₱0.00</div>
+        </div>
         <div class="modal-body">
             <form id="add-item-form">
                 <div class="form-row">
@@ -573,12 +577,9 @@ if (isset($_SESSION['UserID'])) {
         <select id="item-category" required>
             <option value="" disabled selected>Select a category</option>
         </select>
-        <button type="button" class="edit-category-btn" id="open-category-modal-btn">
-            <i class="fas fa-pencil-alt"></i> Edit
+        <button type="button" class="edit-category-btn" id="open-category-modal-btn" title="Edit Categories">
+            <i class="fas fa-pencil-alt"></i>
         </button>
-    </div>
-    <div style="margin-top: 5px; font-size: 12px; font-weight: bold;">
-        Available Budget: <span id="add-modal-available-budget" style="color: #28a745;">₱0.00</span>
     </div>
 </div>
 </div> <div class="form-group"> <label for="item-description">Description</label>
@@ -662,6 +663,10 @@ if (isset($_SESSION['UserID'])) {
             </div>
              <button class="modal-close-btn" id="edit-modal-close-btn">&times;</button>
         </div>
+        <div style="padding: 8px 0; border-bottom: 1px solid #e0e0e0; margin-bottom: 15px;">
+            <div style="font-size: 13px; font-weight: normal; color: #666; margin-bottom: 3px;">Available Budget:</div>
+            <div id="edit-modal-available-budget" style="font-size: 18px; font-weight: 700; color: #28a745;">₱0.00</div>
+        </div>
         <div class="modal-body">
             <form id="edit-item-form">
                 <input type="hidden" id="edit-item-id-input">
@@ -687,9 +692,6 @@ if (isset($_SESSION['UserID'])) {
     <label for="edit-item-category">Category</label>
     <div class="category-select-wrapper">
         <select id="edit-item-category" required></select>
-    </div>
-    <div style="margin-top: 5px; font-size: 12px; font-weight: bold;">
-        Available Budget: <span id="edit-modal-available-budget" style="color: #28a745;">₱0.00</span>
     </div>
 </div>
 </div> <div class="form-group">
@@ -881,48 +883,52 @@ if (isset($_SESSION['UserID'])) {
 </div>
 <div class="modal-overlay" id="budget-request-modal">
     <div class="modal-content" style="max-width: 500px;">
-        <span class="close-modal" id="closeBudgetModal">&times;</span>
-        <h2>Budget Request</h2>
+        <div class="modal-header">
+            <div class="modal-title">
+                <h2>Budget Request</h2>
+            </div>
+            <button class="modal-close-btn" id="closeBudgetModal">&times;</button>
+        </div>
 
-        <form id="budgetForm">
-            <input type="hidden" id="budget-request-id">
-            
-            <div class="form-group">
-                <label>Budget Category <span style="color:red">*</span></label>
-                <select id="budget-category" required>
-                    <option value="" disabled selected>Select Category...</option>
-                    </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Description <span style="color:red">*</span></label>
-                <textarea id="budget-description" rows="3" placeholder="List the items you need to buy here..." required></textarea>
-            </div>
-            
-            <div class="form-row">
+        <div class="modal-body">
+            <form id="budgetForm">
+                <input type="hidden" id="budget-request-id">
+                
                 <div class="form-group">
-                    <label>Requested Amount (₱) <span style="color:red">*</span></label>
-                    <input type="number" id="budget-amount" step="0.01" min="1" required style="font-weight: bold; font-size: 16px; color: #d35400;">
-                </div>
-                <div class="form-group">
-                    <label>Priority</label>
-                    <select id="budget-priority" required>
-                        <option value="Low">Low</option>
-                        <option value="Medium">Medium</option>
-                        <option value="High">High</option>
+                    <label for="budget-category">Budget Category <span style="color:red">*</span></label>
+                    <select id="budget-category" required>
+                        <option value="" disabled selected>Select Category...</option>
                     </select>
                 </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Remarks / Purpose</label>
-                <textarea id="budget-remarks" rows="2" placeholder="Why is this budget needed?"></textarea>
-            </div>
-            
-            <div class="modalButtons">
-                <button type="submit" class="modalBtn confirmBtn" id="submitBudgetBtn" style="width: 100%;">Submit Request</button>
-            </div>
-        </form>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label for="budget-description">Description <span style="color:red">*</span></label>
+                    <textarea id="budget-description" rows="3" placeholder="List the items you need to buy here..." required></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="budget-amount">Requested Amount (₱) <span style="color:red">*</span></label>
+                        <input type="number" id="budget-amount" step="0.01" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="budget-priority">Priority</label>
+                        <select id="budget-priority" required>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="budget-remarks">Remarks / Purpose</label>
+                    <textarea id="budget-remarks" rows="2" placeholder="Why is this budget needed?"></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBudgetBtn">SUBMIT REQUEST</button>
+            </form>
+        </div>
     </div>
 </div>
 </div>
