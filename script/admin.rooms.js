@@ -220,6 +220,26 @@ function renderRoomsTable(data) {
         ).join(' ');
       }
 
+      const dropdownMenu = `
+        <div class="dropdown-menu">
+          <button class="dropdown-item" onclick='handleViewRoomDetails(${JSON.stringify(row).replace(/'/g, "&apos;")}); closeAllDropdowns();'>
+            <i class="fas fa-eye"></i> View Details
+          </button>
+          <div class="dropdown-item has-submenu" onmouseenter="showSubmenu(event)" onmouseleave="hideSubmenu(event)">
+            <i class="fas fa-edit"></i> Edit
+            <i class="fas fa-chevron-right submenu-arrow"></i>
+            <div class="dropdown-submenu" onmouseenter="keepSubmenuOpen(event)" onmouseleave="closeSubmenu(event)">
+              <button class="dropdown-item" onclick='handleEditRoomHousekeeping(${JSON.stringify(row).replace(/'/g, "&apos;")}); closeAllDropdowns();'>
+                <i class="fas fa-broom"></i> Edit Housekeeping
+              </button>
+              <button class="dropdown-item" onclick='handleEditRoomMaintenance(${JSON.stringify(row).replace(/'/g, "&apos;")}); closeAllDropdowns();'>
+                <i class="fas fa-tools"></i> Edit Maintenance
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
       return `
         <tr data-room-data='${JSON.stringify(row)}'>
           <td>${row.Floor}</td>
@@ -228,6 +248,14 @@ function renderRoomsTable(data) {
           <td>${row.Type}</td>
           <td>${row.NoGuests}</td>
           <td><span class="statusBadge ${statusClass}">${statusDisplay}</span></td>
+          <td>
+            <div class="action-dropdown">
+              <button class="action-dots-btn" onclick="toggleActionDropdown(event)">
+                <i class="fas fa-ellipsis-v"></i>
+              </button>
+              ${dropdownMenu}
+            </div>
+          </td>
         </tr>
       `;
     }).join('');
@@ -429,5 +457,259 @@ function initRoomFilters() {
 document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('rooms-page')) {
         fetchAndRenderRooms();
+    }
+});
+
+// ==========================================
+// 7. DROPDOWN TOGGLE FUNCTION (Same as Manage Users)
+// ==========================================
+
+window.closeAllDropdowns = function() {
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+    // Also hide any visible submenus
+    document.querySelectorAll('.dropdown-submenu.show').forEach(submenu => {
+        submenu.classList.remove('show');
+    });
+}
+
+window.toggleActionDropdown = function(event) {
+    event.stopPropagation();
+    const button = event.currentTarget;
+    const dropdown = button.nextElementSibling;
+    const isOpen = dropdown.classList.contains('show');
+    
+    // Close all other dropdowns
+    closeAllDropdowns();
+    
+    // Toggle current dropdown
+    if (!isOpen) {
+        // Get button position
+        const rect = button.getBoundingClientRect();
+        const dropdownHeight = 120; // Approximate height of dropdown
+        const spaceBelow = window.innerHeight - rect.bottom;
+        
+        // Position dropdown
+        if (spaceBelow < dropdownHeight) {
+            // Open upward
+            dropdown.style.bottom = (window.innerHeight - rect.top) + 'px';
+            dropdown.style.top = 'auto';
+        } else {
+            // Open downward
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            dropdown.style.bottom = 'auto';
+        }
+        dropdown.style.left = (rect.right - 180) + 'px'; // Align to right of button
+        
+        dropdown.classList.add('show');
+    }
+}
+
+// Submenu handlers
+window.showSubmenu = function(event) {
+    event.stopPropagation();
+    const parentItem = event.currentTarget;
+    const submenu = parentItem.querySelector('.dropdown-submenu');
+    const mainDropdown = parentItem.closest('.dropdown-menu');
+
+    if (submenu && mainDropdown) {
+        // Hide other submenus
+        document.querySelectorAll('.dropdown-submenu.show').forEach(s => {
+            if (s !== submenu) s.classList.remove('show');
+        });
+        
+        // Add class to main dropdown to shift it left
+        mainDropdown.classList.add('submenu-active');
+        
+        // Show submenu after a tiny delay to let main menu shift first
+        setTimeout(() => {
+            submenu.classList.add('show');
+        }, 50);
+    }
+}
+
+window.hideSubmenu = function(event) {
+    event.stopPropagation();
+    const submenu = event.currentTarget.querySelector('.dropdown-submenu');
+    const mainDropdown = event.currentTarget.closest('.dropdown-menu');
+    
+    if (submenu) {
+        setTimeout(() => {
+            if (!submenu.matches(':hover')) {
+                submenu.classList.remove('show');
+                if (mainDropdown) {
+                    mainDropdown.classList.remove('submenu-active');
+                }
+            }
+        }, 100);
+    }
+}
+
+window.keepSubmenuOpen = function(event) {
+    event.stopPropagation();
+}
+
+window.closeSubmenu = function(event) {
+    event.stopPropagation();
+    const submenu = event.currentTarget;
+    const mainDropdown = submenu.closest('.dropdown-menu');
+    
+    submenu.classList.remove('show');
+    if (mainDropdown) {
+        mainDropdown.classList.remove('submenu-active');
+    }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('.action-dropdown')) {
+        closeAllDropdowns();
+    }
+});
+
+// ==========================================
+// 8. ACTION HANDLERS
+// ==========================================
+
+window.handleViewRoomDetails = async function(room) {
+    console.log('View details for room:', room);
+    
+    // Show modal
+    document.getElementById('roomDetailsModal').style.display = 'flex';
+    document.getElementById('roomDetailsTitle').textContent = `Room ${room.Room} - ${room.Name || 'Details'}`;
+    
+    // Populate basic info
+    document.getElementById('detailFloor').textContent = room.Floor;
+    document.getElementById('detailRoom').textContent = room.Room;
+    document.getElementById('detailType').textContent = room.Type;
+    document.getElementById('detailGuests').textContent = room.NoGuests;
+    
+    // Update status badge
+    const statusBadge = document.getElementById('currentStatusBadge');
+    statusBadge.textContent = `Current Status: ${room.Status.toUpperCase()}`;
+    
+    // Apply status badge color
+    statusBadge.className = 'currentStatusBadge';
+    if (room.Status === 'Available') {
+        statusBadge.style.background = '#d4edda';
+        statusBadge.style.color = '#155724';
+        statusBadge.style.borderColor = '#c3e6cb';
+    } else if (room.Status === 'Needs Cleaning') {
+        statusBadge.style.background = '#fff3cd';
+        statusBadge.style.color = '#856404';
+        statusBadge.style.borderColor = '#ffeaa7';
+    } else if (room.Status === 'Needs Maintenance') {
+        statusBadge.style.background = '#f8d7da';
+        statusBadge.style.color = '#721c24';
+        statusBadge.style.borderColor = '#f5c6cb';
+    }
+    
+    // Load equipment, amenities, linens data
+    await loadRoomDetails(room.RoomID);
+}
+
+async function loadRoomDetails(roomID) {
+    try {
+        // Fetch room details from backend
+        const result = await apiCall('get_room_details', { roomID: roomID }, 'GET', 'room_actions.php');
+        
+        if (result.success) {
+            const data = result.data;
+            
+            // Populate Equipment
+            const equipmentList = document.getElementById('equipmentList');
+            if (data.equipment && data.equipment.length > 0) {
+                equipmentList.innerHTML = data.equipment.map(item => `
+                    <div class="equipmentItem">
+                        <i class="${item.icon || 'fas fa-tv'}"></i>
+                        <span class="equipmentName">${item.name}</span>
+                        <div class="equipmentDetails">
+                            <small><strong>Installed:</strong> ${item.installed || 'N/A'}</small>
+                            <small><strong>Last Maintenance:</strong> ${item.lastMaintenance || 'N/A'}</small>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                equipmentList.innerHTML = '<p class="loadingText">No equipment data available</p>';
+            }
+            
+            // Populate Amenities
+            const amenitiesList = document.getElementById('amenitiesList');
+            if (data.amenities && data.amenities.length > 0) {
+                amenitiesList.innerHTML = data.amenities.map(item => `
+                    <div class="listItem">
+                        <i class="fas fa-check-circle"></i>
+                        <span>${item.name}</span>
+                    </div>
+                `).join('');
+            } else {
+                amenitiesList.innerHTML = '<p class="loadingText">No amenities data available</p>';
+            }
+            
+            // Populate Linens
+            const linensList = document.getElementById('linensList');
+            if (data.linens && data.linens.length > 0) {
+                linensList.innerHTML = data.linens.map(item => `
+                    <div class="listItem">
+                        <i class="fas fa-check-circle"></i>
+                        <span>${item.name}</span>
+                    </div>
+                `).join('');
+            } else {
+                linensList.innerHTML = '<p class="loadingText">No linens data available</p>';
+            }
+            
+        }
+    } catch (error) {
+        console.error('Error loading room details:', error);
+    }
+}
+
+window.handleEditRoomHousekeeping = function(room) {
+    console.log('Edit housekeeping for room:', room);
+    showRoomToast(`Edit Housekeeping for Room ${room.Room} - Coming soon!`);
+    // TODO: Implement edit housekeeping functionality
+}
+
+window.handleEditRoomMaintenance = function(room) {
+    console.log('Edit maintenance for room:', room);
+    showRoomToast(`Edit Maintenance for Room ${room.Room} - Coming soon!`);
+    // TODO: Implement edit maintenance functionality
+}
+
+// Close modal handlers
+document.addEventListener('DOMContentLoaded', () => {
+    const closeButtons = ['closeRoomDetailsBtn', 'closeRoomDetailsBtn2'];
+    closeButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.onclick = () => {
+                document.getElementById('roomDetailsModal').style.display = 'none';
+            };
+        }
+    });
+    
+    // Confirm button (just closes for now)
+    const confirmBtn = document.getElementById('confirmRoomDetailsBtn');
+    if (confirmBtn) {
+        confirmBtn.onclick = () => {
+            document.getElementById('roomDetailsModal').style.display = 'none';
+        };
+    }
+    
+    // Mark Linen Changed button
+    const markLinenBtn = document.getElementById('markLinenBtn');
+    if (markLinenBtn) {
+        markLinenBtn.onclick = () => {
+            const today = new Date().toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            document.getElementById('detailLinenChange').textContent = today;
+            showRoomToast('Linen change recorded!');
+            // TODO: Save to backend
+        };
     }
 });

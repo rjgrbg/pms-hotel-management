@@ -271,6 +271,105 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
             $response['message'] = 'Room not found.';
         }
     }
+
+// ====================================================================
+// --- GET ROOM DETAILS (READ) ---
+// ====================================================================
+} elseif ($request_method === 'GET' && $action === 'get_room_details') {
+    
+    $room_id = trim($_GET['roomID'] ?? '');
+    
+    if (empty($room_id)) {
+        $response['message'] = 'Missing Room ID.';
+    } else {
+        // Prepare sample data structure with detailed equipment info
+        // TODO: Replace with actual database queries when tables are available
+        
+        $response['success'] = true;
+        $response['data'] = [
+            'equipment' => [
+                [
+                    'name' => 'Television',
+                    'icon' => 'fas fa-tv',
+                    'installed' => date('M j, Y', strtotime('-2 years')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-3 months'))
+                ],
+                [
+                    'name' => 'Air Conditioner',
+                    'icon' => 'fas fa-snowflake',
+                    'installed' => date('M j, Y', strtotime('-1 year')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-1 month'))
+                ],
+                [
+                    'name' => 'Mini Fridge',
+                    'icon' => 'fas fa-temperature-low',
+                    'installed' => date('M j, Y', strtotime('-18 months')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-2 months'))
+                ],
+                [
+                    'name' => 'Coffee Maker',
+                    'icon' => 'fas fa-coffee',
+                    'installed' => date('M j, Y', strtotime('-8 months')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-1 week'))
+                ],
+                [
+                    'name' => 'Hair Dryer',
+                    'icon' => 'fas fa-wind',
+                    'installed' => date('M j, Y', strtotime('-1 year')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-2 weeks'))
+                ],
+                [
+                    'name' => 'Safe Box',
+                    'icon' => 'fas fa-lock',
+                    'installed' => date('M j, Y', strtotime('-2 years')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-6 months'))
+                ]
+            ],
+            'amenities' => [
+                ['name' => 'Complimentary WiFi'],
+                ['name' => 'Room Service'],
+                ['name' => 'Daily Housekeeping'],
+                ['name' => 'Toiletries'],
+                ['name' => 'Bottled Water'],
+                ['name' => 'Slippers']
+            ],
+            'linens' => [
+                ['name' => 'Bed Sheets (2 sets)'],
+                ['name' => 'Pillowcases (4 pcs)'],
+                ['name' => 'Bath Towels (4 pcs)'],
+                ['name' => 'Hand Towels (4 pcs)'],
+                ['name' => 'Duvet Cover']
+            ],
+            'lastLinenChange' => date('F j, Y', strtotime('-3 days'))
+        ];
+        
+        // Optional: Query actual data from database if tables exist
+        // Example structure for future implementation:
+        /*
+        $stmt = $conn->prepare("
+            SELECT 
+                equipment_name, 
+                equipment_icon,
+                date_installed,
+                last_maintenance_date
+            FROM room_equipment 
+            WHERE room_id = ?
+        ");
+        $stmt->bind_param("i", $room_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $equipment = [];
+        while ($row = $result->fetch_assoc()) {
+            $equipment[] = [
+                'name' => $row['equipment_name'],
+                'icon' => $row['equipment_icon'],
+                'installed' => date('M j, Y', strtotime($row['date_installed'])),
+                'lastMaintenance' => date('M j, Y', strtotime($row['last_maintenance_date']))
+            ];
+        }
+        $stmt->close();
+        */
+    }
 }
 
 $conn->close();

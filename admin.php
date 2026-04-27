@@ -1101,7 +1101,7 @@ $conn->close();
                 <th>Type</th>
                 <th>No. Guests</th>
                 <th>Status</th>
-
+                <th>Action</th>
               </tr>
             </thead>
             <tbody id="roomsTableBody">
@@ -1453,6 +1453,95 @@ $conn->close();
       </div>
     </div>
 </div>
+
+  <!-- Room Details Modal -->
+  <div class="modalBackdrop" id="roomDetailsModal" style="display: none;">
+    <div class="roomDetailsModal">
+      <button class="closeBtn" id="closeRoomDetailsBtn">&times;</button>
+      
+      <!-- Room Header with Image -->
+      <div class="roomHeader">
+        <div class="roomImage">
+          <i class="fas fa-door-open"></i>
+        </div>
+        <h2 id="roomDetailsTitle">Room 101 - Pulang Bulaklak</h2>
+      </div>
+      
+      <div class="roomDetailsContent">
+        <!-- Core Room Stats -->
+        <div class="coreStatsSection">
+          <div class="coreStatsHeader">
+            <h3>CORE ROOM STATS</h3>
+            <span id="currentStatusBadge" class="statusBadge">Current Status: NEEDS CLEANING</span>
+          </div>
+          <div class="coreStatsGrid">
+            <div class="statItem">
+              <i class="fas fa-layer-group"></i>
+              <div>
+                <label>FLOOR</label>
+                <span id="detailFloor">-</span>
+              </div>
+            </div>
+            <div class="statItem">
+              <i class="fas fa-bed"></i>
+              <div>
+                <label>TYPE</label>
+                <span id="detailType">-</span>
+              </div>
+            </div>
+            <div class="statItem">
+              <i class="fas fa-users"></i>
+              <div>
+                <label>CAPACITY</label>
+                <span id="detailGuests">-</span>
+              </div>
+            </div>
+            <div class="statItem">
+              <i class="fas fa-door-open"></i>
+              <div>
+                <label>ROOM NUMBER</label>
+                <span id="detailRoom">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Equipment & Utilities - Full Width -->
+        <div class="equipmentSection">
+          <div class="columnCard">
+            <h4><i class="fas fa-tv"></i> EQUIPMENT & UTILITIES</h4>
+            <div id="equipmentList" class="equipmentGrid">
+              <p class="loadingText">Loading...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Column Section - Amenities & Linens -->
+        <div class="twoColumnSection">
+          <!-- Amenities & Supplies -->
+          <div class="columnCard">
+            <h4><i class="fas fa-box"></i> AMENITIES & SUPPLIES</h4>
+            <div id="amenitiesList" class="amenitiesList">
+              <p class="loadingText">Loading...</p>
+            </div>
+          </div>
+
+          <!-- Linens -->
+          <div class="columnCard">
+            <h4><i class="fas fa-bed"></i> LINENS</h4>
+            <div id="linensList" class="linensList">
+              <p class="loadingText">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modalButtons">
+        <button class="modalBtn cancelBtn" id="closeRoomDetailsBtn2">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeLogoutBtn">&times;</button>
