@@ -344,7 +344,7 @@ if (isset($_SESSION['UserID'])) {
             <option value="">Category</option>
           </select>
 
-          <select class="filterDropdown" id="roomFilter">
+                    <select class="filterDropdown" id="roomFilter">
             <option value="">Status</option>
             <option value="Out of Stock">Out of Stock</option>
             <option value="Critical">Critical</option>
@@ -352,6 +352,14 @@ if (isset($_SESSION['UserID'])) {
             <option value="In Stock">In Stock</option>
             <option value="Archived" style="color: red; font-weight: bold;">Archived</option>
           </select>
+
+          <!-- ADD DATE FILTERS HERE -->
+          <div style="display: flex; align-items: center; gap: 5px;">
+            <label style="font-size: 12px; color: #555; font-weight: bold;">Restock By:</label>
+            <input type="date" id="stocksFromDate" class="filterDropdown" style="width: auto; padding: 8px;" title="From Date">
+            <label style="font-size: 12px; color: #555; font-weight: bold;">-</label>
+            <input type="date" id="stocksToDate" class="filterDropdown" style="width: auto; padding: 8px;" title="To Date">
+          </div>
 
           <div class="searchBox">
             <input type="text" placeholder="Search" class="searchInput" id="searchInput" />
@@ -413,12 +421,20 @@ if (isset($_SESSION['UserID'])) {
             <option value="">Category</option>
           </select>
 
-          <select class="filterDropdown" id="roomFilterHistory">
+                   <select class="filterDropdown" id="roomFilterHistory">
             <option value="">Status</option>
             <option value="Out of Stock">Out of Stock</option>
             <option value="Critical">Critical</option>
             <option value="In Stock">In Stock</option>
           </select>
+
+          <!-- ADD DATE FILTERS HERE -->
+          <div style="display: flex; align-items: center; gap: 5px;">
+            <label style="font-size: 12px; color: #555; font-weight: bold;">Log Date:</label>
+            <input type="date" id="historyFromDate" class="filterDropdown" style="width: auto; padding: 8px;" title="From Date">
+            <label style="font-size: 12px; color: #555; font-weight: bold;">-</label>
+            <input type="date" id="historyToDate" class="filterDropdown" style="width: auto; padding: 8px;" title="To Date">
+          </div>
 
           <div class="searchBox">
             <input type="text" placeholder="Search" class="searchInput" id="historySearchInput" />
@@ -477,14 +493,36 @@ if (isset($_SESSION['UserID'])) {
       <div class="controlsRow">
         <div class="filterControls">
           <select class="filterDropdown" id="budgetStatusFilter">
-            <option value="">All Statuses</option>
+            <option value="">Status</option>
             <option value="pending">Pending</option>
             <option value="accepted">Accepted</option>
             <option value="rejected">Rejected</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <button class="addItemBtn" id="addBudgetBtn" style="width: auto; padding: 0 15px; font-weight: bold;">
-            + NEW REQUEST
+
+          <!-- ADD DATE FILTERS HERE -->
+          <div style="display: flex; align-items: center; gap: 5px;">
+            <label style="font-size: 12px; color: #555; font-weight: bold;">Req Date:</label>
+            <input type="date" id="budgetReqFromDate" class="filterDropdown" style="width: auto; padding: 8px;" title="From Date">
+            <label style="font-size: 12px; color: #555; font-weight: bold;">-</label>
+            <input type="date" id="budgetReqToDate" class="filterDropdown" style="width: auto; padding: 8px;" title="To Date">
+          </div>
+
+          <!-- SEARCH BAR -->
+          <div class="searchBox">
+            <input type="text" placeholder="Search requests..." class="searchInput" id="searchBudgetReq" />
+            <button class="searchBtn">
+              <img src="assets/icons/search-icon.png" alt="Search" />
+            </button>
+          </div>
+
+          <button class="refreshBtn" id="refreshBtnBudget" title="Refresh Budget Requests">
+            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+          </button>
+          
+          <!-- UPGRADED NEW REQUEST BUTTON -->
+          <button id="addBudgetBtn" style="width: auto; padding: 10px 20px; font-weight: bold; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-left: 10px;">
+            <i class="fas fa-plus-circle" style="font-size: 16px;"></i> NEW REQUEST
           </button>
         </div>
       </div>
@@ -511,15 +549,26 @@ if (isset($_SESSION['UserID'])) {
     </div> <div class="tabContent" id="budget-logs-tab">
       <div class="controlsRow">
         <div class="filterControls">
-          <select class="filterDropdown" id="budgetLogCategoryFilter">
-            <option value="">All Categories</option>
+                    <select class="filterDropdown" id="budgetLogCategoryFilter">
+            <option value="">Category</option>
           </select>
+
+          <!-- ADD DATE FILTERS HERE -->
+          <div style="display: flex; align-items: center; gap: 5px;">
+            <label style="font-size: 12px; color: #555; font-weight: bold;">Log Date:</label>
+            <input type="date" id="budgetLogsFromDate" class="filterDropdown" style="width: auto; padding: 8px;" title="From Date">
+            <label style="font-size: 12px; color: #555; font-weight: bold;">-</label>
+            <input type="date" id="budgetLogsToDate" class="filterDropdown" style="width: auto; padding: 8px;" title="To Date">
+          </div>
           <div class="searchBox">
             <input type="text" placeholder="Search logs..." class="searchInput" id="searchBudgetLogs" />
             <button class="searchBtn">
               <img src="assets/icons/search-icon.png" alt="Search" />
             </button>
           </div>
+          <button class="refreshBtn" id="refreshBtnBudgetLogs" title="Refresh Budget Logs">
+            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+          </button>
         </div>
       </div>
       <div class="tableWrapper">
@@ -632,6 +681,7 @@ if (isset($_SESSION['UserID'])) {
     </div>
 </div>
 
+<!-- Add Item Confirmation Modal -->
 <div class="modal-overlay-confirm" id="confirmation-modal">
     <div class="modal-content-confirm">
         <h3>Are you sure you want to add this item to the inventory?</h3>
@@ -642,6 +692,20 @@ if (isset($_SESSION['UserID'])) {
         <div class="confirm-buttons">
             <button type="button" class="btn btn-cancel" id="confirm-cancel-btn">CANCEL</button>
             <button type="button" class="btn btn-confirm" id="confirm-add-btn">YES, ADD ITEM</button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Item Confirmation Modal -->
+<div class="modal-overlay-confirm" id="edit-confirmation-modal">
+    <div class="modal-content-confirm">
+        <h3>Confirm Edit Changes</h3>
+        <p>
+            Are you sure you want to save these changes? The item details will be updated in the inventory.
+        </p>
+        <div class="confirm-buttons">
+            <button type="button" class="btn btn-cancel" id="edit-confirm-cancel-btn">CANCEL</button>
+            <button type="button" class="btn btn-confirm" id="confirm-edit-btn">YES, SAVE CHANGES</button>
         </div>
     </div>
 </div>
