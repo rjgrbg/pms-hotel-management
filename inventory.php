@@ -1077,7 +1077,7 @@ if (isset($_SESSION['UserID'])) {
                 
                 window.allSystemCategories = await response.json();
                 
-                const filterDropdowns = [
+           const filterDropdowns = [
                     document.getElementById('floorFilter'),
                     document.getElementById('floorFilterHistory')
                 ];
@@ -1085,15 +1085,27 @@ if (isset($_SESSION['UserID'])) {
                 filterDropdowns.forEach(dropdown => {
                     if (!dropdown) return;
                     const currentValue = dropdown.value;
-                    while (dropdown.options.length > 1) { dropdown.remove(1); }
+                    
+                    // --- THE FIX: Completely wipe all options ---
+                    dropdown.innerHTML = '<option value="">Category</option>';
+                    
+                    const addedNames = new Set();
                     
                     window.allSystemCategories.forEach(category => {
-                        const option = document.createElement('option');
-                        option.value = category.ItemCategoryName;
-                        option.textContent = category.ItemCategoryName;
-                        dropdown.appendChild(option);
+                        // Only add active categories, and prevent duplicates
+                        if (category.is_archived == 0 && !addedNames.has(category.ItemCategoryName)) {
+                            const option = document.createElement('option');
+                            option.value = category.ItemCategoryName;
+                            option.textContent = category.ItemCategoryName;
+                            dropdown.appendChild(option);
+                            addedNames.add(category.ItemCategoryName);
+                        }
                     });
-                    dropdown.value = currentValue;
+                    
+                    // Re-select if possible
+                    if (Array.from(dropdown.options).some(opt => opt.value === currentValue)) {
+                        dropdown.value = currentValue;
+                    }
                 });
 
                 // Auto-filter based on current Add/Edit form types
@@ -1112,24 +1124,35 @@ if (isset($_SESSION['UserID'])) {
             const selectedType = typeSelect.value;
             const currentCatId = catSelect.value;
 
-            while (catSelect.options.length > 1) { catSelect.remove(1); }
+            // --- THE FIX: Completely wipe all options, then add the placeholder back ---
+            catSelect.innerHTML = '<option value="" disabled selected>Select a category</option>';
 
-            // --- FIX: Show all categories if no Type is selected ---
+            // --- Show all categories if no Type is selected ---
             const filtered = window.allSystemCategories.filter(c => {
                 if (c.is_archived == 1) return false;
                 if (!selectedType) return true; // Show all if blank
                 return c.ItemType === selectedType;
             });
 
+            // --- Use a Set to guarantee absolutely no duplicates in the final build ---
+            const addedCategories = new Set();
+
             filtered.forEach(category => {
-                const option = document.createElement('option');
-                option.value = category.ItemCategoryID;
-                option.textContent = category.ItemCategoryName;
-                catSelect.appendChild(option);
+                if (!addedCategories.has(category.ItemCategoryID)) {
+                    const option = document.createElement('option');
+                    option.value = category.ItemCategoryID;
+                    option.textContent = category.ItemCategoryName;
+                    catSelect.appendChild(option);
+                    addedCategories.add(category.ItemCategoryID);
+                }
             });
 
-            catSelect.value = currentCatId;
-            if(catSelect.value !== currentCatId) catSelect.value = ""; 
+            // Re-select the previously chosen option if it still exists in the new list
+            if (Array.from(catSelect.options).some(opt => opt.value === currentCatId)) {
+                catSelect.value = currentCatId;
+            } else {
+                catSelect.value = "";
+            }
         };
 
         // --- LOAD CATEGORIES (Active first, then Archived) ---
