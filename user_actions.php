@@ -24,7 +24,7 @@ $position_to_account_type = [
     'POS-0010' => 'maintenance_manager',
     'POS-0005' => 'maintenance_staff',
     'POS-0007' => 'inventory_manager',
-    'Parking Manager' => 'parking_manager'
+    'POS-0043' => 'parking_manager'
 ];
 
 function send_json_response($success, $message, $data = null) {
