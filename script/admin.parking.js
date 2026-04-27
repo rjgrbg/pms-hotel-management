@@ -176,6 +176,8 @@ function initParkingFilters() {
 
     const searchInput = document.getElementById('parkingHistorySearchInput');
     const areaFilter = document.getElementById('parkingAreaFilter');
+    const dateFromInput = document.getElementById('parkingDateFrom');
+    const dateToInput = document.getElementById('parkingDateTo');
     const refreshBtn = document.getElementById('parkingHistoryRefreshBtn');
     const downloadBtn = document.getElementById('parkingHistoryDownloadBtn');
 
@@ -183,6 +185,8 @@ function initParkingFilters() {
     function applyFilters() {
         const search = searchInput.value.toLowerCase();
         const area = areaFilter.value;
+        const dateFrom = dateFromInput ? dateFromInput.value : '';
+        const dateTo = dateToInput ? dateToInput.value : '';
 
         const filtered = parkingHistoryDataList.filter(row => {
             // Area Filter
@@ -196,9 +200,32 @@ function initParkingFilters() {
                 (row.SlotName && row.SlotName.toLowerCase().includes(search))
             );
 
-            return matchesArea && matchesSearch;
+            // Date Range Filter
+            let matchesDateRange = true;
+            if (dateFrom || dateTo) {
+                // Extract date from EntryDateTime (format: "2025-12-12 / 09:55 PM")
+                let enterDate = '';
+                if (row.EntryDateTime) {
+                    // Split by " / " to get the date part
+                    enterDate = row.EntryDateTime.split(' / ')[0]; // Gets "2025-12-12"
+                }
+                
+                if (dateFrom && enterDate) {
+                    if (enterDate < dateFrom) {
+                        matchesDateRange = false;
+                    }
+                }
+                if (dateTo && enterDate) {
+                    if (enterDate > dateTo) {
+                        matchesDateRange = false;
+                    }
+                }
+            }
+
+            return matchesArea && matchesSearch && matchesDateRange;
         });
 
+        console.log(`Filtered results: ${filtered.length} records`);
         paginationState.parkingHistory.currentPage = 1;
         renderParkingHistoryTable(filtered);
         return filtered; 
@@ -208,12 +235,16 @@ function initParkingFilters() {
     // This overwrites previous listeners, preventing duplicates.
     if (searchInput) searchInput.oninput = applyFilters;
     if (areaFilter) areaFilter.onchange = applyFilters;
+    if (dateFromInput) dateFromInput.onchange = applyFilters;
+    if (dateToInput) dateToInput.onchange = applyFilters;
 
     // --- FIX: Refresh Button ---
     if (refreshBtn) {
         refreshBtn.onclick = () => {
             searchInput.value = '';
             areaFilter.value = 'all';
+            if (dateFromInput) dateFromInput.value = '';
+            if (dateToInput) dateToInput.value = '';
             
             fetchAndRenderParkingHistory();
             fetchAndRenderParkingDashboard();

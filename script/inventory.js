@@ -783,6 +783,17 @@ historyTableBody.innerHTML = paginatedData
   addItemForm.addEventListener('submit', (e) => {
     e.preventDefault();
     if (addItemForm.checkValidity()) {
+      // Check for duplicate item name (case-insensitive)
+      const itemName = document.getElementById('item-name').value.trim().toLowerCase();
+      const isDuplicate = allInventoryData.some(item => 
+        item.ItemName.toLowerCase() === itemName && parseInt(item.is_archived) === 0
+      );
+      
+      if (isDuplicate) {
+        showToast('An item with this name already exists in the inventory.', 'error');
+        return;
+      }
+      
       showModal(confirmationModal);
     } else {
       addItemForm.reportValidity();
@@ -868,6 +879,19 @@ function openEditModal(item) {
         return;
     }
     // ---------------------------------
+
+    // Check for duplicate item name (case-insensitive, excluding current item)
+    const itemName = document.getElementById('edit-item-name').value.trim().toLowerCase();
+    const isDuplicate = allInventoryData.some(item => 
+      item.ItemName.toLowerCase() === itemName && 
+      parseInt(item.is_archived) === 0 && 
+      item.ItemID !== currentEditItemId
+    );
+    
+    if (isDuplicate) {
+      showToast('An item with this name already exists in the inventory.', 'error');
+      return;
+    }
 
     if (!currentEditItemId || isSubmittingEdit) return;
 

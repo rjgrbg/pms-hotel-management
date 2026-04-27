@@ -52,7 +52,7 @@ $sql_rooms = "SELECT
                     ELSE COALESCE(rs.RoomStatus, 'Available') 
                 END as RoomStatus,
                 
-                active_req.DateRequested as MaintenanceRequestDate,
+                COALESCE(active_req.DateRequested, rs.LastUpdated) as MaintenanceRequestDate,
                 active_req.RequestID, 
                 
                 -- Get assigned staff member's name
@@ -90,7 +90,7 @@ if ($result_rooms = $conn->query($sql_rooms)) {
         $requestDate = 'N/A';
         $requestTime = 'N/A';
         
-        if (in_array($row['RoomStatus'], ['Needs Maintenance', 'Pending', 'In Progress']) && $row['MaintenanceRequestDate']) {
+        if ($row['MaintenanceRequestDate']) {
             $requestDate = formatDbDateForDisplay($row['MaintenanceRequestDate']);
             $requestTime = date('g:i A', strtotime($row['MaintenanceRequestDate']));
         }

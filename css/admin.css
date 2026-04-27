@@ -404,6 +404,37 @@ body {
   border-color: #ffb400;
 }
 
+.dateRangeFilter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dateRangeFilter input[type="date"] {
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 13px;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: border 0.2s;
+  font-family: 'Arial', sans-serif;
+  min-width: 140px;
+}
+
+.dateRangeFilter input[type="date"]:focus {
+  outline: none;
+  border-color: #ffb400;
+}
+
+.dateRangeSeparator {
+  color: #999;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .searchBox {
   display: flex;
   align-items: center;

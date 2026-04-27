@@ -87,7 +87,7 @@ switch ($action) {
                     WHEN rs.RoomStatus = 'Needs Cleaning' THEN 'Needs Cleaning'
                     ELSE COALESCE(rs.RoomStatus, 'Available') 
                 END as RoomStatus,
-                active_task.DateRequested as TaskRequestDate,
+                COALESCE(active_task.DateRequested, rs.LastUpdated) as TaskRequestDate,
                 active_task.TaskID, 
                 u.Fname, u.Lname, u.Mname
               FROM tbl_rooms r
@@ -107,7 +107,7 @@ switch ($action) {
             while ($row = $result->fetch_assoc()) {
                 $requestDate = 'N/A';
                 $requestTime = 'N/A';
-                if (in_array($row['RoomStatus'], ['Needs Cleaning', 'Pending', 'In Progress']) && $row['TaskRequestDate']) {
+                if ($row['TaskRequestDate']) {
                     $requestDate = formatDbDateForDisplay($row['TaskRequestDate']);
                     $requestTime = date('g:i A', strtotime($row['TaskRequestDate']));
                 }

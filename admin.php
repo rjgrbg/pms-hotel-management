@@ -98,7 +98,8 @@ $sql_hk_rooms = "SELECT
                     ELSE COALESCE(rs.RoomStatus, 'Available') 
                 END as RoomStatus,
                 
-                active_task.DateRequested as TaskRequestDate,
+                -- Use active task date if available, otherwise use room status LastUpdated
+                COALESCE(active_task.DateRequested, rs.LastUpdated) as TaskRequestDate,
                 active_task.TaskID, 
                 
                 -- Get assigned staff member's name
@@ -134,7 +135,7 @@ if ($result_hk_rooms = $conn->query($sql_hk_rooms)) {
   while ($row = $result_hk_rooms->fetch_assoc()) {
     $requestDate = 'N/A';
     $requestTime = 'N/A';
-    if (in_array($row['RoomStatus'], ['Needs Cleaning', 'Pending', 'In Progress']) && $row['TaskRequestDate']) {
+    if ($row['TaskRequestDate']) {
       $requestDate = formatDbDateForDisplay($row['TaskRequestDate']);
       $requestTime = date('g:i A', strtotime($row['TaskRequestDate']));
     }
@@ -242,7 +243,8 @@ $sql_mt_rooms = "SELECT
                     ELSE COALESCE(rs.RoomStatus, 'Available') 
                 END as RoomStatus,
                 
-                active_req.DateRequested as MaintenanceRequestDate,
+                -- Use active request date if available, otherwise use room status LastUpdated
+                COALESCE(active_req.DateRequested, rs.LastUpdated) as MaintenanceRequestDate,
                 active_req.RequestID, 
                 
                 -- Get assigned staff member's name
@@ -278,7 +280,7 @@ if ($result_mt_rooms = $conn->query($sql_mt_rooms)) {
   while ($row = $result_mt_rooms->fetch_assoc()) {
     $requestDate = 'N/A';
     $requestTime = 'N/A';
-    if (in_array($row['RoomStatus'], ['Needs Maintenance', 'Pending', 'In Progress']) && $row['MaintenanceRequestDate']) {
+    if ($row['MaintenanceRequestDate']) {
       $requestDate = formatDbDateForDisplay($row['MaintenanceRequestDate']);
       $requestTime = date('g:i A', strtotime($row['MaintenanceRequestDate']));
     }
@@ -877,6 +879,11 @@ $conn->close();
             <select class="filterDropdown" id="parkingAreaFilter">
               <option value="all">All Areas</option>
             </select>
+            <div class="dateRangeFilter">
+              <input type="date" class="filterDropdown" id="parkingDateFrom" />
+              <span class="dateRangeSeparator">to</span>
+              <input type="date" class="filterDropdown" id="parkingDateTo" />
+            </div>
             <div class="searchBox">
               <input type="text" placeholder="Search Plate, Name, Room..." class="searchInput" id="parkingHistorySearchInput" />
               <button class="searchBtn">
@@ -994,6 +1001,11 @@ $conn->close();
                 <option value="Stock Added">Stock Added</option>
                 <option value="Item Issued">Item Issued</option>
               </select>
+              <div style="display: flex; align-items: center; gap: 5px; background: white; border-radius: 5px; border: 1px solid #ddd; padding: 0 5px;">
+                <input type="date" id="invHistStartDate" title="Start Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+                <span style="color: #666;">-</span>
+                <input type="date" id="invHistEndDate" title="End Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+              </div>
               <div class="searchBox">
                 <input type="text" placeholder="Search" class="searchInput" id="invHistSearchInput" />
                 <button class="searchBtn">
