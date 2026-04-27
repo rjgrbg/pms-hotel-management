@@ -51,7 +51,7 @@ $action = trim($_GET['action'] ?? $_POST['action'] ?? $data['action'] ?? '');
 // ====================================================================
 if ($request_method === 'GET' && $action === 'fetch_rooms') {
     
-    // This query has no user input, so it's already safe.
+   // --- FETCH ROOMS (READ) ---
     $sql = "SELECT 
                 r.room_id, 
                 r.floor_num, 
@@ -59,6 +59,7 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
                 r.room_type,
                 r.room_name,
                 r.capacity,
+                r.status AS OccupancyStatus, 
                 IFNULL(rs.RoomStatus, 'Available') AS RoomStatus
             FROM 
                 tbl_rooms r
@@ -70,26 +71,26 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
                 r.room_num ASC";
 
     if ($result = $conn->query($sql)) {
-        $rooms = [];
+        $data = [];
         while ($row = $result->fetch_assoc()) {
-            $rooms[] = [
-                'RoomID' => $row['room_id'], 
-                'Floor' => $row['floor_num'],
-                'Room' => $row['room_num'],
-                'Name' => $row['room_name'],
-                'Type' => $row['room_type'],
+            $data[] = [
+                'RoomID'   => $row['room_id'],
+                'Floor'    => $row['floor_num'],
+                'Room'     => $row['room_num'],
+                'Name'     => $row['room_name'],
+                'Type'     => $row['room_type'],
                 'NoGuests' => $row['capacity'],
-                'Status' => $row['RoomStatus'],
+                'Occupancy'=> $row['OccupancyStatus'],
+                'Status'   => $row['RoomStatus']
             ];
         }
         $response['success'] = true;
-        $response['data'] = $rooms;
-        $response['totalRecords'] = count($rooms);
+        $response['data'] = $data;
+        $response['totalRecords'] = count($data);
     } else {
         $response['message'] = "Error fetching rooms: ". $conn->error;
         error_log("Room fetch error: ". $conn->error);
     }
-
 // ====================================================================
 // --- SET ROOM STATUS (from maintenance.js) ---
 // ====================================================================
@@ -230,7 +231,6 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
 // ====================================================================
 } elseif ($request_method === 'POST' && $action === 'delete_room') {
     
-    // --- REFINEMENT: Replaced real_escape_string with trim() ---
     $room_id = trim($_POST['roomID'] ?? '');
 
     if (empty($room_id)) {
@@ -271,8 +271,106 @@ if ($request_method === 'GET' && $action === 'fetch_rooms') {
             $response['message'] = 'Room not found.';
         }
     }
-}
 
+// ====================================================================
+// --- GET ROOM DETAILS (READ) ---
+// ====================================================================
+} elseif ($request_method === 'GET' && $action === 'get_room_details') {
+    
+    $room_id = trim($_GET['roomID'] ?? '');
+    
+    if (empty($room_id)) {
+        $response['message'] = 'Missing Room ID.';
+    } else {
+        // Prepare sample data structure with detailed equipment info
+        // TODO: Replace with actual database queries when tables are available
+        
+        $response['success'] = true;
+        $response['data'] = [
+            'equipment' => [
+                [
+                    'name' => 'Television',
+                    'icon' => 'fas fa-tv',
+                    'installed' => date('M j, Y', strtotime('-2 years')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-3 months'))
+                ],
+                [
+                    'name' => 'Air Conditioner',
+                    'icon' => 'fas fa-snowflake',
+                    'installed' => date('M j, Y', strtotime('-1 year')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-1 month'))
+                ],
+                [
+                    'name' => 'Mini Fridge',
+                    'icon' => 'fas fa-temperature-low',
+                    'installed' => date('M j, Y', strtotime('-18 months')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-2 months'))
+                ],
+                [
+                    'name' => 'Coffee Maker',
+                    'icon' => 'fas fa-coffee',
+                    'installed' => date('M j, Y', strtotime('-8 months')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-1 week'))
+                ],
+                [
+                    'name' => 'Hair Dryer',
+                    'icon' => 'fas fa-wind',
+                    'installed' => date('M j, Y', strtotime('-1 year')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-2 weeks'))
+                ],
+                [
+                    'name' => 'Safe Box',
+                    'icon' => 'fas fa-lock',
+                    'installed' => date('M j, Y', strtotime('-2 years')),
+                    'lastMaintenance' => date('M j, Y', strtotime('-6 months'))
+                ]
+            ],
+            'amenities' => [
+                ['name' => 'Complimentary WiFi'],
+                ['name' => 'Room Service'],
+                ['name' => 'Daily Housekeeping'],
+                ['name' => 'Toiletries'],
+                ['name' => 'Bottled Water'],
+                ['name' => 'Slippers']
+            ],
+            'linens' => [
+                ['name' => 'Bed Sheets (2 sets)'],
+                ['name' => 'Pillowcases (4 pcs)'],
+                ['name' => 'Bath Towels (4 pcs)'],
+                ['name' => 'Hand Towels (4 pcs)'],
+                ['name' => 'Duvet Cover']
+            ],
+            'lastLinenChange' => date('F j, Y', strtotime('-3 days'))
+        ];
+        
+        // Optional: Query actual data from database if tables exist
+        // Example structure for future implementation:
+        /*
+        $stmt = $conn->prepare("
+            SELECT 
+                equipment_name, 
+                equipment_icon,
+                date_installed,
+                last_maintenance_date
+            FROM room_equipment 
+            WHERE room_id = ?
+        ");
+        $stmt->bind_param("i", $room_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $equipment = [];
+        while ($row = $result->fetch_assoc()) {
+            $equipment[] = [
+                'name' => $row['equipment_name'],
+                'icon' => $row['equipment_icon'],
+                'installed' => date('M j, Y', strtotime($row['date_installed'])),
+                'lastMaintenance' => date('M j, Y', strtotime($row['last_maintenance_date']))
+            ];
+        }
+        $stmt->close();
+        */
+    }
+}
 $conn->close();
 echo json_encode($response);
 exit();

@@ -593,7 +593,7 @@ table td:last-child {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
@@ -625,13 +625,53 @@ table td:last-child {
   overflow-y: auto;
 }
 
+/* Custom Scrollbar for All Modals */
+.staffSelectionModal::-webkit-scrollbar,
+.logoutModal::-webkit-scrollbar,
+.addItemModal::-webkit-scrollbar,
+.confirmModal::-webkit-scrollbar,
+.successModal::-webkit-scrollbar,
+.deleteConfirmModal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.staffSelectionModal::-webkit-scrollbar-track,
+.logoutModal::-webkit-scrollbar-track,
+.addItemModal::-webkit-scrollbar-track,
+.confirmModal::-webkit-scrollbar-track,
+.successModal::-webkit-scrollbar-track,
+.deleteConfirmModal::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 10px 0;
+}
+
+.staffSelectionModal::-webkit-scrollbar-thumb,
+.logoutModal::-webkit-scrollbar-thumb,
+.addItemModal::-webkit-scrollbar-thumb,
+.confirmModal::-webkit-scrollbar-thumb,
+.successModal::-webkit-scrollbar-thumb,
+.deleteConfirmModal::-webkit-scrollbar-thumb {
+  background: #480c1b;
+  border-radius: 10px;
+}
+
+.staffSelectionModal::-webkit-scrollbar-thumb:hover,
+.logoutModal::-webkit-scrollbar-thumb:hover,
+.addItemModal::-webkit-scrollbar-thumb:hover,
+.confirmModal::-webkit-scrollbar-thumb:hover,
+.successModal::-webkit-scrollbar-thumb:hover,
+.deleteConfirmModal::-webkit-scrollbar-thumb:hover {
+  background: #5d0f23;
+}
+
 .staffSelectionModal {
   max-width: 600px;
   padding: 0;
+  background-color: #fff;
 }
 
 .logoutModal {
-  background-color: #480c1b;
+  background-color: #fff;
   max-width: 420px;
 }
 
@@ -639,7 +679,7 @@ table td:last-child {
 .confirmModal,
 .successModal,
 .deleteConfirmModal {
-  background-color: #480c1b;
+  background-color: #fff;
   border-radius: 12px;
   padding: 35px;
   max-width: 500px;
@@ -657,14 +697,14 @@ table td:last-child {
 
 .confirmModal,
 .successModal {
-  background-color: #480c1b;
+  background-color: #fff;
   text-align: center;
   max-width: 450px;
   padding: 40px 35px;
 }
 
 .deleteConfirmModal {
-  background-color: #480c1b;
+  background-color: #fff;
   max-width: 500px;
 }
 
@@ -686,23 +726,23 @@ table td:last-child {
   background: none;
   border: none;
   font-size: 24px;
-  color: #fff;
+  color: #480c1b;
   cursor: pointer;
-  opacity: 1;
-  transition: color 0.2s;
+  opacity: 0.7;
+  transition: opacity 0.2s;
   z-index: 10;
 }
 
 .closeBtn:hover {
-  opacity: 0.7;
+  opacity: 1;
 }
 
 .addItemModal .closeBtn {
-  color: #e5e5e5;
+  color: #480c1b;
 }
 
 .deleteConfirmModal .closeBtn {
-  color: #fff;
+  color: #480c1b;
 }
 
 .modalIconHeader {
@@ -710,58 +750,78 @@ table td:last-child {
   margin-bottom: 20px;
 }
 
+.modalIconHeader i {
+  color: #480c1b !important;
+}
+
 .staffSelectionModal h2 {
-  color: #d4af78;
-  font-size: 18px;
+  color: #480c1b;
+  font-size: 20px;
   margin-bottom: 15px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   font-family: Arial;
   padding: 40px 40px 10px 40px;
   text-transform: uppercase;
+  letter-spacing: 0px;
 }
 
 .addItemModal h2 {
-  color: #333;
-  font-size: 18px;
+  color: #480c1b;
+  font-size: 20px;
   margin-bottom: 15px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
   font-family: Arial;
   padding: 0 0 10px 0;
   text-transform: uppercase;
+  letter-spacing: 0px;
 }
 
 .confirmModal h2,
 .successModal h2 {
-  color: #ffffff;
-  font-size: 18px;
+  color: #480c1b;
+  font-size: 20px;
   margin-bottom: 15px;
-  font-weight: 600;
+  font-weight: 700;
   text-align: center;
+  letter-spacing: 0px;
+}
+
+.logoutModal h2 {
+  color: #480c1b;
+  font-size: 20px;
+  margin-top: 20px;
+  margin-bottom: 15px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .modalSubtext {
-  color: #333;
+  color: #666;
   font-size: 14px;
   text-align: center;
   margin-bottom: 30px;
   padding: 0 40px;
   font-style: normal;
   font-weight: 400;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .confirmModal .modalSubtext,
 .successModal .modalSubtext {
-  color: #dcc8b0;
-  font-size: 13px;
+  color: #666;
+  font-size: 14px;
   padding: 0;
 }
 
 .addItemModal .modalSubtext {
   padding: 0;
   margin-bottom: 25px;
+  color: #666;
 }
 
 /* Modal Search Box */
@@ -770,14 +830,15 @@ table td:last-child {
   flex: none;
   min-width: 0;
   width: auto;
-  background-color: #fff;
+  background-color: #f9f9f9;
   border: 1px solid #ddd;
   transition: all 0.3s ease;
+  border-radius: 8px;
 }
 
 .modalSearchBox:focus-within {
-  border-color: #999;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+  border-color: #480c1b;
+  box-shadow: 0 0 0 3px rgba(72, 12, 27, 0.1);
 }
 
 .modalSearchBox .searchInput {
@@ -788,6 +849,11 @@ table td:last-child {
 
 .modalSearchBox .searchInput::placeholder {
   color: #999;
+}
+
+.modalSearchBox .searchBtn img {
+  filter: none;
+  opacity: 0.6;
 }
 
 /* Staff List */
@@ -803,21 +869,21 @@ table td:last-child {
 }
 
 .staffList::-webkit-scrollbar-track {
-  background: #f5f5f5;
-  border-radius: 3px;
+  background: transparent;
+  margin: 5px 0;
 }
 
 .staffList::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 3px;
+  background: #480c1b;
+  border-radius: 10px;
 }
 
 .staffList::-webkit-scrollbar-thumb:hover {
-  background: #999;
+  background: #5d0f23;
 }
 
 .staffListItem {
-  background: #f5f5f5;
+  background: #f9f9f9;
   padding: 18px 20px;
   margin-bottom: 12px;
   border-radius: 8px;
@@ -826,22 +892,41 @@ table td:last-child {
   align-items: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 2px solid transparent;
+  border: 2px solid #e0e0e0;
 }
 
 .staffListItem:last-child {
   margin-bottom: 0;
 }
 
-.staffListItem:hover:not(.assigned) {
-  background: #e8e8e8;
-  border-color: #ddd;
+.staffListItem:hover:not(.assigned):not(.offline) {
+  background: #fff;
+  border-color: rgba(72, 12, 27, 0.3);
+  box-shadow: 0 2px 8px rgba(72, 12, 27, 0.08);
 }
 
-.staffListItem.assigned {
+.staffListItem.selected {
+  background: #fff !important;
+  border-color: #480c1b !important;
+  box-shadow: 0 4px 12px rgba(72, 12, 27, 0.15);
+}
+
+.staffListItem.selected .staffListName {
+  color: #333 !important;
+  font-weight: 600;
+}
+
+.staffListItem.selected .staffListStatus {
+  background: #d4edda !important;
+  color: #28a745 !important;
+  border-color: #c3e6cb !important;
+}
+
+.staffListItem.assigned,
+.staffListItem.offline {
   opacity: 0.5;
   cursor: not-allowed;
-  background: #f9f9f9;
+  background: #f5f5f5;
 }
 
 .staffListName {
@@ -890,23 +975,46 @@ table td:last-child {
   display: block;
   font-size: 13px;
   font-weight: 600;
-  color: #333;
+  color: #480c1b;
   margin-bottom: 8px;
 }
 
 .formInput {
   width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 13px;
+  padding: 12px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
   font-family: 'Arial', sans-serif;
-  transition: border 0.2s;
+  transition: all 0.3s ease;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+}
+
+.formInput:hover {
+  border-color: #480c1b;
 }
 
 .formInput:focus {
   outline: none;
-  border-color: #d4af78;
+  border-color: #28a745;
+  background-color: #fff;
+  box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1);
+}
+
+/* Dropdown arrow styling */
+.formInput[type="text"],
+.formInput[type="number"] {
+  cursor: text;
+}
+
+select.formInput {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23480c1b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
 }
 
 /* Modal Buttons */
@@ -927,23 +1035,23 @@ table td:last-child {
 .confirmModal .modalButtons,
 .successModal .modalButtons {
   padding: 0;
-  margin-top: 25px;
+  margin-top: 45px;
 }
 
 .addItemModal .modalButtons {
   padding: 0;
-  margin-top: 25px;
+  margin-top: 45px;
 }
 
 .modalBtn {
-  padding: 12px 24px;
+  padding: 12px 28px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   transition: all 0.2s ease;
 }
 
@@ -953,49 +1061,60 @@ table td:last-child {
 }
 
 .modalBtn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
 }
 
 .cancelBtn {
-  background: #e0e0e0;
-  color: #333;
+  background: #f5f5f5;
+  color: #666;
   min-width: 130px;
+  border: 2px solid #e0e0e0;
 }
 
 .cancelBtn:hover {
-  background: #d5d5d5;
+  background: #e8e8e8;
+  border-color: #ccc;
+  color: #333;
 }
 
 .confirmBtn {
-  background: #d4af78;
-  color: #480c1b;
+  background: #480c1b;
+  color: #fff;
   min-width: 180px;
-  font-weight: 600;
+  font-weight: 700;
+  border: 2px solid #480c1b;
 }
 
 .confirmBtn:hover:not(:disabled) {
-  background: #d4af78;
+  background: #5d0f23;
+  border-color: #5d0f23;
+  box-shadow: 0 6px 16px rgba(72, 12, 27, 0.3);
 }
 
 .confirmBtn.deleteBtn {
   background: #dc3545;
+  border-color: #dc3545;
 }
 
 .confirmBtn.deleteBtn:hover {
   background: #c82333;
+  border-color: #c82333;
 }
 
 .okayBtn {
-  background-color: #d4af78;
-  color: #480c1b;
+  background-color: #480c1b;
+  color: #fff;
   min-width: 250px;
-  font-weight: 600;
+  font-weight: 700;
   padding: 14px 40px;
+  border: 2px solid #480c1b;
 }
 
 .okayBtn:hover {
-  background-color: #ff8c00;
+  background-color: #5d0f23;
+  border-color: #5d0f23;
+  box-shadow: 0 6px 16px rgba(72, 12, 27, 0.3);
 }
 
 /* Logout Modal Specific */
@@ -1008,23 +1127,15 @@ table td:last-child {
 }
 
 .logoutIcon {
-  height: 50px;
-  width: 50px;
-}
-
-.logoutModal h2 {
-  color: #fff;
-  font-size: 18px;
-  margin-bottom: 12px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-align: center;
+  height: 60px;
+  width: 60px;
+  filter: brightness(0) saturate(100%) invert(8%) sepia(45%) saturate(4500%) hue-rotate(330deg) brightness(90%) contrast(95%);
 }
 
 .logoutModal p {
-  color: #dcc8b0;
-  font-size: 13px;
-  line-height: 1.5;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
   text-align: center;
   margin-bottom: 25px;
 }
@@ -1158,6 +1269,57 @@ table td:last-child {
   }
 }
 
+/* ===== ADDITIONAL MODAL ENHANCEMENTS ===== */
+
+/* Add subtle shadow to modal headers */
+.staffSelectionModal h2,
+.addItemModal h2,
+.confirmModal h2,
+.successModal h2,
+.logoutModal h2 {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Enhance modal icon appearance */
+.modalIconHeader i {
+  filter: drop-shadow(0 2px 4px rgba(72, 12, 27, 0.15));
+}
+
+/* Add focus styles for better accessibility */
+.formInput:focus,
+.modalSearchBox:focus-within {
+  box-shadow: 0 0 0 3px rgba(72, 12, 27, 0.1);
+}
+
+/* Smooth transitions for staff list items */
+.staffListItem {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Enhanced hover effect for buttons */
+.modalBtn {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Add subtle gradient to confirm buttons */
+.confirmBtn {
+  background: linear-gradient(135deg, #480c1b 0%, #5d0f23 100%);
+}
+
+.confirmBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5d0f23 0%, #6e1129 100%);
+}
+
+/* Improve checkbox styling */
+.formGroup.checkboxGroup input[type="checkbox"]:hover {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+.formGroup.checkboxGroup input[type="checkbox"]:checked {
+  filter: drop-shadow(0 1px 2px rgba(72, 12, 27, 0.3));
+}
+
 
 /* --- Assign Staff Button Styles --- */
 
@@ -1212,188 +1374,252 @@ table td:last-child {
 /* Styles for the new checkbox groups in the modal */
 .formGroup.checkboxGroup {
     display: flex;
-    align-items: center; /* Vertically aligns the checkbox and label */
-    margin-bottom: 10px; /* Adds spacing between rows */
+    align-items: center;
+    margin-bottom: 10px;
 }
 
 .formGroup.checkboxGroup input[type="checkbox"] {
-    margin-right: 10px; /* Adds spacing between checkbox and label */
-    width: auto;
-    flex-shrink: 0; /* Prevents checkbox from shrinking */
+    margin-right: 10px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: #480c1b;
 }
 
 .formGroup.checkboxGroup label {
-    margin-bottom: 0; /* Resets any default bottom margin */
-    font-weight: normal;
-    line-height: 1.3; /* Improves readability for wrapped labels */
-}
-/* --- Add this to your maintenance.css file --- */
-
-
-
-/* ====================================================== */
-/* NEW: THEMED MODAL STYLES (Dark Red & Gold) */
-/* ====================================================== */
-
-/* Custom Modal Styling for Maintenance Theme */
-
-/* Target Issue Type and Staff Selection Modals specifically */
-#issueTypeModal .addItemModal,
-#staffModal .staffSelectionModal {
-    background-color: rgb(72, 12, 27); /* Dark Red Background */
-    color: white; /* Default text color white */
-    border-radius: 8px; /* Keep rounded corners */
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); /* Add some shadow for depth */
-}
-
-/* Headings (h2) */
-#issueTypeModal h2,
-#staffModal h2 {
-    color: #d4af78 !important; /* Gold Color */
-    font-weight: bold;
-}
-
-/* Subtext/Paragraphs */
-#issueTypeModal .modalSubtext,
-#staffModal .modalSubtext {
-    color: white !important; /* Ensure subtext is white */
-}
-
-/* Modal Close Button (X) */
-#issueTypeModal .closeBtn,
-#staffModal .closeBtn {
-    color: white;
-    opacity: 0.8;
-}
-#issueTypeModal .closeBtn:hover,
-#staffModal .closeBtn:hover {
-    opacity: 1;
-}
-
-/* --- Issue Type Modal Specifics --- */
-
-/* Labels for checkboxes */
-#issueTypeModal label {
-    color: white !important;
-}
-
-/* Icon Header (the list icon) */
-#issueTypeModal .modalIconHeader i {
-    color: #d4af78 !important; /* Make the icon Gold too */
-}
-
-
-/* --- Staff Modal Specifics --- */
-
-/* Search Box Styling to fit dark theme */
-#staffModal .searchBox {
-    background-color: rgba(255, 255, 255, 0.1); /* Semi-transparent white */
-    border: 1px solid rgba(255, 255, 255, 0.3);
-}
-#staffModal .searchBox input {
-    color: white;
-}
-#staffModal .searchBox input::placeholder {
-    color: rgba(255, 255, 255, 0.7);
-}
-#staffModal .searchBtn img {
-    filter: brightness(0) invert(1); /* Turn search icon white */
-}
-
-/* --- Staff List Item Styling --- */
-
-/* 1. DEFAULT STATE (Not Selected) */
-#staffModal .staff-item {
-    background-color: rgba(255, 255, 255, 0.1) !important; /* Semi-transparent white */
-    color: white !important;
-    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border */
-    transition: all 0.2s ease;
-}
-
-#staffModal .staff-name {
-    color: white !important;
-    font-weight: bold;
-}
-
-#staffModal .staff-role {
-    color: rgba(255, 255, 255, 0.7) !important;
-}
-
-/* 2. HOVER STATE */
-#staffModal .staff-item:hover {
-    background-color: rgba(255, 255, 255, 0.2) !important;
+    margin-bottom: 0;
+    font-weight: 500;
+    line-height: 1.3;
+    color: #333;
     cursor: pointer;
 }
 
-/* 3. SELECTED STATE (Turns Gold) */
-#staffModal .staff-item.selected {
-    background-color: rgb(212, 175, 120) !important; /* Gold Background */
-    border-color: rgb(212, 175, 120) !important;
+/* ===== ISSUE TYPE MODAL - CARD STYLE ===== */
+.issueTypeModal {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 800px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideIn 0.3s ease;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
-/* Change text color to Dark Red when selected so it's readable on Gold */
-#staffModal .staff-item.selected .staff-name,
-#staffModal .staff-item.selected .staff-role {
-    color: rgb(72, 12, 27) !important;
+/* Custom Scrollbar for Issue Type Modal */
+.issueTypeModal::-webkit-scrollbar {
+  width: 6px;
 }
 
-/* --- Buttons --- */
-
-/* Cancel Button */
-#issueTypeModal .cancelBtn,
-#staffModal .cancelBtn {
-    background-color: #e0e0e0; /* Keep light grey for contrast */
-    color: #333;
-    border: none;
-}
-#issueTypeModal .cancelBtn:hover,
-#staffModal .cancelBtn:hover {
-    background-color: #d0d0d0;
+.issueTypeModal::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 10px 0;
 }
 
-/* Action Buttons (Next/Assign) */
-#issueTypeModal .confirmBtn,
-#staffModal .confirmBtn {
-    background-color: #d4af78 !important; /* Gold Background */
-    color: rgb(72, 12, 27) !important; /* Dark Red Text */
-    font-weight: bold;
-    border: none;
-}
-#issueTypeModal .confirmBtn:hover,
-#staffModal .confirmBtn:hover {
-    background-color: #d4af78 !important; /* Slightly darker gold on hover */
-}
-#issueTypeModal .confirmBtn:disabled,
-#staffModal .confirmBtn:disabled {
-    background-color: #cccccc !important;
-    color: #666666 !important;
-    cursor: not-allowed;
-}
-/* --- Custom Scrollbar for Staff List (Gold & Dark Red Theme) --- */
-
-/* The Scrollbar Container */
-#staffList::-webkit-scrollbar {
-    width: 8px;
+.issueTypeModal::-webkit-scrollbar-thumb {
+  background: #480c1b;
+  border-radius: 10px;
 }
 
-/* The Track (Background) */
-#staffList::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2); /* Dark transparent track */
-    border-radius: 4px;
+.issueTypeModal::-webkit-scrollbar-thumb:hover {
+  background: #5d0f23;
 }
 
-/* The Handle (Scrollbar itself) */
-#staffList::-webkit-scrollbar-thumb {
-    background: rgb(212, 175, 120); /* Gold color */
-    border-radius: 4px;
+.issueTypeModal h2 {
+  color: #480c1b;
+  font-size: 20px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0px;
+  text-transform: uppercase;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
-/* Handle on Hover */
-#staffList::-webkit-scrollbar-thumb:hover {
-    background: rgb(192, 155, 100); /* Slightly darker gold */
+.issueTypeModal .modalSubtext {
+  color: #666;
+  font-size: 13px;
+  text-align: center;
+  margin-bottom: 35px;
+  margin-top: 15px;
+  line-height: 1.6;
+  font-weight: 400;
 }
 
-/* --- Ensure the List Container Text is White --- */
-#staffList {
-    color: white; 
+/* Hide default checkboxes */
+.issue-checkbox-hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Issue Type Grid */
+.issueTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+/* Issue Type Card */
+.issueTypeCard {
+  position: relative;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px 12px 12px 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  min-height: 140px;
+  justify-content: space-between;
+}
+
+.issueTypeCard:hover {
+  border-color: #480c1b;
+  box-shadow: 0 4px 12px rgba(72, 12, 27, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Selected State - Only show check, don't change background */
+.issue-checkbox-hidden:checked + .issueTypeCard {
+  border-color: #480c1b;
+  box-shadow: 0 4px 12px rgba(72, 12, 27, 0.15);
+  background: #fff;
+}
+
+.issue-checkbox-hidden:checked + .issueTypeCard .issueTypeCheck {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Select All Card Special Styling */
+.selectAllCard {
+  grid-column: 1 / -1;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  min-height: auto;
+  padding: 18px 20px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.selectAllCard:hover {
+  border-color: #480c1b;
+  box-shadow: 0 4px 12px rgba(72, 12, 27, 0.1);
+}
+
+.selectAllCard .issueTypeIcon {
+  display: none;
+}
+
+.selectAllCard .issueTypeName {
+  font-size: 14px;
+  margin-top: 0;
+  font-weight: 700;
+  color: #333;
+}
+
+.selectAllCard .issueTypeCheck {
+  color: #fff;
+  position: relative;
+  top: auto;
+  right: auto;
+  margin-left: auto;
+  background: transparent;
+}
+
+/* Select All - Selected State (Maroon) */
+.issue-checkbox-hidden:checked + .selectAllCard {
+  background: #480c1b;
+  border-color: #480c1b;
+  box-shadow: 0 4px 12px rgba(72, 12, 27, 0.25);
+}
+
+.issue-checkbox-hidden:checked + .selectAllCard .issueTypeIcon {
+  color: #fff;
+}
+
+.issue-checkbox-hidden:checked + .selectAllCard .issueTypeName {
+  color: #fff;
+}
+
+.issue-checkbox-hidden:checked + .selectAllCard .issueTypeCheck {
+  opacity: 1;
+  transform: scale(1);
+  color: #fff;
+}
+
+/* Icon Styling - Top Left, Smaller */
+.issueTypeIcon {
+  font-size: 40px;
+  color: #480c1b;
+  margin-bottom: 0;
+  transition: all 0.3s ease;
+  align-self: flex-start;
+}
+
+/* Name Styling - Bottom */
+.issueTypeName {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  margin-top: auto;
+  line-height: 1.3;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+/* Check Icon - Top Right */
+.issueTypeCheck {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #480c1b;
+  font-size: 18px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #fff;
+  border-radius: 50%;
+}
+
+/* Responsive Grid */
+@media (max-width: 768px) {
+  .issueTypeGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .issueTypeCard {
+    min-height: 100px;
+    padding: 16px 12px;
+  }
+  
+  .issueTypeIcon {
+    font-size: 22px;
+  }
+  
+  .issueTypeName {
+    font-size: 11px;
+  }
+  
+  .issueTypeModal {
+    padding: 30px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .issueTypeGrid {
+    grid-template-columns: 1fr;
+  }
 }

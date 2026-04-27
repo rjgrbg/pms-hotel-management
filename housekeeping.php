@@ -53,7 +53,7 @@ $sql_rooms = "SELECT
                     ELSE COALESCE(rs.RoomStatus, 'Available') 
                 END as RoomStatus,
                 
-                active_task.DateRequested as TaskRequestDate,
+                COALESCE(active_task.DateRequested, rs.LastUpdated) as TaskRequestDate,
                 active_task.TaskID, 
                 
                 -- Get assigned staff member's name
@@ -91,7 +91,7 @@ if ($result_rooms = $conn->query($sql_rooms)) {
         $requestDate = 'N/A';
         $requestTime = 'N/A';
         
-        if (in_array($row['RoomStatus'], ['Needs Cleaning', 'Pending', 'In Progress']) && $row['TaskRequestDate']) {
+        if ($row['TaskRequestDate']) {
             $requestDate = formatDbDateForDisplay($row['TaskRequestDate']);
             $requestTime = date('g:i A', strtotime($row['TaskRequestDate']));
         }
@@ -334,11 +334,8 @@ $conn->close();
     <div class="modalBackdrop" id="logoutModal" style="display: none;">
         <div class="logoutModal">
             <button class="closeBtn" id="closeLogoutBtn">×</button>
-            <div class="modalIcon">
-                <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
-            </div>
-            <h2 style="color: #d4af78; text-align: center; font-size: 20px;">Are you sure you want to logout?</h2>
-            <p style="color: #d8d8d8ff; text-align: center; font-size: 13px;">You will be logged out from your account and redirected to the login page.</p>
+            <h2>Are you sure you want to logout?</h2>
+            <p>You will be logged out from your account and redirected to the login page.</p>
             <div class="modalButtons">
                 <button class="modalBtn cancelBtn" id="cancelLogoutBtn">CANCEL</button>
                 <button class="modalBtn confirmBtn" id="confirmLogoutBtn">YES, LOGOUT</button>
@@ -484,65 +481,109 @@ $conn->close();
     </div>
 
     <div class="modalBackdrop" id="taskTypeModal" style="display: none;">
-        <div class="addItemModal">
-            <button class="closeBtn" id="closeTaskTypeModalBtn" style="color: #bababa" >×</button>
-            <div class="modalIconHeader">
-                <i class="fas fa-broom" style="font-size: 48px; color: #FFA237;"></i>
-            </div>
-            <h2 style="color: #ffffffff">Select Task Types</h2>
-            <p class="modalSubtext" style="color: #bababa">Select all relevant tasks for the request in Room <strong id="taskTypeModalRoomNumber">---</strong>.</p>
+        <div class="taskTypeModal">
+            <button class="closeBtn" id="closeTaskTypeModalBtn">×</button>
+            <h2>Select Task Types</h2>
+            <p class="modalSubtext">Select all relevant tasks for the request in Room <strong id="taskTypeModalRoomNumber">---</strong>.</p>
             
             <form id="taskTypeForm">
                 <input type="hidden" id="taskTypeRoomId" value="">
                 
-                <div class="formGroup checkboxGroup" style="width: 100%; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 10px;">
-                    <input type="checkbox" id="task_select_all">
-                    <label for="task_select_all" style="font-weight: 700; color: #d4d4d4ff;">SELECT ALL</label>
-                </div>
+                <div class="taskTypeGrid">
+                    <input type="checkbox" id="task_select_all" class="task-checkbox-hidden">
+                    <label for="task_select_all" class="taskTypeCard selectAllCard">
+                        <div class="taskTypeName">SELECT ALL</div>
+                        <div class="taskTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
 
-                <div class="formRow" id="taskTypeCheckboxContainer" style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px 15px; max-height: 250px; overflow-y: auto;">
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="task_general" name="taskType[]" value="General Cleaning">
-                        <label for="task_general" style="color: #bababa">General Cleaning</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="task_linen" name="taskType[]" value="Bed and Linen Care">
-                        <label for="task_linen" style="color: #bababa">Bed and Linen Care</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="task_bathroom" name="taskType[]" value="Bathroom Cleaning">
-                        <label for="task_bathroom" style="color: #bababa">Bathroom Cleaning</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="task_restock" name="taskType[]" value="Restocking Supplies">
-                        <label for="task_restock"style="color: #bababa">Restocking Supplies</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="task_trash" name="taskType[]" value="Trash Removal">
-                        <label for="task_trash"style="color: #bababa">Trash Removal</label>
-                    </div>
-                    <div class="formGroup checkboxGroup">
-                        <input type="checkbox" id="task_windows" name="taskType[]" value="Window & Curtains Care">
-                        <label for="task_windows" style="color: #bababa">Window & Curtains Care</label>
-                    </div>
+                    <input type="checkbox" id="task_general" name="taskType[]" value="General Cleaning" class="task-checkbox-hidden">
+                    <label for="task_general" class="taskTypeCard">
+                        <div class="taskTypeIcon">
+                            <i class="fas fa-broom"></i>
+                        </div>
+                        <div class="taskTypeName">General Cleaning</div>
+                        <div class="taskTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="task_linen" name="taskType[]" value="Bed and Linen Care" class="task-checkbox-hidden">
+                    <label for="task_linen" class="taskTypeCard">
+                        <div class="taskTypeIcon">
+                            <i class="fas fa-bed"></i>
+                        </div>
+                        <div class="taskTypeName">Bed and Linen Care</div>
+                        <div class="taskTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="task_bathroom" name="taskType[]" value="Bathroom Cleaning" class="task-checkbox-hidden">
+                    <label for="task_bathroom" class="taskTypeCard">
+                        <div class="taskTypeIcon">
+                            <i class="fas fa-bath"></i>
+                        </div>
+                        <div class="taskTypeName">Bathroom Cleaning</div>
+                        <div class="taskTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="task_restock" name="taskType[]" value="Restocking Supplies" class="task-checkbox-hidden">
+                    <label for="task_restock" class="taskTypeCard">
+                        <div class="taskTypeIcon">
+                            <i class="fas fa-box"></i>
+                        </div>
+                        <div class="taskTypeName">Restocking Supplies</div>
+                        <div class="taskTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="task_trash" name="taskType[]" value="Trash Removal" class="task-checkbox-hidden">
+                    <label for="task_trash" class="taskTypeCard">
+                        <div class="taskTypeIcon">
+                            <i class="fas fa-trash-alt"></i>
+                        </div>
+                        <div class="taskTypeName">Trash Removal</div>
+                        <div class="taskTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
+
+                    <input type="checkbox" id="task_windows" name="taskType[]" value="Window & Curtains Care" class="task-checkbox-hidden">
+                    <label for="task_windows" class="taskTypeCard">
+                        <div class="taskTypeIcon">
+                            <i class="fas fa-window-maximize"></i>
+                        </div>
+                        <div class="taskTypeName">Window & Curtains Care</div>
+                        <div class="taskTypeCheck">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                    </label>
                 </div>
                 
                 <div class="modalButtons">
                     <button type="button" class="modalBtn cancelBtn" id="cancelTaskTypeBtn">CANCEL</button>
-                    <button type="submit" class="modalBtn confirmBtn" id="confirmTaskTypeBtn">NEXT</button>
+                    <button type="submit" class="modalBtn confirmBtn" id="confirmTaskTypeBtn">
+                        <i class="fas fa-check"></i> NEXT
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
     <div class="modalBackdrop" id="editRoomStatusModal" style="display: none;">
-        <div class="addItemModal"> <button class="closeBtn" id="closeEditRoomStatusBtn" style="color: white;">×</button>
+        <div class="addItemModal">
+            <button class="closeBtn" id="closeEditRoomStatusBtn">×</button>
             <div class="modalIconHeader">
-                <i class="fas fa-bed" style="font-size: 48px; color: #d4af78;"></i>
+                <i class="fas fa-bed" style="font-size: 48px; color: #480c1b;"></i>
             </div>
-            <h2 id="editRoomStatusModalTitle" style="color: white;">Edit Room Status</h2>
+            <h2 id="editRoomStatusModalTitle">Edit Room Status</h2>
             
-            <p class="modalSubtext normal-message" style="color: white;">
+            <p class="modalSubtext normal-message">
                 Update the status for Room <strong id="editRoomStatusRoomNumber">---</strong>.
             </p>
             <p class="modalSubtext error-message" id="editRoomStatusErrorMessage">
@@ -551,7 +592,7 @@ $conn->close();
                 <input type="hidden" id="editRoomStatusRoomId" value="">
                 <div class="formRow">
                     <div class="formGroup">
-                        <label style="color: white;">Room Status</label>
+                        <label>Room Status</label>
                         <select class="formInput" id="editRoomStatusSelect" required>
                             <option value="Available">Available</option>
                             <option value="Needs Cleaning">Needs Cleaning</option>

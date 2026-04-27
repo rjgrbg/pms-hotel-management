@@ -226,48 +226,63 @@ body {
   background-color: #d5d5d5;
 }
 
-/* This .confirmBtn style from inventory.css uses a gold background */
+/* This .confirmBtn style uses maroon background */
 .modalBtn.confirmBtn {
-  background-color: #d4af78; 
-  color: #480c1b;
+  background-color: #480c1b; 
+  color: #fff;
   min-width: 160px;
 }
 
 .modalBtn.confirmBtn:hover:not(:disabled) {
-  opacity: 0.9;
+  background-color: #6a1129;
 }
 
-/* --- Logout Modal (Dark Theme from inventory.css) --- */
+/* --- Logout Modal (White Theme) --- */
 .logoutModal {
-  background-color: #480c1b; /* This is the correct dark maroon */
-  border-radius: 8px;
+  background-color: #fff;
+  border-radius: 12px;
   padding: 35px;
   max-width: 420px;
   text-align: center;
-  color: #fff; /* White text */
+  color: #333;
 }
 
 .logoutModal h2 {
-  font-size: 18px;
-  margin-bottom: 12px;
+  font-size: 20px;
+  margin-top: 20px;
+  margin-bottom: 15px;
   font-weight: 600;
-  color: #fff; /* Ensure header text is white */
+  color: #480c1b;
+  letter-spacing: 0px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .logoutModal p {
-  color: #dcc8b0; /* Light text for dark background */
-  font-size: 13px;
+  color: #666;
+  font-size: 14px;
   line-height: 1.5;
   margin-bottom: 10px;
+  margin-top: 20px;
 }
 
 .modalIcon {
   margin: 10px auto 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logoutIcon {
+  height: 60px;
+  width: 60px;
+  filter: brightness(0) saturate(100%) invert(8%) sepia(35%) saturate(4872%) hue-rotate(332deg) brightness(91%) contrast(101%);
 }
 
 .logoutIcon {
   height: 50px;
   width: 50px;
+  filter: brightness(0) saturate(100%) invert(8%) sepia(35%) saturate(4872%) hue-rotate(332deg) brightness(91%) contrast(101%);
 }
 
 /* ============================================= */
@@ -537,29 +552,30 @@ body {
 /* === DETAILS SECTION                       === */
 /* ============================================= */
 .item-details-section {
-  background-color: #480c1b;
-  color: #fff;
+  background-color: #fff;
+  color: #333;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
   padding: 25px;
   position: sticky;
   top: 30px;
 }
 
 .details-title {
-  font-family: 'Arial Black', Arial, sans-serif;
-  font-size: 20px;
-  color: #d4af78;
+  font-family: 'Arial', sans-serif;
+  font-size: 18px;
+  color: #333;
   margin: 0 0 8px 0;
   padding-bottom: 0;
-  font-weight: 900;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   text-align: center;
 }
 
 .details-description {
-  color: #dcc8b0;
+  color: #666;
   font-size: 13px;
   text-align: center;
   margin: 0 0 20px 0;
@@ -567,7 +583,7 @@ body {
   font-style: normal;
   font-weight: 400;
   line-height: 1.5;
-  border-bottom: 1px solid rgba(212, 175, 120, 0.3);
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .item-details-content {
@@ -577,8 +593,8 @@ body {
 }
 
 .placeholder-text {
-  font-size: 16px;
-  color: #dcc8b0;
+  font-size: 14px;
+  color: #999;
   text-align: center;
   padding: 50px 20px;
   font-style: italic;
@@ -589,7 +605,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .details-item:last-child {
@@ -607,12 +623,12 @@ body {
 .item-name {
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
+  color: #333;
 }
 
 .item-category {
   font-size: 11px;
-  color: #dcc8b0;
+  color: #666;
 }
 
 .item-controls {
@@ -622,9 +638,9 @@ body {
 }
 
 .control-btn {
-  background-color: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #e0e0e0;
   width: 24px;
   height: 24px;
   border-radius: 4px;
@@ -638,8 +654,8 @@ body {
 }
 
 .control-btn:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.5);
+  background-color: #e0e0e0;
+  border-color: #ccc;
 }
 
 .control-btn:disabled {
@@ -648,15 +664,16 @@ body {
 }
 
 .control-btn.remove-btn {
-  background-color: rgba(220, 53, 69, 0.8);
-  border-color: rgba(220, 53, 69, 1);
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
   font-size: 16px;
   line-height: 1;
 }
 
 .control-btn.remove-btn:hover {
-  background-color: #dc3545;
-  border-color: #dc3545;
+  background-color: #f5c6cb;
+  border-color: #f1b0b7;
 }
 
 .quantity-input {
@@ -664,12 +681,11 @@ body {
   text-align: center;
   font-size: 13px;
   padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid #e0e0e0;
   border-radius: 4px;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: #fff;
   color: #333;
   font-weight: 600;
-  -moz-appearance: textfield;
 }
 
 .quantity-input::-webkit-outer-spin-button,
@@ -681,7 +697,7 @@ body {
 .details-actions {
   display: flex;
   gap: 15px;
-  border-top: 1px solid rgba(212, 175, 120, 0.3);
+  border-top: 1px solid #e0e0e0;
   padding-top: 25px;
 }
 
@@ -689,9 +705,9 @@ body {
 .action-btn-confirm {
   flex: 1;
   padding: 12px;
-  font-size: 14px;
-  font-weight: bold;
-  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
   border: none;
@@ -700,28 +716,30 @@ body {
 }
 
 .action-btn-outline {
-  background-color: transparent;
-  border: 2px solid #e0e0e0;
-  color: #e0e0e0;
+  background-color: #fff;
+  border: 2px solid #480c1b;
+  color: #480c1b;
 }
 
 .action-btn-outline:hover {
-  background-color: #e0e0e0;
-  color: #480c1b;
+  background-color: #f5f5f5;
 }
 
 .action-btn-confirm {
-  background-color: #d4af78;
-  color: #480c1b;
+  background-color: #480c1b;
+  color: #fff;
+  border: 2px solid #480c1b;
 }
 
 .action-btn-confirm:hover:not(:disabled) {
-  background-color: #c9a066;
+  background-color: #6a1129;
+  border-color: #6a1129;
 }
 
 .action-btn-confirm:disabled {
-  background-color: #aaa;
-  color: #777;
+  background-color: #ccc;
+  border-color: #ccc;
+  color: #999;
   cursor: not-allowed;
   opacity: 0.5;
 }
@@ -790,7 +808,7 @@ body {
 
 /* Confirmation Modal (for 'DONE') */
 .confirmation-modal-content {
-  background-color: #480c1b;
+  background-color: #fff;
   border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-width: 500px;
@@ -800,23 +818,24 @@ body {
 }
 
 .confirmation-modal-header {
-  background-color: #480c1b;
+  background-color: #f9f9f9;
   padding: 25px 30px 20px 30px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .confirmModalTitle {
-  color: #d4af78;
+  color: #480c1b;
   font-size: 18px;
   margin: 0 0 8px 0;
-  font-weight: 900;
+  font-weight: 700;
   text-align: center;
-  font-family: 'Arial Black', Arial, sans-serif;
+  font-family: 'Arial', sans-serif;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
 }
 
 .confirmModalDescription {
-  color: #dcc8b0;
+  color: #666;
   font-size: 13px;
   text-align: center;
   margin: 0;
@@ -836,9 +855,9 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 17px;
+  font-size: 14px;
   padding: 12px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .confirm-item:last-child {
@@ -847,20 +866,22 @@ body {
 
 .confirm-name {
   color: #333;
-  font-weight: bold;
+  font-weight: 600;
+  font-size: 13px;
 }
 
 .confirm-qty {
-  color: #555;
-  font-size: 16px;
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
 }
 
 .confirmation-modal-actions {
   display: flex;
   gap: 15px;
   padding: 20px 30px 25px 30px;
-  background-color: #480c1b;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: #fff;
+  border-top: 1px solid #e0e0e0;
 }
 
 .confirmation-modal-actions .modalBtn {
@@ -868,7 +889,7 @@ body {
   padding: 12px 24px;
   border: none;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   text-transform: uppercase;
@@ -888,22 +909,25 @@ body {
 }
 
 .confirmation-modal-actions .cancelBtn {
-  background: #e0e0e0;
-  color: #333;
+  background: #fff;
+  color: #480c1b;
+  border: 2px solid #480c1b;
 }
 
 .confirmation-modal-actions .cancelBtn:hover {
-  background: #d5d5d5;
+  background: #f5f5f5;
 }
 
 .confirmation-modal-actions .confirmBtn {
-  background: #d4af78;
-  color: #480c1b;
+  background: #480c1b;
+  color: #fff;
   font-weight: 600;
+  border: 2px solid #480c1b;
 }
 
 .confirmation-modal-actions .confirmBtn:hover:not(:disabled) {
-  background: #c9a066;
+  background: #6a1129;
+  border-color: #6a1129;
 }
 
 /* ============================================= */

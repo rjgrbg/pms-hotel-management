@@ -142,7 +142,7 @@ function renderUsersTable(data) {
             if (isArchived) {
                 dropdownMenu = `
                     <div class="dropdown-menu">
-                        <button class="dropdown-item" onclick="handleRestoreUserClick('${row.UserID}', '${escapeHtml(row.Username)}')">
+                        <button class="dropdown-item" onclick="handleRestoreUserClick('${row.UserID}', '${escapeHtml(row.Username)}'); closeAllDropdowns();">
                             <i class="fas fa-trash-restore"></i> Restore
                         </button>
                     </div>
@@ -150,10 +150,10 @@ function renderUsersTable(data) {
             } else {
                 dropdownMenu = `
                     <div class="dropdown-menu">
-                        <button class="dropdown-item" onclick='handleEditUserClick(${JSON.stringify(row).replace(/'/g, "&apos;")})'>
+                        <button class="dropdown-item" onclick='handleEditUserClick(${JSON.stringify(row).replace(/'/g, "&apos;")}); closeAllDropdowns();'>
                             <i class="fas fa-edit"></i> Edit
                         </button>
-                        <button class="dropdown-item delete" onclick="handleArchiveUserClick('${row.UserID}', '${escapeHtml(row.Username)}')">
+                        <button class="dropdown-item delete" onclick="handleArchiveUserClick('${row.UserID}', '${escapeHtml(row.Username)}'); closeAllDropdowns();">
                             <i class="fas fa-archive"></i> Archive
                         </button>
                     </div>
@@ -410,7 +410,6 @@ function handleArchiveUserClick(userId, username) {
     const confirmBtn = document.getElementById('confirmDeleteUserBtn');
     if(confirmBtn) {
         confirmBtn.textContent = "ARCHIVE";
-        confirmBtn.style.backgroundColor = '#dc3545'; // Red
         confirmBtn.onclick = confirmUserArchive;
     }
 
@@ -464,7 +463,6 @@ function handleRestoreUserClick(userId, username) {
     const confirmBtn = document.getElementById('confirmDeleteUserBtn');
     if(confirmBtn) {
         confirmBtn.textContent = "RESTORE";
-        confirmBtn.style.backgroundColor = '#28a745'; // Green
         confirmBtn.onclick = confirmUserRestore; 
     }
 
@@ -605,6 +603,12 @@ function initUserFilters() {
 // 6. DROPDOWN TOGGLE FUNCTION
 // ==========================================
 
+window.closeAllDropdowns = function() {
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+}
+
 window.toggleActionDropdown = function(event) {
     event.stopPropagation();
     const button = event.currentTarget;
@@ -612,9 +616,7 @@ window.toggleActionDropdown = function(event) {
     const isOpen = dropdown.classList.contains('show');
     
     // Close all other dropdowns
-    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-        menu.classList.remove('show');
-    });
+    closeAllDropdowns();
     
     // Toggle current dropdown
     if (!isOpen) {
@@ -642,9 +644,7 @@ window.toggleActionDropdown = function(event) {
 // Close dropdown when clicking outside
 document.addEventListener('click', (event) => {
     if (!event.target.closest('.action-dropdown')) {
-        document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-            menu.classList.remove('show');
-        });
+        closeAllDropdowns();
     }
 });
 

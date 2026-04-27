@@ -387,6 +387,8 @@ function initInventoryHistoryFilters() {
     const searchInput = document.getElementById('invHistSearchInput');
     const categoryFilter = document.getElementById('invHistCategoryFilter');
     const actionFilter = document.getElementById('invHistActionFilter');
+    const startDateInput = document.getElementById('invHistStartDate');
+    const endDateInput = document.getElementById('invHistEndDate');
     const refreshBtn = document.getElementById('invHistRefreshBtn');
     const downloadBtn = document.getElementById('invHistDownloadBtn');
 
@@ -394,14 +396,35 @@ function initInventoryHistoryFilters() {
         const search = searchInput.value.toLowerCase();
         const category = categoryFilter.value;
         const action = actionFilter.value;
+        const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+        const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
         
-        const filtered = inventoryHistoryDataList.filter(row => 
-            ((row.ItemName && row.ItemName.toLowerCase().includes(search)) ||
-            (row.Category && row.Category.toLowerCase().includes(search)) ||
-            (row.PerformedBy && row.PerformedBy.toLowerCase().includes(search))) &&
-            (category === "" || row.Category === category) &&
-            (action === "" || row.ActionType === action)
-        );
+        const filtered = inventoryHistoryDataList.filter(row => {
+            // Text filters
+            const matchesSearch = (row.ItemName && row.ItemName.toLowerCase().includes(search)) ||
+                (row.Category && row.Category.toLowerCase().includes(search)) ||
+                (row.PerformedBy && row.PerformedBy.toLowerCase().includes(search));
+            
+            const matchesCategory = category === "" || row.Category === category;
+            const matchesAction = action === "" || row.ActionType === action;
+            
+            // Date filter
+            let matchesDate = true;
+            if (row.DateofRelease) {
+                const rowDate = new Date(row.DateofRelease);
+                if (startDate) {
+                    matchesDate = matchesDate && rowDate >= startDate;
+                }
+                if (endDate) {
+                    // Add 1 day to endDate to include the entire end date
+                    const endDateInclusive = new Date(endDate);
+                    endDateInclusive.setDate(endDateInclusive.getDate() + 1);
+                    matchesDate = matchesDate && rowDate < endDateInclusive;
+                }
+            }
+            
+            return matchesSearch && matchesCategory && matchesAction && matchesDate;
+        });
         
         paginationState.inventoryHistory.currentPage = 1;
         renderInventoryHistoryTable(filtered);
@@ -410,12 +433,16 @@ function initInventoryHistoryFilters() {
     if (searchInput) searchInput.oninput = applyInvHistFilters;
     if (categoryFilter) categoryFilter.onchange = applyInvHistFilters;
     if (actionFilter) actionFilter.onchange = applyInvHistFilters;
+    if (startDateInput) startDateInput.onchange = applyInvHistFilters;
+    if (endDateInput) endDateInput.onchange = applyInvHistFilters;
 
     if (refreshBtn) {
         refreshBtn.onclick = () => {
             searchInput.value = '';
             categoryFilter.value = '';
             actionFilter.value = '';
+            startDateInput.value = '';
+            endDateInput.value = '';
             
             paginationState.inventoryHistory.currentPage = 1;
             fetchAndRenderInventoryHistory();
@@ -425,11 +452,42 @@ function initInventoryHistoryFilters() {
 
     if (downloadBtn) {
         downloadBtn.onclick = () => {
+            // Apply current filters to download data
+            const search = searchInput.value.toLowerCase();
+            const category = categoryFilter.value;
+            const action = actionFilter.value;
+            const startDate = startDateInput.value ? new Date(startDateInput.value) : null;
+            const endDate = endDateInput.value ? new Date(endDateInput.value) : null;
+            
+            const filtered = inventoryHistoryDataList.filter(row => {
+                const matchesSearch = (row.ItemName && row.ItemName.toLowerCase().includes(search)) ||
+                    (row.Category && row.Category.toLowerCase().includes(search)) ||
+                    (row.PerformedBy && row.PerformedBy.toLowerCase().includes(search));
+                
+                const matchesCategory = category === "" || row.Category === category;
+                const matchesAction = action === "" || row.ActionType === action;
+                
+                let matchesDate = true;
+                if (row.DateofRelease) {
+                    const rowDate = new Date(row.DateofRelease);
+                    if (startDate) {
+                        matchesDate = matchesDate && rowDate >= startDate;
+                    }
+                    if (endDate) {
+                        const endDateInclusive = new Date(endDate);
+                        endDateInclusive.setDate(endDateInclusive.getDate() + 1);
+                        matchesDate = matchesDate && rowDate < endDateInclusive;
+                    }
+                }
+                
+                return matchesSearch && matchesCategory && matchesAction && matchesDate;
+            });
+            
             const headers = ['Log ID', 'Name', 'Category', 'Old Qty', 'Change', 'New Qty', 'Status', 'Stock In', 'Performed By'];
-            const tableData = inventoryHistoryDataList.map(row => [
+            const tableData = filtered.map(row => [
                 row.InvLogID, row.ItemName, row.Category, row.OldQuantity, 
                 row.QuantityChange, row.NewQuantity, row.ItemStatus, 
-                row.DateofStockIn || 'N/A', row.PerformedBy
+                row.DateofRelease || 'N/A', row.PerformedBy
             ]);
             downloadData(headers, tableData, "Inventory History Logs", "inventory_history");
         };

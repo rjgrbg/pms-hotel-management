@@ -135,7 +135,7 @@ function setupModalListeners() {
     document.getElementById('cancelTaskTypeBtn')?.addEventListener('click', hideTaskTypeModal);
     document.getElementById('closeTaskTypeModalBtn')?.addEventListener('click', hideTaskTypeModal);
     document.getElementById('task_select_all')?.addEventListener('change', (e) => {
-        document.querySelectorAll('#taskTypeCheckboxContainer input[type="checkbox"]').forEach(cb => {
+        document.querySelectorAll('.taskTypeGrid input[name="taskType[]"]').forEach(cb => {
             cb.checked = e.target.checked;
         });
     });

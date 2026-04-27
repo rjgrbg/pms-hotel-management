@@ -611,7 +611,7 @@ tbody tr:hover {
 .editTypesModal,
 .logoutModal,
 .deleteConfirmModal {
-  background-color: #480c1b;
+  background-color: #fff;
   border-radius: 12px;
   color: #fff;
   padding: 0;
@@ -635,18 +635,19 @@ tbody tr:hover {
 }
 
 .staffSelectionModal h2 {
-  color: #d4af78;
-  font-size: 18px;
+  color: #480c1b;
+  font-size: 20px;
   margin: 0;
   font-weight: 600;
   text-align: center;
   font-family: Arial, sans-serif;
   padding: 40px 40px 10px 40px;
   text-transform: uppercase;
+  letter-spacing: 0px;
 }
 
 .staffSelectionModal .modalSubtext {
-  color: #dcc8b0;
+  color: #666;
   font-size: 14px;
   text-align: center;
   margin: 0;
@@ -671,8 +672,8 @@ tbody tr:hover {
 }
 
 .modalSearchBox:focus-within {
-  border-color: #999;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
+  border-color: #480c1b;
+  box-shadow: 0 0 0 3px rgba(72, 12, 27, 0.1);
 }
 
 .modalSearchBox .searchInput {
@@ -730,7 +731,7 @@ tbody tr:hover {
   align-items: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: 2px solid transparent;
+  border: 2px solid #e0e0e0;
 }
 
 .staffListItem:last-child {
@@ -738,8 +739,26 @@ tbody tr:hover {
 }
 
 .staffListItem:hover:not(.assigned) {
-  background: #e8e8e8;
-  border-color: #ddd;
+  background: #fff;
+  border-color: rgba(72, 12, 27, 0.3);
+  box-shadow: 0 2px 8px rgba(72, 12, 27, 0.08);
+}
+
+.staffListItem.selected {
+  background: #fff !important;
+  border-color: #480c1b !important;
+  box-shadow: 0 4px 12px rgba(72, 12, 27, 0.15);
+}
+
+.staffListItem.selected .staffListName {
+  color: #333 !important;
+  font-weight: 600;
+}
+
+.staffListItem.selected .staffListStatus {
+  background: #d4edda !important;
+  color: #28a745 !important;
+  border-color: #c3e6cb !important;
 }
 
 .staffListItem.assigned {
@@ -824,10 +843,26 @@ tbody tr:hover {
   padding: 35px;
 }
 
+.logoutModal h2 {
+  color: #480c1b;
+  font-size: 20px;
+  margin-top: 20px;
+  margin-bottom: 15px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
 .logoutModal p {
   margin: 20px 0 40px 0;
-  color: #dcc8b0;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
 }
+
 
 .closeBtn {
   position: absolute;
@@ -836,19 +871,15 @@ tbody tr:hover {
   background: none;
   border: none;
   font-size: 24px;
-  color: #fff;
+  color: #480c1b;
   cursor: pointer;
-  opacity: 1;
+  opacity: 0.7;
   transition: opacity 0.2s;
   z-index: 10;
 }
 
 .closeBtn:hover {
-  opacity: 0.7;
-}
-
-.addItemModal .closeBtn {
-  color: #fff;
+  opacity: 1;
 }
 
 .modalIconHeader {
@@ -858,28 +889,30 @@ tbody tr:hover {
 
 .addItemModal h2,
 .editTypesModal h2 {
-  color: #d4af78;
-  font-size: 18px;
+  color: #480c1b;
+  font-size: 20px;
   margin-bottom: 15px;
   font-weight: 600;
   text-align: center;
   font-family: Arial, sans-serif;
   padding: 0;
   text-transform: uppercase;
+  letter-spacing: 0px;
 }
 
 .confirmModal h2,
 .successModal h2 {
-  color: #d4af78;
-  font-size: 18px;
+  color: #480c1b;
+  font-size: 20px;
   margin-bottom: 15px;
   font-weight: 600;
   text-align: center;
+  letter-spacing: 0px;
 }
 
 .modalSubtext {
-  color: #dcc8b0;
-  font-size: 13px;
+  color: #666;
+  font-size: 14px;
   text-align: center;
   margin-bottom: 25px;
   padding: 0;
@@ -891,7 +924,7 @@ tbody tr:hover {
 .addItemModal .modalSubtext {
   padding: 0;
   margin-bottom: 25px;
-  color: #dcc8b0;
+  color: #666;
 }
 
 /* Form Styles */
@@ -936,21 +969,43 @@ tbody tr:hover {
 .formGroup select,
 .formGroup textarea {
   width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 13px;
+  padding: 12px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
   font-family: 'Arial', sans-serif;
-  transition: border 0.2s;
+  transition: all 0.3s ease;
   background-color: #fff;
   color: #333;
+  cursor: pointer;
+}
+
+.formGroup input,
+.formGroup textarea {
+  cursor: text;
+}
+
+.formInput:hover,
+.formGroup select:hover {
+  border-color: #480c1b;
 }
 
 .formInput:focus,
 .formGroup input:focus,
 .formGroup select:focus {
   outline: none;
-  border-color: #d4af78;
+  border-color: #28a745;
+  box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1);
+}
+
+/* Dropdown arrow styling */
+select.formInput,
+.formGroup select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23480c1b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
 }
 
 /* Modal Buttons */
@@ -964,14 +1019,14 @@ tbody tr:hover {
 .addItemModal .modalButtons,
 .editTypesModal .modalButtons {
   padding: 0;
-  margin-top: 25px;
+  margin-top: 45px;
   justify-content: center;
 }
 
 .confirmModal .modalButtons,
 .successModal .modalButtons {
   padding: 0;
-  margin-top: 30px;
+  margin-top: 45px;
 }
 
 .modalBtn {
@@ -997,44 +1052,55 @@ tbody tr:hover {
 }
 
 .cancelBtn {
-  background: #e0e0e0;
-  color: #333;
+  background: #f5f5f5;
+  color: #666;
   min-width: 130px;
+  border: 2px solid #e0e0e0;
 }
 
 .cancelBtn:hover {
-  background: #d5d5d5;
+  background: #e8e8e8;
+  border-color: #ccc;
+  color: #333;
 }
 
 .confirmBtn {
-  background: #d4af78;
-  color: #480c1b;
+  background: #480c1b;
+  color: #fff;
   min-width: 180px;
-  font-weight: 600;
+  font-weight: 700;
+  border: 2px solid #480c1b;
 }
 
 .confirmBtn:hover:not(:disabled) {
-  background: #d4af78;
+  background: #5d0f23;
+  border-color: #5d0f23;
+  box-shadow: 0 6px 16px rgba(72, 12, 27, 0.3);
 }
 
 .confirmBtn.deleteBtn {
   background: #dc3545;
+  border-color: #dc3545;
 }
 
 .confirmBtn.deleteBtn:hover {
   background: #c82333;
+  border-color: #c82333;
 }
 
 .okayBtn {
-  background-color: #d4af78;
-  color: #480c1b;
+  background-color: #480c1b;
+  color: #fff;
   min-width: 250px;
-  font-weight: 600;
+  font-weight: 700;
   padding: 14px 40px;
+  border: 2px solid #480c1b;
 }
 
 .okayBtn:hover {
-  background-color: #b89969;
+  background-color: #5d0f23;
+  border-color: #5d0f23;
+  box-shadow: 0 6px 16px rgba(72, 12, 27, 0.3);
 }
 
 .modalIcon {
@@ -1052,12 +1118,14 @@ tbody tr:hover {
 
 /* Special button styling for staff modal */
 .modalBtn.confirmBtn#confirmStaffAssignBtn {
-  background-color: #c5a16c;
-  color: rgb(72, 12, 27);
+  background-color: #480c1b;
+  color: #fff;
+  border: 2px solid #480c1b;
 }
 
 .modalBtn.confirmBtn#confirmStaffAssignBtn:hover:not(:disabled) {
-  background-color: #218838;
+  background-color: #5d0f23;
+  border-color: #5d0f23;
 }
 
 .modalBtn.confirmBtn#confirmStaffAssignBtn:disabled {
@@ -1428,5 +1496,234 @@ tbody tr:hover {
   .typeActions {
     width: 100%;
     justify-content: flex-end;
+  }
+}
+
+/* ===== TASK TYPE MODAL - CARD STYLE ===== */
+.taskTypeModal {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 40px;
+  max-width: 800px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  animation: slideIn 0.3s ease;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Custom Scrollbar for Task Type Modal */
+.taskTypeModal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.taskTypeModal::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 10px 0;
+}
+
+.taskTypeModal::-webkit-scrollbar-thumb {
+  background: #480c1b;
+  border-radius: 10px;
+}
+
+.taskTypeModal::-webkit-scrollbar-thumb:hover {
+  background: #5d0f23;
+}
+
+.taskTypeModal h2 {
+  color: #480c1b;
+  font-size: 20px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0px;
+  text-transform: uppercase;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.taskTypeModal .modalSubtext {
+  color: #666;
+  font-size: 13px;
+  text-align: center;
+  margin-bottom: 35px;
+  margin-top: 15px;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* Hide default checkboxes */
+.task-checkbox-hidden {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Task Type Grid */
+.taskTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+/* Task Type Card */
+.taskTypeCard {
+  position: relative;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px 12px 12px 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  min-height: 140px;
+  justify-content: space-between;
+}
+
+.taskTypeCard:hover {
+  border-color: #480c1b;
+  box-shadow: 0 4px 12px rgba(72, 12, 27, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Selected State - Only show check, don't change background */
+.task-checkbox-hidden:checked + .taskTypeCard {
+  border-color: #480c1b;
+  box-shadow: 0 4px 12px rgba(72, 12, 27, 0.15);
+  background: #fff;
+}
+
+.task-checkbox-hidden:checked + .taskTypeCard .taskTypeCheck {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Select All Card Special Styling */
+.selectAllCard {
+  grid-column: 1 / -1;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  min-height: auto;
+  padding: 18px 20px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.selectAllCard:hover {
+  border-color: #480c1b;
+  box-shadow: 0 4px 12px rgba(72, 12, 27, 0.1);
+}
+
+.selectAllCard .taskTypeIcon {
+  display: none;
+}
+
+.selectAllCard .taskTypeName {
+  font-size: 14px;
+  margin-top: 0;
+  font-weight: 700;
+  color: #333;
+}
+
+.selectAllCard .taskTypeCheck {
+  color: #fff;
+  position: relative;
+  top: auto;
+  right: auto;
+  margin-left: auto;
+  background: transparent;
+}
+
+/* Select All - Selected State (Maroon) */
+.task-checkbox-hidden:checked + .selectAllCard {
+  background: #480c1b;
+  border-color: #480c1b;
+  box-shadow: 0 4px 12px rgba(72, 12, 27, 0.25);
+}
+
+.task-checkbox-hidden:checked + .selectAllCard .taskTypeIcon {
+  color: #fff;
+}
+
+.task-checkbox-hidden:checked + .selectAllCard .taskTypeName {
+  color: #fff;
+}
+
+.task-checkbox-hidden:checked + .selectAllCard .taskTypeCheck {
+  opacity: 1;
+  transform: scale(1);
+  color: #fff;
+}
+
+/* Icon Styling - Top Left, Smaller */
+.taskTypeIcon {
+  font-size: 40px;
+  color: #480c1b;
+  margin-bottom: 0;
+  transition: all 0.3s ease;
+  align-self: flex-start;
+}
+
+/* Name Styling - Bottom */
+.taskTypeName {
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  margin-top: auto;
+  line-height: 1.3;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+/* Check Icon - Top Right */
+.taskTypeCheck {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  color: #480c1b;
+  font-size: 18px;
+  opacity: 0;
+  transform: scale(0.5);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #fff;
+  border-radius: 50%;
+}
+
+/* Responsive Grid */
+@media (max-width: 768px) {
+  .taskTypeGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .taskTypeCard {
+    min-height: 100px;
+    padding: 16px 12px;
+  }
+  
+  .taskTypeIcon {
+    font-size: 22px;
+  }
+  
+  .taskTypeName {
+    font-size: 11px;
+  }
+  
+  .taskTypeModal {
+    padding: 30px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .taskTypeGrid {
+    grid-template-columns: 1fr;
   }
 }

@@ -133,7 +133,7 @@ function setupEventListeners() {
 
     // --- Select All Logic ---
     const selectAllCheckbox = document.getElementById('issue_select_all');
-    const issueCheckboxes = document.getElementById('issueTypeForm')?.querySelectorAll('input[type="checkbox"][name="issueType[]"]');
+    const issueCheckboxes = document.querySelectorAll('.issueTypeGrid input[name="issueType[]"]');
 
     selectAllCheckbox?.addEventListener('change', () => {
         issueCheckboxes?.forEach(cb => { cb.checked = selectAllCheckbox.checked; });

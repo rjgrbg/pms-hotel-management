@@ -98,7 +98,8 @@ $sql_hk_rooms = "SELECT
                     ELSE COALESCE(rs.RoomStatus, 'Available') 
                 END as RoomStatus,
                 
-                active_task.DateRequested as TaskRequestDate,
+                -- Use active task date if available, otherwise use room status LastUpdated
+                COALESCE(active_task.DateRequested, rs.LastUpdated) as TaskRequestDate,
                 active_task.TaskID, 
                 
                 -- Get assigned staff member's name
@@ -134,7 +135,7 @@ if ($result_hk_rooms = $conn->query($sql_hk_rooms)) {
   while ($row = $result_hk_rooms->fetch_assoc()) {
     $requestDate = 'N/A';
     $requestTime = 'N/A';
-    if (in_array($row['RoomStatus'], ['Needs Cleaning', 'Pending', 'In Progress']) && $row['TaskRequestDate']) {
+    if ($row['TaskRequestDate']) {
       $requestDate = formatDbDateForDisplay($row['TaskRequestDate']);
       $requestTime = date('g:i A', strtotime($row['TaskRequestDate']));
     }
@@ -242,7 +243,8 @@ $sql_mt_rooms = "SELECT
                     ELSE COALESCE(rs.RoomStatus, 'Available') 
                 END as RoomStatus,
                 
-                active_req.DateRequested as MaintenanceRequestDate,
+                -- Use active request date if available, otherwise use room status LastUpdated
+                COALESCE(active_req.DateRequested, rs.LastUpdated) as MaintenanceRequestDate,
                 active_req.RequestID, 
                 
                 -- Get assigned staff member's name
@@ -278,7 +280,7 @@ if ($result_mt_rooms = $conn->query($sql_mt_rooms)) {
   while ($row = $result_mt_rooms->fetch_assoc()) {
     $requestDate = 'N/A';
     $requestTime = 'N/A';
-    if (in_array($row['RoomStatus'], ['Needs Maintenance', 'Pending', 'In Progress']) && $row['MaintenanceRequestDate']) {
+    if ($row['MaintenanceRequestDate']) {
       $requestDate = formatDbDateForDisplay($row['MaintenanceRequestDate']);
       $requestTime = date('g:i A', strtotime($row['MaintenanceRequestDate']));
     }
@@ -877,6 +879,11 @@ $conn->close();
             <select class="filterDropdown" id="parkingAreaFilter">
               <option value="all">All Areas</option>
             </select>
+            <div class="dateRangeFilter">
+              <input type="date" class="filterDropdown" id="parkingDateFrom" />
+              <span class="dateRangeSeparator">to</span>
+              <input type="date" class="filterDropdown" id="parkingDateTo" />
+            </div>
             <div class="searchBox">
               <input type="text" placeholder="Search Plate, Name, Room..." class="searchInput" id="parkingHistorySearchInput" />
               <button class="searchBtn">
@@ -994,6 +1001,11 @@ $conn->close();
                 <option value="Stock Added">Stock Added</option>
                 <option value="Item Issued">Item Issued</option>
               </select>
+              <div style="display: flex; align-items: center; gap: 5px; background: white; border-radius: 5px; border: 1px solid #ddd; padding: 0 5px;">
+                <input type="date" id="invHistStartDate" title="Start Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+                <span style="color: #666;">-</span>
+                <input type="date" id="invHistEndDate" title="End Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+              </div>
               <div class="searchBox">
                 <input type="text" placeholder="Search" class="searchInput" id="invHistSearchInput" />
                 <button class="searchBtn">
@@ -1081,15 +1093,15 @@ $conn->close();
 
         <div class="tableWrapper">
           <table>
-            <thead>
+         <thead>
               <tr>
                 <th>Floor</th>
                 <th>Room</th>
                 <th>Room Name</th>
                 <th>Type</th>
                 <th>No. Guests</th>
-                <th>Status</th>
-
+                <th>Ocuppancy / Status</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody id="roomsTableBody">
@@ -1315,20 +1327,6 @@ $conn->close();
     </div>
   </div>
 
-  <div class="modalBackdrop" id="deleteRoomModal" style="display: none;">
-    <div class="logoutModal">
-      <button class="closeBtn" id="closeDeleteModalBtn">&times;</button>
-      <div class="modalIcon">
-        <img src="assets/icons/warning-icon.png" alt="Warning" class="logoutIcon" />
-      </div>
-      <h2>Delete Room</h2>
-      <p id="deleteRoomText">Are you sure you want to delete this room?</p>
-      <div class="modalButtons">
-        <button class="modalBtn cancelBtn" id="cancelDeleteBtn">CANCEL</button>
-        <button class="modalBtn confirmBtn" id="confirmDeleteBtn">DELETE</button>
-      </div>
-    </div>
-  </div>
 
  <div class="modalBackdrop" id="userModal" style="display: none;">
     <div class="addUserModal">
@@ -1354,7 +1352,7 @@ $conn->close();
 
         <div class="modalButtons">
           <button type="button" class="modalBtn cancelBtn" id="cancelEmployeeCodeBtn">CANCEL</button>
-          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn" style="background: #b99156;">ADD SELECTED</button>
+          <button type="submit" class="modalBtn confirmBtn" id="lookupEmployeeBtn" style="background: #b99156ff;">ADD EMPLOYEE</button>
         </div>
       </form>
       
@@ -1365,36 +1363,57 @@ $conn->close();
           <div class="profileAvatar">
             <img src="assets/icons/profile-icon.png" alt="Profile" />
           </div>
-          <h3 id="displayFullName" class="editUserName">User Full Name</h3>
-          <p class="editUserEmployeeId" style="color: white;">Employee Code: <span id="displayEmployeeCode">------</span></p>
+          <div class="profileInfo">
+            <h3 id="displayFullName" class="editUserName">User Full Name</h3>
+            <p class="editUserEmployeeId">Employee Code: <span id="displayEmployeeCode">------</span></p>
+          </div>
         </div>
 
-        <div class="infoGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; padding: 15px; border-radius: 8px;">
+        <span class="readOnlyLabel">Read-Only Details</span>
+
+        <div class="infoGrid">
           <div>
-            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Email</label>
-            <div id="displayEmail" style="font-size: 14px; font-weight: 500;">-</div>
+            <i class="fas fa-envelope"></i>
+            <div class="infoContent">
+              <label>Email</label>
+              <div id="displayEmail">-</div>
+            </div>
           </div>
           <div>
-            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Account Type</label>
-            <div id="displayAccountType" style="font-size: 14px; font-weight: 500;">-</div>
+            <i class="fas fa-user"></i>
+            <div class="infoContent">
+              <label>Account Type</label>
+              <div id="displayAccountType">-</div>
+            </div>
           </div>
           <div>
-            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Shift</label>
-            <div id="displayShift" style="font-size: 14px; font-weight: 500;">-</div>
+            <i class="fas fa-clock"></i>
+            <div class="infoContent">
+              <label>Shift</label>
+              <div id="displayShift">-</div>
+            </div>
           </div>
           <div>
-            <label style="font-size: 11px; color: #D4AF78; display: block; margin-bottom: 3px;">Username</label>
-            <div id="displayUsername" style="font-size: 14px; font-weight: 500;">-</div>
+            <i class="fas fa-user-circle"></i>
+            <div class="infoContent">
+              <label>Username</label>
+              <div id="displayUsername">-</div>
+            </div>
           </div>
         </div>
 
         <form id="passwordChangeForm">
           <div class="formGroup">
-            <label for="newPassword" style="text-align: left;">New Password *</label>
+            <label for="newPassword">New Password *</label>
             <input type="password" id="newPassword" name="password" required
-              placeholder="Enter new password"
-              style="border: 2px solid #efefefff;" />
-            <small style="color: #c6c6c6ff; font-size: 11px; display: block; margin-top: 5px;">
+              placeholder="Enter your secure new password" />
+            <small>
+              Minimum 8 characters, include a special character.
+            </small>
+          </div>
+
+          <div class="formGroup">
+            <small>
               All other user information is read-only and comes from the employees table.
             </small>
           </div>
@@ -1412,7 +1431,7 @@ $conn->close();
     <div class="logoutModal">
       <button class="closeBtn" id="closeDeleteUserModalBtn">&times;</button>
       <div class="modalIcon">
-        <i class="fas fa-archive" style="font-size: 40px; color: #d4af78;"></i> 
+        <i class="fas fa-archive"></i> 
       </div>
       <h2>Archive User</h2>
       <p id="deleteUserText">Are you sure you want to archive this user?</p>
@@ -1422,12 +1441,98 @@ $conn->close();
       </div>
     </div>
 </div>
+
+  <!-- Room Details Modal -->
+  <div class="modalBackdrop" id="roomDetailsModal" style="display: none;">
+    <div class="roomDetailsModal">
+      <button class="closeBtn" id="closeRoomDetailsBtn">&times;</button>
+      
+      <!-- Room Header with Image -->
+      <div class="roomHeader">
+        <div class="roomImage">
+          <i class="fas fa-door-open"></i>
+        </div>
+        <h2 id="roomDetailsTitle">Room 101 - Pulang Bulaklak</h2>
+      </div>
+      
+      <div class="roomDetailsContent">
+        <!-- Core Room Stats -->
+        <div class="coreStatsSection">
+          <div class="coreStatsHeader">
+            <h3>CORE ROOM STATS</h3>
+            <span id="currentStatusBadge" class="statusBadge">Current Status: NEEDS CLEANING</span>
+          </div>
+          <div class="coreStatsGrid">
+            <div class="statItem">
+              <i class="fas fa-layer-group"></i>
+              <div>
+                <label>FLOOR</label>
+                <span id="detailFloor">-</span>
+              </div>
+            </div>
+            <div class="statItem">
+              <i class="fas fa-bed"></i>
+              <div>
+                <label>TYPE</label>
+                <span id="detailType">-</span>
+              </div>
+            </div>
+            <div class="statItem">
+              <i class="fas fa-users"></i>
+              <div>
+                <label>CAPACITY</label>
+                <span id="detailGuests">-</span>
+              </div>
+            </div>
+            <div class="statItem">
+              <i class="fas fa-door-open"></i>
+              <div>
+                <label>ROOM NUMBER</label>
+                <span id="detailRoom">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Equipment & Utilities - Full Width -->
+        <div class="equipmentSection">
+          <div class="columnCard">
+            <h4><i class="fas fa-tv"></i> EQUIPMENT & UTILITIES</h4>
+            <div id="equipmentList" class="equipmentGrid">
+              <p class="loadingText">Loading...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Column Section - Amenities & Linens -->
+        <div class="twoColumnSection">
+          <!-- Amenities & Supplies -->
+          <div class="columnCard">
+            <h4><i class="fas fa-box"></i> AMENITIES & SUPPLIES</h4>
+            <div id="amenitiesList" class="amenitiesList">
+              <p class="loadingText">Loading...</p>
+            </div>
+          </div>
+
+          <!-- Linens -->
+          <div class="columnCard">
+            <h4><i class="fas fa-bed"></i> LINENS</h4>
+            <div id="linensList" class="linensList">
+              <p class="loadingText">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modalButtons">
+        <button class="modalBtn cancelBtn" id="closeRoomDetailsBtn2">CLOSE</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modalBackdrop" id="logoutModal" style="display: none;">
     <div class="logoutModal">
       <button class="closeBtn" id="closeLogoutBtn">&times;</button>
-      <div class="modalIcon">
-        <img src="assets/icons/logout.png" alt="Logout" class="logoutIcon" />
-      </div>
       <h2>Confirm Logout</h2>
       <p>Are you sure you want to logout?</p>
       <div class="modalButtons">

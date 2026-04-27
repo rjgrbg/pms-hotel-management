@@ -134,11 +134,7 @@ function getInventoryHistory($conn) {
             (rt.NewQuantity - rt.Quantity) AS OldQuantity,
             rt.NewQuantity,
             i.ItemStatus,            
-            CASE
-                WHEN rt.ActionType = 'Initial Stock In' OR rt.ActionType = 'Stock Added'
-                THEN DATE_FORMAT(i.DateofStockIn, '%Y-%m-%d')
-                ELSE NULL
-            END AS DateofStockIn,
+            DATE_FORMAT(rt.DateofRelease, '%Y-%m-%d') AS DateofStockIn,
             rt.ActionType,
             CONCAT(u.Fname, ' ', u.Lname) AS PerformedBy,
             rt.DateofRelease,
@@ -203,6 +199,16 @@ function addItem($conn, $data, $userID) {
   if ($stockLimit < 1) throw new Exception("Stock Limit must be at least 1.");
   if ($type === 'Consumables' && empty($expirationDate)) throw new Exception("Expiration date is required for Consumables.");
 
+  // Check for duplicate item name (case-insensitive, excluding archived items)
+  $checkStmt = $conn->prepare("SELECT ItemID FROM pms_inventory WHERE LOWER(ItemName) = LOWER(?) AND is_archived = 0");
+  if (!$checkStmt) throw new Exception("Database error: " . $conn->error);
+  $checkStmt->bind_param("s", $name);
+  $checkStmt->execute();
+  if ($checkStmt->get_result()->num_rows > 0) {
+    throw new Exception("An item with the name '$name' already exists in the inventory.");
+  }
+  $checkStmt->close();
+
   $status = 'In Stock';
   $yellowThreshold = $stockLimit / 2;
   $orangeThreshold = $stockLimit / 4;
@@ -266,6 +272,16 @@ function updateItem($conn, $data, $userID) {
 
   if (empty($name) || $categoryID <= 0 || $itemID <= 0) throw new Exception("Invalid data.");
   if ($type === 'Consumables' && empty($expirationDate)) throw new Exception("Expiration required for Consumables.");
+  
+  // Check for duplicate item name (case-insensitive, excluding the current item and archived items)
+  $checkStmt = $conn->prepare("SELECT ItemID FROM pms_inventory WHERE LOWER(ItemName) = LOWER(?) AND ItemID != ? AND is_archived = 0");
+  if (!$checkStmt) throw new Exception("Database error: " . $conn->error);
+  $checkStmt->bind_param("si", $name, $itemID);
+  $checkStmt->execute();
+  if ($checkStmt->get_result()->num_rows > 0) {
+    throw new Exception("An item with the name '$name' already exists in the inventory.");
+  }
+  $checkStmt->close();
   
   $conn->begin_transaction();
 

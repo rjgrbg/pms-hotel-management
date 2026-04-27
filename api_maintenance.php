@@ -87,7 +87,7 @@ switch ($action) {
                     WHEN rs.RoomStatus = 'Maintenance' THEN 'Needs Maintenance'
                     ELSE COALESCE(rs.RoomStatus, 'Available') 
                 END as RoomStatus,
-                active_req.DateRequested as MaintenanceRequestDate,
+                COALESCE(active_req.DateRequested, rs.LastUpdated) as MaintenanceRequestDate,
                 active_req.RequestID, 
                 u.Fname, u.Lname, u.Mname
               FROM tbl_rooms r
@@ -107,7 +107,7 @@ switch ($action) {
             while ($row = $result->fetch_assoc()) {
                 $requestDate = 'N/A';
                 $requestTime = 'N/A';
-                if (in_array($row['RoomStatus'], ['Needs Maintenance', 'Pending', 'In Progress']) && $row['MaintenanceRequestDate']) {
+                if ($row['MaintenanceRequestDate']) {
                     $requestDate = formatDbDateForDisplay($row['MaintenanceRequestDate']);
                     $requestTime = date('g:i A', strtotime($row['MaintenanceRequestDate']));
                 }
