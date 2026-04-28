@@ -1447,7 +1447,11 @@ $conn->close();
         <div class="roomImage">
           <i class="fas fa-door-open"></i>
         </div>
-        <h2 id="roomDetailsTitle">Room 101 - Pulang Bulaklak</h2>
+        <div class="roomHeaderText">
+          <h2 id="roomDetailsTitle">Pulang Bulaklak</h2>
+          <p id="roomNumber" style="font-size: 14px; color: #666; font-weight: normal; margin: 5px 0 10px 0;">Room 101</p>
+          <span id="currentStatusBadge" class="statusBadge">Available</span>
+        </div>
       </div>
       
       <div class="roomDetailsContent">
@@ -1455,7 +1459,6 @@ $conn->close();
         <div class="coreStatsSection">
           <div class="coreStatsHeader">
             <h3>CORE ROOM STATS</h3>
-            <span id="currentStatusBadge" class="statusBadge">Current Status: NEEDS CLEANING</span>
           </div>
           <div class="coreStatsGrid">
             <div class="statItem">

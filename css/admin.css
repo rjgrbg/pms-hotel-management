@@ -1321,7 +1321,7 @@ table td {
 
 /* Submenu Styles */
 .dropdown-item.has-submenu {
-  justify-content: space-between;
+  justify-content: flex-start;
   position: relative;
 }
 
@@ -1330,16 +1330,18 @@ table td {
   font-size: 10px;
   opacity: 0.6;
   transition: transform 0.2s ease;
+  display: none;
 }
 
 .dropdown-item.has-submenu:hover .submenu-arrow {
-  transform: translateX(2px);
+  transform: translateX(-2px);
 }
 
 .dropdown-submenu {
   position: absolute;
   top: 0;
-  left: calc(100% + 4px);
+  right: calc(100% + 2px);
+  left: auto;
   background: #ffffff;
   border: 1px solid #ddd;
   border-radius: 0;
