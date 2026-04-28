@@ -267,6 +267,30 @@ switch ($action) {
         
         echo json_encode($response);
         break;
+
+    // ===== GET INVENTORY ITEMS (for hk_assign_staff.html) =====
+    case 'get_inventory':
+        $sql = "SELECT 
+                    i.ItemID, 
+                    i.ItemName, 
+                    i.ItemType,
+                    ic.ItemCategoryName AS Category,
+                    i.ItemQuantity,
+                    i.is_archived
+                FROM pms_inventory i
+                JOIN pms_itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
+                ORDER BY i.ItemName";
+        
+        if ($result = $conn->query($sql)) {
+            $items = [];
+            while ($row = $result->fetch_assoc()) {
+                $items[] = $row;
+            }
+            echo json_encode($items);
+        } else {
+            echo json_encode(['error' => 'Failed to fetch inventory: ' . $conn->error]);
+        }
+        break;
         
     default:
         echo json_encode(['status' => 'error', 'message' => 'Unknown action.']);
