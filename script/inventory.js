@@ -176,6 +176,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const addItemForm = document.getElementById('add-item-form');
   const addCategorySelect = document.getElementById('item-category');
   const addModalCloseBtn = document.getElementById('modal-close-btn');
+  const localToday = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  const itemExpirationInput = document.getElementById('item-expiration');
+  if (itemExpirationInput) {
+      itemExpirationInput.setAttribute('min', localToday);
+  }
 
   const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
   const confirmAddBtn = document.getElementById('confirm-add-btn');
@@ -492,11 +497,11 @@ document.addEventListener('DOMContentLoaded', () => {
       dropdown.value = currentValue;
   }
 
-  async function fetchInventory() {
+ async function fetchInventory() {
     try {
       // Show loading
       if(requestsTableBody) {
-          requestsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Loading items...</td></tr>';
+          requestsTableBody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 40px; color: #999;">Loading items...</td></tr>';
       }
 
       const response = await fetch('inventory_actions.php?action=get_inventory');
@@ -513,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       handleError('Error fetching inventory: ' + error.message);
       requestsTableBody.innerHTML =
-        '<tr><td colspan="7" class="no-data-cell">Error loading data.</td></tr>'; 
+        '<tr><td colspan="11" style="text-align: center; padding: 40px; color: #c33;">Error loading data.</td></tr>'; 
     }
   }
 
@@ -606,7 +611,7 @@ async function fetchHistory() {
 
     if (totalItems === 0) {
       requestsTableBody.innerHTML =
-        '<tr><td colspan="7" class="no-data-cell">No inventory items found</td></tr>'; 
+        '<tr><td colspan="11" style="text-align: center; padding: 40px; color: #999;">No inventory items found</td></tr>'; 
       return;
     }
 
@@ -724,9 +729,9 @@ function renderHistoryTable() {
     const totalItems = filteredData.length;
     setupPagination(totalItems, 'pagination-history', page);
 
-    if (totalItems === 0) {
+   if (totalItems === 0) {
       historyTableBody.innerHTML =
-        '<tr><td colspan="9" class="no-data-cell">No history found</td></tr>';
+        '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history found</td></tr>';
       return;
     }
 
@@ -909,7 +914,19 @@ function renderHistoryTable() {
     document.getElementById('edit-item-unit').value = item.ItemUnit || ''; 
     document.getElementById('edit-item-unit-cost').value = item.UnitCost || '0.00'; 
     document.getElementById('edit-item-limit').value = item.StockLimit || 1; 
-    document.getElementById('edit-item-expiration').value = item.ExpirationDate || ''; 
+    const editExpirationInput = document.getElementById('edit-item-expiration');
+    editExpirationInput.value = item.ExpirationDate || ''; 
+    
+    // --- FIX: Restrict Edit Expiration Date to Future Dates ---
+    const localTodayDate = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    
+    // If the item already has a past expiration date, set the min to that old date so the form doesn't break
+    // Otherwise, restrict the calendar to today onwards.
+    if (item.ExpirationDate && item.ExpirationDate < localTodayDate) {
+        editExpirationInput.setAttribute('min', item.ExpirationDate);
+    } else {
+        editExpirationInput.setAttribute('min', localTodayDate);
+    } 
     editStockInput.value = '';
     document.getElementById('edit-item-current-qty').textContent = item.ItemQuantity;
     
@@ -1503,12 +1520,16 @@ function renderHistoryTable() {
       } catch(e) { console.error('Error fetching budget logs:', e); }
   }
 
-  function renderBudgetTable() {
+ function renderBudgetTable() {
       const tbody = document.getElementById('budgetTableBody');
       if (!tbody) return;
 
       const fromDate = document.getElementById('budgetReqFromDate') ? document.getElementById('budgetReqFromDate').value : '';
       const toDate = document.getElementById('budgetReqToDate') ? document.getElementById('budgetReqToDate').value : '';
+      
+      // --- NEW: Grab the search input ---
+      const searchInput = document.getElementById('searchBudgetReq');
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
       let filtered = allBudgetRequests.filter(req => req.Status.toLowerCase() !== 'purchased');
       
@@ -1517,7 +1538,23 @@ function renderHistoryTable() {
           filtered = filtered.filter(req => req.Status.toLowerCase() === statusFilterVal);
       }
 
-      filtered = filtered.filter(req => checkDateRange(req.RequestDate, fromDate, toDate));
+      // --- NEW: Filter by Date AND Search Term ---
+      filtered = filtered.filter(req => {
+          const matchesDate = checkDateRange(req.RequestDate, fromDate, toDate);
+          
+          const catName = (req.ItemCategory || req.CategoryName || '').toLowerCase();
+          const desc = (req.Description || '').toLowerCase();
+          const reqId = (req.RequestID || '').toString().toLowerCase();
+          const reqBy = (req.RequestedByName || '').toLowerCase();
+
+          const matchesSearch = searchTerm === '' || 
+                                catName.includes(searchTerm) || 
+                                desc.includes(searchTerm) || 
+                                reqId.includes(searchTerm) ||
+                                reqBy.includes(searchTerm);
+
+          return matchesDate && matchesSearch;
+      });
 
       if (filtered.length === 0) {
           tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #777;">No budget requests found.</td></tr>';
@@ -1556,7 +1593,11 @@ function renderHistoryTable() {
           `;
       }).join('');
   }
-
+// --- NEW: Listeners for Budget Requests Search ---
+  const reqSearch = document.getElementById('searchBudgetReq');
+  if (reqSearch) {
+      reqSearch.addEventListener('input', renderBudgetTable);
+  }
   function renderBudgetLogsTable() {
       const tbody = document.getElementById('budgetLogsTableBody');
       if (!tbody) return;
@@ -1784,7 +1825,7 @@ function renderHistoryTable() {
       }
   });
 
-  const refreshBtnBudget = document.getElementById('refreshBtnBudget');
+const refreshBtnBudget = document.getElementById('refreshBtnBudget');
   if (refreshBtnBudget) {
       refreshBtnBudget.addEventListener('click', () => {
           if (typeof fetchBudgetRequests === 'function') fetchBudgetRequests();
@@ -1796,6 +1837,9 @@ function renderHistoryTable() {
           if (bFromDate) bFromDate.value = '';
           const bToDate = document.getElementById('budgetReqToDate');
           if (bToDate) bToDate.value = '';
+
+          // --- NEW: Clear Search Input ---
+          if (reqSearch) reqSearch.value = '';
           
           if (typeof showToast === 'function') showToast('Budget requests refreshed.', 'success');
       });
