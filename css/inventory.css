@@ -254,13 +254,13 @@ body {
 .filterDropdown:focus,
 .searchInput:focus {
   outline: none;
-  border-color: #480c1b;
-  box-shadow: 0 0 0 3px rgba(72, 12, 27, 0.1);
+  border-color: #d4af78;
+  box-shadow: 0 0 0 3px rgba(212, 175, 120, 0.1);
 }
 
 .filterDropdown:hover:not(:focus),
 .searchInput:hover:not(:focus) {
-  border-color: #480c1b;
+  border-color: #d4af78;
 }
 
 /* Global Budget Category Select Specific Styling */
@@ -368,12 +368,13 @@ body {
   background: transparent;
   border: none;
   cursor: pointer;
-  padding: 4px 8px;
-  font-size: 16px;
+  padding: 2px 6px;
+  font-size: 14px;
   color: #666;
   transition: all 0.2s ease;
   border-radius: 4px;
   line-height: 1;
+  letter-spacing: 2px;
 }
 
 .action-dots-btn:hover {

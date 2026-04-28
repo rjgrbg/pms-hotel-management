@@ -428,6 +428,29 @@ body {
   border-color: #ffb400;
 }
 
+/* General date input styling (for inputs outside dateRangeFilter) */
+input[type="date"].filterDateInput {
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 13px;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: border 0.2s;
+  font-family: 'Arial', sans-serif;
+  min-width: 140px;
+}
+
+input[type="date"].filterDateInput:focus {
+  outline: none;
+  border-color: #ffb400;
+}
+
+input[type="date"].filterDateInput:hover:not(:focus) {
+  border-color: #ffb400;
+}
+
 .dateRangeSeparator {
   color: #999;
   font-size: 12px;

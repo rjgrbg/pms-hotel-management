@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize manage users page (Added)
   if(document.getElementById('manage-users-page')) {
       initUserFilters();
-      initUserLogsFilters();
+      // Don't call initUserLogsFilters here - it will be called after data is fetched
       
       // User Modal Listeners
       document.getElementById('addUserBtn')?.addEventListener('click', handleAddUserClick);

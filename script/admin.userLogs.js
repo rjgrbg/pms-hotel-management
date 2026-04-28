@@ -245,13 +245,31 @@ function initUserLogsFilters() {
     const refreshBtn = document.getElementById('logsRefreshBtn');
     const downloadBtn = document.getElementById('logsDownloadBtn');
 
+    console.log('Initializing User Logs Filters', {
+        searchInput: !!searchInput,
+        roleFilter: !!roleFilter,
+        shiftFilter: !!shiftFilter,
+        dateFrom: !!dateFrom,
+        dateTo: !!dateTo,
+        dataLength: userLogsDataList.length
+    });
+
     // --- Central Filter Function ---
     function applyFilters() {
-        const search = searchInput.value.toLowerCase();
-        const role = roleFilter.value;
-        const shift = shiftFilter.value;
+        const search = searchInput ? searchInput.value.toLowerCase() : '';
+        const role = roleFilter ? roleFilter.value : '';
+        const shift = shiftFilter ? shiftFilter.value : '';
         const from = dateFrom && dateFrom.value ? new Date(dateFrom.value) : null;
         const to = dateTo && dateTo.value ? new Date(dateTo.value) : null;
+
+        console.log('Applying filters:', { 
+            search, 
+            role, 
+            shift, 
+            from: from ? from.toISOString() : null, 
+            to: to ? to.toISOString() : null,
+            totalRecords: userLogsDataList.length
+        });
 
         const filtered = userLogsDataList.filter(row => {
             // Search Check (checks multiple fields)
@@ -265,22 +283,24 @@ function initUserLogsFilters() {
             // Dropdown Checks
             const matchesRole = !role || row.AccountType === role;
             const matchesShift = !shift || row.Shift === shift;
-            // Date filter
+            // Date filter based on Timestamp (same logic as inventory history)
             let matchesDate = true;
-            if (from || to) {
-                const logDate = row.Timestamp ? new Date(row.Timestamp) : null;
-                if (logDate) {
-                    if (from && logDate < from) matchesDate = false;
-                    if (to) {
-                        // Set to end of day for inclusive filtering
-                        const toEnd = new Date(to);
-                        toEnd.setHours(23,59,59,999);
-                        if (logDate > toEnd) matchesDate = false;
-                    }
+            if (row.Timestamp) {
+                const rowDate = new Date(row.Timestamp);
+                if (from) {
+                    matchesDate = matchesDate && rowDate >= from;
+                }
+                if (to) {
+                    // Add 1 day to endDate to include the entire end date
+                    const endDateInclusive = new Date(to);
+                    endDateInclusive.setDate(endDateInclusive.getDate() + 1);
+                    matchesDate = matchesDate && rowDate < endDateInclusive;
                 }
             }
             return matchesSearch && matchesRole && matchesShift && matchesDate;
         });
+        
+        console.log('Filtered results:', filtered.length);
         paginationState.userLogs.currentPage = 1;
         renderUserLogsTable(filtered);
         return filtered; // Return for PDF
@@ -299,6 +319,8 @@ function initUserLogsFilters() {
             if(searchInput) searchInput.value = '';
             if(roleFilter) roleFilter.value = '';
             if(shiftFilter) shiftFilter.value = '';
+            if(dateFrom) dateFrom.value = '';
+            if(dateTo) dateTo.value = '';
             
             fetchAndRenderUserLogs();
             showLogsToast("User Logs refreshed successfully!");
@@ -337,7 +359,6 @@ function initUserLogsFilters() {
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-    if(document.getElementById('user-logs-page')) {
-        fetchAndRenderUserLogs();
-    }
+    // Filters will be initialized when fetchAndRenderUserLogs is called
+    // which happens when the User Logs tab is clicked (see admin.ui.js)
 });

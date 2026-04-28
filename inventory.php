@@ -524,6 +524,12 @@ if (isset($_SESSION['UserID'])) {
           <button id="addBudgetBtn" style="width: auto; padding: 10px 20px; font-weight: bold; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-left: 10px;">
             <i class="fas fa-plus-circle" style="font-size: 16px;"></i> NEW REQUEST
           </button>
+          <button class="refreshBtn" id="budgetRequestRefreshBtn">
+            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+          </button>
+          <button class="downloadBtn" id="budgetRequestDownloadBtn">
+            <img src="assets/icons/download-icon.png" alt="Download" />
+          </button>
         </div>
       </div>
       

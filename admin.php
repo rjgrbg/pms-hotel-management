@@ -1221,8 +1221,11 @@ $conn->close();
                 <option value="Afternoon">Afternoon</option>
                 <option value="Night">Night</option>
               </select>
-              <input type="date" id="logsDateFrom" class="filterDateInput" placeholder="From" style="margin-left:8px;">
-              <input type="date" id="logsDateTo" class="filterDateInput" placeholder="To" style="margin-left:4px;">
+              <div style="display: flex; align-items: center; gap: 5px; background: white; border-radius: 5px; border: 1px solid #ddd; padding: 0 5px;">
+                <input type="date" id="logsDateFrom" title="Start Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+                <span style="color: #666;">-</span>
+                <input type="date" id="logsDateTo" title="End Date" style="border: none; outline: none; padding: 8px 5px; color: #480c1b; font-family: 'Segoe UI', sans-serif;">
+              </div>
               <div class="searchBox">
                 <input type="text" placeholder="Search" class="searchInput" id="logsSearchInput" />
                 <button class="searchBtn">

@@ -1572,9 +1572,12 @@ function renderHistoryTable() {
           else if (status === 'cancelled') { statusColor = '#383d41'; statusBg = '#e2e3e5'; }
           else if (status === 'pending') {
               actionBtns = `
-              <div style="display:flex; gap:5px; justify-content:center;">
-                  <button class="cancel-budget-btn" data-id="${req.RequestID}" style="padding: 6px 10px; cursor: pointer; border: none; background: #dc3545; color: white; border-radius: 4px; font-weight: bold;" title="Cancel Request"><i class="fas fa-times"></i> Cancel</button>
-              </div>`;
+                <div class="action-dropdown">
+                    <button class="action-dots-btn" onclick="toggleActionDropdown(event)"><i class="fas fa-ellipsis-v"></i></button>
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item cancel-budget-btn" data-id="${req.RequestID}"><i class="fas fa-times"></i> Cancel</button>
+                    </div>
+                </div>`;
           }
 
           return `
@@ -1806,6 +1809,13 @@ function renderHistoryTable() {
       const cancelBtn = e.target.closest('.cancel-budget-btn');
 
       if (cancelBtn) {
+          // Close the dropdown menu
+          const dropdown = cancelBtn.closest('.action-dropdown');
+          if (dropdown) {
+              const menu = dropdown.querySelector('.dropdown-menu');
+              if (menu) menu.classList.remove('show');
+          }
+          
           if (confirm('Are you sure you want to cancel this request? It will be removed from Finance.')) {
               const reqID = parseInt(cancelBtn.dataset.id);
               const formData = new FormData();
