@@ -233,7 +233,6 @@ function renderRoomsTable(data) {
           </button>
           <div class="dropdown-item has-submenu" onmouseenter="showSubmenu(event)" onmouseleave="hideSubmenu(event)">
             <i class="fas fa-edit"></i> Edit
-            <i class="fas fa-chevron-right submenu-arrow"></i>
             <div class="dropdown-submenu" onmouseenter="keepSubmenuOpen(event)" onmouseleave="closeSubmenu(event)">
               <button class="dropdown-item" onclick='openEditRoomModal(${JSON.stringify(row).replace(/'/g, "&apos;")}); closeAllDropdowns();'>
                 <i class="fas fa-door-open"></i> Edit Room Info
@@ -513,31 +512,104 @@ document.addEventListener('click', () => {
 
 // --- VIEW DETAILS MODAL LOGIC ---
 window.handleViewRoomDetails = function(room) {
-    // 1. Set the Title & Header
+    // 1. Set the Title (Room Name)
     const title = document.getElementById('roomDetailsTitle');
     if (title) {
-        title.innerHTML = `Room ${room.Room} ${room.Name ? '- ' + room.Name : ''}`;
+        title.textContent = room.Name || 'Room';
     }
 
-    // 2. Set the Status Badge & Colors dynamically
+    // 2. Set the Room Number (not bold)
+    const roomNumber = document.getElementById('roomNumber');
+    if (roomNumber) {
+        roomNumber.textContent = `Room ${room.Room}`;
+    }
+
+    // 3. Set the Status Badge & Colors dynamically
     const statusBadge = document.getElementById('currentStatusBadge');
     if (statusBadge) {
-        statusBadge.textContent = `Current Status: ${room.Status.toUpperCase()}`;
+        statusBadge.textContent = room.Status.toUpperCase();
         statusBadge.className = 'statusBadge'; // Reset default classes
         let statusClass = room.Status.toLowerCase().replace(/ /g, '-');
         statusBadge.classList.add(statusClass);
     }
 
-    // 3. Set the 4 Core Room Stats
+    // 4. Set the 4 Core Room Stats
     if (document.getElementById('detailFloor')) document.getElementById('detailFloor').textContent = room.Floor;
     if (document.getElementById('detailType')) document.getElementById('detailType').textContent = room.Type;
     if (document.getElementById('detailGuests')) document.getElementById('detailGuests').textContent = room.NoGuests;
     if (document.getElementById('detailRoom')) document.getElementById('detailRoom').textContent = room.Room;
 
-    // 4. Set Placeholder Data for Lists (Since we removed the inventory DB earlier)
-    if (document.getElementById('equipmentList')) document.getElementById('equipmentList').innerHTML = '<p class="loadingText" style="color:#999; font-style:italic;">No equipment assigned yet.</p>';
-    if (document.getElementById('amenitiesList')) document.getElementById('amenitiesList').innerHTML = '<p class="loadingText" style="color:#999; font-style:italic;">No amenities assigned yet.</p>';
-    if (document.getElementById('linensList')) document.getElementById('linensList').innerHTML = '<p class="loadingText" style="color:#999; font-style:italic;">No linens assigned yet.</p>';
+    // 4. Set Sample Data for Equipment, Amenities, and Linens (exactly matching image)
+    if (document.getElementById('equipmentList')) {
+        document.getElementById('equipmentList').innerHTML = `
+            <div class="equipmentItem">
+                <i class="fas fa-tv"></i>
+                <span class="equipmentName">Television</span>
+                <div class="equipmentDetails">
+                    <small><strong>Installed:</strong> Apr 27, 2024</small>
+                    <small><strong>Last Maintenance:</strong> Jan 27, 2026</small>
+                </div>
+            </div>
+            <div class="equipmentItem">
+                <i class="fas fa-snowflake"></i>
+                <span class="equipmentName">Air Conditioner</span>
+                <div class="equipmentDetails">
+                    <small><strong>Installed:</strong> Apr 27, 2025</small>
+                    <small><strong>Last Maintenance:</strong> Mar 27, 2026</small>
+                </div>
+            </div>
+            <div class="equipmentItem">
+                <i class="fas fa-temperature-low"></i>
+                <span class="equipmentName">Mini Fridge</span>
+                <div class="equipmentDetails">
+                    <small><strong>Installed:</strong> Oct 27, 2024</small>
+                    <small><strong>Last Maintenance:</strong> Feb 27, 2026</small>
+                </div>
+            </div>
+            <div class="equipmentItem">
+                <i class="fas fa-coffee"></i>
+                <span class="equipmentName">Coffee Maker</span>
+                <div class="equipmentDetails">
+                    <small><strong>Installed:</strong> Aug 27, 2025</small>
+                    <small><strong>Last Maintenance:</strong> Apr 20, 2026</small>
+                </div>
+            </div>
+            <div class="equipmentItem">
+                <i class="fas fa-wind"></i>
+                <span class="equipmentName">Hair Dryer</span>
+                <div class="equipmentDetails">
+                    <small><strong>Installed:</strong> Apr 27, 2025</small>
+                    <small><strong>Last Maintenance:</strong> Apr 13, 2026</small>
+                </div>
+            </div>
+            <div class="equipmentItem">
+                <i class="fas fa-lock"></i>
+                <span class="equipmentName">Safe Box</span>
+                <div class="equipmentDetails">
+                    <small><strong>Installed:</strong> Apr 27, 2024</small>
+                    <small><strong>Last Maintenance:</strong> Oct 27, 2025</small>
+                </div>
+            </div>
+        `;
+    }
+    
+    if (document.getElementById('amenitiesList')) {
+        document.getElementById('amenitiesList').innerHTML = `
+            <div class="listItem"><i class="fas fa-circle"></i> Complimentary WiFi</div>
+            <div class="listItem"><i class="fas fa-circle"></i> Room Service</div>
+            <div class="listItem"><i class="fas fa-circle"></i> Daily Housekeeping</div>
+            <div class="listItem"><i class="fas fa-circle"></i> Toiletries</div>
+        `;
+    }
+    
+    if (document.getElementById('linensList')) {
+        document.getElementById('linensList').innerHTML = `
+            <div class="listItem"><i class="fas fa-circle"></i> Bed Sheets (2 sets)</div>
+            <div class="listItem"><i class="fas fa-circle"></i> Pillowcases (4 pcs)</div>
+            <div class="listItem"><i class="fas fa-circle"></i> Bath Towels (4 pcs)</div>
+            <div class="listItem"><i class="fas fa-circle"></i> Hand Towels (4 pcs)</div>
+        `;
+    }
 
     // 5. Open the Modal!
     const modal = document.getElementById('roomDetailsModal');
