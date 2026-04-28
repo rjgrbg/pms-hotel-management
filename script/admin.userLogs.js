@@ -92,18 +92,20 @@ function renderUserLogsTable(data) {
   const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
   
   if (paginatedData.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 40px; color: #999;">No logs found</td></tr>';
+    // Changed colspan to 7 to match our new column count
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No logs found</td></tr>';
   } else {
     tbody.innerHTML = paginatedData.map(row => {
       const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
       const actionClass = row.ActionType.toLowerCase().replace(/ /g, '-');
+      
+      // Combine the names into a single Full Name string (Format: Lastname, Firstname Middlename)
+      const middleName = row.Mname ? ` ${row.Mname}` : '';
+      const fullName = `${row.Lname}, ${row.Fname}${middleName}`;
 
       return `
         <tr>
-          <td>${row.LogID}</td>
-          <td>${row.Lname}</td>
-          <td>${row.Fname}</td>
-          <td>${row.Mname || ''}</td>
+          <td>${fullName}</td>
           <td>${roleName}</td>
           <td>${row.Shift}</td>
           <td>${row.Username}</td>
@@ -121,6 +123,113 @@ function renderUserLogsTable(data) {
     state.currentPage = page;
     renderUserLogsTable(data);
   });
+}
+
+// Ensure the Date check mechanism parses cross-platform SQL datetimes properly:
+function initUserLogsFilters() {
+    const searchInput = document.getElementById('logsSearchInput');
+    const roleFilter = document.getElementById('logsRoleFilter');
+    const shiftFilter = document.getElementById('logsShiftFilter');
+    const dateFrom = document.getElementById('logsDateFrom');
+    const dateTo = document.getElementById('logsDateTo');
+    const refreshBtn = document.getElementById('logsRefreshBtn');
+    const downloadBtn = document.getElementById('logsDownloadBtn');
+
+    // --- Central Filter Function ---
+    function applyFilters() {
+        const search = searchInput.value.toLowerCase();
+        const role = roleFilter.value;
+        const shift = shiftFilter.value;
+        const from = dateFrom && dateFrom.value ? new Date(dateFrom.value) : null;
+        const to = dateTo && dateTo.value ? new Date(dateTo.value) : null;
+
+        const filtered = userLogsDataList.filter(row => {
+            // Search Check (checks multiple fields)
+            const matchesSearch = !search || (
+                (row.Username && row.Username.toLowerCase().includes(search)) ||
+                (row.Fname && row.Fname.toLowerCase().includes(search)) ||
+                (row.Lname && row.Lname.toLowerCase().includes(search)) ||
+                (row.EmailAddress && row.EmailAddress.toLowerCase().includes(search)) ||
+                (row.UserID && row.UserID.toString().includes(search))
+            );
+            // Dropdown Checks
+            const matchesRole = !role || row.AccountType === role;
+            const matchesShift = !shift || row.Shift === shift;
+            
+            // Date filter Fix
+            let matchesDate = true;
+            if (from || to) {
+                // Ensure cross-browser date parsing for standard SQL timestamps (replace ' ' with 'T')
+                const logDate = row.Timestamp ? new Date(row.Timestamp.replace(' ', 'T')) : null;
+                if (logDate && !isNaN(logDate)) {
+                    if (from) {
+                        const fromStart = new Date(from);
+                        fromStart.setHours(0,0,0,0);
+                        if (logDate < fromStart) matchesDate = false;
+                    }
+                    if (to) {
+                        // Set to end of day for inclusive filtering
+                        const toEnd = new Date(to);
+                        toEnd.setHours(23,59,59,999);
+                        if (logDate > toEnd) matchesDate = false;
+                    }
+                }
+            }
+            return matchesSearch && matchesRole && matchesShift && matchesDate;
+        });
+        paginationState.userLogs.currentPage = 1;
+        renderUserLogsTable(filtered);
+        return filtered; // Return for PDF
+    }
+
+    // --- Use .oninput/.onchange to prevent duplicate listeners ---
+    if (searchInput) searchInput.oninput = applyFilters;
+    if (roleFilter) roleFilter.onchange = applyFilters;
+    if (shiftFilter) shiftFilter.onchange = applyFilters;
+    if (dateFrom) dateFrom.onchange = applyFilters;
+    if (dateTo) dateTo.onchange = applyFilters;
+
+    // --- Refresh Button ---
+    if (refreshBtn) {
+        refreshBtn.onclick = () => {
+            if(searchInput) searchInput.value = '';
+            if(roleFilter) roleFilter.value = '';
+            if(shiftFilter) shiftFilter.value = '';
+            if(dateFrom) dateFrom.value = '';
+            if(dateTo) dateTo.value = '';
+            
+            fetchAndRenderUserLogs();
+            showLogsToast("User Logs refreshed successfully!");
+        };
+    }
+
+    // --- Download Button (Landscape PDF) ---
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            const filteredData = applyFilters();
+            
+            if (filteredData.length === 0) {
+                alert("No data to download");
+                return;
+            }
+
+            const headers = ['Full Name', 'Role', 'Shift', 'Username', 'Action', 'Timestamp'];
+            const body = filteredData.map(row => {
+                const fullName = `${row.Lname}, ${row.Fname}`;
+                const roleName = ACCOUNT_TYPE_MAP[row.AccountType] || row.AccountType;
+                return [
+                    fullName,
+                    roleName,
+                    row.Shift,
+                    row.Username,
+                    row.ActionType,
+                    row.Timestamp
+                ];
+            });
+
+            downloadData(headers, body, 'User Logs Report', 'user_logs');
+        };
+    }
 }
 
 // ==========================================

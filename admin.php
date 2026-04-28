@@ -1021,11 +1021,10 @@ $conn->close();
             </div>
           </div>
 
-          <div class="tableWrapper">
+         <div class="tableWrapper">
             <table>
               <thead>
                 <tr>
-                  <th>Log ID</th>
                   <th>Name</th>
                   <th>Category</th>
                   <th>Old Qty</th>
@@ -1239,26 +1238,22 @@ $conn->close();
             </div>
           </div>
 
-          <div class="tableWrapper">
+         <div class="tableWrapper">
             <table>
-              <thead>
-                <tr>
-                  <th>Log ID</th>
-                  <th>Last Name</th>
-                  <th>First Name</th>
-                  <th>Middle Name</th>
-                  <th>Role</th>
-                  <th>Shift</th>
-                  <th>Username</th>
-                  <th>Email Address</th>
-                  <th>Action Type</th>
-                  <th>Timestamp</th>
-                </tr>
-              </thead>
+             <thead>
+  <tr>
+    <th>Full Name</th>
+    <th>Role</th>
+    <th>Shift</th>
+    <th>Username</th>
+    <th>Email Address</th>
+    <th>Action Type</th>
+    <th>Timestamp</th>
+  </tr>
+</thead>
               <tbody id="logsTableBody"></tbody>
             </table>
           </div>
-
           <div class="pagination" id="user-logs-tab-pagination">
             <span class="paginationInfo">Display Records <span id="logsRecordCount">0</span></span>
             <div class="paginationControls"></div>

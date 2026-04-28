@@ -1118,50 +1118,27 @@ table td {
 #rooms-page table th:nth-child(6),
 #rooms-page table td:nth-child(6) { width: 25%; } /* Occ / Status */
 
+/* ===== USER LOGS TABLE COLUMN ALIGNMENT (7 Columns) ===== */
+#user-logs-tab table th:nth-child(1),
+#user-logs-tab table td:nth-child(1) { width: 18%; } /* Full Name */
+
 #user-logs-tab table th:nth-child(2),
-#user-logs-tab table td:nth-child(2) {
-  width: 10%;
-}
+#user-logs-tab table td:nth-child(2) { width: 12%; } /* Role */
 
 #user-logs-tab table th:nth-child(3),
-#user-logs-tab table td:nth-child(3) {
-  width: 10%;
-}
+#user-logs-tab table td:nth-child(3) { width: 10%; } /* Shift */
 
 #user-logs-tab table th:nth-child(4),
-#user-logs-tab table td:nth-child(4) {
-  width: 10%;
-}
+#user-logs-tab table td:nth-child(4) { width: 15%; } /* Username */
 
 #user-logs-tab table th:nth-child(5),
-#user-logs-tab table td:nth-child(5) {
-  width: 12%;
-}
+#user-logs-tab table td:nth-child(5) { width: 20%; } /* Email Address */
 
 #user-logs-tab table th:nth-child(6),
-#user-logs-tab table td:nth-child(6) {
-  width: 9%;
-}
+#user-logs-tab table td:nth-child(6) { width: 10%; } /* Action Type */
 
 #user-logs-tab table th:nth-child(7),
-#user-logs-tab table td:nth-child(7) {
-  width: 9%;
-}
-
-#user-logs-tab table th:nth-child(8),
-#user-logs-tab table td:nth-child(8) {
-  width: 16%;
-}
-
-#user-logs-tab table th:nth-child(9),
-#user-logs-tab table td:nth-child(9) {
-  width: 10%;
-}
-
-#user-logs-tab table th:nth-child(10),
-#user-logs-tab table td:nth-child(10) {
-  width: 8%;
-}
+#user-logs-tab table td:nth-child(7) { width: 15%; } /* Timestamp */
 
 /* ===== ROOMS PAGE SPECIFIC STYLES ===== */
 /* Use fixed table layout for consistent column widths */

@@ -210,7 +210,7 @@ function renderInventoryTable(data = inventoryDataList) {
         const statusRank = {
             'out of stock': 1,
             'critical': 2,
-            'low stock': 2, // fallback
+            'low stock': 2, // fallback for legacy data
             'threshold': 3,
             'in stock': 4
         };
@@ -267,7 +267,7 @@ function renderInventoryHistoryTable(data = inventoryHistoryDataList) {
     const paginatedData = paginateData(data, state.currentPage, state.itemsPerPage);
 
     if (paginatedData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
     } else {
          tbody.innerHTML = paginatedData.map(row => {
             let badgeClass = '';
@@ -281,29 +281,28 @@ function renderInventoryHistoryTable(data = inventoryHistoryDataList) {
             else badgeClass = statusLower.replace(/ /g, '-');
 
             let quantityChangeText = row.QuantityChange;
+            let changeClass = '';
             const changeAmount = parseInt(row.QuantityChange, 10);
-            let changeColor = 'inherit';
-            
+
             if (changeAmount > 0) {
                 quantityChangeText = `+${changeAmount}`;
-                changeColor = '#28a745'; // Green for positive
+                changeClass = 'text-success';
             } else if (changeAmount < 0) {
                 quantityChangeText = `${changeAmount}`;
-                changeColor = '#dc3545'; // Red for negative
+                changeClass = 'text-danger';
             } else {
                 quantityChangeText = '0';
             }
             
             return `
                 <tr>
-                <td>${escapeHtml(row.InvLogID)}</td>
                 <td>${escapeHtml(row.ItemName)}</td>
                 <td>${escapeHtml(row.Category)}</td>
                 <td>${escapeHtml(row.OldQuantity ?? 'N/A')}</td>
-                <td style="color: ${changeColor}; font-weight: bold;">${escapeHtml(quantityChangeText)}</td>
+                <td class="${changeClass}">${escapeHtml(quantityChangeText)}</td>
                 <td>${escapeHtml(row.NewQuantity ?? 'N/A')}</td>
                 <td><span class="statusBadge ${badgeClass}">${escapeHtml(row.ItemStatus)}</span></td>
-                <td>${escapeHtml(row.DateofRelease || row.DateofStockIn || 'N/A')}</td>
+                <td>${escapeHtml(row.DateofStockIn || row.DateofRelease || 'N/A')}</td>
                 <td>${escapeHtml(row.PerformedBy)}</td>
                 </tr>
             `;
