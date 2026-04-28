@@ -1523,6 +1523,22 @@ function openEditModal(item) {
           filtered = filtered.filter(req => req.Status.toLowerCase() === statusFilterVal);
       }
 
+      // Apply search filter
+      const searchInput = document.getElementById('searchBudgetRequests');
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+      if (searchTerm) {
+          filtered = filtered.filter(req => {
+              return (
+                  (req.RequestID && req.RequestID.toString().includes(searchTerm)) ||
+                  (req.ItemCategory && req.ItemCategory.toLowerCase().includes(searchTerm)) ||
+                  (req.CategoryName && req.CategoryName.toLowerCase().includes(searchTerm)) ||
+                  (req.Description && req.Description.toLowerCase().includes(searchTerm)) ||
+                  (req.RequestedByName && req.RequestedByName.toLowerCase().includes(searchTerm)) ||
+                  (req.Status && req.Status.toLowerCase().includes(searchTerm))
+              );
+          });
+      }
+
       if (filtered.length === 0) {
           tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #777;">No budget requests found.</td></tr>';
           return;
@@ -1539,9 +1555,12 @@ function openEditModal(item) {
           else if (status === 'cancelled') { statusColor = '#383d41'; statusBg = '#e2e3e5'; }
           else if (status === 'pending') {
               actionBtns = `
-              <div style="display:flex; gap:5px; justify-content:center;">
-                  <button class="cancel-budget-btn" data-id="${req.RequestID}" style="padding: 6px 10px; cursor: pointer; border: none; background: #dc3545; color: white; border-radius: 4px; font-weight: bold;" title="Cancel Request"><i class="fas fa-times"></i> Cancel</button>
-              </div>`;
+                <div class="action-dropdown">
+                    <button class="action-dots-btn" onclick="toggleActionDropdown(event)"><i class="fas fa-ellipsis-v"></i></button>
+                    <div class="dropdown-menu">
+                        <button class="dropdown-item cancel-budget-btn" data-id="${req.RequestID}"><i class="fas fa-times"></i> Cancel</button>
+                    </div>
+                </div>`;
           }
 
           return `
@@ -1691,6 +1710,13 @@ function openEditModal(item) {
       const cancelBtn = e.target.closest('.cancel-budget-btn');
 
       if (cancelBtn) {
+          // Close the dropdown menu
+          const dropdown = cancelBtn.closest('.action-dropdown');
+          if (dropdown) {
+              const menu = dropdown.querySelector('.dropdown-menu');
+              if (menu) menu.classList.remove('show');
+          }
+          
           if (confirm('Are you sure you want to cancel this request? It will be removed from Finance.')) {
               const reqID = parseInt(cancelBtn.dataset.id);
               const formData = new FormData();
@@ -1723,6 +1749,112 @@ function openEditModal(item) {
           }
       }
   });
+
+  // === BUDGET REQUEST REFRESH & DOWNLOAD BUTTONS ===
+  const budgetRequestRefreshBtn = document.getElementById('budgetRequestRefreshBtn');
+  const budgetRequestDownloadBtn = document.getElementById('budgetRequestDownloadBtn');
+  const budgetLogsRefreshBtn = document.getElementById('budgetLogsRefreshBtn');
+  const budgetLogsDownloadBtn = document.getElementById('budgetLogsDownloadBtn');
+
+  // Budget Request Refresh Button
+  if (budgetRequestRefreshBtn) {
+      budgetRequestRefreshBtn.addEventListener('click', () => {
+          const statusFilter = document.getElementById('budgetStatusFilter');
+          if (statusFilter) statusFilter.value = '';
+          fetchBudgetRequests();
+          showToast('Budget requests refreshed successfully!', 'success');
+      });
+  }
+
+  // Budget Request Download Button
+  if (budgetRequestDownloadBtn) {
+      budgetRequestDownloadBtn.addEventListener('click', () => {
+          const statusFilterVal = budgetStatusFilter ? budgetStatusFilter.value.toLowerCase() : '';
+          let filtered = allBudgetRequests.filter(req => req.Status.toLowerCase() !== 'purchased');
+          
+          if (statusFilterVal) {
+              filtered = filtered.filter(req => req.Status.toLowerCase() === statusFilterVal);
+          }
+
+          if (filtered.length === 0) {
+              alert('No budget requests to download');
+              return;
+          }
+
+          const headers = ['Request ID', 'Category', 'Description', 'Requested Amount', 'Requested By', 'Date Requested', 'Status'];
+          const data = filtered.map(req => [
+              `#${req.RequestID}`,
+              req.ItemCategory || req.CategoryName || 'Unknown',
+              req.Description || 'N/A',
+              `₱${parseFloat(req.TotalAmount).toLocaleString('en-PH', {minimumFractionDigits:2})}`,
+              req.RequestedByName || 'N/A',
+              req.RequestDate.split(' ')[0],
+              req.Status
+          ]);
+
+          downloadData(headers, data, 'Budget Requests', 'budget_requests');
+      });
+  }
+
+  // Budget Logs Refresh Button
+  if (budgetLogsRefreshBtn) {
+      budgetLogsRefreshBtn.addEventListener('click', () => {
+          const categoryFilter = document.getElementById('budgetLogCategoryFilter');
+          const searchInput = document.getElementById('searchBudgetLogs');
+          if (categoryFilter) categoryFilter.value = '';
+          if (searchInput) searchInput.value = '';
+          fetchBudgetRequests();
+          showToast('Budget logs refreshed successfully!', 'success');
+      });
+  }
+
+  // Budget Logs Download Button
+  if (budgetLogsDownloadBtn) {
+      budgetLogsDownloadBtn.addEventListener('click', () => {
+          const logData = allBudgetRequests.filter(req => req.Status.toLowerCase() === 'purchased');
+
+          if (logData.length === 0) {
+              alert('No budget logs to download');
+              return;
+          }
+
+          const headers = ['Log ID', 'Category', 'Item Name', 'Quantity', 'Unit Price', 'Amount', 'Remaining Budget', 'Date'];
+          const data = logData.map(req => {
+              let itemName = req.Description || 'N/A';
+              let qty = "-";
+              let price = "-";
+              
+              if (req.Remarks && req.Remarks.includes('QTY:')) {
+                  const parts = req.Remarks.split('|');
+                  qty = parts[0].replace('QTY:', '');
+                  price = parseFloat(parts[1].replace('PRICE:', '')).toLocaleString('en-PH', {minimumFractionDigits:2});
+              } else if (itemName.includes('Stock Purchased:')) {
+                  const match = itemName.match(/Stock Purchased: (.*?) \(Qty: (\d+) @ ₱([\d,.]+)\)/);
+                  if (match) {
+                      itemName = match[1];
+                      qty = match[2];
+                      price = match[3];
+                  }
+              }
+
+              const rawAmount = parseFloat(req.TotalAmount) || 0;
+              const rawBalance = parseFloat(req.RemainingBudget) || 0;
+
+              return [
+                  `#${req.RequestID}`,
+                  req.ItemCategory || req.CategoryName || 'Unknown',
+                  itemName,
+                  qty,
+                  `₱${price}`,
+                  `- ₱${rawAmount.toLocaleString('en-PH', {minimumFractionDigits:2})}`,
+                  `₱${rawBalance.toLocaleString('en-PH', {minimumFractionDigits:2})}`,
+                  new Date(req.RequestDate).toLocaleDateString()
+              ];
+          });
+
+          downloadData(headers, data, 'Budget Logs', 'budget_logs');
+      });
+  }
 
  // Override initializePage to ensure our new budget function runs!
   const originalInit = initializePage;

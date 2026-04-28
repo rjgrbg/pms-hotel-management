@@ -483,8 +483,20 @@ if (isset($_SESSION['UserID'])) {
             <option value="rejected">Rejected</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <button class="addItemBtn" id="addBudgetBtn" style="width: auto; padding: 10px 20px; font-weight: 600; background-color: #480c1b; color: #fff; border: none; border-radius: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <div class="searchBox">
+            <input type="text" placeholder="Search requests..." class="searchInput" id="searchBudgetRequests" />
+            <button class="searchBtn">
+              <img src="assets/icons/search-icon.png" alt="Search" />
+            </button>
+          </div>
+          <button class="addItemBtn" id="addBudgetBtn" style="width: auto; padding: 10px 20px; font-weight: 600; background-color: #d3d3d3; color: #333; border: none; border-radius: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px;">
             <span style="font-size: 16px; font-weight: 700;">+</span> NEW REQUEST
+          </button>
+          <button class="refreshBtn" id="budgetRequestRefreshBtn">
+            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+          </button>
+          <button class="downloadBtn" id="budgetRequestDownloadBtn">
+            <img src="assets/icons/download-icon.png" alt="Download" />
           </button>
         </div>
       </div>
@@ -520,6 +532,12 @@ if (isset($_SESSION['UserID'])) {
               <img src="assets/icons/search-icon.png" alt="Search" />
             </button>
           </div>
+          <button class="refreshBtn" id="budgetLogsRefreshBtn">
+            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+          </button>
+          <button class="downloadBtn" id="budgetLogsDownloadBtn">
+            <img src="assets/icons/download-icon.png" alt="Download" />
+          </button>
         </div>
       </div>
       <div class="tableWrapper">
