@@ -111,7 +111,7 @@ async function fetchAndRenderInventory() {
     const tbody = document.getElementById('inventoryTableBody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Loading inventory items...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Loading inventory items...</td></tr>';
     
     const result = await apiCall('get_inventory', {}, 'GET', 'inventory_actions.php');
     
@@ -127,21 +127,21 @@ async function fetchAndRenderInventory() {
             // Count items (optionally filter out archived if your backend sends them but you don't show them)
             const activeItems = inventoryDataList.filter(item => item.is_archived != 1);
             
-            const totalItems = activeItems.length;
-            const lowStock = activeItems.filter(item => item.ItemStatus === 'Low Stock').length;
+             const totalItems = activeItems.length;
+            const criticalStock = activeItems.filter(item => item.ItemStatus === 'Critical' || item.ItemStatus === 'Low Stock').length;
             const outOfStock = activeItems.filter(item => item.ItemStatus === 'Out of Stock').length;
             
-            // Assumes updateStatCard function exists globally (from admin.ui.js or similar)
+            // Assumes updateStatCard function exists globally
             if (typeof updateStatCard === 'function') {
                 updateStatCard(3, totalItems); 
-                updateStatCard(4, lowStock); 
+                updateStatCard(4, criticalStock); // Map critical stock to the dashboard
                 updateStatCard(5, outOfStock); 
             }
         } catch (e) { console.log("Stat update skipped"); }
 
     } else if (result && Array.isArray(result) && result.length === 0) {
         inventoryDataList = [];
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No inventory items found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No inventory items found.</td></tr>';
         document.getElementById('inventoryRecordCount').textContent = 0;
         
         // Clear filter if no data
@@ -150,12 +150,13 @@ async function fetchAndRenderInventory() {
         renderPaginationControls('inv-items-tab', 0, 1, () => {});
     } else {
         inventoryDataList = [];
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: #c33;">Failed to load data</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 20px; color: #c33;">Failed to load data</td></tr>`;
     }
     
     // Initialize filter listeners
     initInventoryFilters();
 }
+
 
 async function fetchAndRenderInventoryHistory() {
     const tbody = document.getElementById('invHistTableBody');
@@ -201,29 +202,47 @@ function renderInventoryTable(data = inventoryDataList) {
     
     const state = paginationState.inventory;
     
-    // Filter out archived items if necessary (Admin usually sees active items in main table)
-    // If you want to show archived items, remove this filter.
-    const activeData = data.filter(item => item.is_archived != 1); 
+    // Filter out archived items if necessary
+    let activeData = data.filter(item => item.is_archived != 1); 
+
+    // Sort by custom status severity
+    activeData.sort((a, b) => {
+        const statusRank = {
+            'out of stock': 1,
+            'critical': 2,
+            'low stock': 2, // fallback
+            'threshold': 3,
+            'in stock': 4
+        };
+        const rankA = statusRank[(a.ItemStatus || '').toLowerCase()] || 99;
+        const rankB = statusRank[(b.ItemStatus || '').toLowerCase()] || 99;
+        return rankA - rankB; // Ascending (Out of Stock first)
+    });
 
     const totalPages = getTotalPages(activeData.length, state.itemsPerPage);
     const paginatedData = paginateData(activeData, state.currentPage, state.itemsPerPage);
 
     if (paginatedData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
     } else {
         tbody.innerHTML = paginatedData.map(row => {
-            const statusText = row.ItemStatus === 'In Stock' ? 'In Stock' : 
-                            row.ItemStatus === 'Low Stock' ? 'Low Stock' : 'Out of Stock';
-            const statusClass = statusText.toLowerCase().replace(/ /g, '-');
+            let badgeClass = '';
+            const statusLower = (row.ItemStatus || '').toLowerCase();
+            
+            if (statusLower === 'in stock') badgeClass = 'in-stock';
+            else if (statusLower === 'out of stock') badgeClass = 'out-of-stock';
+            else if (statusLower === 'critical' || statusLower === 'low stock') badgeClass = 'critical';
+            else if (statusLower === 'threshold') badgeClass = 'threshold';
+            else if (statusLower === 'archived') badgeClass = 'archived';
+            else badgeClass = statusLower.replace(/ /g, '-');
             
             return `
                 <tr>
-                <td>${escapeHtml(row.ItemID)}</td>
                 <td>${escapeHtml(row.ItemName)}</td>
                 <td>${escapeHtml(row.Category)}</td>
                 <td>${escapeHtml(row.ItemQuantity ?? '-')}</td>
                 <td>${escapeHtml(row.ItemDescription || 'N/A')}</td>
-                <td><span class="statusBadge ${statusClass}">${escapeHtml(statusText)}</span></td>
+                <td><span class="statusBadge ${badgeClass}">${escapeHtml(row.ItemStatus)}</span></td>
                 <td>${escapeHtml(row.DateofStockIn)}</td>
                 </tr>
             `;
@@ -250,32 +269,42 @@ function renderInventoryHistoryTable(data = inventoryHistoryDataList) {
     if (paginatedData.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No records found</td></tr>';
     } else {
-        tbody.innerHTML = paginatedData.map(row => {
+         tbody.innerHTML = paginatedData.map(row => {
+            let badgeClass = '';
+            const statusLower = (row.ItemStatus || '').toLowerCase();
+            
+            if (statusLower === 'in stock') badgeClass = 'in-stock';
+            else if (statusLower === 'out of stock') badgeClass = 'out-of-stock';
+            else if (statusLower === 'critical' || statusLower === 'low stock') badgeClass = 'critical';
+            else if (statusLower === 'threshold') badgeClass = 'threshold';
+            else if (statusLower === 'archived') badgeClass = 'archived';
+            else badgeClass = statusLower.replace(/ /g, '-');
+
             let quantityChangeText = row.QuantityChange;
-            let changeClass = '';
             const changeAmount = parseInt(row.QuantityChange, 10);
+            let changeColor = 'inherit';
             
             if (changeAmount > 0) {
                 quantityChangeText = `+${changeAmount}`;
-                changeClass = 'text-success'; 
+                changeColor = '#28a745'; // Green for positive
             } else if (changeAmount < 0) {
                 quantityChangeText = `${changeAmount}`;
-                changeClass = 'text-danger';
+                changeColor = '#dc3545'; // Red for negative
             } else {
                 quantityChangeText = '0';
             }
             
             return `
                 <tr>
-                    <td>${escapeHtml(row.InvLogID)}</td>
-                    <td>${escapeHtml(row.ItemName)}</td>
-                    <td>${escapeHtml(row.Category)}</td>
-                    <td>${escapeHtml(row.OldQuantity ?? 'N/A')}</td>
-                    <td class="${changeClass}">${escapeHtml(quantityChangeText)}</td>
-                    <td>${escapeHtml(row.NewQuantity ?? 'N/A')}</td>
-                    <td>${escapeHtml(row.ItemStatus)}</td>
-                    <td>${escapeHtml(row.DateofStockIn || 'N/A')}</td>
-                    <td>${escapeHtml(row.PerformedBy)}</td>
+                <td>${escapeHtml(row.InvLogID)}</td>
+                <td>${escapeHtml(row.ItemName)}</td>
+                <td>${escapeHtml(row.Category)}</td>
+                <td>${escapeHtml(row.OldQuantity ?? 'N/A')}</td>
+                <td style="color: ${changeColor}; font-weight: bold;">${escapeHtml(quantityChangeText)}</td>
+                <td>${escapeHtml(row.NewQuantity ?? 'N/A')}</td>
+                <td><span class="statusBadge ${badgeClass}">${escapeHtml(row.ItemStatus)}</span></td>
+                <td>${escapeHtml(row.DateofRelease || row.DateofStockIn || 'N/A')}</td>
+                <td>${escapeHtml(row.PerformedBy)}</td>
                 </tr>
             `;
         }).join('');
@@ -308,7 +337,13 @@ function initInventoryFilters() {
         const category = categoryFilter.value;
         const statusRaw = statusFilter.value;
         
-        const statusMap = { 'in-stock': 'In Stock', 'low-stock': 'Low Stock', 'out-of-stock': 'Out of Stock' };
+        const statusMap = { 
+            'in-stock': 'In Stock', 
+            'threshold': 'Threshold', 
+            'critical': 'Critical', 
+            'low-stock': 'Low Stock', // Fallback for legacy
+            'out-of-stock': 'Out of Stock' 
+        };
         const status = statusMap[statusRaw] || statusRaw;
         
         // Filter logic: Search + Category + Status + Non-Archived

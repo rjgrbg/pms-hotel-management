@@ -948,7 +948,8 @@ $conn->close();
               <select class="filterDropdown" id="inventoryStatusFilter">
                 <option value="">Status</option>
                 <option value="in-stock">In Stock</option>
-                <option value="low-stock">Low Stock</option>
+                <option value="threshold">Threshold</option>
+                <option value="critical">Critical</option>
                 <option value="out-of-stock">Out of Stock</option>
               </select>
               <div class="searchBox">
@@ -966,11 +967,10 @@ $conn->close();
             </div>
           </div>
 
-          <div class="tableWrapper">
+                    <div class="tableWrapper">
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
                   <th>Name</th>
                   <th>Category</th>
                   <th>Quantity</th>
