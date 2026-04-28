@@ -2,6 +2,8 @@
 
 // --- GLOBALS ---
 let CURRENT_REQUEST_ID = null;
+let usedItems = []; 
+let allAvailableItems = []; 
 
 // --- DOM ELEMENTS ---
 const roomValue = document.getElementById('room-value');
@@ -27,6 +29,13 @@ const taskContent = document.getElementById('task-content');
 const loadingState = document.getElementById('loading-state');
 const errorState = document.getElementById('error-state');
 const errorMessage = document.getElementById('error-message');
+
+// Inventory Elements
+const inventorySelect = document.getElementById('inventory-select');
+const inventoryQty = document.getElementById('inventory-qty');
+const addItemBtn = document.getElementById('add-item-btn');
+const selectedItemsList = document.getElementById('selected-items-list');
+const searchInput = document.getElementById('inventory-search');
 
 // ===== PAGE INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -128,12 +137,18 @@ function setupEventListeners() {
         modalBackdrop.style.display = 'none';
     });
 
-    // --- Modal "Save" Button (completes task) ---
-    modalSave.addEventListener('click', () => {
-        console.log('Setting status to Completed...');
-        updateTaskStatus('Completed');
-    });
+   modalSave.addEventListener('click', async () => {
+        // Disable button to prevent double clicks during the request
+        modalSave.disabled = true;
+        modalSave.textContent = 'Saving...';
 
+        // Use your existing JSON helper function which formats the data perfectly for your PHP file!
+        await updateTaskStatus('Completed');
+
+        // Reset button state just in case of an error (if it succeeds, the page will reload automatically)
+        modalSave.disabled = false;
+        modalSave.textContent = 'Save';
+    });
     // --- Modal Backdrop (closes modal) ---
     modalBackdrop.addEventListener('click', (e) => {
         if (e.target === modalBackdrop) {
@@ -161,10 +176,11 @@ function showToast(message, type = 'success') {
  * Send the status update to the backend
  */
 async function updateTaskStatus(newStatus) {
-  const taskData = {
+    const taskData = {
     request_id: CURRENT_REQUEST_ID,
     status: newStatus,
-    remarks: remarksTextarea.value 
+    remarks: remarksTextarea.value,
+    used_items: usedItems // NEW: Add used items to payload
   };
 
   try {
@@ -226,3 +242,103 @@ function showTaskView() {
     if (errorState) errorState.style.display = 'none';
     if (taskContent) taskContent.style.display = 'block';
 }
+
+// ===== NEW: INVENTORY LOGIC =====
+
+async function fetchMaintenanceInventory() {
+    try {
+        const response = await fetch('api_staff_task.php?action=get_inventory');
+        const result = await response.json();
+
+        if (!result.error && Array.isArray(result)) {
+            // ONLY ALLOW EQUIPMENT
+            allAvailableItems = result.filter(item => 
+                item.is_archived == 0 && 
+                item.ItemQuantity > 0 &&
+                item.ItemType === 'Equipment'
+            );
+            renderInventoryDropdown(allAvailableItems);
+        } else {
+            if(inventorySelect) inventorySelect.innerHTML = '<option value="">Failed to load items</option>';
+        }
+    } catch (err) {
+        console.error('Failed to load inventory:', err);
+        if(inventorySelect) inventorySelect.innerHTML = '<option value="">Error loading items</option>';
+    }
+}
+
+function renderInventoryDropdown(itemsToRender) {
+    if (!inventorySelect) return;
+    inventorySelect.innerHTML = '<option value="">Select Equipment...</option>';
+    
+    itemsToRender.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.ItemID;
+        opt.dataset.name = item.ItemName;
+        opt.dataset.max = item.ItemQuantity;
+        opt.textContent = `${item.ItemName} (Stock: ${item.ItemQuantity})`;
+        inventorySelect.appendChild(opt);
+    });
+}
+
+if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredItems = allAvailableItems.filter(item => 
+            item.ItemName.toLowerCase().includes(searchTerm)
+        );
+        renderInventoryDropdown(filteredItems);
+    });
+}
+
+if (addItemBtn) {
+    addItemBtn.addEventListener('click', () => {
+        if (!inventorySelect || !inventoryQty) return;
+
+        const itemId = inventorySelect.value;
+        if (!itemId) return showToast('Please select an item.', 'error');
+
+        const selectedOption = inventorySelect.options[inventorySelect.selectedIndex];
+        const itemName = selectedOption.dataset.name;
+        const maxQty = parseInt(selectedOption.dataset.max);
+        const qty = parseInt(inventoryQty.value);
+
+        if (qty <= 0) return showToast('Quantity must be at least 1.', 'error');
+        if (qty > maxQty) return showToast(`Only ${maxQty} in stock!`, 'error');
+
+        const existing = usedItems.find(i => i.id === itemId);
+        if (existing) {
+            if (existing.qty + qty > maxQty) return showToast(`Cannot exceed stock limit of ${maxQty}.`, 'error');
+            existing.qty += qty;
+        } else {
+            usedItems.push({ id: itemId, name: itemName, qty: qty });
+        }
+
+        searchInput.value = '';
+        renderInventoryDropdown(allAvailableItems);
+        inventorySelect.value = '';
+        inventoryQty.value = 1;
+        renderUsedItems();
+    });
+}
+
+function renderUsedItems() {
+    if(!selectedItemsList) return;
+    selectedItemsList.innerHTML = '';
+    usedItems.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.style.cssText = "display: flex; justify-content: space-between; padding: 8px; background: #fff; border: 1px solid #eee; margin-bottom: 5px; border-radius: 4px;";
+        li.innerHTML = `
+            <span><strong>${item.qty}x</strong> ${item.name}</span>
+            <button type="button" onclick="removeUsedItem(${index})" style="color: #dc3545; background: none; border: none; cursor: pointer;"><i class="fas fa-times"></i></button>
+        `;
+        selectedItemsList.appendChild(li);
+    });
+}
+
+window.removeUsedItem = function(index) {
+    usedItems.splice(index, 1);
+    renderUsedItems();
+};
+
+document.addEventListener('DOMContentLoaded', fetchMaintenanceInventory);

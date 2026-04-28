@@ -259,7 +259,7 @@ function showTaskView(elements) {
 
 async function fetchHousekeepingInventory() {
     try {
-        const response = await fetch('inventory_actions.php?action=get_inventory');
+        const response = await fetch('api_hk_task.php?action=get_inventory');
         const result = await response.json();
 
         if (!result.error && Array.isArray(result)) {

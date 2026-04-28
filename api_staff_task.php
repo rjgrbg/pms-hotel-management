@@ -99,10 +99,11 @@ switch ($action) {
     case 'update_task_status':
         $taskData = $data['data'] ?? [];
         
-        // --- REFINEMENT: Validate/trim inputs ---
+                // --- REFINEMENT: Validate/trim inputs ---
         $requestId = filter_var($taskData['request_id'] ?? null, FILTER_VALIDATE_INT);
         $newStatus = trim($taskData['status'] ?? '');
         $remarks = trim($taskData['remarks'] ?? ''); 
+        $usedItems = $taskData['used_items'] ?? []; // NEW: Grabs the inventory items from JS
 
         if ($requestId === false || $requestId === null || empty($newStatus)) {
              echo json_encode(['status' => 'error', 'message' => 'Invalid task data provided.']);
@@ -190,7 +191,7 @@ switch ($action) {
                     $result_check = $stmt_check_other_tasks->get_result()->fetch_assoc();
                     $stmt_check_other_tasks->close();
 
-                    // --- Only set to Available if no other active tasks exist ---
+                                       // --- Only set to Available if no other active tasks exist ---
                     if ($result_check['active_tasks'] == 0) {
                         $stmt_room_status = $conn->prepare(
                             "UPDATE pms_room_status SET RoomStatus = 'Available' WHERE RoomNumber = ?"
@@ -198,6 +199,60 @@ switch ($action) {
                         $stmt_room_status->bind_param("i", $roomNumber);
                         $stmt_room_status->execute();
                         $stmt_room_status->close();
+                    }
+                }
+                
+                // --- NEW: Deduct Inventory Items (ONLY HAPPENS ON DONE) ---
+                if (!empty($usedItems) && is_array($usedItems)) {
+                    foreach ($usedItems as $item) {
+                        $itemId = filter_var($item['id'] ?? 0, FILTER_VALIDATE_INT);
+                        $qty = filter_var($item['qty'] ?? 0, FILTER_VALIDATE_INT);
+                        $itemName = trim($item['name'] ?? '');
+                        
+                        if ($itemId > 0 && $qty > 0) {
+                            $stmt_inv = $conn->prepare("SELECT ItemQuantity, StockLimit, RestockDate FROM pms_inventory WHERE ItemID = ?");
+                            $stmt_inv->bind_param("i", $itemId);
+                            $stmt_inv->execute();
+                            $inv_row = $stmt_inv->get_result()->fetch_assoc();
+                            $stmt_inv->close();
+
+                            if ($inv_row && $inv_row['ItemQuantity'] >= $qty) {
+                                $newQuantity = $inv_row['ItemQuantity'] - $qty;
+                                $stockLimit = $inv_row['StockLimit'];
+                                $currentRestockDate = $inv_row['RestockDate'];
+                                
+                                $status = 'In Stock';
+                                $yellowThreshold = $stockLimit / 2;
+                                $orangeThreshold = $stockLimit / 4;
+                                $restockDate = NULL;
+
+                                if ($newQuantity <= 0 || $newQuantity <= $yellowThreshold) {
+                                    if ($newQuantity <= 0) $status = 'Out of Stock';
+                                    else if ($newQuantity <= $orangeThreshold) $status = 'Critical';
+                                    else $status = 'Threshold';
+                                    $restockDate = $currentRestockDate ? $currentRestockDate : date('Y-m-d', strtotime('+7 days'));
+                                }
+
+                                if ($restockDate === NULL) {
+                                    $stmt_update_inv = $conn->prepare("UPDATE pms_inventory SET ItemQuantity = ?, ItemStatus = ?, RestockDate = NULL WHERE ItemID = ?");
+                                    $stmt_update_inv->bind_param("isi", $newQuantity, $status, $itemId);
+                                } else {
+                                    $stmt_update_inv = $conn->prepare("UPDATE pms_inventory SET ItemQuantity = ?, ItemStatus = ?, RestockDate = ? WHERE ItemID = ?");
+                                    $stmt_update_inv->bind_param("issi", $newQuantity, $status, $restockDate, $itemId);
+                                }
+                                $stmt_update_inv->execute();
+                                $stmt_update_inv->close();
+
+                                $logReason = "Used for MT Task #$requestId (Room $roomId)";
+                                $qtyChange = -$qty;
+                                $stmt_log = $conn->prepare("INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) VALUES (?, ?, ?, ?, NOW())");
+                                $stmt_log->bind_param("iiis", $staffId, $itemId, $qtyChange, $logReason);
+                                $stmt_log->execute();
+                                $stmt_log->close();
+                                
+                                $logDetails .= " | Used: $qty x $itemName";
+                            }
+                        }
                     }
                 }
             }
@@ -216,6 +271,30 @@ switch ($action) {
         }
         
         echo json_encode($response);
+        break;
+        
+    // ===== GET INVENTORY ITEMS (for mt_assign_staff.html) =====
+    case 'get_inventory':
+        $sql = "SELECT 
+                    i.ItemID, 
+                    i.ItemName, 
+                    i.ItemType,
+                    ic.ItemCategoryName AS Category,
+                    i.ItemQuantity,
+                    i.is_archived
+                FROM pms_inventory i
+                JOIN pms_itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
+                ORDER BY i.ItemName";
+        
+        if ($result = $conn->query($sql)) {
+            $items = [];
+            while ($row = $result->fetch_assoc()) {
+                $items[] = $row;
+            }
+            echo json_encode($items);
+        } else {
+            echo json_encode(['error' => 'Failed to fetch inventory: ' . $conn->error]);
+        }
         break;
         
     default:

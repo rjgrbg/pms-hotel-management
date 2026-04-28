@@ -8,6 +8,28 @@ function escapeHtml(text) {
         .replace(/'/g, "&#039;");
 }
 
+function checkDateRange(itemDateStr, fromStr, toStr) {
+    if (!fromStr && !toStr) return true; // No filters active
+    if (!itemDateStr) return false; // Has filter, but item has no date
+    
+    const itemDate = new Date(itemDateStr);
+    itemDate.setHours(0,0,0,0);
+    
+    if (fromStr) {
+        const fromDate = new Date(fromStr);
+        fromDate.setHours(0,0,0,0);
+        if (itemDate < fromDate) return false;
+    }
+    
+    if (toStr) {
+        const toDate = new Date(toStr);
+        toDate.setHours(23,59,59,999);
+        if (itemDate > toDate) return false;
+    }
+    
+    return true;
+}
+
 // Dropdown toggle function
 window.toggleActionDropdown = function(event) {
     event.stopPropagation();
@@ -147,12 +169,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const editItemModal = document.getElementById('edit-item-modal');
   const deleteConfirmModal = document.getElementById('delete-confirm-modal');
   const restoreConfirmModal = document.getElementById('restore-confirm-modal'); 
+  const editConfirmationModal = document.getElementById('edit-confirmation-modal');
 
   // Forms & Inputs
   const addItemBtn = document.getElementById('addItemBtn');
   const addItemForm = document.getElementById('add-item-form');
   const addCategorySelect = document.getElementById('item-category');
   const addModalCloseBtn = document.getElementById('modal-close-btn');
+  const localToday = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+  const itemExpirationInput = document.getElementById('item-expiration');
+  if (itemExpirationInput) {
+      itemExpirationInput.setAttribute('min', localToday);
+  }
 
   const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
   const confirmAddBtn = document.getElementById('confirm-add-btn');
@@ -164,6 +192,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const editItemIdSpan = document.getElementById('edit-item-id');
   const editItemIdInput = document.getElementById('edit-item-id-input');
   const editStockInput = document.getElementById('edit-item-add-stock');
+  const editConfirmCancelBtn = document.getElementById('edit-confirm-cancel-btn');
+  const confirmEditBtn = document.getElementById('confirm-edit-btn');
 
 
   const editModalCancelBtn = document.getElementById('edit-modal-cancel-btn');
@@ -467,11 +497,11 @@ document.addEventListener('DOMContentLoaded', () => {
       dropdown.value = currentValue;
   }
 
-  async function fetchInventory() {
+ async function fetchInventory() {
     try {
       // Show loading
       if(requestsTableBody) {
-          requestsTableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 20px;">Loading items...</td></tr>';
+          requestsTableBody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 40px; color: #999;">Loading items...</td></tr>';
       }
 
       const response = await fetch('inventory_actions.php?action=get_inventory');
@@ -488,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       handleError('Error fetching inventory: ' + error.message);
       requestsTableBody.innerHTML =
-        '<tr><td colspan="7" class="no-data-cell">Error loading data.</td></tr>'; 
+        '<tr><td colspan="11" style="text-align: center; padding: 40px; color: #c33;">Error loading data.</td></tr>'; 
     }
   }
 
@@ -541,7 +571,9 @@ async function fetchHistory() {
   // ======================================================
 
  function renderInventoryTable() {
-    // FIX: Add safe checks (?) so it doesn't crash if an element is missing
+    const fromDate = document.getElementById('stocksFromDate') ? document.getElementById('stocksFromDate').value : '';
+    const toDate = document.getElementById('stocksToDate') ? document.getElementById('stocksToDate').value : '';
+
     const type = typeFilter ? typeFilter.value.toLowerCase() : ''; 
     const category = categoryFilter ? categoryFilter.value.toLowerCase() : '';
     const status = statusFilter ? statusFilter.value.toLowerCase() : '';
@@ -549,7 +581,6 @@ async function fetchHistory() {
 
     const filteredData = allInventoryData.filter((item) => {
       const itemIsArchived = parseInt(item.is_archived) === 1;
-      // FIX: Add safety checks so blank database values don't crash the filters
       const itemStatus = item.ItemStatus ? item.ItemStatus.toLowerCase() : '';
       
       if (status === 'archived') {
@@ -565,8 +596,10 @@ async function fetchHistory() {
         !search ||
         (item.ItemName && item.ItemName.toLowerCase().includes(search)) ||
         (item.ItemID && item.ItemID.toString().includes(search));
+        
+      const matchDate = checkDateRange(item.RestockDate, fromDate, toDate);
 
-      return matchType && matchCategory && matchSearch; 
+      return matchType && matchCategory && matchSearch && matchDate; 
     });
 
     const { column, direction } = sortState.requests;
@@ -578,7 +611,7 @@ async function fetchHistory() {
 
     if (totalItems === 0) {
       requestsTableBody.innerHTML =
-        '<tr><td colspan="7" class="no-data-cell">No inventory items found</td></tr>'; 
+        '<tr><td colspan="11" style="text-align: center; padding: 40px; color: #999;">No inventory items found</td></tr>'; 
       return;
     }
 
@@ -640,7 +673,6 @@ async function fetchHistory() {
 
     // --- UPDATED LISTENERS: use e.currentTarget to safely get dataset ---
     
-    // ADDED BACK: The Edit Button Listener
     document.querySelectorAll('#requestsTableBody .edit-btn').forEach((btn) => {
         btn.addEventListener('click', (e) => {
             const itemId = parseInt(e.currentTarget.dataset.id);
@@ -667,14 +699,16 @@ async function fetchHistory() {
   }
 
 function renderHistoryTable() {
-    // FIX: Add safe checks (?) 
+    const fromDate = document.getElementById('historyFromDate') ? document.getElementById('historyFromDate').value : '';
+    const toDate = document.getElementById('historyToDate') ? document.getElementById('historyToDate').value : '';
+
     const type = typeFilterHistory ? typeFilterHistory.value.toLowerCase() : ''; 
     const category = categoryFilterHistory ? categoryFilterHistory.value.toLowerCase() : '';
     const status = statusFilterHistory ? statusFilterHistory.value.toLowerCase() : '';
     const search = searchInputHistory ? searchInputHistory.value.toLowerCase() : '';
 
     const filteredData = allHistoryData.filter((log) => {
-      const matchType = !type || (log.ItemType && log.ItemType.toLowerCase() === type); // NEW
+      const matchType = !type || (log.ItemType && log.ItemType.toLowerCase() === type); 
       const matchCategory = !category || (log.Category && log.Category.toLowerCase() === category);
       const matchStatus = !status || (log.ItemStatus && log.ItemStatus.toLowerCase() === status);
       const matchSearch =
@@ -683,7 +717,9 @@ function renderHistoryTable() {
         (log.InvLogID && log.InvLogID.toString().includes(search)) ||
         (log.PerformedBy && log.PerformedBy.toLowerCase().includes(search));
         
-      return matchType && matchCategory && matchStatus && matchSearch; // UPDATED
+      const matchDate = checkDateRange(log.DateofStockIn, fromDate, toDate);
+        
+      return matchType && matchCategory && matchStatus && matchSearch && matchDate;
     });
 
     const { column, direction } = sortState.history;
@@ -693,9 +729,9 @@ function renderHistoryTable() {
     const totalItems = filteredData.length;
     setupPagination(totalItems, 'pagination-history', page);
 
-    if (totalItems === 0) {
+   if (totalItems === 0) {
       historyTableBody.innerHTML =
-        '<tr><td colspan="9" class="no-data-cell">No history found</td></tr>';
+        '<tr><td colspan="9" style="text-align: center; padding: 40px; color: #999;">No history found</td></tr>';
       return;
     }
 
@@ -703,7 +739,7 @@ function renderHistoryTable() {
     const endIndex = startIndex + rowsPerPage;
     const paginatedData = filteredData.slice(startIndex, endIndex);
 
-historyTableBody.innerHTML = paginatedData
+    historyTableBody.innerHTML = paginatedData
       .map(
         (log) => {
           let quantityChangeText = log.QuantityChange;
@@ -721,11 +757,8 @@ historyTableBody.innerHTML = paginatedData
           }
 
           // === FIX: USE CALCULATED VALUES ===
-          // Use the values we calculated in fetchHistory
-          // If they don't exist (fallback), assume 0
           const oldQty = (log.calculatedOldQty !== undefined) ? log.calculatedOldQty : 0;
           const newQty = (log.calculatedNewQty !== undefined) ? log.calculatedNewQty : 0;
-          // ==================================
 
           return `
             <tr>
@@ -750,9 +783,7 @@ historyTableBody.innerHTML = paginatedData
  // ======================================================
   // === MODAL & FORM LOGIC
   // ======================================================
-// Handle Return Submission
-  // Instantly update the budget display when picking a category
-  // Instantly update the budget display and Auto-Select Type when picking a category
+
   document.getElementById('item-category')?.addEventListener('change', (e) => {
       const catId = e.target.value;
       const display = document.getElementById('add-modal-available-budget');
@@ -760,14 +791,13 @@ historyTableBody.innerHTML = paginatedData
           display.textContent = '₱' + categoryBudgets[catId].toLocaleString('en-PH', {minimumFractionDigits: 2});
       }
       
-      // --- NEW: Auto-select the Type! ---
       if (window.allSystemCategories) {
           const category = window.allSystemCategories.find(c => c.ItemCategoryID == catId);
           if (category && category.ItemType) {
               const typeDropdown = document.getElementById('item-type');
               if (typeDropdown.value !== category.ItemType) {
-                  typeDropdown.value = category.ItemType; // Set the Type
-                  if (typeof toggleAddExpiration === 'function') toggleAddExpiration(); // Trigger UI updates
+                  typeDropdown.value = category.ItemType; 
+                  if (typeof toggleAddExpiration === 'function') toggleAddExpiration(); 
               }
           }
       }
@@ -780,14 +810,13 @@ historyTableBody.innerHTML = paginatedData
           display.textContent = '₱' + categoryBudgets[catId].toLocaleString('en-PH', {minimumFractionDigits: 2});
       }
       
-      // --- NEW: Auto-select the Type! ---
       if (window.allSystemCategories) {
           const category = window.allSystemCategories.find(c => c.ItemCategoryID == catId);
           if (category && category.ItemType) {
               const typeDropdown = document.getElementById('edit-item-type');
               if (typeDropdown.value !== category.ItemType) {
-                  typeDropdown.value = category.ItemType; // Set the Type
-                  if (typeof toggleEditExpiration === 'function') toggleEditExpiration(); // Trigger UI updates
+                  typeDropdown.value = category.ItemType; 
+                  if (typeof toggleEditExpiration === 'function') toggleEditExpiration(); 
               }
           }
       }
@@ -805,12 +834,10 @@ historyTableBody.innerHTML = paginatedData
 
     if (totalPurchaseCost > available) {
         showToast(`Insufficient Budget! This purchase costs ₱${totalPurchaseCost.toLocaleString('en-PH', {minimumFractionDigits:2})}, but you only have ₱${available.toLocaleString('en-PH', {minimumFractionDigits:2})}.`, 'error');
-        return; // PREVENTS MODAL FROM OPENING
+        return; 
     }
-    // -------------------------
 
     if (addItemForm.checkValidity()) {
-      // Check for duplicate item name (case-insensitive)
       const itemName = document.getElementById('item-name').value.trim().toLowerCase();
       const isDuplicate = allInventoryData.some(item => 
         item.ItemName.toLowerCase() === itemName && parseInt(item.is_archived) === 0
@@ -828,13 +855,12 @@ historyTableBody.innerHTML = paginatedData
   });
 
   confirmAddBtn.addEventListener('click', async () => {
-    // Prevent spam clicking
     if (confirmAddBtn.disabled) return;
     
     confirmAddBtn.disabled = true;
     confirmAddBtn.textContent = 'Adding...';
     
-  const formData = new FormData();
+    const formData = new FormData();
     formData.append('name', document.getElementById('item-name').value);
     formData.append('type', document.getElementById('item-type').value);
     formData.append('category_id', document.getElementById('item-category').value);
@@ -867,20 +893,18 @@ historyTableBody.innerHTML = paginatedData
     } catch (error) {
       handleError('Error adding item: ' + error.message);
     } finally {
-      // Re-enable button after request completes
       confirmAddBtn.disabled = false;
       confirmAddBtn.textContent = 'Confirm';
     }
   });
 
-function openEditModal(item) {
+  function openEditModal(item) {
     currentEditItemId = item.ItemID;
     editItemIdSpan.textContent = item.ItemID;
     editItemIdInput.value = item.ItemID;
     document.getElementById('edit-item-name').value = item.ItemName;
     document.getElementById('edit-item-type').value = item.ItemType || 'Consumables';
     
-    // --- FIX: Filter the categories instantly to match the Type BEFORE setting the category! ---
     if(window.filterCategoriesByType) {
         window.filterCategoriesByType('edit-item-type', 'edit-item-category');
     }
@@ -890,14 +914,24 @@ function openEditModal(item) {
     document.getElementById('edit-item-unit').value = item.ItemUnit || ''; 
     document.getElementById('edit-item-unit-cost').value = item.UnitCost || '0.00'; 
     document.getElementById('edit-item-limit').value = item.StockLimit || 1; 
-    document.getElementById('edit-item-expiration').value = item.ExpirationDate || ''; 
+    const editExpirationInput = document.getElementById('edit-item-expiration');
+    editExpirationInput.value = item.ExpirationDate || ''; 
+    
+    // --- FIX: Restrict Edit Expiration Date to Future Dates ---
+    const localTodayDate = new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+    
+    // If the item already has a past expiration date, set the min to that old date so the form doesn't break
+    // Otherwise, restrict the calendar to today onwards.
+    if (item.ExpirationDate && item.ExpirationDate < localTodayDate) {
+        editExpirationInput.setAttribute('min', item.ExpirationDate);
+    } else {
+        editExpirationInput.setAttribute('min', localTodayDate);
+    } 
     editStockInput.value = '';
     document.getElementById('edit-item-current-qty').textContent = item.ItemQuantity;
     
-    // Trigger the toggle to show/hide the expiration field based on type
     if(typeof toggleEditExpiration === 'function') toggleEditExpiration(); 
 
-    // Fetch the correct budget to display as soon as modal opens
     const editDisplay = document.getElementById('edit-modal-available-budget');
     if(editDisplay) {
         editDisplay.textContent = '₱' + (categoryBudgets[item.ItemCategoryID] || 0).toLocaleString('en-PH', {minimumFractionDigits: 2});
@@ -911,7 +945,6 @@ function openEditModal(item) {
   editItemForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // --- BUDGET HARD BLOCK FOR RESTOCK ---
     const categoryId = document.getElementById('edit-item-category').value;
     const stockAdjustment = parseFloat(document.getElementById('edit-item-add-stock').value) || 0;
     const unitCost = parseFloat(document.getElementById('edit-item-unit-cost').value) || 0;
@@ -922,20 +955,15 @@ function openEditModal(item) {
         
         if (totalRestockCost > available) {
             showToast(`Insufficient Budget! Restocking costs ₱${totalRestockCost.toLocaleString('en-PH', {minimumFractionDigits:2})}, but you only have ₱${available.toLocaleString('en-PH', {minimumFractionDigits:2})}.`, 'error');
-            return; // BLOCKS SUBMISSION
+            return; 
         }
     }
-    // -------------------------------------
 
-    // --- EXISTING VALIDATION CHECK ---
     if (!editItemForm.checkValidity()) {
         editItemForm.reportValidity();
         return;
     }
-    // ... rest of the code remains exactly the same ...
-    // ---------------------------------
 
-    // Check for duplicate item name (case-insensitive, excluding current item)
     const itemName = document.getElementById('edit-item-name').value.trim().toLowerCase();
     const isDuplicate = allInventoryData.some(item => 
       item.ItemName.toLowerCase() === itemName && 
@@ -950,50 +978,62 @@ function openEditModal(item) {
 
     if (!currentEditItemId || isSubmittingEdit) return;
 
-    isSubmittingEdit = true;
-    const submitBtn = editItemForm.querySelector('button[type="submit"]');
-    const originalText = submitBtn ? submitBtn.textContent : '';
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Updating...';
-    }
-
-   const formData = new FormData();
-    formData.append('item_id', currentEditItemId);
-    formData.append('name', document.getElementById('edit-item-name').value);
-    formData.append('type', document.getElementById('edit-item-type').value);
-    formData.append('category_id', editCategorySelect.value);
-    formData.append('description', document.getElementById('edit-item-description').value);
-    formData.append('unit', document.getElementById('edit-item-unit').value);
-    formData.append('unit_cost', document.getElementById('edit-item-unit-cost').value);
-    formData.append('stock_limit', document.getElementById('edit-item-limit').value);
-    formData.append('expiration_date', document.getElementById('edit-item-expiration').value);
-    const stockToAdd = editStockInput.value || 0;
-    formData.append('stock_adjustment', stockToAdd);
-    try {
-      const response = await fetch('inventory_actions.php?action=update_item', {
-        method: 'POST',
-        body: formData,
-      });
-      const result = await response.json();
-
-      if (result.success) {
-        hideModal(editItemModal);
-        fetchInventory();
-        fetchHistory();
-      } else {
-        throw new Error(result.error || 'Failed to update item.');
-      }
-    } catch (error) {
-      handleError('Error updating item: ' + error.message);
-    } finally {
-      isSubmittingEdit = false;
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-      }
-    }
+    // SHOW CONFIRMATION MODAL INSTEAD OF SUBMITTING IMMEDIATELY
+    showModal(editConfirmationModal);
   });
+
+  // CONFIRM EDIT BUTTON LOGIC
+  if (confirmEditBtn) {
+    confirmEditBtn.addEventListener('click', async () => {
+      if (!currentEditItemId || isSubmittingEdit) return;
+
+      isSubmittingEdit = true;
+      confirmEditBtn.disabled = true;
+      confirmEditBtn.textContent = 'Updating...';
+
+      const formData = new FormData();
+      formData.append('item_id', currentEditItemId);
+      formData.append('name', document.getElementById('edit-item-name').value);
+      formData.append('type', document.getElementById('edit-item-type').value);
+      formData.append('category_id', editCategorySelect.value);
+      formData.append('description', document.getElementById('edit-item-description').value);
+      formData.append('unit', document.getElementById('edit-item-unit').value);
+      formData.append('unit_cost', document.getElementById('edit-item-unit-cost').value);
+      formData.append('stock_limit', document.getElementById('edit-item-limit').value);
+      formData.append('expiration_date', document.getElementById('edit-item-expiration').value);
+      const stockToAdd = editStockInput.value || 0;
+      formData.append('stock_adjustment', stockToAdd);
+
+      try {
+        const response = await fetch('inventory_actions.php?action=update_item', {
+          method: 'POST',
+          body: formData,
+        });
+        const result = await response.json();
+
+        hideModal(editConfirmationModal);
+
+        if (result.success) {
+          hideModal(editItemModal);
+          fetchInventory();
+          fetchHistory();
+          showToast('Item updated successfully.', 'success');
+        } else {
+          throw new Error(result.error || 'Failed to update item.');
+        }
+      } catch (error) {
+        handleError('Error updating item: ' + error.message);
+      } finally {
+        isSubmittingEdit = false;
+        confirmEditBtn.disabled = false;
+        confirmEditBtn.textContent = 'YES, SAVE CHANGES';
+      }
+    });
+  }
+
+  if (editConfirmCancelBtn) {
+      editConfirmCancelBtn.addEventListener('click', () => hideModal(editConfirmationModal));
+  }
 
   deleteConfirmBtn.addEventListener('click', async () => {
     if (!currentEditItemId) return;
@@ -1042,9 +1082,8 @@ function openEditModal(item) {
 
   if (addItemBtn) {
     addItemBtn.addEventListener('click', () => {
-        if(addItemForm) addItemForm.reset(); // Reset form
+        if(addItemForm) addItemForm.reset(); 
         
-        // Reset the Smart Filter so it waits for you to pick a Type
         if(window.filterCategoriesByType) {
             window.filterCategoriesByType('item-type', 'item-category');
         }
@@ -1052,21 +1091,13 @@ function openEditModal(item) {
         showModal(addItemModal);
     });
   }
-  if (addModalCloseBtn)
-    addModalCloseBtn.addEventListener('click', () => hideModal(addItemModal));
-  if (confirmCancelBtn)
-    confirmCancelBtn.addEventListener('click', () => hideModal(confirmationModal));
-  if (successOkayBtn)
-    successOkayBtn.addEventListener('click', () => hideModal(successModal));
-
-  if (editModalCloseBtn)
-    editModalCloseBtn.addEventListener('click', () => hideModal(editItemModal));
-
-  if (deleteCancelBtn)
-    deleteCancelBtn.addEventListener('click', () => hideModal(deleteConfirmModal));
-
-  if (deleteModalCloseBtn)
-    deleteModalCloseBtn.addEventListener('click', () => hideModal(deleteConfirmModal));
+  
+  if (addModalCloseBtn) addModalCloseBtn.addEventListener('click', () => hideModal(addItemModal));
+  if (confirmCancelBtn) confirmCancelBtn.addEventListener('click', () => hideModal(confirmationModal));
+  if (successOkayBtn) successOkayBtn.addEventListener('click', () => hideModal(successModal));
+  if (editModalCloseBtn) editModalCloseBtn.addEventListener('click', () => hideModal(editItemModal));
+  if (deleteCancelBtn) deleteCancelBtn.addEventListener('click', () => hideModal(deleteConfirmModal));
+  if (deleteModalCloseBtn) deleteModalCloseBtn.addEventListener('click', () => hideModal(deleteConfirmModal));
 
   if (editModalCancelBtn) {
     editModalCancelBtn.addEventListener('click', () => {
@@ -1113,12 +1144,9 @@ function openEditModal(item) {
     );
   }
 
-  if (logoutBtn)
-    logoutBtn.addEventListener('click', () => showModal(logoutModal));
-  if (closeLogoutBtn)
-    closeLogoutBtn.addEventListener('click', () => hideModal(logoutModal));
-  if (cancelLogoutBtn)
-    cancelLogoutBtn.addEventListener('click', () => hideModal(logoutModal));
+  if (logoutBtn) logoutBtn.addEventListener('click', () => showModal(logoutModal));
+  if (closeLogoutBtn) closeLogoutBtn.addEventListener('click', () => hideModal(logoutModal));
+  if (cancelLogoutBtn) cancelLogoutBtn.addEventListener('click', () => hideModal(logoutModal));
 
   if (confirmLogoutBtn) {
     confirmLogoutBtn.addEventListener('click', () => {
@@ -1137,6 +1165,28 @@ function openEditModal(item) {
     currentPages.requests = 1;
     renderInventoryTable();
   });
+
+  // Add listeners for date inputs to trigger filtering instantly
+  ['stocksFromDate', 'stocksToDate'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', () => { currentPages.requests = 1; renderInventoryTable(); });
+  });
+
+  ['historyFromDate', 'historyToDate'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', () => { currentPages.history = 1; renderHistoryTable(); });
+  });
+
+  ['budgetReqFromDate', 'budgetReqToDate'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', renderBudgetTable);
+  });
+
+  ['budgetLogsFromDate', 'budgetLogsToDate'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', renderBudgetLogsTable);
+  });
+
   if (categoryFilter) categoryFilter.addEventListener('change', () => {
     currentPages.requests = 1;
     renderInventoryTable();
@@ -1158,7 +1208,7 @@ function openEditModal(item) {
     currentPages.history = 1;
     renderHistoryTable();
   });
-// --- NEW: Smart Filter for the Main Tables ---
+
   function updateMainTabCategoryFilters(typeVal, categoryDropdownId) {
       const catSelect = document.getElementById(categoryDropdownId);
       if (!catSelect || !window.allSystemCategories) return;
@@ -1174,7 +1224,7 @@ function openEditModal(item) {
       filtered.forEach(category => {
           const option = document.createElement('option');
           option.value = category.ItemCategoryName; 
-          option.textContent = category.ItemCategoryName; // Perfectly clean text
+          option.textContent = category.ItemCategoryName; 
           catSelect.appendChild(option);
       });
 
@@ -1193,18 +1243,22 @@ function openEditModal(item) {
       updateMainTabCategoryFilters(typeFilterHistory.value, 'floorFilterHistory');
       renderHistoryTable();
   });
- if (refreshBtn) {
+
+  if (refreshBtn) {
     refreshBtn.addEventListener('click', async () => {
       if (typeFilter) {
           typeFilter.value = ''; 
-          updateMainTabCategoryFilters('', 'floorFilter'); // Instantly reset categories
+          updateMainTabCategoryFilters('', 'floorFilter'); 
       }
-      categoryFilter.value = '';
-      statusFilter.value = '';
-      searchInput.value = '';
+      if(categoryFilter) categoryFilter.value = '';
+      if(statusFilter) statusFilter.value = '';
+      if(searchInput) searchInput.value = '';
+      const stocksFromDate = document.getElementById('stocksFromDate');
+      const stocksToDate = document.getElementById('stocksToDate');
+      if (stocksFromDate) stocksFromDate.value = '';
+      if (stocksToDate) stocksToDate.value = '';
       currentPages.requests = 1;
       
-      // Also reload data from server to be "just like in admin"
       await fetchCategories();
       await fetchInventory(); 
       showToast('Data refreshed successfully!');
@@ -1212,15 +1266,18 @@ function openEditModal(item) {
   }
 
   if (refreshBtnHistory) {
-    // UPDATED REFRESH LOGIC FOR HISTORY
     refreshBtnHistory.addEventListener('click', async () => {
       if (typeFilterHistory) {
           typeFilterHistory.value = '';
-          updateMainTabCategoryFilters('', 'floorFilterHistory'); // Instantly reset categories
+          updateMainTabCategoryFilters('', 'floorFilterHistory'); 
       }
-      categoryFilterHistory.value = '';
-      statusFilterHistory.value = '';
-      searchInputHistory.value = '';
+      if(categoryFilterHistory) categoryFilterHistory.value = '';
+      if(statusFilterHistory) statusFilterHistory.value = '';
+      if(searchInputHistory) searchInputHistory.value = '';
+      const historyFromDate = document.getElementById('historyFromDate');
+      const historyToDate = document.getElementById('historyToDate');
+      if(historyFromDate) historyFromDate.value = '';
+      if(historyToDate) historyToDate.value = '';
       currentPages.history = 1;
       
       await fetchHistory();
@@ -1234,11 +1291,15 @@ function openEditModal(item) {
       const category = categoryFilter.value.toLowerCase();
       const status = statusFilter.value.toLowerCase();
       const search = searchInput.value.toLowerCase();
+      const fromDate = document.getElementById('stocksFromDate') ? document.getElementById('stocksFromDate').value : '';
+      const toDate = document.getElementById('stocksToDate') ? document.getElementById('stocksToDate').value : '';
+
       const filteredData = allInventoryData.filter((item) => {
         const matchCategory = !category || item.Category.toLowerCase() === category;
         const matchStatus = !status || item.ItemStatus.toLowerCase() === status;
         const matchSearch = !search || item.ItemName.toLowerCase().includes(search) || item.ItemID.toString().includes(search);
-        return matchCategory && matchStatus && matchSearch;
+        const matchDate = checkDateRange(item.RestockDate, fromDate, toDate);
+        return matchCategory && matchStatus && matchSearch && matchDate;
       });
 
       const {
@@ -1266,6 +1327,9 @@ function openEditModal(item) {
       const category = categoryFilterHistory.value.toLowerCase();
       const status = statusFilterHistory.value.toLowerCase();
       const search = searchInputHistory.value.toLowerCase();
+      const fromDate = document.getElementById('historyFromDate') ? document.getElementById('historyFromDate').value : '';
+      const toDate = document.getElementById('historyToDate') ? document.getElementById('historyToDate').value : '';
+
       const filteredData = allHistoryData.filter((log) => {
         const matchCategory = !category || (log.Category && log.Category.toLowerCase() === category);
         const matchStatus = !status || (log.ItemStatus && log.ItemStatus.toLowerCase() === status);
@@ -1273,7 +1337,8 @@ function openEditModal(item) {
           (log.ItemName && log.ItemName.toLowerCase().includes(search)) ||
           (log.InvLogID && log.InvLogID.toString().includes(search)) ||
           (log.PerformedBy && log.PerformedBy.toLowerCase().includes(search));
-        return matchCategory && matchStatus && matchSearch;
+        const matchDate = checkDateRange(log.DateofStockIn, fromDate, toDate);
+        return matchCategory && matchStatus && matchSearch && matchDate;
       });
 
       const {
@@ -1349,13 +1414,12 @@ function openEditModal(item) {
     }
   }
 
- // ==========================================
+  // ==========================================
   // === BUDGET REQUEST LOGIC ===
   // ==========================================
   let allBudgetRequests = [];
   const BUDGET_API_URL = 'inventory_actions.php';
 
-  // Holds actual budget values from DB
   let categoryBudgets = {};
 
   const budgetModal = document.getElementById('budget-request-modal');
@@ -1366,16 +1430,13 @@ function openEditModal(item) {
   const globalCategorySelect = document.getElementById('globalBudgetCategorySelect');
   const globalBudgetDisplay = document.getElementById('global-available-budget');
 
-  // 1. Fetch Categories & Real Available Budgets
   async function fetchCategoryBudgets() {
       try {
           const res = await fetch('inventory_actions.php?action=get_categories');
           const cats = await res.json();
           
-          // --- NEW: FEED THE SMART FILTER ---
           window.allSystemCategories = cats;
 
-          // Clear dropdowns
           const optionsHtml = '<option value="" disabled selected>Select Category...</option>';
           let realOptions = '';
 
@@ -1395,22 +1456,20 @@ function openEditModal(item) {
 
           updateGlobalBudgetDisplay(globalCategorySelect ? globalCategorySelect.value : null);
           
-          // --- NEW: TRIGGER THE FILTER FOR ADD/EDIT MODALS ON LOAD ---
           if (typeof window.filterCategoriesByType === 'function') {
               window.filterCategoriesByType('item-type', 'item-category');
               window.filterCategoriesByType('edit-item-type', 'edit-item-category');
           }
 
-          // --- FIX: POPULATE MAIN TAB CATEGORIES ON LOAD ---
           if (typeof updateMainTabCategoryFilters === 'function') {
               updateMainTabCategoryFilters(typeFilter ? typeFilter.value : '', 'floorFilter');
               updateMainTabCategoryFilters(typeFilterHistory ? typeFilterHistory.value : '', 'floorFilterHistory');
+              updateMainTabCategoryFilters('', 'budgetLogCategoryFilter');
           }
 
       } catch(e) { console.error("Error fetching budgets", e); }
   }
 
-  // 2. Update the big Green Dashboard text
   function updateGlobalBudgetDisplay(catId) {
       if(globalBudgetDisplay && catId && categoryBudgets[catId] !== undefined) {
           globalBudgetDisplay.textContent = '₱' + categoryBudgets[catId].toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
@@ -1419,7 +1478,6 @@ function openEditModal(item) {
       }
   }
 
-  // Event Listeners for Dropdowns
   if(globalCategorySelect) {
       globalCategorySelect.addEventListener('change', () => {
           updateGlobalBudgetDisplay(globalCategorySelect.value);
@@ -1435,7 +1493,6 @@ function openEditModal(item) {
       });
   }
 
-  // Connect the new Status Filter
   const budgetStatusFilter = document.getElementById('budgetStatusFilter');
   if(budgetStatusFilter) {
       budgetStatusFilter.addEventListener('change', () => {
@@ -1443,101 +1500,61 @@ function openEditModal(item) {
       });
   }
 
-  // 3. Render the Logs Table & Pending Table cleanly separated
   async function fetchBudgetRequests() {
+    const reqTable = document.getElementById('budgetTableBody'); 
+    const logTable = document.getElementById('budgetLogsTableBody');
+    
+    if (reqTable) {
+        reqTable.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 30px; color: #666;"><i class="fas fa-spinner fa-spin"></i> Loading budget requests...</td></tr>';
+    }
+    if (logTable) {
+        logTable.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 30px; color: #666;"><i class="fas fa-spinner fa-spin"></i> Loading budget logs...</td></tr>';
+    }
       try {
           const res = await fetch(`${BUDGET_API_URL}?action=get_budget_requests`);
           allBudgetRequests = await res.json();
           
-          // --- RENDER LOGS TAB (History only: Purchased/Expenses) ---
-          const logsTbody = document.getElementById('budgetLogsTableBody');
-          if(logsTbody) {
-              // Only show stock purchases in the logs
-              const logData = allBudgetRequests.filter(req => req.Status.toLowerCase() === 'purchased');
-              logsTbody.innerHTML = '';
-              
-              if(logData.length === 0) {
-                  logsTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No stock purchase logs found.</td></tr>';
-              } else {
-                  logData.forEach(req => {
-                      const tr = document.createElement('tr');
-                      
-                      let itemName = req.Description || 'N/A';
-                      let qty = "-";
-                      let price = "-";
-                      
-                      // Extract Qty and Price from Remarks (New Format)
-                      if (req.Remarks && req.Remarks.includes('QTY:')) {
-                          const parts = req.Remarks.split('|');
-                          qty = parts[0].replace('QTY:', '');
-                          price = parseFloat(parts[1].replace('PRICE:', '')).toLocaleString('en-PH', {minimumFractionDigits:2});
-                      } 
-                      // Extract from Description (Fallback for tests you already did)
-                      else if (itemName.includes('Stock Purchased:')) {
-                          const match = itemName.match(/Stock Purchased: (.*?) \(Qty: (\d+) @ ₱([\d,.]+)\)/);
-                          if (match) {
-                              itemName = match[1];
-                              qty = match[2];
-                              price = match[3];
-                          }
-                      }
-
-                      const rawAmount = parseFloat(req.TotalAmount) || 0;
-                      const rawBalance = parseFloat(req.RemainingBudget) || 0;
-
-                      tr.innerHTML = `
-                          <td>#${req.RequestID}</td>
-                          <td><strong>${escapeHtml(req.ItemCategory || req.CategoryName || 'Unknown')}</strong></td>
-                          <td>${escapeHtml(itemName)}</td>
-                          <td>${escapeHtml(qty)}</td>
-                          <td>₱${price}</td>
-                          <td style="color:#dc3545; font-weight:bold;">
-                              - ₱${rawAmount.toLocaleString('en-PH', {minimumFractionDigits:2})}
-                          </td>
-                          <td style="color:#0056b3; font-weight:bold;">
-                              ₱${rawBalance.toLocaleString('en-PH', {minimumFractionDigits:2})}
-                          </td>
-                          <td>${new Date(req.RequestDate).toLocaleDateString()}</td>
-                      `;
-                      logsTbody.appendChild(tr);
-                  });
-              }
-          }
-          
-          // --- RENDER BUDGET REQUESTS TAB ---
+          renderBudgetLogsTable();
           renderBudgetTable();
           
       } catch(e) { console.error('Error fetching budget logs:', e); }
   }
 
-  function renderBudgetTable() {
+ function renderBudgetTable() {
       const tbody = document.getElementById('budgetTableBody');
       if (!tbody) return;
 
-      // Show EVERYTHING EXCEPT "Purchased" in the Requests tab
+      const fromDate = document.getElementById('budgetReqFromDate') ? document.getElementById('budgetReqFromDate').value : '';
+      const toDate = document.getElementById('budgetReqToDate') ? document.getElementById('budgetReqToDate').value : '';
+      
+      // --- NEW: Grab the search input ---
+      const searchInput = document.getElementById('searchBudgetReq');
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
       let filtered = allBudgetRequests.filter(req => req.Status.toLowerCase() !== 'purchased');
       
-      // Apply the dropdown filter if it is selected
       const statusFilterVal = budgetStatusFilter ? budgetStatusFilter.value.toLowerCase() : '';
       if (statusFilterVal) {
           filtered = filtered.filter(req => req.Status.toLowerCase() === statusFilterVal);
       }
 
-      // Apply search filter
-      const searchInput = document.getElementById('searchBudgetRequests');
-      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-      if (searchTerm) {
-          filtered = filtered.filter(req => {
-              return (
-                  (req.RequestID && req.RequestID.toString().includes(searchTerm)) ||
-                  (req.ItemCategory && req.ItemCategory.toLowerCase().includes(searchTerm)) ||
-                  (req.CategoryName && req.CategoryName.toLowerCase().includes(searchTerm)) ||
-                  (req.Description && req.Description.toLowerCase().includes(searchTerm)) ||
-                  (req.RequestedByName && req.RequestedByName.toLowerCase().includes(searchTerm)) ||
-                  (req.Status && req.Status.toLowerCase().includes(searchTerm))
-              );
-          });
-      }
+      // --- NEW: Filter by Date AND Search Term ---
+      filtered = filtered.filter(req => {
+          const matchesDate = checkDateRange(req.RequestDate, fromDate, toDate);
+          
+          const catName = (req.ItemCategory || req.CategoryName || '').toLowerCase();
+          const desc = (req.Description || '').toLowerCase();
+          const reqId = (req.RequestID || '').toString().toLowerCase();
+          const reqBy = (req.RequestedByName || '').toLowerCase();
+
+          const matchesSearch = searchTerm === '' || 
+                                catName.includes(searchTerm) || 
+                                desc.includes(searchTerm) || 
+                                reqId.includes(searchTerm) ||
+                                reqBy.includes(searchTerm);
+
+          return matchesDate && matchesSearch;
+      });
 
       if (filtered.length === 0) {
           tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px; color: #777;">No budget requests found.</td></tr>';
@@ -1579,8 +1596,97 @@ function openEditModal(item) {
           `;
       }).join('');
   }
+// --- NEW: Listeners for Budget Requests Search ---
+  const reqSearch = document.getElementById('searchBudgetReq');
+  if (reqSearch) {
+      reqSearch.addEventListener('input', renderBudgetTable);
+  }
+  function renderBudgetLogsTable() {
+      const tbody = document.getElementById('budgetLogsTableBody');
+      if (!tbody) return;
 
-  // Open Modal logic
+      const fromDate = document.getElementById('budgetLogsFromDate') ? document.getElementById('budgetLogsFromDate').value : '';
+      const toDate = document.getElementById('budgetLogsToDate') ? document.getElementById('budgetLogsToDate').value : '';
+
+      const searchInput = document.getElementById('searchBudgetLogs');
+      const catFilter = document.getElementById('budgetLogCategoryFilter');
+
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+      const selectedCat = catFilter ? catFilter.value.toLowerCase() : '';
+
+      let logData = allBudgetRequests.filter(req => req.Status.toLowerCase() === 'purchased');
+
+      logData = logData.filter(req => {
+          const catName = (req.ItemCategory || req.CategoryName || '').toLowerCase();
+          const itemName = (req.Description || '').toLowerCase();
+          const reqId = (req.RequestID || '').toString().toLowerCase();
+
+          const matchesCat = selectedCat === '' || catName === selectedCat;
+          const matchesSearch = searchTerm === '' || 
+                                catName.includes(searchTerm) || 
+                                itemName.includes(searchTerm) || 
+                                reqId.includes(searchTerm);
+                                
+          const matchesDate = checkDateRange(req.RequestDate, fromDate, toDate);
+
+          return matchesCat && matchesSearch && matchesDate;
+      });
+
+      tbody.innerHTML = '';
+
+      if (logData.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No stock purchase logs found.</td></tr>';
+          return;
+      }
+
+      logData.forEach(req => {
+          const tr = document.createElement('tr');
+          
+          let itemName = req.Description || 'N/A';
+          let qty = "-";
+          let price = "-";
+          
+          if (req.Remarks && req.Remarks.includes('QTY:')) {
+              const parts = req.Remarks.split('|');
+              qty = parts[0].replace('QTY:', '');
+              price = parseFloat(parts[1].replace('PRICE:', '')).toLocaleString('en-PH', {minimumFractionDigits:2});
+          } 
+          else if (itemName.includes('Stock Purchased:')) {
+              const match = itemName.match(/Stock Purchased: (.*?) \(Qty: (\d+) @ ₱([\d,.]+)\)/);
+              if (match) {
+                  itemName = match[1];
+                  qty = match[2];
+                  price = match[3];
+              }
+          }
+
+          const rawAmount = parseFloat(req.TotalAmount) || 0;
+          const rawBalance = parseFloat(req.RemainingBudget) || 0;
+
+          tr.innerHTML = `
+              <td>#${req.RequestID}</td>
+              <td><strong>${escapeHtml(req.ItemCategory || req.CategoryName || 'Unknown')}</strong></td>
+              <td>${escapeHtml(itemName)}</td>
+              <td>${escapeHtml(qty)}</td>
+              <td>₱${price}</td>
+              <td style="color:#dc3545; font-weight:bold;">
+                  - ₱${rawAmount.toLocaleString('en-PH', {minimumFractionDigits:2})}
+              </td>
+              <td style="color:#0056b3; font-weight:bold;">
+                  ₱${rawBalance.toLocaleString('en-PH', {minimumFractionDigits:2})}
+              </td>
+              <td>${new Date(req.RequestDate).toLocaleDateString()}</td>
+          `;
+          tbody.appendChild(tr);
+      });
+  }
+
+  const logSearch = document.getElementById('searchBudgetLogs');
+  const logCatFilter = document.getElementById('budgetLogCategoryFilter');
+
+  if (logSearch) logSearch.addEventListener('input', renderBudgetLogsTable);
+  if (logCatFilter) logCatFilter.addEventListener('change', renderBudgetLogsTable);
+
   if (document.getElementById('addBudgetBtn')) {
       document.getElementById('addBudgetBtn').addEventListener('click', () => {
           if(budgetForm) budgetForm.reset();
@@ -1603,10 +1709,8 @@ function openEditModal(item) {
       });
   }
 
-  // Temporary variable to hold form data while waiting for user confirmation
   let pendingBudgetSubmission = null;
 
-  // 1. Intercept the form submission and show the Confirmation Modal
   if (budgetForm) {
       budgetForm.addEventListener('submit', (e) => {
           e.preventDefault();
@@ -1623,7 +1727,6 @@ function openEditModal(item) {
           formData.append('priority', document.getElementById('budget-priority').value);
           formData.append('remarks', document.getElementById('budget-remarks').value);
 
-          // Save data and show the standard confirmation modal
           pendingBudgetSubmission = formData; 
           const confirmModal = document.getElementById('budget-confirm-modal');
           if(confirmModal) {
@@ -1633,7 +1736,6 @@ function openEditModal(item) {
       });
   }
 
-  // 2. The actual sending function (Fired after they click "Yes, Submit")
   async function processBudgetForm(formData) {
       try {
           const submitBtn = document.getElementById('submitBudgetBtn');
@@ -1647,17 +1749,16 @@ function openEditModal(item) {
                   budgetModal.style.display = 'none';
                   budgetModal.classList.remove('show-modal');
               }
-              fetchCategoryBudgets(); // Refresh the Green Dashboard
-              fetchBudgetRequests();  // Refresh the Table Logs
+              fetchCategoryBudgets(); 
+              fetchBudgetRequests();  
               showToast('Budget request submitted & logged successfully!', 'success');
           } else {
-                      alert("Error: " + (data.message || 'Failed to cancel.'));
-                  }
+              alert("Error: " + (data.message || 'Failed to submit.'));
+          }
           if(submitBtn) submitBtn.textContent = 'Submit Request';
       } catch (error) { console.error(error); }
   }
 
-  // 3. Modal Listeners for the Standard Confirmation
   const budgetConfirmBtn = document.getElementById('budget-confirm-btn');
   const budgetCancelBtn = document.getElementById('budget-cancel-btn');
   const budgetModalCloseBtn = document.getElementById('budget-modal-close-btn');
@@ -1668,7 +1769,7 @@ function openEditModal(item) {
           confirmModal.style.display = 'none';
           confirmModal.classList.remove('show-modal');
       }
-      pendingBudgetSubmission = null; // clear the temporary data
+      pendingBudgetSubmission = null; 
   }
 
   if(budgetCancelBtn) budgetCancelBtn.addEventListener('click', closeConfirmModal);
@@ -1678,13 +1779,12 @@ function openEditModal(item) {
       budgetConfirmBtn.addEventListener('click', async () => {
           if(pendingBudgetSubmission) {
               const dataToSubmit = pendingBudgetSubmission;
-              closeConfirmModal(); // Hide modal
-              await processBudgetForm(dataToSubmit); // Fire the save function!
+              closeConfirmModal(); 
+              await processBudgetForm(dataToSubmit); 
           }
       });
   }
 
-  // Open Modal from "Low Stock" quick-action button on the Table
   window.openBudgetModalFromItem = function(item) {
       if(budgetForm) budgetForm.reset();
 
@@ -1705,7 +1805,6 @@ function openEditModal(item) {
       }
   };
 
-  // Handle Cancel Button inside Budget Table
   document.getElementById('budgetTableBody')?.addEventListener('click', async (e) => {
       const cancelBtn = e.target.closest('.cancel-budget-btn');
 
@@ -1736,7 +1835,44 @@ function openEditModal(item) {
       }
   });
 
-  // Attach listeners to dynamically generated quick-action buttons inside the inventory table
+const refreshBtnBudget = document.getElementById('refreshBtnBudget');
+  if (refreshBtnBudget) {
+      refreshBtnBudget.addEventListener('click', () => {
+          if (typeof fetchBudgetRequests === 'function') fetchBudgetRequests();
+          if (typeof fetchCategoryBudgets === 'function') fetchCategoryBudgets();
+          
+          const statusFilter = document.getElementById('budgetStatusFilter');
+          if (statusFilter) statusFilter.value = '';
+          const bFromDate = document.getElementById('budgetReqFromDate');
+          if (bFromDate) bFromDate.value = '';
+          const bToDate = document.getElementById('budgetReqToDate');
+          if (bToDate) bToDate.value = '';
+
+          // --- NEW: Clear Search Input ---
+          if (reqSearch) reqSearch.value = '';
+          
+          if (typeof showToast === 'function') showToast('Budget requests refreshed.', 'success');
+      });
+  }
+
+ const refreshBtnBudgetLogs = document.getElementById('refreshBtnBudgetLogs');
+  if (refreshBtnBudgetLogs) {
+      refreshBtnBudgetLogs.addEventListener('click', () => {
+          if (typeof fetchBudgetRequests === 'function') fetchBudgetRequests();
+          
+          const logCatFilter = document.getElementById('budgetLogCategoryFilter');
+          const logSearch = document.getElementById('searchBudgetLogs');
+          if (logCatFilter) logCatFilter.value = '';
+          if (logSearch) logSearch.value = '';
+          const lFromDate = document.getElementById('budgetLogsFromDate');
+          if (lFromDate) lFromDate.value = '';
+          const lToDate = document.getElementById('budgetLogsToDate');
+          if (lToDate) lToDate.value = '';
+          
+          if (typeof showToast === 'function') showToast('Budget logs refreshed.', 'success');
+      });
+  }
+
   document.getElementById('requestsTableBody').addEventListener('click', (e) => {
       const budgetBtn = e.target.closest('.budget-quick-btn');
       if (budgetBtn) {
@@ -1750,118 +1886,12 @@ function openEditModal(item) {
       }
   });
 
-  // === BUDGET REQUEST REFRESH & DOWNLOAD BUTTONS ===
-  const budgetRequestRefreshBtn = document.getElementById('budgetRequestRefreshBtn');
-  const budgetRequestDownloadBtn = document.getElementById('budgetRequestDownloadBtn');
-  const budgetLogsRefreshBtn = document.getElementById('budgetLogsRefreshBtn');
-  const budgetLogsDownloadBtn = document.getElementById('budgetLogsDownloadBtn');
-
-  // Budget Request Refresh Button
-  if (budgetRequestRefreshBtn) {
-      budgetRequestRefreshBtn.addEventListener('click', () => {
-          const statusFilter = document.getElementById('budgetStatusFilter');
-          if (statusFilter) statusFilter.value = '';
-          fetchBudgetRequests();
-          showToast('Budget requests refreshed successfully!', 'success');
-      });
-  }
-
-  // Budget Request Download Button
-  if (budgetRequestDownloadBtn) {
-      budgetRequestDownloadBtn.addEventListener('click', () => {
-          const statusFilterVal = budgetStatusFilter ? budgetStatusFilter.value.toLowerCase() : '';
-          let filtered = allBudgetRequests.filter(req => req.Status.toLowerCase() !== 'purchased');
-          
-          if (statusFilterVal) {
-              filtered = filtered.filter(req => req.Status.toLowerCase() === statusFilterVal);
-          }
-
-          if (filtered.length === 0) {
-              alert('No budget requests to download');
-              return;
-          }
-
-          const headers = ['Request ID', 'Category', 'Description', 'Requested Amount', 'Requested By', 'Date Requested', 'Status'];
-          const data = filtered.map(req => [
-              `#${req.RequestID}`,
-              req.ItemCategory || req.CategoryName || 'Unknown',
-              req.Description || 'N/A',
-              `₱${parseFloat(req.TotalAmount).toLocaleString('en-PH', {minimumFractionDigits:2})}`,
-              req.RequestedByName || 'N/A',
-              req.RequestDate.split(' ')[0],
-              req.Status
-          ]);
-
-          downloadData(headers, data, 'Budget Requests', 'budget_requests');
-      });
-  }
-
-  // Budget Logs Refresh Button
-  if (budgetLogsRefreshBtn) {
-      budgetLogsRefreshBtn.addEventListener('click', () => {
-          const categoryFilter = document.getElementById('budgetLogCategoryFilter');
-          const searchInput = document.getElementById('searchBudgetLogs');
-          if (categoryFilter) categoryFilter.value = '';
-          if (searchInput) searchInput.value = '';
-          fetchBudgetRequests();
-          showToast('Budget logs refreshed successfully!', 'success');
-      });
-  }
-
-  // Budget Logs Download Button
-  if (budgetLogsDownloadBtn) {
-      budgetLogsDownloadBtn.addEventListener('click', () => {
-          const logData = allBudgetRequests.filter(req => req.Status.toLowerCase() === 'purchased');
-
-          if (logData.length === 0) {
-              alert('No budget logs to download');
-              return;
-          }
-
-          const headers = ['Log ID', 'Category', 'Item Name', 'Quantity', 'Unit Price', 'Amount', 'Remaining Budget', 'Date'];
-          const data = logData.map(req => {
-              let itemName = req.Description || 'N/A';
-              let qty = "-";
-              let price = "-";
-              
-              if (req.Remarks && req.Remarks.includes('QTY:')) {
-                  const parts = req.Remarks.split('|');
-                  qty = parts[0].replace('QTY:', '');
-                  price = parseFloat(parts[1].replace('PRICE:', '')).toLocaleString('en-PH', {minimumFractionDigits:2});
-              } else if (itemName.includes('Stock Purchased:')) {
-                  const match = itemName.match(/Stock Purchased: (.*?) \(Qty: (\d+) @ ₱([\d,.]+)\)/);
-                  if (match) {
-                      itemName = match[1];
-                      qty = match[2];
-                      price = match[3];
-                  }
-              }
-
-              const rawAmount = parseFloat(req.TotalAmount) || 0;
-              const rawBalance = parseFloat(req.RemainingBudget) || 0;
-
-              return [
-                  `#${req.RequestID}`,
-                  req.ItemCategory || req.CategoryName || 'Unknown',
-                  itemName,
-                  qty,
-                  `₱${price}`,
-                  `- ₱${rawAmount.toLocaleString('en-PH', {minimumFractionDigits:2})}`,
-                  `₱${rawBalance.toLocaleString('en-PH', {minimumFractionDigits:2})}`,
-                  new Date(req.RequestDate).toLocaleDateString()
-              ];
-          });
-
-          downloadData(headers, data, 'Budget Logs', 'budget_logs');
-      });
-  }
-
- // Override initializePage to ensure our new budget function runs!
   const originalInit = initializePage;
   initializePage = async function() {
-      await fetchCategoryBudgets(); // Run our new category fetcher!
+      await fetchCategoryBudgets(); 
       await originalInit();
   };
 
   initializePage();
 });
+
