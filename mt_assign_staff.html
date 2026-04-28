@@ -85,7 +85,23 @@
           <span class="detail-value" id="status-value">Loading...</span>
         </div>
       </div>
+<!-- NEW: Inventory Section -->
+      <div class="inventory-section" style="margin-top: 20px; background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 20px;">
+          <label class="remarks-label" style="margin-bottom: 10px; display: block; font-weight: 600;">Use Inventory Items (Equipment)</label>
+          
+          <input type="text" id="inventory-search" placeholder="🔍 Search equipment (e.g., Wrench, Bulbs)..." style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; margin-bottom: 10px;">
+          
+          <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+              <select id="inventory-select" style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                  <option value="">Loading items...</option>
+              </select>
+              <input type="number" id="inventory-qty" value="1" min="1" style="width: 80px; padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+              <button id="add-item-btn" type="button" style="padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;">Add</button>
+          </div>
 
+          <ul id="selected-items-list" style="list-style: none; padding: 0; margin: 0; max-height: 150px; overflow-y: auto;">
+          </ul>
+      </div>
       <div class="remarks-section">
         <label class="remarks-label">Staff Remarks</label>
         <textarea class="remarks-textarea sanitize-on-paste" placeholder="Enter any remarks or notes..."></textarea>
