@@ -1500,6 +1500,14 @@ function renderHistoryTable() {
       });
   }
 
+  // Connect the search input for Budget Requests
+  const searchBudgetRequests = document.getElementById('searchBudgetRequests');
+  if(searchBudgetRequests) {
+      searchBudgetRequests.addEventListener('input', () => {
+          renderBudgetTable();
+      });
+  }
+
   async function fetchBudgetRequests() {
     const reqTable = document.getElementById('budgetTableBody'); 
     const logTable = document.getElementById('budgetLogsTableBody');
@@ -1835,41 +1843,145 @@ function renderHistoryTable() {
       }
   });
 
-const refreshBtnBudget = document.getElementById('refreshBtnBudget');
-  if (refreshBtnBudget) {
-      refreshBtnBudget.addEventListener('click', () => {
+const budgetRequestRefreshBtn = document.getElementById('budgetRequestRefreshBtn');
+  if (budgetRequestRefreshBtn) {
+      budgetRequestRefreshBtn.addEventListener('click', () => {
           if (typeof fetchBudgetRequests === 'function') fetchBudgetRequests();
           if (typeof fetchCategoryBudgets === 'function') fetchCategoryBudgets();
           
           const statusFilter = document.getElementById('budgetStatusFilter');
+          const searchInput = document.getElementById('searchBudgetRequests');
           if (statusFilter) statusFilter.value = '';
-          const bFromDate = document.getElementById('budgetReqFromDate');
-          if (bFromDate) bFromDate.value = '';
-          const bToDate = document.getElementById('budgetReqToDate');
-          if (bToDate) bToDate.value = '';
-
-          // --- NEW: Clear Search Input ---
-          if (reqSearch) reqSearch.value = '';
+          if (searchInput) searchInput.value = '';
           
-          if (typeof showToast === 'function') showToast('Budget requests refreshed.', 'success');
+          if (typeof showToast === 'function') showToast('Budget requests refreshed successfully!', 'success');
       });
   }
 
- const refreshBtnBudgetLogs = document.getElementById('refreshBtnBudgetLogs');
-  if (refreshBtnBudgetLogs) {
-      refreshBtnBudgetLogs.addEventListener('click', () => {
+  const budgetRequestDownloadBtn = document.getElementById('budgetRequestDownloadBtn');
+  if (budgetRequestDownloadBtn) {
+      budgetRequestDownloadBtn.addEventListener('click', () => {
+          console.log('Download button clicked');
+          console.log('allBudgetRequests:', allBudgetRequests);
+          console.log('downloadData function:', typeof downloadData);
+          
+          const statusFilterVal = budgetStatusFilter ? budgetStatusFilter.value.toLowerCase() : '';
+          let filtered = allBudgetRequests.filter(req => req.Status.toLowerCase() !== 'purchased');
+          
+          if (statusFilterVal) {
+              filtered = filtered.filter(req => req.Status.toLowerCase() === statusFilterVal);
+          }
+
+          // Apply search filter
+          const searchInput = document.getElementById('searchBudgetRequests');
+          const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+          if (searchTerm) {
+              filtered = filtered.filter(req => {
+                  return (
+                      (req.RequestID && req.RequestID.toString().includes(searchTerm)) ||
+                      (req.ItemCategory && req.ItemCategory.toLowerCase().includes(searchTerm)) ||
+                      (req.CategoryName && req.CategoryName.toLowerCase().includes(searchTerm)) ||
+                      (req.Description && req.Description.toLowerCase().includes(searchTerm)) ||
+                      (req.RequestedByName && req.RequestedByName.toLowerCase().includes(searchTerm)) ||
+                      (req.Status && req.Status.toLowerCase().includes(searchTerm))
+                  );
+              });
+          }
+
+          console.log('Filtered data:', filtered);
+
+          if (filtered.length === 0) {
+              alert('No budget requests to download');
+              return;
+          }
+
+          const headers = ['Request ID', 'Category', 'Description', 'Requested Amount', 'Requested By', 'Date Requested', 'Status'];
+          const data = filtered.map(req => [
+              `#${req.RequestID}`,
+              req.ItemCategory || req.CategoryName || 'Unknown',
+              req.Description || 'N/A',
+              `₱${parseFloat(req.TotalAmount).toLocaleString('en-PH', {minimumFractionDigits:2})}`,
+              req.RequestedByName || 'N/A',
+              req.RequestDate.split(' ')[0],
+              req.Status
+          ]);
+
+          console.log('Calling downloadData with:', { headers, data, title: 'Budget Requests' });
+
+          if (typeof downloadData === 'function') {
+              downloadData(headers, data, 'Budget Requests', 'budget_requests');
+          } else {
+              console.error('downloadData function not found');
+              alert('Download function not available. Please refresh the page.');
+          }
+      });
+  } else {
+      console.error('budgetRequestDownloadBtn not found');
+  }
+
+ const budgetLogsRefreshBtn = document.getElementById('budgetLogsRefreshBtn');
+  if (budgetLogsRefreshBtn) {
+      budgetLogsRefreshBtn.addEventListener('click', () => {
           if (typeof fetchBudgetRequests === 'function') fetchBudgetRequests();
           
           const logCatFilter = document.getElementById('budgetLogCategoryFilter');
           const logSearch = document.getElementById('searchBudgetLogs');
           if (logCatFilter) logCatFilter.value = '';
           if (logSearch) logSearch.value = '';
-          const lFromDate = document.getElementById('budgetLogsFromDate');
-          if (lFromDate) lFromDate.value = '';
-          const lToDate = document.getElementById('budgetLogsToDate');
-          if (lToDate) lToDate.value = '';
           
-          if (typeof showToast === 'function') showToast('Budget logs refreshed.', 'success');
+          if (typeof showToast === 'function') showToast('Budget logs refreshed successfully!', 'success');
+      });
+  }
+
+  const budgetLogsDownloadBtn = document.getElementById('budgetLogsDownloadBtn');
+  if (budgetLogsDownloadBtn) {
+      budgetLogsDownloadBtn.addEventListener('click', () => {
+          const logData = allBudgetRequests.filter(req => req.Status.toLowerCase() === 'purchased');
+
+          if (logData.length === 0) {
+              alert('No budget logs to download');
+              return;
+          }
+
+          const headers = ['Log ID', 'Category', 'Item Name', 'Quantity', 'Unit Price', 'Amount', 'Remaining Budget', 'Date'];
+          const data = logData.map(req => {
+              let itemName = req.Description || 'N/A';
+              let qty = "-";
+              let price = "-";
+              
+              if (req.Remarks && req.Remarks.includes('QTY:')) {
+                  const parts = req.Remarks.split('|');
+                  qty = parts[0].replace('QTY:', '');
+                  price = parseFloat(parts[1].replace('PRICE:', '')).toLocaleString('en-PH', {minimumFractionDigits:2});
+              } else if (itemName.includes('Stock Purchased:')) {
+                  const match = itemName.match(/Stock Purchased: (.*?) \(Qty: (\d+) @ ₱([\d,.]+)\)/);
+                  if (match) {
+                      itemName = match[1];
+                      qty = match[2];
+                      price = match[3];
+                  }
+              }
+
+              const rawAmount = parseFloat(req.TotalAmount) || 0;
+              const rawBalance = parseFloat(req.RemainingBudget) || 0;
+
+              return [
+                  `#${req.RequestID}`,
+                  req.ItemCategory || req.CategoryName || 'Unknown',
+                  itemName,
+                  qty,
+                  `₱${price}`,
+                  `- ₱${rawAmount.toLocaleString('en-PH', {minimumFractionDigits:2})}`,
+                  `₱${rawBalance.toLocaleString('en-PH', {minimumFractionDigits:2})}`,
+                  new Date(req.RequestDate).toLocaleDateString()
+              ];
+          });
+
+          if (typeof downloadData === 'function') {
+              downloadData(headers, data, 'Budget Logs', 'budget_logs');
+          } else {
+              alert('Download function not available');
+          }
       });
   }
 

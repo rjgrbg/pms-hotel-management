@@ -493,36 +493,20 @@ if (isset($_SESSION['UserID'])) {
       <div class="controlsRow">
         <div class="filterControls">
           <select class="filterDropdown" id="budgetStatusFilter">
-            <option value="">Status</option>
+            <option value="">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="accepted">Accepted</option>
             <option value="rejected">Rejected</option>
             <option value="cancelled">Cancelled</option>
           </select>
-
-          <!-- ADD DATE FILTERS HERE -->
-          <div style="display: flex; align-items: center; gap: 5px;">
-            <label style="font-size: 12px; color: #555; font-weight: bold;">Req Date:</label>
-            <input type="date" id="budgetReqFromDate" class="filterDropdown" style="width: auto; padding: 8px;" title="From Date">
-            <label style="font-size: 12px; color: #555; font-weight: bold;">-</label>
-            <input type="date" id="budgetReqToDate" class="filterDropdown" style="width: auto; padding: 8px;" title="To Date">
-          </div>
-
-          <!-- SEARCH BAR -->
           <div class="searchBox">
-            <input type="text" placeholder="Search requests..." class="searchInput" id="searchBudgetReq" />
+            <input type="text" placeholder="Search requests..." class="searchInput" id="searchBudgetRequests" />
             <button class="searchBtn">
               <img src="assets/icons/search-icon.png" alt="Search" />
             </button>
           </div>
-
-          <button class="refreshBtn" id="refreshBtnBudget" title="Refresh Budget Requests">
-            <img src="assets/icons/refresh-icon.png" alt="Refresh" />
-          </button>
-          
-          <!-- UPGRADED NEW REQUEST BUTTON -->
-          <button id="addBudgetBtn" style="width: auto; padding: 10px 20px; font-weight: bold; background-color: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-left: 10px;">
-            <i class="fas fa-plus-circle" style="font-size: 16px;"></i> NEW REQUEST
+          <button class="addItemBtn" id="addBudgetBtn" style="width: auto; padding: 10px 20px; font-weight: 600; background-color: #d3d3d3; color: #333; border: none; border-radius: 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+            <span style="font-size: 16px; font-weight: 700;">+</span> NEW REQUEST
           </button>
           <button class="refreshBtn" id="budgetRequestRefreshBtn">
             <img src="assets/icons/refresh-icon.png" alt="Refresh" />
@@ -572,8 +556,11 @@ if (isset($_SESSION['UserID'])) {
               <img src="assets/icons/search-icon.png" alt="Search" />
             </button>
           </div>
-          <button class="refreshBtn" id="refreshBtnBudgetLogs" title="Refresh Budget Logs">
+          <button class="refreshBtn" id="budgetLogsRefreshBtn">
             <img src="assets/icons/refresh-icon.png" alt="Refresh" />
+          </button>
+          <button class="downloadBtn" id="budgetLogsDownloadBtn">
+            <img src="assets/icons/download-icon.png" alt="Download" />
           </button>
         </div>
       </div>
