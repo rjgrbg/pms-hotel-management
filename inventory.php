@@ -992,7 +992,7 @@ if (isset($_SESSION['UserID'])) {
 <div class="modal-overlay" id="budget-confirm-modal">
     <div class="modal-content-confirm" style="max-width: 480px; position: relative;">
         <button class="modal-close-btn" id="budget-modal-close-btn">&times;</button>
-        <i class="fas fa-file-invoice-dollar modal-icon" style="font-size: 40px; color: #007bff; display: block; text-align: center; margin-bottom: 20px;"></i>
+        <i class="fas fa-file-invoice-dollar modal-icon" style="font-size: 40px; color: #480c1b; display: block; text-align: center; margin-bottom: 20px;"></i>
         
         <h3 style="text-align: center;">Confirm Budget Request</h3>
         <p style="text-align: center; color: #555;">
@@ -1000,7 +1000,7 @@ if (isset($_SESSION['UserID'])) {
         </p>
         <div class="confirm-buttons" style="margin-top: 20px;">
             <button type="button" class="btn btn-cancel" id="budget-cancel-btn">CANCEL</button>
-            <button type="button" class="btn btn-confirm" id="budget-confirm-btn" style="background-color: #007bff; border: none;">YES, SUBMIT</button>
+            <button type="button" class="btn btn-confirm" id="budget-confirm-btn" style="background-color: #480c1b; border: none;">YES, SUBMIT</button>
         </div>
     </div>
 </div>

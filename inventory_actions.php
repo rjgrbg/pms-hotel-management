@@ -73,6 +73,9 @@ try {
     case 'add_budget_request':
       addBudgetRequest($conn, $_POST, $currentUserID);
       break;
+    case 'update_budget_request':
+      updateBudgetRequest($conn, $_POST, $currentUserID);
+      break;
     case 'delete_budget_request': // <-- ADDED THIS
       deleteBudgetRequest($conn, $_POST);
       break;
@@ -733,6 +736,77 @@ function deleteBudgetRequest($conn, $data) {
     $conn->commit();
     header('Content-Type: application/json');
     echo json_encode(['success' => true, 'message' => 'Request cancelled.']);
+}
+
+function updateBudgetRequest($conn, $data, $userID) {
+    $requestID = (int)($data['request_id'] ?? 0);
+    $categoryID = (int)($data['category_id'] ?? 0);
+    $description = trim($data['description'] ?? '');
+    $totalAmount = (float)($data['requested_amount'] ?? 0);
+    $priorityUI = trim($data['priority'] ?? 'Low');
+    $remarks = trim($data['remarks'] ?? '');
+    
+    if ($requestID <= 0 || $categoryID <= 0 || empty($description) || $totalAmount <= 0) {
+        throw new Exception("Invalid request details.");
+    }
+    
+    $dbPriority = strtolower($priorityUI);
+
+    $conn->begin_transaction();
+
+    // Check if request exists and is still pending
+    $stmtCheck = $conn->prepare("SELECT Status FROM pms_budget_requests WHERE RequestID = ?");
+    $stmtCheck->bind_param("i", $requestID);
+    $stmtCheck->execute();
+    $result = $stmtCheck->get_result();
+    $row = $result->fetch_assoc();
+    $stmtCheck->close();
+    
+    if (!$row) {
+        $conn->rollback();
+        throw new Exception("Request not found.");
+    }
+    
+    if ($row['Status'] !== 'Pending') {
+        $conn->rollback();
+        throw new Exception("Only pending requests can be edited.");
+    }
+
+    // Get category name
+    $stmtCat = $conn->prepare("SELECT ItemCategoryName, AvailableBudget FROM pms_itemcategory WHERE ItemCategoryID = ?");
+    $stmtCat->bind_param("i", $categoryID);
+    $stmtCat->execute();
+    $catRow = $stmtCat->get_result()->fetch_assoc();
+    $categoryName = $catRow ? $catRow['ItemCategoryName'] : 'Unknown Category';
+    $currentBudget = $catRow ? (float)$catRow['AvailableBudget'] : 0.00;
+    $stmtCat->close();
+
+    // Update the budget request
+    $stmtUpdate = $conn->prepare("UPDATE pms_budget_requests SET CategoryID = ?, ItemCategory = ?, Description = ?, TotalAmount = ?, RemainingBudget = ?, Priority = ?, Remarks = ? WHERE RequestID = ?");
+    $stmtUpdate->bind_param("issddssi", $categoryID, $categoryName, $description, $totalAmount, $currentBudget, $priorityUI, $remarks, $requestID);
+    $stmtUpdate->execute();
+    $stmtUpdate->close();
+
+    // Update Finance Notification
+    $extRef = "INV-REQ-" . $requestID;
+    $notifTitle = "Budget Request: " . $categoryName;
+    
+    // Get requester name
+    $stmtUser = $conn->prepare("SELECT Fname, Lname FROM pms_users WHERE UserID = ?");
+    $stmtUser->bind_param("i", $userID);
+    $stmtUser->execute();
+    $userRow = $stmtUser->get_result()->fetch_assoc();
+    $requesterName = $userRow ? trim($userRow['Fname'] . ' ' . $userRow['Lname']) : 'InventoryManager';
+    $stmtUser->close();
+    
+    $stmtUpdateNotif = $conn->prepare("UPDATE expense_notifications SET title = ?, description = ?, requested_amount = ?, requested_by = ?, purpose = ?, priority = ? WHERE external_reference_id = ? AND status = 'pending'");
+    $stmtUpdateNotif->bind_param("ssdssss", $notifTitle, $description, $totalAmount, $requesterName, $remarks, $dbPriority, $extRef);
+    $stmtUpdateNotif->execute();
+    $stmtUpdateNotif->close();
+
+    $conn->commit();
+    header('Content-Type: application/json');
+    echo json_encode(['success' => true, 'message' => 'Budget request updated successfully.']);
 }
 
 ?>

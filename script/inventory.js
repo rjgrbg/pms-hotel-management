@@ -1583,6 +1583,7 @@ function renderHistoryTable() {
                 <div class="action-dropdown">
                     <button class="action-dots-btn" onclick="toggleActionDropdown(event)"><i class="fas fa-ellipsis-v"></i></button>
                     <div class="dropdown-menu">
+                        <button class="dropdown-item edit-budget-btn" data-id="${req.RequestID}"><i class="fas fa-edit"></i> Edit</button>
                         <button class="dropdown-item cancel-budget-btn" data-id="${req.RequestID}"><i class="fas fa-times"></i> Cancel</button>
                     </div>
                 </div>`;
@@ -1698,6 +1699,7 @@ function renderHistoryTable() {
   if (document.getElementById('addBudgetBtn')) {
       document.getElementById('addBudgetBtn').addEventListener('click', () => {
           if(budgetForm) budgetForm.reset();
+          resetBudgetModal(); // Reset to add mode
           if(globalCategorySelect && globalCategorySelect.value && budgetCategory) {
               budgetCategory.value = globalCategorySelect.value;
           }
@@ -1714,10 +1716,63 @@ function renderHistoryTable() {
               budgetModal.style.display = 'none';
               budgetModal.classList.remove('show-modal');
           }
+          resetBudgetModal(); // Reset when closing
       });
   }
 
   let pendingBudgetSubmission = null;
+  let isEditingBudget = false; // Track if we're editing or adding
+
+  // Function to open edit modal with request data
+  function openEditBudgetModal(request) {
+      console.log('openEditBudgetModal called with:', request);
+      isEditingBudget = true;
+      
+      // Populate the form with request data
+      const budgetRequestId = document.getElementById('budget-request-id');
+      const budgetCategory = document.getElementById('budget-category');
+      const budgetDescription = document.getElementById('budget-description');
+      const budgetAmount = document.getElementById('budget-amount');
+      const budgetPriority = document.getElementById('budget-priority');
+      const budgetRemarks = document.getElementById('budget-remarks');
+      const budgetModal = document.getElementById('budget-request-modal');
+      
+      console.log('Modal element:', budgetModal);
+      console.log('Form elements:', {
+          budgetRequestId,
+          budgetCategory,
+          budgetDescription,
+          budgetAmount,
+          budgetPriority,
+          budgetRemarks
+      });
+      
+      if (budgetRequestId) budgetRequestId.value = request.RequestID;
+      if (budgetCategory) budgetCategory.value = request.CategoryID || '';
+      if (budgetDescription) budgetDescription.value = request.Description || '';
+      if (budgetAmount) budgetAmount.value = request.TotalAmount || '';
+      if (budgetPriority) budgetPriority.value = request.Priority || 'Low';
+      if (budgetRemarks) budgetRemarks.value = request.Remarks || '';
+      
+      // Change modal title
+      const modalTitle = document.querySelector('#budget-request-modal .modal-title h2');
+      if (modalTitle) modalTitle.textContent = 'Edit Budget Request';
+      
+      // Change submit button text
+      const submitBtn = document.getElementById('submitBudgetBtn');
+      if (submitBtn) submitBtn.textContent = 'UPDATE REQUEST';
+      
+      // Open the modal
+      if (budgetModal) {
+          console.log('Opening modal...');
+          budgetModal.style.display = 'flex';
+          budgetModal.classList.add('show-modal');
+          console.log('Modal display:', budgetModal.style.display);
+          console.log('Modal classes:', budgetModal.className);
+      } else {
+          console.error('Budget modal not found!');
+      }
+  }
 
   if (budgetForm) {
       budgetForm.addEventListener('submit', (e) => {
@@ -1729,6 +1784,14 @@ function renderHistoryTable() {
           if(!categoryId) return alert("Please select a category.");
 
           const formData = new FormData();
+          
+          // If editing, include the request ID
+          if (isEditingBudget) {
+              const requestId = document.getElementById('budget-request-id').value;
+              formData.append('request_id', requestId);
+              formData.append('action', 'update_budget_request');
+          }
+          
           formData.append('category_id', categoryId); 
           formData.append('description', document.getElementById('budget-description').value);
           formData.append('requested_amount', amount); 
@@ -1738,6 +1801,13 @@ function renderHistoryTable() {
           pendingBudgetSubmission = formData; 
           const confirmModal = document.getElementById('budget-confirm-modal');
           if(confirmModal) {
+              // Update confirmation message
+              const confirmText = confirmModal.querySelector('p');
+              if (confirmText) {
+                  confirmText.textContent = isEditingBudget ? 
+                      'Are you sure you want to update this budget request?' : 
+                      'Are you sure you want to submit this budget request to Finance?';
+              }
               confirmModal.style.display = 'flex';
               confirmModal.classList.add('show-modal');
           }
@@ -1747,9 +1817,10 @@ function renderHistoryTable() {
   async function processBudgetForm(formData) {
       try {
           const submitBtn = document.getElementById('submitBudgetBtn');
-          if(submitBtn) submitBtn.textContent = 'Submitting...';
+          if(submitBtn) submitBtn.textContent = isEditingBudget ? 'Updating...' : 'Submitting...';
 
-          const res = await fetch(`${BUDGET_API_URL}?action=add_budget_request`, { method: 'POST', body: formData });
+          const action = isEditingBudget ? 'update_budget_request' : 'add_budget_request';
+          const res = await fetch(`${BUDGET_API_URL}?action=${action}`, { method: 'POST', body: formData });
           const data = await res.json();
           
           if (data.success) {
@@ -1759,12 +1830,37 @@ function renderHistoryTable() {
               }
               fetchCategoryBudgets(); 
               fetchBudgetRequests();  
-              showToast('Budget request submitted & logged successfully!', 'success');
+              const message = isEditingBudget ? 'Budget request updated successfully!' : 'Budget request submitted & logged successfully!';
+              showToast(message, 'success');
+              
+              // Reset the form and flags
+              resetBudgetModal();
           } else {
               alert("Error: " + (data.message || 'Failed to submit.'));
           }
-          if(submitBtn) submitBtn.textContent = 'Submit Request';
-      } catch (error) { console.error(error); }
+          if(submitBtn) submitBtn.textContent = isEditingBudget ? 'UPDATE REQUEST' : 'SUBMIT REQUEST';
+      } catch (error) { 
+          console.error(error);
+          const submitBtn = document.getElementById('submitBudgetBtn');
+          if(submitBtn) submitBtn.textContent = isEditingBudget ? 'UPDATE REQUEST' : 'SUBMIT REQUEST';
+      }
+  }
+
+  // Function to reset the modal to add mode
+  function resetBudgetModal() {
+      isEditingBudget = false;
+      
+      // Reset modal title
+      const modalTitle = document.querySelector('#budget-request-modal .modal-title h2');
+      if (modalTitle) modalTitle.textContent = 'Budget Request';
+      
+      // Reset submit button text
+      const submitBtn = document.getElementById('submitBudgetBtn');
+      if (submitBtn) submitBtn.textContent = 'SUBMIT REQUEST';
+      
+      // Clear the hidden request ID
+      const budgetRequestId = document.getElementById('budget-request-id');
+      if (budgetRequestId) budgetRequestId.value = '';
   }
 
   const budgetConfirmBtn = document.getElementById('budget-confirm-btn');
@@ -1814,7 +1910,39 @@ function renderHistoryTable() {
   };
 
   document.getElementById('budgetTableBody')?.addEventListener('click', async (e) => {
+      console.log('Budget table clicked', e.target);
       const cancelBtn = e.target.closest('.cancel-budget-btn');
+      const editBtn = e.target.closest('.edit-budget-btn');
+      
+      console.log('Edit button:', editBtn);
+      console.log('Cancel button:', cancelBtn);
+
+      if (editBtn) {
+          console.log('Edit button clicked!');
+          // Close the dropdown menu
+          const dropdown = editBtn.closest('.action-dropdown');
+          if (dropdown) {
+              const menu = dropdown.querySelector('.dropdown-menu');
+              if (menu) menu.classList.remove('show');
+          }
+          
+          // Get the request ID and find the request data
+          const reqID = parseInt(editBtn.dataset.id);
+          console.log('Request ID:', reqID);
+          console.log('All budget requests:', allBudgetRequests);
+          
+          // Try to find by RequestID (could be string or number)
+          const request = allBudgetRequests.find(req => req.RequestID == reqID);
+          console.log('Found request:', request);
+          
+          if (request) {
+              openEditBudgetModal(request);
+          } else {
+              console.error('Request not found for ID:', reqID);
+              console.log('Available RequestIDs:', allBudgetRequests.map(r => r.RequestID));
+              alert('Error: Could not find request data. Please refresh the page and try again.');
+          }
+      }
 
       if (cancelBtn) {
           // Close the dropdown menu
