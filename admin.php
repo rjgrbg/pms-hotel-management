@@ -1495,10 +1495,20 @@ $conn->close();
           </div>
         </div>
 
+        <!-- Room Items Section (for edit mode) -->
+        <div class="roomItemsSection" id="roomItemsContainer" style="display: none; margin-bottom: 20px;">
+          <div class="columnCard" style="border: 2px solid #480c1b; background: #f0f0f0;">
+            <h4 style="color: #480c1b;"><i class="fas fa-box"></i> ROOM ITEMS INVENTORY</h4>
+            <div id="roomItemsList" style="max-height: 300px; overflow-y: auto;">
+              <p class="loadingText">Loading items...</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Equipment & Utilities - Full Width -->
         <div class="equipmentSection">
           <div class="columnCard">
-            <h4><i class="fas fa-tv"></i> EQUIPMENT & UTILITIES</h4>
+            <h4 id="typeHeadingEquipment"><i class="fas fa-tv"></i> EQUIPMENT</h4>
             <div id="equipmentList" class="equipmentGrid">
               <p class="loadingText">Loading...</p>
             </div>
@@ -1509,7 +1519,7 @@ $conn->close();
         <div class="twoColumnSection">
           <!-- Amenities & Supplies -->
           <div class="columnCard">
-            <h4><i class="fas fa-box"></i> AMENITIES & SUPPLIES</h4>
+            <h4 id="typeHeadingReusable"><i class="fas fa-recycle"></i> REUSABLE</h4>
             <div id="amenitiesList" class="amenitiesList">
               <p class="loadingText">Loading...</p>
             </div>
@@ -1517,7 +1527,7 @@ $conn->close();
 
           <!-- Linens -->
           <div class="columnCard">
-            <h4><i class="fas fa-bed"></i> LINENS</h4>
+            <h4 id="typeHeadingConsumables"><i class="fas fa-box-open"></i> CONSUMABLES</h4>
             <div id="linensList" class="linensList">
               <p class="loadingText">Loading...</p>
             </div>
@@ -1553,6 +1563,7 @@ $conn->close();
 
   <script src="script/shared-data.js"></script>
   <script src="script/download-utils.js"></script>
+  <script src="script/room-items.js"></script>
   <script src="script/admin.config.js"></script>
   <script src="script/admin.utils.js"></script>
   <script src="script/admin.pagination.js"></script>

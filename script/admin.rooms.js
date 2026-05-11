@@ -225,26 +225,15 @@ function renderRoomsTable(data) {
       let occupancyText = row.Occupancy ? row.Occupancy : 'Available'; 
       let occupancyClass = occupancyText.toLowerCase().replace(/ /g, '-');
 
-      // 3. Your Nested Dropdown Menu (Now includes "Edit Room Info")
+      // 3. Your Dropdown Menu (Simplified: Only View Details and Edit Items)
       const dropdownMenu = `
         <div class="dropdown-menu">
           <button class="dropdown-item" onclick='handleViewRoomDetails(${JSON.stringify(row).replace(/'/g, "&apos;")}); closeAllDropdowns();'>
             <i class="fas fa-eye"></i> View Details
           </button>
-          <div class="dropdown-item has-submenu" onmouseenter="showSubmenu(event)" onmouseleave="hideSubmenu(event)">
-            <i class="fas fa-edit"></i> Edit
-            <div class="dropdown-submenu" onmouseenter="keepSubmenuOpen(event)" onmouseleave="closeSubmenu(event)">
-              <button class="dropdown-item" onclick='openEditRoomModal(${JSON.stringify(row).replace(/'/g, "&apos;")}); closeAllDropdowns();'>
-                <i class="fas fa-door-open"></i> Edit Room Info
-              </button>
-              <button class="dropdown-item" onclick='handleEditRoomHousekeeping(${JSON.stringify(row).replace(/'/g, "&apos;")}); closeAllDropdowns();'>
-                <i class="fas fa-broom"></i> Edit Housekeeping
-              </button>
-              <button class="dropdown-item" onclick='handleEditRoomMaintenance(${JSON.stringify(row).replace(/'/g, "&apos;")}); closeAllDropdowns();'>
-                <i class="fas fa-tools"></i> Edit Maintenance
-              </button>
-            </div>
-          </div>
+          <button class="dropdown-item" onclick='handleEditRoomItems(${JSON.stringify(row).replace(/'/g, "&apos;")}); closeAllDropdowns();'>
+            <i class="fas fa-edit"></i> Edit Items
+          </button>
         </div>
       `;
 
@@ -471,7 +460,7 @@ function initRoomFilters() {
 // 7. NESTED MENU & VIEW DETAILS HANDLERS
 // ==========================================
 
-// --- DROPDOWN & SUBMENU HOVER LOGIC ---
+// --- DROPDOWN LOGIC (Simplified - No submenu) ---
 window.toggleActionDropdown = function(event) {
     event.stopPropagation();
     closeAllDropdowns();
@@ -487,31 +476,70 @@ window.closeAllDropdowns = function() {
     });
 };
 
-window.showSubmenu = function(event) {
-    const submenu = event.currentTarget.querySelector('.dropdown-submenu');
-    if (submenu) submenu.classList.add('show');
-};
-
-window.hideSubmenu = function(event) {
-    const submenu = event.currentTarget.querySelector('.dropdown-submenu');
-    if (submenu) submenu.classList.remove('show');
-};
-
-window.keepSubmenuOpen = function(event) {
-    event.currentTarget.classList.add('show');
-};
-
-window.closeSubmenu = function(event) {
-    event.currentTarget.classList.remove('show');
-};
-
 // Close dropdowns if clicking anywhere else on the screen
 document.addEventListener('click', () => {
     closeAllDropdowns();
 });
 
+function normalizeRoomItemType(type) {
+    return String(type || '').trim().toLowerCase();
+}
+
+function groupRoomItemsByType(items) {
+    const grouped = {
+        equipment: [],
+        reusable: [],
+        consumables: []
+    };
+
+    (items || []).forEach(item => {
+        const type = normalizeRoomItemType(item.type);
+        if (type === 'equipment') {
+            grouped.equipment.push(item);
+        } else if (type === 'reusable') {
+            grouped.reusable.push(item);
+        } else {
+            grouped.consumables.push(item);
+        }
+    });
+
+    return grouped;
+}
+
+function renderGroupedRoomItems(items, editable = false) {
+    const grouped = groupRoomItemsByType(items);
+
+    const equipmentList = document.getElementById('equipmentList');
+    const reusableList = document.getElementById('amenitiesList');
+    const consumablesList = document.getElementById('linensList');
+
+    const options = {
+        editable,
+        onRemove: editable ? handleRemoveRoomItem : null
+    };
+
+    if (equipmentList) {
+        RoomItemsManager.renderRoomItemsList(grouped.equipment, equipmentList, options);
+    }
+    if (reusableList) {
+        RoomItemsManager.renderRoomItemsList(grouped.reusable, reusableList, options);
+    }
+    if (consumablesList) {
+        RoomItemsManager.renderRoomItemsList(grouped.consumables, consumablesList, options);
+    }
+}
+
+async function loadAndRenderRoomItemsByType(roomId, editable = false) {
+    const result = await RoomItemsManager.getRoomItems(roomId);
+    if (result.success) {
+        renderGroupedRoomItems(result.data, editable);
+    } else {
+        renderGroupedRoomItems([], editable);
+    }
+}
+
 // --- VIEW DETAILS MODAL LOGIC ---
-window.handleViewRoomDetails = function(room) {
+window.handleViewRoomDetails = async function(room) {
     // 1. Set the Title (Room Name)
     const title = document.getElementById('roomDetailsTitle');
     if (title) {
@@ -539,90 +567,85 @@ window.handleViewRoomDetails = function(room) {
     if (document.getElementById('detailGuests')) document.getElementById('detailGuests').textContent = room.NoGuests;
     if (document.getElementById('detailRoom')) document.getElementById('detailRoom').textContent = room.Room;
 
-    // 4. Set Sample Data for Equipment, Amenities, and Linens (exactly matching image)
-    if (document.getElementById('equipmentList')) {
-        document.getElementById('equipmentList').innerHTML = `
-            <div class="equipmentItem">
-                <i class="fas fa-tv"></i>
-                <span class="equipmentName">Television</span>
-                <div class="equipmentDetails">
-                    <small><strong>Installed:</strong> Apr 27, 2024</small>
-                    <small><strong>Last Maintenance:</strong> Jan 27, 2026</small>
-                </div>
-            </div>
-            <div class="equipmentItem">
-                <i class="fas fa-snowflake"></i>
-                <span class="equipmentName">Air Conditioner</span>
-                <div class="equipmentDetails">
-                    <small><strong>Installed:</strong> Apr 27, 2025</small>
-                    <small><strong>Last Maintenance:</strong> Mar 27, 2026</small>
-                </div>
-            </div>
-            <div class="equipmentItem">
-                <i class="fas fa-temperature-low"></i>
-                <span class="equipmentName">Mini Fridge</span>
-                <div class="equipmentDetails">
-                    <small><strong>Installed:</strong> Oct 27, 2024</small>
-                    <small><strong>Last Maintenance:</strong> Feb 27, 2026</small>
-                </div>
-            </div>
-            <div class="equipmentItem">
-                <i class="fas fa-coffee"></i>
-                <span class="equipmentName">Coffee Maker</span>
-                <div class="equipmentDetails">
-                    <small><strong>Installed:</strong> Aug 27, 2025</small>
-                    <small><strong>Last Maintenance:</strong> Apr 20, 2026</small>
-                </div>
-            </div>
-            <div class="equipmentItem">
-                <i class="fas fa-wind"></i>
-                <span class="equipmentName">Hair Dryer</span>
-                <div class="equipmentDetails">
-                    <small><strong>Installed:</strong> Apr 27, 2025</small>
-                    <small><strong>Last Maintenance:</strong> Apr 13, 2026</small>
-                </div>
-            </div>
-            <div class="equipmentItem">
-                <i class="fas fa-lock"></i>
-                <span class="equipmentName">Safe Box</span>
-                <div class="equipmentDetails">
-                    <small><strong>Installed:</strong> Apr 27, 2024</small>
-                    <small><strong>Last Maintenance:</strong> Oct 27, 2025</small>
-                </div>
-            </div>
-        `;
+    // Hide room items section in view mode
+    const roomItemsContainer = document.getElementById('roomItemsContainer');
+    if (roomItemsContainer) {
+        roomItemsContainer.style.display = 'none';
     }
-    
-    if (document.getElementById('amenitiesList')) {
-        document.getElementById('amenitiesList').innerHTML = `
-            <div class="listItem"><i class="fas fa-circle"></i> Complimentary WiFi</div>
-            <div class="listItem"><i class="fas fa-circle"></i> Room Service</div>
-            <div class="listItem"><i class="fas fa-circle"></i> Daily Housekeeping</div>
-            <div class="listItem"><i class="fas fa-circle"></i> Toiletries</div>
-        `;
-    }
-    
-    if (document.getElementById('linensList')) {
-        document.getElementById('linensList').innerHTML = `
-            <div class="listItem"><i class="fas fa-circle"></i> Bed Sheets (2 sets)</div>
-            <div class="listItem"><i class="fas fa-circle"></i> Pillowcases (4 pcs)</div>
-            <div class="listItem"><i class="fas fa-circle"></i> Bath Towels (4 pcs)</div>
-            <div class="listItem"><i class="fas fa-circle"></i> Hand Towels (4 pcs)</div>
-        `;
-    }
+
+    await loadAndRenderRoomItemsByType(room.RoomID, false);
 
     // 5. Open the Modal!
     const modal = document.getElementById('roomDetailsModal');
     if (modal) modal.style.display = 'flex';
 };
 
-// --- PLACEHOLDER HANDLERS FOR THE SUBMENU ---
-window.handleEditRoomHousekeeping = function(room) {
-    showRoomToast(`Housekeeping tools for Room ${room.Room} coming soon!`);
+// --- EDIT ROOM ITEMS MODAL LOGIC ---
+window.handleEditRoomItems = async function(room) {
+    // 1. Set the Title (Room Name)
+    const title = document.getElementById('roomDetailsTitle');
+    if (title) {
+        title.textContent = room.Name || 'Room';
+    }
+
+    // 2. Set the Room Number
+    const roomNumber = document.getElementById('roomNumber');
+    if (roomNumber) {
+        roomNumber.textContent = `Room ${room.Room}`;
+    }
+
+    // 3. Set the Status Badge
+    const statusBadge = document.getElementById('currentStatusBadge');
+    if (statusBadge) {
+        statusBadge.textContent = room.Status.toUpperCase();
+        statusBadge.className = 'statusBadge';
+        let statusClass = room.Status.toLowerCase().replace(/ /g, '-');
+        statusBadge.classList.add(statusClass);
+    }
+
+    // 4. Set the 4 Core Room Stats
+    if (document.getElementById('detailFloor')) document.getElementById('detailFloor').textContent = room.Floor;
+    if (document.getElementById('detailType')) document.getElementById('detailType').textContent = room.Type;
+    if (document.getElementById('detailGuests')) document.getElementById('detailGuests').textContent = room.NoGuests;
+    if (document.getElementById('detailRoom')) document.getElementById('detailRoom').textContent = room.Room;
+
+    // Show add-items form section in edit mode
+    const roomItemsContainer = document.getElementById('roomItemsContainer');
+    if (roomItemsContainer) {
+        roomItemsContainer.style.display = 'block';
+        roomItemsContainer.innerHTML = '';
+
+        const formContainer = document.createElement('div');
+        RoomItemsManager.createAddItemsForm(formContainer, room.RoomID, async () => {
+            await loadAndRenderRoomItemsByType(room.RoomID, true);
+        });
+        roomItemsContainer.appendChild(formContainer);
+    }
+
+    await loadAndRenderRoomItemsByType(room.RoomID, true);
+
+    // 6. Open the Modal
+    const modal = document.getElementById('roomDetailsModal');
+    if (modal) modal.style.display = 'flex';
 };
 
-window.handleEditRoomMaintenance = function(room) {
-    showRoomToast(`Maintenance tools for Room ${room.Room} coming soon!`);
+// Handle removing room item
+window.handleRemoveRoomItem = async function(roomItemId, itemId, quantity) {
+    const result = await RoomItemsManager.removeRoomItem(roomItemId, itemId, quantity, 0);
+    if (result.success) {
+        alert('Item removed successfully!');
+        // Reload items
+        const roomDetailsTitle = document.getElementById('roomDetailsTitle');
+        const roomNum = document.getElementById('roomNumber')?.textContent?.replace('Room ', '');
+        if (roomNum) {
+            const currentRoomData = roomData.find(r => r.Room.toString() === roomNum);
+            if (currentRoomData) {
+                await handleEditRoomItems(currentRoomData);
+            }
+        }
+    } else {
+        alert('Error: ' + result.message);
+    }
 };
 
 // --- CLOSE MODAL HANDLERS ---
