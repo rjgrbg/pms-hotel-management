@@ -100,26 +100,85 @@ const RoomItemsManager = (function() {
             return;
         }
 
-        const listHTML = items.map((item, index) => `
-            <div class="room-item" data-room-item-id="${item.room_item_id}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #e0e0e0; background: ${index % 2 === 0 ? '#fff' : '#f9f9f9'};">
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; color: #333;">${item.name}</div>
-                    <div style="font-size: 12px; color: #666;">
-                        Category: ${item.category} | Type: ${item.type} | Qty: ${item.quantity}
+        const listHTML = items.map((item, index) => {
+            // Determine icon based on item type
+            let itemIcon = 'fa-cube'; // default icon
+            let iconColor = '#666';
+            
+            const itemType = (item.type || '').toLowerCase();
+            if (itemType === 'equipment') {
+                itemIcon = 'fa-tv';
+                iconColor = '#480c1b';
+            } else if (itemType === 'reusable') {
+                itemIcon = 'fa-recycle';
+                iconColor = '#5cb85c';
+            } else if (itemType === 'consumables') {
+                itemIcon = 'fa-box-open';
+                iconColor = '#d4af78';
+            }
+            
+            return `
+            <div class="room-item-card" data-room-item-id="${item.room_item_id}" style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 16px;
+                margin-bottom: 12px;
+                background: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                transition: all 0.2s ease;
+            " onmouseover="this.style.boxShadow='0 4px 12px rgba(0, 0, 0, 0.1)'; this.style.transform='translateY(-2px)';" onmouseout="this.style.boxShadow='0 1px 3px rgba(0, 0, 0, 0.05)'; this.style.transform='translateY(0)';">
+                <div style="flex: 1; display: flex; align-items: center; gap: 14px;">
+                    <div style="
+                        flex-shrink: 0;
+                        width: 48px;
+                        height: 48px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: ${iconColor}15;
+                        border-radius: 10px;
+                        border: 2px solid ${iconColor}30;
+                    ">
+                        <i class="fas ${itemIcon}" style="color: ${iconColor}; font-size: 20px;"></i>
                     </div>
-                    <div style="font-size: 11px; color: #999; margin-top: 4px;">
-                        Assigned: ${new Date(item.date_assigned).toLocaleDateString()} by ${item.assigned_by}
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #1f2937; font-size: 15px; margin-bottom: 4px;">${item.name}</div>
+                        <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">
+                            <span style="display: inline-block; padding: 2px 8px; background: #f3f4f6; border-radius: 4px; margin-right: 6px;">
+                                ${item.category}
+                            </span>
+                            <span style="display: inline-block; padding: 2px 8px; background: ${iconColor}10; color: ${iconColor}; border-radius: 4px; font-weight: 600;">
+                                Qty: ${item.quantity}
+                            </span>
+                        </div>
+                        <div style="font-size: 11px; color: #9ca3af;">
+                            Assigned: ${new Date(item.date_assigned).toLocaleDateString()} by ${item.assigned_by}
+                        </div>
                     </div>
                 </div>
                 <div style="display: flex; gap: 8px; align-items: center;">
                     ${editable ? `
-                        <button class="remove-item-btn" data-room-item-id="${item.room_item_id}" data-item-id="${item.item_id}" data-quantity="${item.quantity}" data-type="${item.type}" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                            Remove
+                        <button class="remove-item-btn" data-room-item-id="${item.room_item_id}" data-item-id="${item.item_id}" data-quantity="${item.quantity}" data-type="${item.type}" style="
+                            padding: 8px 16px;
+                            background: #fee2e2;
+                            color: #dc2626;
+                            border: 1px solid #fecaca;
+                            border-radius: 8px;
+                            cursor: pointer;
+                            font-size: 12px;
+                            font-weight: 600;
+                            transition: all 0.2s ease;
+                        " onmouseover="this.style.background='#dc2626'; this.style.color='#ffffff';" onmouseout="this.style.background='#fee2e2'; this.style.color='#dc2626';">
+                            <i class="fas fa-trash-alt" style="margin-right: 4px;"></i> Remove
                         </button>
                     ` : ''}
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
 
         container.innerHTML = listHTML;
 
