@@ -168,10 +168,10 @@ const RoomItemsManager = (function() {
             
             <div style="display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center;">
                 <select class="type-filter" style="width: 130px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="">All Types</option>
+                    <option value="">Types</option>
                 </select>
                 <select class="category-filter" style="width: 140px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                    <option value="">All Categories</option>
+                    <option value="">Categories</option>
                 </select>
                 <input type="text" class="item-search" placeholder="Search items..." style="flex: 1; min-width: 150px; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                 
@@ -229,7 +229,7 @@ const RoomItemsManager = (function() {
             const selectedType = typeFilter.value;
             const currentSelectedCat = catFilter.value;
 
-            catFilter.innerHTML = '<option value="">All Categories</option>';
+            catFilter.innerHTML = '<option value="">Categories</option>';
             
             let allowedCategories = [];
             if (selectedType && typeCatMap[selectedType]) {
@@ -281,7 +281,7 @@ const RoomItemsManager = (function() {
             });
 
             const currentSelectedType = typeFilter.value;
-            typeFilter.innerHTML = '<option value="">All Types</option>';
+            typeFilter.innerHTML = '<option value="">Types</option>';
             
             [...types].sort().forEach(type => {
                 const opt = document.createElement('option');
