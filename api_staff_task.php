@@ -41,14 +41,12 @@ $action = ''; // Initialize action
 if (!$data) {
     // Allow GET requests for fetching details
     if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['action'])) {
-        // --- REFINEMENT: Added trim() ---
         $action = trim($_GET['action'] ?? '');
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Invalid request.']);
         exit;
     }
 } else {
-    // --- REFINEMENT: Added trim() ---
     $action = trim($data['action'] ?? '');
 }
 
@@ -56,7 +54,6 @@ switch ($action) {
 
     // ===== GET TASK DETAILS (for mt_assign_staff.html) =====
     case 'get_task_details':
-        // --- REFINEMENT: Use filter_var for integer validation ---
         $requestId = filter_var($_GET['request_id'] ?? null, FILTER_VALIDATE_INT);
         if ($requestId === false || $requestId === null) {
             echo json_encode(['status' => 'error', 'message' => 'Request ID missing or invalid.']);
@@ -99,13 +96,12 @@ switch ($action) {
     case 'update_task_status':
         $taskData = $data['data'] ?? [];
         
-                // --- REFINEMENT: Validate/trim inputs ---
         $requestId = filter_var($taskData['request_id'] ?? null, FILTER_VALIDATE_INT);
         $newStatus = trim($taskData['status'] ?? '');
         $remarks = trim($taskData['remarks'] ?? ''); 
-        $usedItems = $taskData['used_items'] ?? []; // NEW: Grabs the inventory items from JS
-        $usedElectricalItems = $taskData['used_electrical'] ?? []; // NEW: Electrical items selected
-        $usedFurnitureItems = $taskData['used_furniture'] ?? []; // NEW: Furniture items selected
+        $usedItems = $taskData['used_items'] ?? []; // Grabs the inventory items from JS
+        $usedElectricalItems = $taskData['used_electrical'] ?? []; // Electrical items selected
+        $usedFurnitureItems = $taskData['used_furniture'] ?? []; // Furniture items selected
 
         if ($requestId === false || $requestId === null || empty($newStatus)) {
              echo json_encode(['status' => 'error', 'message' => 'Invalid task data provided.']);
@@ -193,7 +189,7 @@ switch ($action) {
                     $result_check = $stmt_check_other_tasks->get_result()->fetch_assoc();
                     $stmt_check_other_tasks->close();
 
-                                       // --- Only set to Available if no other active tasks exist ---
+                    // --- Only set to Available if no other active tasks exist ---
                     if ($result_check['active_tasks'] == 0) {
                         $stmt_room_status = $conn->prepare(
                             "UPDATE pms_room_status SET RoomStatus = 'Available' WHERE RoomNumber = ?"
@@ -220,7 +216,7 @@ switch ($action) {
 
                             if ($inv_row && $inv_row['ItemQuantity'] >= $qty) {
                                 $newQuantity = $inv_row['ItemQuantity'] - $qty;
-                                $stockLimit = $inv_row['StockLimit'];
+                                $stockLimit = (float)$inv_row['StockLimit'];
                                 $currentRestockDate = $inv_row['RestockDate'];
                                 
                                 $status = 'In Stock';
@@ -228,11 +224,11 @@ switch ($action) {
                                 $orangeThreshold = $stockLimit / 4;
                                 $restockDate = NULL;
 
-                                if ($newQuantity <= 0 || $newQuantity <= $yellowThreshold) {
+                                if ($newQuantity <= 0 || ($stockLimit > 0 && $newQuantity <= $yellowThreshold)) {
                                     if ($newQuantity <= 0) $status = 'Out of Stock';
                                     else if ($newQuantity <= $orangeThreshold) $status = 'Critical';
                                     else $status = 'Threshold';
-                                    $restockDate = $currentRestockDate ? $currentRestockDate : date('Y-m-d', strtotime('+7 days'));
+                                    $restockDate = !empty($currentRestockDate) ? $currentRestockDate : date('Y-m-d', strtotime('+7 days'));
                                 }
 
                                 if ($restockDate === NULL) {
@@ -246,9 +242,10 @@ switch ($action) {
                                 $stmt_update_inv->close();
 
                                 $logReason = "Used for MT Task #$requestId (Room $roomId)";
+                                $safeStaffId = (int)$staffId;
                                 $qtyChange = -$qty;
                                 $stmt_log = $conn->prepare("INSERT INTO pms_inventorylog (UserID, ItemID, Quantity, InventoryLogReason, DateofRelease) VALUES (?, ?, ?, ?, NOW())");
-                                $stmt_log->bind_param("iiis", $staffId, $itemId, $qtyChange, $logReason);
+                                $stmt_log->bind_param("iiis", $safeStaffId, $itemId, $qtyChange, $logReason);
                                 $stmt_log->execute();
                                 $stmt_log->close();
                                 
@@ -258,13 +255,12 @@ switch ($action) {
                     }
                 }
                 
-                // --- NEW: Update last_maintained for electrical items ---
+                // --- Update last_maintained for electrical items ---
                 if (!empty($usedElectricalItems) && is_array($usedElectricalItems)) {
                     foreach ($usedElectricalItems as $item) {
                         $itemId = filter_var($item['id'] ?? 0, FILTER_VALIDATE_INT);
                         $roomItemId = filter_var($item['room_item_id'] ?? 0, FILTER_VALIDATE_INT);
                         
-                        // Update using room_item_id if available, otherwise use item_id + room_id
                         if ($roomItemId > 0) {
                             $stmt_electrical = $conn->prepare(
                                 "UPDATE pms_room_items SET last_maintained = NOW() 
@@ -287,13 +283,12 @@ switch ($action) {
                     }
                 }
 
-                // --- NEW: Update last_maintained for furniture items ---
+                // --- Update last_maintained for furniture items ---
                 if (!empty($usedFurnitureItems) && is_array($usedFurnitureItems)) {
                     foreach ($usedFurnitureItems as $item) {
                         $itemId = filter_var($item['id'] ?? 0, FILTER_VALIDATE_INT);
                         $roomItemId = filter_var($item['room_item_id'] ?? 0, FILTER_VALIDATE_INT);
                         
-                        // Update using room_item_id if available, otherwise use item_id + room_id
                         if ($roomItemId > 0) {
                             $stmt_furniture = $conn->prepare(
                                 "UPDATE pms_room_items SET last_maintained = NOW() 
@@ -338,7 +333,7 @@ switch ($action) {
         $itemType = $_GET['item_type'] ?? null;
         $roomId = $_GET['room_id'] ?? null;
         
-        // EQUIPMENT: Fetch ALL available equipment from general inventory
+        // EQUIPMENT: Fetch available items belonging ONLY to Appliances, Electronics, and Furniture
         if ($itemType === 'Equipment') {
             $sql = "SELECT 
                         i.ItemID, 
@@ -349,7 +344,7 @@ switch ($action) {
                     FROM pms_inventory i
                     JOIN pms_itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
                     WHERE i.is_archived = 0 AND i.ItemQuantity > 0
-                    AND ic.ItemCategoryName IN ('Cleaning Chemicals', 'Cleaning Tools')
+                    AND ic.ItemCategoryName IN ('Appliances', 'Electronics', 'Furniture')
                     ORDER BY ic.ItemCategoryName, i.ItemName";
             
             if ($stmt = $conn->prepare($sql)) {
@@ -386,7 +381,6 @@ switch ($action) {
             
             // Filter by category if specific type requested
             if ($itemType === 'Electrical & Lighting') {
-                // Electrical & Lightning: Show Appliances and Electronics categories
                 $sql .= " AND ic.ItemCategoryName IN ('Appliances', 'Electronics')";
             } else if ($itemType === 'Furniture & Fixtures') {
                 $sql .= " AND ic.ItemCategoryName = 'Furniture'";

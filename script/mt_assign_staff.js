@@ -133,32 +133,27 @@ function initializePageData(data) {
 
   // Set button states based on status
   if (data.Status === 'In Progress') {
-    // *** HIDE In Progress button if already In Progress ***
     inProgressBtn.style.display = 'none'; 
-    
   } else if (data.Status === 'Completed') {
     inProgressBtn.disabled = true;
     doneBtn.disabled = true;
     inProgressBtn.textContent = 'Task Completed';
     doneBtn.textContent = 'Task Completed';
     remarksTextarea.disabled = true; 
-    inProgressBtn.style.display = ''; // Show (disabled)
+    inProgressBtn.style.display = ''; 
   }
 }
 
 // ===== INVENTORY SECTION VISIBILITY & MANAGEMENT =====
 function updateInventorySectionVisibility(issueType) {
-  // Show/hide furniture section
   if (furnitureSection) {
     furnitureSection.style.display = (issueType && issueType.includes('Furniture & Fixtures')) ? 'block' : 'none';
   }
   
-  // Show/hide electrical section
   if (electricalSection) {
     electricalSection.style.display = (issueType && issueType.includes('Electrical & Lighting')) ? 'block' : 'none';
   }
   
-  // Load appropriate inventory items
   if (issueType && issueType.includes('Furniture & Fixtures')) {
     if (allFurnitureItems.length === 0) {
       fetchInventoryByType('Furniture & Fixtures', 'furniture', CURRENT_ROOM_ID);
@@ -178,20 +173,11 @@ async function fetchInventoryByType(itemType, category, roomId) {
     if (roomId) {
       url += `&room_id=${roomId}`;
     }
-    console.log(`[${category}] Fetching room-assigned items. ItemType: "${itemType}", RoomID: ${roomId}`);
-    console.log(`[${category}] URL:`, url);
-    
     const response = await fetch(url);
     const result = await response.json();
-    
-    console.log(`[${category}] API Response:`, result);
 
     if (Array.isArray(result)) {
-      // All items from pms_room_items are valid (API already filtered by room and category if applicable)
       let itemsToUse = result;
-      
-      console.log(`[${category}] Items retrieved: ${itemsToUse.length}`, itemsToUse);
-      
       if (category === 'furniture') {
         allFurnitureItems = itemsToUse;
         if (furnitureSelect) {
@@ -203,8 +189,6 @@ async function fetchInventoryByType(itemType, category, roomId) {
           renderCategoryDropdown(electricalSelect, allElectricalItems, 'electrical');
         }
       }
-    } else {
-      console.error(`[${category}] Response is not an array:`, result);
     }
   } catch (err) {
     console.error(`Failed to load ${category} inventory:`, err);
@@ -215,7 +199,6 @@ function renderCategoryDropdown(selectElement, itemsToRender, category = null) {
   if (!selectElement) return;
   selectElement.innerHTML = '<option value="">-- Select an item to add --</option>';
   
-  // Group items by category for display
   const grouped = {};
   itemsToRender.forEach(item => {
     const cat = item.Category || 'Other';
@@ -225,7 +208,6 @@ function renderCategoryDropdown(selectElement, itemsToRender, category = null) {
     grouped[cat].push(item);
   });
   
-  // Create optgroup for each category
   Object.keys(grouped).sort().forEach(catName => {
     const optgroup = document.createElement('optgroup');
     optgroup.label = catName;
@@ -235,7 +217,6 @@ function renderCategoryDropdown(selectElement, itemsToRender, category = null) {
       opt.value = item.ItemID;
       opt.dataset.name = item.ItemName;
       opt.dataset.max = item.ItemQuantity;
-      // Store room_item_id for both furniture and electrical items (for last_maintained updates)
       if ((category === 'electrical' || category === 'furniture') && item.room_item_id) {
         opt.dataset.roomItemId = item.room_item_id;
       }
@@ -249,35 +230,26 @@ function renderCategoryDropdown(selectElement, itemsToRender, category = null) {
 
 // ===== EVENT LISTENER SETUP =====
 function setupEventListeners() {
-    // --- "In Progress" Button ---
     inProgressBtn.addEventListener('click', () => {
-        console.log('Setting status to In Progress...');
         updateTaskStatus('In Progress');
     });
 
-    // --- "Done" Button (opens modal) ---
     doneBtn.addEventListener('click', () => {
         modalBackdrop.style.display = 'flex';
     });
 
-    // --- Modal "Cancel" Button ---
     modalCancel.addEventListener('click', () => {
         modalBackdrop.style.display = 'none';
     });
 
-   modalSave.addEventListener('click', async () => {
-        // Disable button to prevent double clicks during the request
+    modalSave.addEventListener('click', async () => {
         modalSave.disabled = true;
         modalSave.textContent = 'Saving...';
-
-        // Use your existing JSON helper function which formats the data perfectly for your PHP file!
         await updateTaskStatus('Completed');
-
-        // Reset button state just in case of an error (if it succeeds, the page will reload automatically)
         modalSave.disabled = false;
         modalSave.textContent = 'Save';
     });
-    // --- Modal Backdrop (closes modal) ---
+
     modalBackdrop.addEventListener('click', (e) => {
         if (e.target === modalBackdrop) {
             modalBackdrop.style.display = 'none';
@@ -285,24 +257,15 @@ function setupEventListeners() {
     });
 }
 
-
-/**
- * Show Toast Notification
- */
 function showToast(message, type = 'success') {
     if (!toast) return;
-
     toast.textContent = message;
     toast.className = `toast toast-${type} toast-visible`;
-
     setTimeout(() => {
         toast.classList.remove('toast-visible');
     }, 3000);
 }
 
-/**
- * Send the status update to the backend
- */
 async function updateTaskStatus(newStatus) {
     const taskData = {
     request_id: CURRENT_REQUEST_ID,
@@ -340,7 +303,6 @@ async function updateTaskStatus(newStatus) {
              window.location.reload();
          }, 1500);
       } else {
-         // Reload details (which will trigger the hiding logic in initializePageData)
          fetchTaskDetails(CURRENT_REQUEST_ID);
       }
     } else {
@@ -353,7 +315,6 @@ async function updateTaskStatus(newStatus) {
 }
 
 // ===== VIEW CONTROLS =====
-
 function showLoadingView() {
     if (taskContent) taskContent.style.display = 'none';
     if (errorState) errorState.style.display = 'none';
@@ -373,28 +334,17 @@ function showTaskView() {
     if (taskContent) taskContent.style.display = 'block';
 }
 
-// ===== NEW: INVENTORY LOGIC =====
-
+// ===== INVENTORY LOGIC =====
 async function fetchMaintenanceInventory(roomId = null) {
     try {
-        // Equipment: Fetch ALL available equipment from general inventory (no room filtering)
         let url = 'api_staff_task.php?action=get_inventory&item_type=Equipment';
-        // Note: Do NOT pass roomId for Equipment - we want all available equipment stock
-        
-        console.log('[Equipment] Fetching all available equipment from:', url);
-        
         const response = await fetch(url);
         const result = await response.json();
 
-        console.log('[Equipment] API Response:', result);
-
         if (Array.isArray(result)) {
-            // All items returned are valid equipment items from general inventory
             allAvailableItems = result;
-            console.log('[Equipment] Items retrieved:', allAvailableItems.length, allAvailableItems);
             renderInventoryDropdown(allAvailableItems);
         } else {
-            console.error('[Equipment] Invalid response, not an array:', result);
             if(inventorySelect) inventorySelect.innerHTML = '<option value="">No equipment available</option>';
         }
     } catch (err) {
@@ -407,7 +357,6 @@ function renderInventoryDropdown(itemsToRender) {
     if (!inventorySelect) return;
     inventorySelect.innerHTML = '<option value="">-- Select an item to add --</option>';
     
-    // Group items by category
     const grouped = {};
     itemsToRender.forEach(item => {
         const cat = item.Category || 'Other';
@@ -417,7 +366,6 @@ function renderInventoryDropdown(itemsToRender) {
         grouped[cat].push(item);
     });
     
-    // Create optgroup for each category
     Object.keys(grouped).sort().forEach(catName => {
         const optgroup = document.createElement('optgroup');
         optgroup.label = catName;
@@ -515,19 +463,15 @@ window.removeUsedFurniture = function(index) {
     renderUsedFurniture();
 };
 
-// Auto-add furniture items on selection (no Add button needed)
 if (furnitureSelect) {
     furnitureSelect.addEventListener('change', (e) => {
         const itemId = e.target.value;
-        if (!itemId) return; // Empty selection
+        if (!itemId) return; 
         
         const selectedOption = e.target.options[e.target.selectedIndex];
         const itemName = selectedOption.dataset.name;
         const roomItemId = selectedOption.dataset.roomItemId;
         
-        console.log('Selected furniture item:', { itemId, itemName, roomItemId });
-        
-        // Check if already selected
         const existing = usedFurnitureItems.find(i => i.id === itemId);
         if (!existing) {
             usedFurnitureItems.push({ id: itemId, name: itemName, qty: 1, room_item_id: roomItemId });
@@ -536,8 +480,6 @@ if (furnitureSelect) {
         } else {
             showToast(`✓ Already selected: ${itemName}`, 'success');
         }
-        
-        // Reset dropdown
         e.target.value = '';
     });
 }
@@ -562,19 +504,15 @@ window.removeUsedElectrical = function(index) {
     renderUsedElectrical();
 };
 
-// Auto-add electrical items on selection (no Add button needed)
 if (electricalSelect) {
     electricalSelect.addEventListener('change', (e) => {
         const itemId = e.target.value;
-        if (!itemId) return; // Empty selection
+        if (!itemId) return; 
         
         const selectedOption = e.target.options[e.target.selectedIndex];
         const itemName = selectedOption.dataset.name;
         const roomItemId = selectedOption.dataset.roomItemId;
         
-        console.log('Selected electrical item:', { itemId, itemName, roomItemId });
-        
-        // Check if already selected
         const existing = usedElectricalItems.find(i => i.id === itemId);
         if (!existing) {
             usedElectricalItems.push({ id: itemId, name: itemName, qty: 1, room_item_id: roomItemId });
@@ -583,8 +521,6 @@ if (electricalSelect) {
         } else {
             showToast(`✓ Already selected: ${itemName}`, 'success');
         }
-        
-        // Reset dropdown
         e.target.value = '';
     });
 }
