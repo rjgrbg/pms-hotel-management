@@ -117,6 +117,11 @@ const RoomItemsManager = (function() {
                 iconColor = '#d4af78';
             }
             
+            // Format dates
+            const dateAssigned = item.date_assigned ? new Date(item.date_assigned).toLocaleDateString() : 'N/A';
+            const lastMaintained = item.last_maintained ? new Date(item.last_maintained).toLocaleDateString() : 'Never';
+            const lastChanged = item.last_changed ? new Date(item.last_changed).toLocaleDateString() : 'Never';
+            
             return `
             <div class="room-item-card" data-room-item-id="${item.room_item_id}" style="
                 display: flex;
@@ -154,8 +159,10 @@ const RoomItemsManager = (function() {
                                 Qty: ${item.quantity}
                             </span>
                         </div>
-                        <div style="font-size: 11px; color: #9ca3af;">
-                            Assigned: ${new Date(item.date_assigned).toLocaleDateString()} by ${item.assigned_by}
+                        <div style="font-size: 11px; color: #9ca3af; line-height: 1.5;">
+                            <div>Assigned: ${dateAssigned} by ${item.assigned_by}</div>
+                            ${itemType === 'equipment' ? `<div style="color: #c97a1a;">Last Maintained: ${lastMaintained}</div>` : ''}
+                            ${itemType === 'reusable' ? `<div style="color: #166534;">Last Changed: ${lastChanged}</div>` : ''}
                         </div>
                     </div>
                 </div>

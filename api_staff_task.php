@@ -67,7 +67,7 @@ switch ($action) {
 
         // --- SECURE: Uses prepared statement ---
         $sql = "SELECT 
-                    mr.RequestID, mr.Status, mr.IssueType, mr.Remarks,
+                    mr.RequestID, mr.Status, mr.IssueType, mr.Remarks, mr.RoomID,
                     DATE_FORMAT(mr.DateRequested, '%m/%d/%Y') as DateRequested,
                     DATE_FORMAT(mr.DateRequested, '%l:%i %p') as TimeRequested,
                     r.room_num as RoomNumber, r.room_type as RoomType
@@ -104,6 +104,8 @@ switch ($action) {
         $newStatus = trim($taskData['status'] ?? '');
         $remarks = trim($taskData['remarks'] ?? ''); 
         $usedItems = $taskData['used_items'] ?? []; // NEW: Grabs the inventory items from JS
+        $usedElectricalItems = $taskData['used_electrical'] ?? []; // NEW: Electrical items selected
+        $usedFurnitureItems = $taskData['used_furniture'] ?? []; // NEW: Furniture items selected
 
         if ($requestId === false || $requestId === null || empty($newStatus)) {
              echo json_encode(['status' => 'error', 'message' => 'Invalid task data provided.']);
@@ -255,6 +257,64 @@ switch ($action) {
                         }
                     }
                 }
+                
+                // --- NEW: Update last_maintained for electrical items ---
+                if (!empty($usedElectricalItems) && is_array($usedElectricalItems)) {
+                    foreach ($usedElectricalItems as $item) {
+                        $itemId = filter_var($item['id'] ?? 0, FILTER_VALIDATE_INT);
+                        $roomItemId = filter_var($item['room_item_id'] ?? 0, FILTER_VALIDATE_INT);
+                        
+                        // Update using room_item_id if available, otherwise use item_id + room_id
+                        if ($roomItemId > 0) {
+                            $stmt_electrical = $conn->prepare(
+                                "UPDATE pms_room_items SET last_maintained = NOW() 
+                                 WHERE room_item_id = ? AND date_removed IS NULL"
+                            );
+                            $stmt_electrical->bind_param("i", $roomItemId);
+                            $stmt_electrical->execute();
+                            $stmt_electrical->close();
+                        } else if ($itemId > 0) {
+                            $stmt_electrical = $conn->prepare(
+                                "UPDATE pms_room_items SET last_maintained = NOW() 
+                                 WHERE room_id = ? AND item_id = ? AND date_removed IS NULL"
+                            );
+                            $stmt_electrical->bind_param("ii", $roomId, $itemId);
+                            $stmt_electrical->execute();
+                            $stmt_electrical->close();
+                        }
+                        
+                        $logDetails .= " | Maintained: Electrical Item ID $itemId";
+                    }
+                }
+
+                // --- NEW: Update last_maintained for furniture items ---
+                if (!empty($usedFurnitureItems) && is_array($usedFurnitureItems)) {
+                    foreach ($usedFurnitureItems as $item) {
+                        $itemId = filter_var($item['id'] ?? 0, FILTER_VALIDATE_INT);
+                        $roomItemId = filter_var($item['room_item_id'] ?? 0, FILTER_VALIDATE_INT);
+                        
+                        // Update using room_item_id if available, otherwise use item_id + room_id
+                        if ($roomItemId > 0) {
+                            $stmt_furniture = $conn->prepare(
+                                "UPDATE pms_room_items SET last_maintained = NOW() 
+                                 WHERE room_item_id = ? AND date_removed IS NULL"
+                            );
+                            $stmt_furniture->bind_param("i", $roomItemId);
+                            $stmt_furniture->execute();
+                            $stmt_furniture->close();
+                        } else if ($itemId > 0) {
+                            $stmt_furniture = $conn->prepare(
+                                "UPDATE pms_room_items SET last_maintained = NOW() 
+                                 WHERE room_id = ? AND item_id = ? AND date_removed IS NULL"
+                            );
+                            $stmt_furniture->bind_param("ii", $roomId, $itemId);
+                            $stmt_furniture->execute();
+                            $stmt_furniture->close();
+                        }
+                        
+                        $logDetails .= " | Maintained: Furniture Item ID $itemId";
+                    }
+                }
             }
             
             // *** Log the action ***
@@ -275,25 +335,78 @@ switch ($action) {
         
     // ===== GET INVENTORY ITEMS (for mt_assign_staff.html) =====
     case 'get_inventory':
-        $sql = "SELECT 
-                    i.ItemID, 
-                    i.ItemName, 
-                    i.ItemType,
-                    ic.ItemCategoryName AS Category,
-                    i.ItemQuantity,
-                    i.is_archived
-                FROM pms_inventory i
-                JOIN pms_itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
-                ORDER BY i.ItemName";
+        $itemType = $_GET['item_type'] ?? null;
+        $roomId = $_GET['room_id'] ?? null;
         
-        if ($result = $conn->query($sql)) {
-            $items = [];
-            while ($row = $result->fetch_assoc()) {
-                $items[] = $row;
+        // EQUIPMENT: Fetch ALL available equipment from general inventory
+        if ($itemType === 'Equipment') {
+            $sql = "SELECT 
+                        i.ItemID, 
+                        i.ItemName, 
+                        ic.ItemCategoryName AS Category,
+                        i.ItemQuantity,
+                        i.is_archived
+                    FROM pms_inventory i
+                    JOIN pms_itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
+                    WHERE i.is_archived = 0 AND i.ItemQuantity > 0
+                    AND ic.ItemCategoryName IN ('Cleaning Chemicals', 'Cleaning Tools')
+                    ORDER BY ic.ItemCategoryName, i.ItemName";
+            
+            if ($stmt = $conn->prepare($sql)) {
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $items = [];
+                while ($row = $result->fetch_assoc()) {
+                    $items[] = $row;
+                }
+                $stmt->close();
+                echo json_encode($items);
+            } else {
+                echo json_encode([]);
             }
-            echo json_encode($items);
-        } else {
-            echo json_encode(['error' => 'Failed to fetch inventory: ' . $conn->error]);
+            exit;
+        }
+        // FURNITURE & FIXTURES and ELECTRICAL & LIGHTING: Fetch from room-assigned items only
+        else if ($roomId) {
+            $roomId = filter_var($roomId, FILTER_VALIDATE_INT);
+            
+            // Base query for items assigned to the room
+            $sql = "SELECT 
+                        ri.room_item_id,
+                        i.ItemID, 
+                        i.ItemName, 
+                        ic.ItemCategoryName AS Category,
+                        ri.quantity AS ItemQuantity,
+                        ri.last_maintained,
+                        ri.date_assigned
+                    FROM pms_room_items ri
+                    JOIN pms_inventory i ON ri.item_id = i.ItemID
+                    JOIN pms_itemcategory ic ON i.ItemCategoryID = ic.ItemCategoryID
+                    WHERE ri.room_id = ? AND ri.date_removed IS NULL";
+            
+            // Filter by category if specific type requested
+            if ($itemType === 'Electrical & Lighting') {
+                // Electrical & Lightning: Show Appliances and Electronics categories
+                $sql .= " AND ic.ItemCategoryName IN ('Appliances', 'Electronics')";
+            } else if ($itemType === 'Furniture & Fixtures') {
+                $sql .= " AND ic.ItemCategoryName = 'Furniture'";
+            }
+            
+            $sql .= " ORDER BY ic.ItemCategoryName, i.ItemName";
+            
+            if ($stmt = $conn->prepare($sql)) {
+                $stmt->bind_param("i", $roomId);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $items = [];
+                while ($row = $result->fetch_assoc()) {
+                    $items[] = $row;
+                }
+                $stmt->close();
+                echo json_encode($items);
+            } else {
+                echo json_encode(['error' => 'Failed to fetch room items: ' . $conn->error]);
+            }
         }
         break;
         

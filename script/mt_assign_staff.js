@@ -2,8 +2,14 @@
 
 // --- GLOBALS ---
 let CURRENT_REQUEST_ID = null;
+let CURRENT_ROOM_ID = null;
+let CURRENT_ISSUE_TYPE = null;
 let usedItems = []; 
-let allAvailableItems = []; 
+let usedFurnitureItems = [];
+let usedElectricalItems = [];
+let allAvailableItems = [];
+let allFurnitureItems = [];
+let allElectricalItems = [];
 
 // --- DOM ELEMENTS ---
 const roomValue = document.getElementById('room-value');
@@ -30,12 +36,22 @@ const loadingState = document.getElementById('loading-state');
 const errorState = document.getElementById('error-state');
 const errorMessage = document.getElementById('error-message');
 
-// Inventory Elements
+// Inventory Elements (Equipment)
 const inventorySelect = document.getElementById('inventory-select');
 const inventoryQty = document.getElementById('inventory-qty');
 const addItemBtn = document.getElementById('add-item-btn');
 const selectedItemsList = document.getElementById('selected-items-list');
 const searchInput = document.getElementById('inventory-search');
+
+// Furniture & Fixtures Elements
+const furnitureSection = document.getElementById('furniture-section');
+const furnitureSelect = document.getElementById('furniture-select');
+const selectedFurnitureList = document.getElementById('selected-furniture-list');
+
+// Electrical & Lighting Elements
+const electricalSection = document.getElementById('electrical-section');
+const electricalSelect = document.getElementById('electrical-select');
+const selectedElectricalList = document.getElementById('selected-electrical-list');
 
 // ===== PAGE INITIALIZATION =====
 document.addEventListener('DOMContentLoaded', () => {
@@ -96,6 +112,17 @@ function initializePageData(data) {
   statusValue.textContent = data.Status || 'N/A';
   issueTypeValue.textContent = data.IssueType || 'N/A'; 
   
+  // Store issue type, room ID and update sections
+  CURRENT_ROOM_ID = data.RoomID || null;
+  CURRENT_ISSUE_TYPE = data.IssueType || '';
+  
+  // Fetch equipment inventory assigned to this room
+  if (allAvailableItems.length === 0) {
+    fetchMaintenanceInventory(CURRENT_ROOM_ID);
+  }
+  
+  updateInventorySectionVisibility(CURRENT_ISSUE_TYPE);
+  
   remarksTextarea.value = data.Remarks || '';
   
   // Reset Visibility
@@ -117,6 +144,107 @@ function initializePageData(data) {
     remarksTextarea.disabled = true; 
     inProgressBtn.style.display = ''; // Show (disabled)
   }
+}
+
+// ===== INVENTORY SECTION VISIBILITY & MANAGEMENT =====
+function updateInventorySectionVisibility(issueType) {
+  // Show/hide furniture section
+  if (furnitureSection) {
+    furnitureSection.style.display = (issueType && issueType.includes('Furniture & Fixtures')) ? 'block' : 'none';
+  }
+  
+  // Show/hide electrical section
+  if (electricalSection) {
+    electricalSection.style.display = (issueType && issueType.includes('Electrical & Lighting')) ? 'block' : 'none';
+  }
+  
+  // Load appropriate inventory items
+  if (issueType && issueType.includes('Furniture & Fixtures')) {
+    if (allFurnitureItems.length === 0) {
+      fetchInventoryByType('Furniture & Fixtures', 'furniture', CURRENT_ROOM_ID);
+    }
+  }
+  
+  if (issueType && issueType.includes('Electrical & Lighting')) {
+    if (allElectricalItems.length === 0) {
+      fetchInventoryByType('Electrical & Lighting', 'electrical', CURRENT_ROOM_ID);
+    }
+  }
+}
+
+async function fetchInventoryByType(itemType, category, roomId) {
+  try {
+    let url = `api_staff_task.php?action=get_inventory&item_type=${encodeURIComponent(itemType)}`;
+    if (roomId) {
+      url += `&room_id=${roomId}`;
+    }
+    console.log(`[${category}] Fetching room-assigned items. ItemType: "${itemType}", RoomID: ${roomId}`);
+    console.log(`[${category}] URL:`, url);
+    
+    const response = await fetch(url);
+    const result = await response.json();
+    
+    console.log(`[${category}] API Response:`, result);
+
+    if (Array.isArray(result)) {
+      // All items from pms_room_items are valid (API already filtered by room and category if applicable)
+      let itemsToUse = result;
+      
+      console.log(`[${category}] Items retrieved: ${itemsToUse.length}`, itemsToUse);
+      
+      if (category === 'furniture') {
+        allFurnitureItems = itemsToUse;
+        if (furnitureSelect) {
+          renderCategoryDropdown(furnitureSelect, allFurnitureItems, 'furniture');
+        }
+      } else if (category === 'electrical') {
+        allElectricalItems = itemsToUse;
+        if (electricalSelect) {
+          renderCategoryDropdown(electricalSelect, allElectricalItems, 'electrical');
+        }
+      }
+    } else {
+      console.error(`[${category}] Response is not an array:`, result);
+    }
+  } catch (err) {
+    console.error(`Failed to load ${category} inventory:`, err);
+  }
+}
+
+function renderCategoryDropdown(selectElement, itemsToRender, category = null) {
+  if (!selectElement) return;
+  selectElement.innerHTML = '<option value="">-- Select an item to add --</option>';
+  
+  // Group items by category for display
+  const grouped = {};
+  itemsToRender.forEach(item => {
+    const cat = item.Category || 'Other';
+    if (!grouped[cat]) {
+      grouped[cat] = [];
+    }
+    grouped[cat].push(item);
+  });
+  
+  // Create optgroup for each category
+  Object.keys(grouped).sort().forEach(catName => {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = catName;
+    
+    grouped[catName].forEach(item => {
+      const opt = document.createElement('option');
+      opt.value = item.ItemID;
+      opt.dataset.name = item.ItemName;
+      opt.dataset.max = item.ItemQuantity;
+      // Store room_item_id for both furniture and electrical items (for last_maintained updates)
+      if ((category === 'electrical' || category === 'furniture') && item.room_item_id) {
+        opt.dataset.roomItemId = item.room_item_id;
+      }
+      opt.textContent = `${item.ItemName} (${item.ItemQuantity}${category === 'electrical' ? ' in room' : ''})`;
+      optgroup.appendChild(opt);
+    });
+    
+    selectElement.appendChild(optgroup);
+  });
 }
 
 // ===== EVENT LISTENER SETUP =====
@@ -180,7 +308,9 @@ async function updateTaskStatus(newStatus) {
     request_id: CURRENT_REQUEST_ID,
     status: newStatus,
     remarks: remarksTextarea.value,
-    used_items: usedItems // NEW: Add used items to payload
+    used_items: usedItems,
+    used_furniture: usedFurnitureItems,
+    used_electrical: usedElectricalItems
   };
 
   try {
@@ -245,21 +375,27 @@ function showTaskView() {
 
 // ===== NEW: INVENTORY LOGIC =====
 
-async function fetchMaintenanceInventory() {
+async function fetchMaintenanceInventory(roomId = null) {
     try {
-        const response = await fetch('api_staff_task.php?action=get_inventory');
+        // Equipment: Fetch ALL available equipment from general inventory (no room filtering)
+        let url = 'api_staff_task.php?action=get_inventory&item_type=Equipment';
+        // Note: Do NOT pass roomId for Equipment - we want all available equipment stock
+        
+        console.log('[Equipment] Fetching all available equipment from:', url);
+        
+        const response = await fetch(url);
         const result = await response.json();
 
-        if (!result.error && Array.isArray(result)) {
-            // ONLY ALLOW EQUIPMENT
-            allAvailableItems = result.filter(item => 
-                item.is_archived == 0 && 
-                item.ItemQuantity > 0 &&
-                item.ItemType === 'Equipment'
-            );
+        console.log('[Equipment] API Response:', result);
+
+        if (Array.isArray(result)) {
+            // All items returned are valid equipment items from general inventory
+            allAvailableItems = result;
+            console.log('[Equipment] Items retrieved:', allAvailableItems.length, allAvailableItems);
             renderInventoryDropdown(allAvailableItems);
         } else {
-            if(inventorySelect) inventorySelect.innerHTML = '<option value="">Failed to load items</option>';
+            console.error('[Equipment] Invalid response, not an array:', result);
+            if(inventorySelect) inventorySelect.innerHTML = '<option value="">No equipment available</option>';
         }
     } catch (err) {
         console.error('Failed to load inventory:', err);
@@ -269,15 +405,33 @@ async function fetchMaintenanceInventory() {
 
 function renderInventoryDropdown(itemsToRender) {
     if (!inventorySelect) return;
-    inventorySelect.innerHTML = '<option value="">Select Equipment...</option>';
+    inventorySelect.innerHTML = '<option value="">-- Select an item to add --</option>';
     
+    // Group items by category
+    const grouped = {};
     itemsToRender.forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item.ItemID;
-        opt.dataset.name = item.ItemName;
-        opt.dataset.max = item.ItemQuantity;
-        opt.textContent = `${item.ItemName} (Stock: ${item.ItemQuantity})`;
-        inventorySelect.appendChild(opt);
+        const cat = item.Category || 'Other';
+        if (!grouped[cat]) {
+            grouped[cat] = [];
+        }
+        grouped[cat].push(item);
+    });
+    
+    // Create optgroup for each category
+    Object.keys(grouped).sort().forEach(catName => {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = catName;
+        
+        grouped[catName].forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item.ItemID;
+            opt.dataset.name = item.ItemName;
+            opt.dataset.max = item.ItemQuantity;
+            opt.textContent = `${item.ItemName} (${item.ItemQuantity} in stock)`;
+            optgroup.appendChild(opt);
+        });
+        
+        inventorySelect.appendChild(optgroup);
     });
 }
 
@@ -341,4 +495,96 @@ window.removeUsedItem = function(index) {
     renderUsedItems();
 };
 
-document.addEventListener('DOMContentLoaded', fetchMaintenanceInventory);
+// ===== FURNITURE & FIXTURES HANDLING =====
+function renderUsedFurniture() {
+    if (!selectedFurnitureList) return;
+    selectedFurnitureList.innerHTML = '';
+    usedFurnitureItems.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.style.cssText = "display: flex; justify-content: space-between; padding: 8px; background: #fff; border: 1px solid #eee; margin-bottom: 5px; border-radius: 4px;";
+        li.innerHTML = `
+            <span>${item.name}</span>
+            <button type="button" onclick="removeUsedFurniture(${index})" style="color: #dc3545; background: none; border: none; cursor: pointer;"><i class="fas fa-times"></i></button>
+        `;
+        selectedFurnitureList.appendChild(li);
+    });
+}
+
+window.removeUsedFurniture = function(index) {
+    usedFurnitureItems.splice(index, 1);
+    renderUsedFurniture();
+};
+
+// Auto-add furniture items on selection (no Add button needed)
+if (furnitureSelect) {
+    furnitureSelect.addEventListener('change', (e) => {
+        const itemId = e.target.value;
+        if (!itemId) return; // Empty selection
+        
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const itemName = selectedOption.dataset.name;
+        const roomItemId = selectedOption.dataset.roomItemId;
+        
+        console.log('Selected furniture item:', { itemId, itemName, roomItemId });
+        
+        // Check if already selected
+        const existing = usedFurnitureItems.find(i => i.id === itemId);
+        if (!existing) {
+            usedFurnitureItems.push({ id: itemId, name: itemName, qty: 1, room_item_id: roomItemId });
+            renderUsedFurniture();
+            showToast(`✓ Added: ${itemName}`, 'success');
+        } else {
+            showToast(`✓ Already selected: ${itemName}`, 'success');
+        }
+        
+        // Reset dropdown
+        e.target.value = '';
+    });
+}
+
+// ===== ELECTRICAL & LIGHTING HANDLING =====
+function renderUsedElectrical() {
+    if (!selectedElectricalList) return;
+    selectedElectricalList.innerHTML = '';
+    usedElectricalItems.forEach((item, index) => {
+        const li = document.createElement('li');
+        li.style.cssText = "display: flex; justify-content: space-between; padding: 8px; background: #fff; border: 1px solid #eee; margin-bottom: 5px; border-radius: 4px;";
+        li.innerHTML = `
+            <span>${item.name}</span>
+            <button type="button" onclick="removeUsedElectrical(${index})" style="color: #dc3545; background: none; border: none; cursor: pointer;"><i class="fas fa-times"></i></button>
+        `;
+        selectedElectricalList.appendChild(li);
+    });
+}
+
+window.removeUsedElectrical = function(index) {
+    usedElectricalItems.splice(index, 1);
+    renderUsedElectrical();
+};
+
+// Auto-add electrical items on selection (no Add button needed)
+if (electricalSelect) {
+    electricalSelect.addEventListener('change', (e) => {
+        const itemId = e.target.value;
+        if (!itemId) return; // Empty selection
+        
+        const selectedOption = e.target.options[e.target.selectedIndex];
+        const itemName = selectedOption.dataset.name;
+        const roomItemId = selectedOption.dataset.roomItemId;
+        
+        console.log('Selected electrical item:', { itemId, itemName, roomItemId });
+        
+        // Check if already selected
+        const existing = usedElectricalItems.find(i => i.id === itemId);
+        if (!existing) {
+            usedElectricalItems.push({ id: itemId, name: itemName, qty: 1, room_item_id: roomItemId });
+            renderUsedElectrical();
+            showToast(`✓ Added: ${itemName}`, 'success');
+        } else {
+            showToast(`✓ Already selected: ${itemName}`, 'success');
+        }
+        
+        // Reset dropdown
+        e.target.value = '';
+    });
+}

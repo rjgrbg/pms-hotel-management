@@ -57,6 +57,8 @@ if ($request_method === 'GET' && $action === 'get_room_items') {
                 ri.item_id,
                 ri.quantity,
                 ri.date_assigned,
+                ri.last_maintained,
+                ri.last_changed,
                 i.ItemName,
                 i.ItemType,
                 ic.ItemCategoryName,
@@ -87,6 +89,8 @@ if ($request_method === 'GET' && $action === 'get_room_items') {
                     'type' => $row['ItemType'],
                     'category' => $row['ItemCategoryName'],
                     'date_assigned' => $row['date_assigned'],
+                    'last_maintained' => $row['last_maintained'],
+                    'last_changed' => $row['last_changed'],
                     'assigned_by' => $assignedBy
                 ];
             }
